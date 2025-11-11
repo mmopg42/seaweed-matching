@@ -8,26 +8,29 @@ class GroupManager:
         self.log = log_emitter_func
         self.group_counter = 0
 
-    def build_all_groups(self, unmatched_data, consumed_nir_keys):
+    def build_all_groups(self, unmatched_data, consumed_nir_keys, nir_match_time_diff=1.0):
         """
         순서:
           1) normal(일반 카메라) 기준으로 베이스 그룹 생성
              - 각 그룹에 cam1/cam2/cam3 큐에서 1장씩 순서대로 배정
           2) cam 큐에 남은 이미지가 있다면 cam-only 그룹 생성(1장=1그룹)
-          3) NIR을 시간 기준으로, time >= t_nir 이고 아직 NIR 비어있는 첫 그룹에 부착
+          3) NIR을 시간 기준으로 가장 가까운 그룹에 부착 (최대 허용 시간 차이 내)
              - 없으면 NIR-only 그룹 생성
           4) 최종 시간 정렬 후 그룹명 재부여
+
+        Args:
+            nir_match_time_diff: NIR 매칭 최대 시간 차이 (초)
         """
         groups = []
 
         # === 라인1 처리 ===
-        groups_line1 = self._build_line_groups(unmatched_data, consumed_nir_keys, line=1)
+        groups_line1 = self._build_line_groups(unmatched_data, consumed_nir_keys, line=1, nir_match_time_diff=nir_match_time_diff)
         for g in groups_line1:
             g['line'] = 1
         groups.extend(groups_line1)
 
         # === 라인2 처리 ===
-        groups_line2 = self._build_line_groups(unmatched_data, consumed_nir_keys, line=2)
+        groups_line2 = self._build_line_groups(unmatched_data, consumed_nir_keys, line=2, nir_match_time_diff=nir_match_time_diff)
         for g in groups_line2:
             g['line'] = 2
         groups.extend(groups_line2)
@@ -40,7 +43,7 @@ class GroupManager:
         self.group_counter = len(groups)
         return groups
 
-    def _build_line_groups(self, unmatched_data, consumed_nir_keys, line=1):
+    def _build_line_groups(self, unmatched_data, consumed_nir_keys, line=1, nir_match_time_diff=1.0):
         """라인별 그룹 생성"""
         groups = []
 
@@ -101,16 +104,23 @@ class GroupManager:
         # --- (E) 시간 정렬 (NIR 부착 전에도 정렬 유지) ---
         groups.sort(key=lambda x: datetime.datetime.fromisoformat(x["time"]))
 
-        # --- (F) NIR 부착: time >= t_nir 이고 아직 NIR 없는 첫 그룹에 붙임 ---
+        # --- (F) NIR 부착: 가장 가까운 시간의 그룹에 부착 (최대 허용 시간 차이 내) ---
         for (t_nir, nir_key_val, nir_files) in available_nirs:
             target_idx = None
+            min_diff = None
+
             for i, g in enumerate(groups):
                 if g.get("NIR"):  # 이미 NIR 있음
                     continue
                 g_time = datetime.datetime.fromisoformat(g["time"])
-                if g_time >= t_nir:
-                    target_idx = i
-                    break
+                time_diff = (g_time - t_nir).total_seconds()
+
+                # 조건: 같거나 늦은 시간이고, 최대 허용 시간 차이 내
+                if 0 <= time_diff <= nir_match_time_diff:
+                    if min_diff is None or time_diff < min_diff:
+                        min_diff = time_diff
+                        target_idx = i
+
             if target_idx is None:
                 # 붙일 곳이 없다면 NIR-only 그룹 생성
                 nir_only_group = {

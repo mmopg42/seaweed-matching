@@ -21,7 +21,7 @@ from ui_components import SettingDialog, MonitorRow, FlowLayout_
 from file_matcher import Communicate, FolderEventHandler, FileMatcher
 from group_manager import GroupManager
 from file_operations import FileOperationWorker
-from utils import extract_datetime_from_str, LruPixmapCache
+from utils import extract_datetime_from_str, LruPixmapCache, normalize_path
 from preview_dialog import PreviewDialog
 from log_panel import LogPanel
 from delete_manager import (
@@ -156,6 +156,11 @@ class MainWindow(QMainWindow):
         self.full_scan_timer = QTimer(self)
         self.full_scan_timer.setSingleShot(True)
         self.full_scan_timer.timeout.connect(self.do_full_scan_once)
+
+        # 이미지 갱신용 타이머 (이벤트 기반, 단발성)
+        self.image_refresh_timer = QTimer(self)
+        self.image_refresh_timer.setSingleShot(True)
+        self.image_refresh_timer.timeout.connect(self.refresh_visible_images)
         self.full_scan_done = False  # 풀스캔 완료 플래그
 
         # ✅ 실시간 파일 개수 카운트 워커 (별도 스레드, UI 렉과 완전 독립)
@@ -164,7 +169,7 @@ class MainWindow(QMainWindow):
         self.file_count_worker.counts_updated.connect(self.on_file_counts_updated)
 
         self.init_ui()
-        self.setWindowTitle("실시간 이미지 모니터링 및 매칭 도구_v18")
+        self.setWindowTitle("AI 데이터 퓨전 및 통합 관제 솔루션' (Model  이비기술-MMS v1.0)")
         self.resize(1200, 800)
         self.restore_window_bounds()
 
@@ -698,6 +703,7 @@ class MainWindow(QMainWindow):
 
         # 경로 변경 및 폴더 생성
         created_folders = []
+        failed_folders = []
         for key, label, old_path, new_path in changes:
             self.settings[key] = new_path
             self.log_to_box(f"  [{label}] 경로 변경됨")
@@ -710,14 +716,46 @@ class MainWindow(QMainWindow):
                     os.makedirs(new_path, exist_ok=True)
                     created_folders.append((label, new_path))
                     self.log_to_box(f"  ✅ [{label}] 폴더 생성: {new_path}")
+                except PermissionError as e:
+                    error_msg = f"[{label}] 접근 권한이 없어 폴더를 생성할 수 없습니다.\n경로: {new_path}\n오류: {str(e)}"
+                    self.log_to_box(f"  ❌ {error_msg}")
+                    failed_folders.append((label, new_path, "접근 권한 없음"))
+                except OSError as e:
+                    error_msg = f"[{label}] 폴더 생성 중 오류가 발생했습니다.\n경로: {new_path}\n오류: {str(e)}"
+                    self.log_to_box(f"  ❌ {error_msg}")
+                    failed_folders.append((label, new_path, str(e)))
                 except Exception as e:
-                    self.log_to_box(f"  ⚠️ [{label}] 폴더 생성 실패: {e}")
+                    error_msg = f"[{label}] 폴더 생성 중 예상치 못한 오류가 발생했습니다.\n경로: {new_path}\n오류: {str(e)}"
+                    self.log_to_box(f"  ❌ {error_msg}")
+                    failed_folders.append((label, new_path, str(e)))
 
         # 변경된 설정 저장
         self.config_manager.save(self.settings)
         self.log_to_box(f"✅ 총 {len(changes)}개 경로가 변경되어 저장되었습니다.")
         if created_folders:
             self.log_to_box(f"📁 총 {len(created_folders)}개 폴더가 생성되었습니다.")
+        
+        # 폴더 생성 실패가 있으면 GUI 오류창 표시
+        if failed_folders:
+            error_details = []
+            for label, path, reason in failed_folders:
+                error_details.append(f"• [{label}]")
+                error_details.append(f"  경로: {path}")
+                error_details.append(f"  사유: {reason}")
+                error_details.append("")
+            
+            error_message = (
+                f"⚠️ 총 {len(failed_folders)}개의 폴더 생성에 실패했습니다.\n\n"
+                + "\n".join(error_details)
+                + "\n경로를 확인하고 접근 권한이 있는지 확인하세요.\n프로그램은 계속 실행됩니다."
+            )
+            
+            QMessageBox.warning(
+                self,
+                "폴더 생성 실패",
+                error_message
+            )
+            self.log_to_box(f"❌ 총 {len(failed_folders)}개 폴더 생성 실패 - 오류창을 확인하세요.")
 
         # 감시 중이었다면 재시작
         was_watching = self.is_watching
@@ -780,9 +818,11 @@ class MainWindow(QMainWindow):
         QApplication.processEvents()
 
         # 2) 그룹 재구성 + UI 갱신
+        nir_match_time_diff = self.settings.get("nir_match_time_diff", 1.0)
         self.groups = self.group_manager.build_all_groups(
             self.file_matcher.unmatched_files,
-            self.file_matcher.consumed_nir_keys
+            self.file_matcher.consumed_nir_keys,
+            nir_match_time_diff=nir_match_time_diff
         )
         self.update_monitoring_view()
 
@@ -860,6 +900,7 @@ class MainWindow(QMainWindow):
 
             dlg.legacy_ui_mode.setChecked(self.settings.get("legacy_ui_mode", False))
             dlg.use_folder_suffix.setChecked(self.settings.get("use_folder_suffix", False))
+            dlg.nir_match_time_diff.setText(str(self.settings.get("nir_match_time_diff", 1.0)))
 
         if dlg.exec():
             was_on = self.is_watching  # 현재 감시 상태 기억
@@ -1143,9 +1184,11 @@ class MainWindow(QMainWindow):
 
             QApplication.processEvents()  # ✅ 이벤트 처리 완료 후
 
+        nir_match_time_diff = self.settings.get("nir_match_time_diff", 1.0)
         self.groups = self.group_manager.build_all_groups(
             self.file_matcher.unmatched_files,
-            self.file_matcher.consumed_nir_keys
+            self.file_matcher.consumed_nir_keys,
+            nir_match_time_diff=nir_match_time_diff
         )
 
         # ✅ UI 모드에 따라 분기
@@ -1337,6 +1380,9 @@ class MainWindow(QMainWindow):
         # 통합 탭: 좌우로 분할하여 업데이트
         self._update_tab_view(self.scroll_area_combined_line1, self.scroll_layout_combined_line1, line1_items)
         self._update_tab_view(self.scroll_area_combined_line2, self.scroll_layout_combined_line2, line2_items)
+        
+        # ✅ UI 업데이트 후 캐시된 이미지 갱신
+        self.refresh_visible_images()
 
     def _update_tab_view(self, scroll_area, scroll_layout, display_items):
         """개별 탭 뷰 업데이트"""
@@ -1386,12 +1432,14 @@ class MainWindow(QMainWindow):
         # ✅ 업데이트 완료 후 이벤트 처리
         QApplication.processEvents()
 
-        # ✅ 스크롤바가 최하단에 있었다면 업데이트 후에도 최하단으로 이동
-        if is_at_bottom:
+        # ✅ Run 중일 때는 항상 최하단으로 스크롤 (최신 행 추적)
+        # ✅ Run 중이 아닐 때는 기존처럼 스크롤바가 최하단에 있었을 때만 이동
+        should_scroll_bottom = self.is_watching or is_at_bottom
+        if should_scroll_bottom:
             QTimer.singleShot(0, lambda: self.scroll_to_bottom_for_area(scroll_area))
 
     def on_row_delete_requested(self, _clicked_row_idx: int):
-        # 행 삭제 버튼은 체크박스 상태 무시하고 해당 행 전체 삭제
+        # 행 삭제 버튼은 해당 행의 선택된 항목만 삭제 (체크박스 상태 반영)
         # sender()로 실제 위젯을 찾아서 처리 (_clicked_row_idx는 무시)
 
         current_tab_index = self.tab_widget.currentIndex()
@@ -1458,7 +1506,7 @@ class MainWindow(QMainWindow):
 
         # _temp_row_widget 설정하여 delete_one_row에서 사용
         self._temp_row_widget = widget
-        deleted = delete_one_row(self, display_idx, ignore_checkboxes=True)
+        deleted = delete_one_row(self, display_idx, ignore_checkboxes=False)
         self._temp_row_widget = None
 
         if deleted > 0:
@@ -1589,9 +1637,11 @@ class MainWindow(QMainWindow):
 
         QApplication.processEvents()  # ✅ 이벤트 처리 완료 후
 
+        nir_match_time_diff = self.settings.get("nir_match_time_diff", 1.0)
         self.groups = self.group_manager.build_all_groups(
             self.file_matcher.unmatched_files,
-            self.file_matcher.consumed_nir_keys
+            self.file_matcher.consumed_nir_keys,
+            nir_match_time_diff=nir_match_time_diff
         )
 
         # ✅ UI 모드에 따라 분기
@@ -1635,11 +1685,8 @@ class MainWindow(QMainWindow):
             path = f_info.get("absolute_path")
             if path:
                 pixmap = self.get_cached_pixmap(path)
-                if pixmap:
-                    cam_widget.set_image(pixmap, path)
-                else:
-                    cam_widget.img_label.clear()
-                    cam_widget.text_label.setText("로딩 실패")
+                # pixmap이 None이어도 경로를 저장 (나중에 캐시에서 로드하기 위해)
+                cam_widget.set_image(pixmap, normalize_path(path))
             else:
                 cam_widget.img_label.clear()
                 cam_widget.img_label.setText("X")
@@ -1697,7 +1744,8 @@ class MainWindow(QMainWindow):
         cam1_name, cam1_path = _first_name_and_path(group.get(cam_keys[0], {}))
         if cam1_path:
             pix = self.get_cached_pixmap(cam1_path)
-            cam_views[0].set_image(pix, cam1_path) if pix else cam_views[0].set_image(None, "")
+            # pixmap이 None이어도 경로를 저장
+            cam_views[0].set_image(pix, normalize_path(cam1_path))
             cam_views[0].set_caption(cam1_name or "")
             cam_views[0].setToolTip(cam1_name or cam1_path)
         else:
@@ -1708,7 +1756,8 @@ class MainWindow(QMainWindow):
         cam2_name, cam2_path = _first_name_and_path(group.get(cam_keys[1], {}))
         if cam2_path:
             pix = self.get_cached_pixmap(cam2_path)
-            cam_views[1].set_image(pix, cam2_path) if pix else cam_views[1].set_image(None, "")
+            # pixmap이 None이어도 경로를 저장
+            cam_views[1].set_image(pix, normalize_path(cam2_path))
             cam_views[1].set_caption(cam2_name or "")
             cam_views[1].setToolTip(cam2_name or cam2_path)
         else:
@@ -1719,7 +1768,8 @@ class MainWindow(QMainWindow):
         cam3_name, cam3_path = _first_name_and_path(group.get(cam_keys[2], {}))
         if cam3_path:
             pix = self.get_cached_pixmap(cam3_path)
-            cam_views[2].set_image(pix, cam3_path) if pix else cam_views[2].set_image(None, "")
+            # pixmap이 None이어도 경로를 저장
+            cam_views[2].set_image(pix, normalize_path(cam3_path))
             cam_views[2].set_caption(cam3_name or "")
             cam_views[2].setToolTip(cam3_name or cam3_path)
         else:
@@ -1728,70 +1778,78 @@ class MainWindow(QMainWindow):
 
     def get_cached_pixmap(self, path):
         """
-        비동기 이미지 로딩 (개선됨)
+        비동기 이미지 로딩
         - 메모리 캐시에 있으면 즉시 반환
-        - 없으면 백그라운드 로더에 요청하고 플레이스홀더 반환
+        - 없으면 백그라운드 로더에 요청하고 None 반환
         """
+        if not path or not os.path.exists(path):
+            return None
+
         img_w = self.settings.get("img_width", 110)
         img_h = self.settings.get("img_height", 80)
         thumb_size = (img_w, img_h)
-        
+
         # 1. 메모리 캐시 확인
         pixmap = self.pixmap_cache.get(path)
         if pixmap is not None:
             return pixmap
-        
-        # 2. 캐시 없음 → 백그라운드 로더에 요청
+
+        # 2. 캐시 없음 → 백그라운드 로더에 요청하고 None 반환
         request_id = f"{path}_{time.time()}"
         self.image_loader.request_image(path, thumb_size, request_id)
-        
-        # 3. 플레이스홀더 반환 (로딩 중 표시)
-        placeholder = self._create_placeholder(thumb_size)
-        return placeholder
+        return None
     
-    def _create_placeholder(self, size):
-        """로딩 중 플레이스홀더 이미지 생성"""
-        from PyQt6.QtGui import QPainter, QColor
-        pixmap = QPixmap(size[0], size[1])
-        pixmap.fill(QColor(240, 240, 240))
-        
-        painter = QPainter(pixmap)
-        painter.setPen(QColor(180, 180, 180))
-        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "로딩중...")
-        painter.end()
-        
-        return pixmap
-    
-    def on_image_loaded(self, image_path: str, pixmap: QPixmap, request_id: str):
+    def on_image_loaded(self, image_path: str, pixmap: QPixmap, request_id: str = ""):
         """
         이미지 로딩 완료 콜백
         - 메모리 캐시에 저장
-        - 해당 위젯 업데이트
+        - 단발성 타이머로 UI 갱신 예약 (여러 이미지 동시 로드 시 한 번만 갱신)
         """
-        img_w = self.settings.get("img_width", 110)
-        img_h = self.settings.get("img_height", 80)
-        thumb_size = (img_w, img_h)
-        
-        # 메모리 캐시에 저장
         self.pixmap_cache.set(image_path, pixmap)
         
-        # UI 업데이트: 현재 표시된 행들을 순회하며 해당 이미지 경로를 사용하는 위젯 찾기
-        for i in range(self.scroll_layout.count()):
-            row_widget = self.scroll_layout.itemAt(i).widget()
-            if not isinstance(row_widget, MonitorRow):
-                continue
-            
-            # 각 이미지 위젯 확인
-            image_widgets = [
-                row_widget.norm_view,
-                row_widget.cam1_view,
-                row_widget.cam2_view,
-                row_widget.cam3_view
-            ]
-            
-            for img_widget in image_widgets:
-                if hasattr(img_widget, '_current_path') and img_widget._current_path == image_path:
-                    img_widget.set_image(pixmap, image_path)
+        # 타이머가 이미 실행 중이 아니면 50ms 후 갱신 예약
+        if not self.image_refresh_timer.isActive():
+            self.image_refresh_timer.start(50)
+
+    def refresh_visible_images(self):
+        """
+        화면에 표시된 행들의 이미지를 캐시에서 다시 로드하여 갱신
+        - 새로고침 버튼 클릭 시
+        - 이미지 로딩 완료 시 (타이머를 통해)
+        """
+        # 모든 탭의 레이아웃을 순회하며 이미지 갱신
+        all_layouts = [
+            self.scroll_layout_line1,
+            self.scroll_layout_line2,
+            self.scroll_layout_combined_line1,
+            self.scroll_layout_combined_line2
+        ]
+        
+        updated_count = 0
+        for scroll_layout in all_layouts:
+            for i in range(scroll_layout.count()):
+                row_widget = scroll_layout.itemAt(i).widget()
+                if not isinstance(row_widget, MonitorRow):
+                    continue
+
+                # 각 이미지 위젯의 경로를 확인하고 캐시에 이미지가 있으면 업데이트
+                image_widgets = [
+                    row_widget.nir_view,
+                    row_widget.norm_view,
+                    row_widget.cam1_view,
+                    row_widget.cam2_view,
+                    row_widget.cam3_view
+                ]
+
+                for img_widget in image_widgets:
+                    if hasattr(img_widget, '_current_path') and img_widget._current_path:
+                        # 캐시에서 이미지 가져오기
+                        widget_path = img_widget._current_path
+                        cached_pixmap = self.pixmap_cache.get(widget_path)
+                        if cached_pixmap is not None:
+                            # 캐시된 이미지로 무조건 업데이트
+                            if img_widget._current_pixmap is None:
+                                img_widget.set_image(cached_pixmap, widget_path)
 
     def scroll_to_bottom(self):
         bar = self.scroll_area.verticalScrollBar()
@@ -2011,13 +2069,30 @@ class MainWindow(QMainWindow):
                 if data_count_limit > 0 and len(groups_to_process) > data_count_limit:
                     sorted_groups = sorted(groups_to_process, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
                     groups_to_process = sorted_groups[:data_count_limit]
-                    self.log_to_box(f"📊 [라인1] 전체 {len(line1_groups)}개 중 최신 {data_count_limit}개 데이터만 이동합니다.")
+
+                    # NIR 개수 확인 및 부족 시 추가 행 포함
+                    if keep_n > 0:
+                        nir_count = sum(1 for g in groups_to_process if g.get("NIR"))
+                        if nir_count < keep_n and len(sorted_groups) > data_count_limit:
+                            # 추가로 NIR 있는 행 찾기
+                            additional_groups = []
+                            for g in sorted_groups[data_count_limit:]:
+                                if g.get("NIR"):
+                                    additional_groups.append(g)
+                                    nir_count += 1
+                                    if nir_count >= keep_n:
+                                        break
+                            if additional_groups:
+                                groups_to_process.extend(additional_groups)
+                                self.log_to_box(f"📊 [라인1] NIR {keep_n}개 확보를 위해 {len(additional_groups)}개 행 추가 (총 {len(groups_to_process)}개)")
+
+                    self.log_to_box(f"📊 [라인1] 전체 {len(line1_groups)}개 중 {len(groups_to_process)}개 데이터를 이동합니다.")
 
                 target_subject = subject
                 msg = f"정말로 이동하시겠습니까?\n\n"
                 msg += f"[라인1 → {subject}]\n"
                 if data_count_limit > 0:
-                    msg += f"  데이터: {len(groups_to_process)}개 (제한: {data_count_limit}개)\n"
+                    msg += f"  데이터: {len(groups_to_process)}개 (기본 제한: {data_count_limit}개)\n"
                 else:
                     msg += f"  데이터: {len(groups_to_process)}개 (전체)\n"
                 msg += f"NIR: {keep_n}개 만 이동" if keep_n > 0 else "NIR: 전체 이동"
@@ -2037,14 +2112,31 @@ class MainWindow(QMainWindow):
                 if data_count_limit > 0 and len(groups_to_process) > data_count_limit:
                     sorted_groups = sorted(groups_to_process, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
                     groups_to_process = sorted_groups[:data_count_limit]
-                    self.log_to_box(f"📊 [라인2] 전체 {len(line2_groups)}개 중 최신 {data_count_limit}개 데이터만 이동합니다.")
+
+                    # NIR 개수 확인 및 부족 시 추가 행 포함
+                    if keep_n > 0:
+                        nir_count = sum(1 for g in groups_to_process if g.get("NIR"))
+                        if nir_count < keep_n and len(sorted_groups) > data_count_limit:
+                            # 추가로 NIR 있는 행 찾기
+                            additional_groups = []
+                            for g in sorted_groups[data_count_limit:]:
+                                if g.get("NIR"):
+                                    additional_groups.append(g)
+                                    nir_count += 1
+                                    if nir_count >= keep_n:
+                                        break
+                            if additional_groups:
+                                groups_to_process.extend(additional_groups)
+                                self.log_to_box(f"📊 [라인2] NIR {keep_n}개 확보를 위해 {len(additional_groups)}개 행 추가 (총 {len(groups_to_process)}개)")
+
+                    self.log_to_box(f"📊 [라인2] 전체 {len(line2_groups)}개 중 {len(groups_to_process)}개 데이터를 이동합니다.")
 
                 # 분리 모드일 때는 subject2 사용, 통합 모드일 때는 subject 사용
                 target_subject = subject2 if is_separated else subject
                 msg = f"정말로 이동하시겠습니까?\n\n"
                 msg += f"[라인2 → {target_subject}]\n"
                 if data_count_limit > 0:
-                    msg += f"  데이터: {len(groups_to_process)}개 (제한: {data_count_limit}개)\n"
+                    msg += f"  데이터: {len(groups_to_process)}개 (기본 제한: {data_count_limit}개)\n"
                 else:
                     msg += f"  데이터: {len(groups_to_process)}개 (전체)\n"
                 msg += f"NIR: {keep_n}개 만 이동" if keep_n > 0 else "NIR: 전체 이동"
@@ -2069,22 +2161,54 @@ class MainWindow(QMainWindow):
                         if len(line1_groups) > data_count_limit:
                             sorted_line1 = sorted(line1_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
                             groups_to_move_line1 = sorted_line1[:data_count_limit]
-                            self.log_to_box(f"📊 [라인1] 전체 {len(line1_groups)}개 중 최신 {data_count_limit}개 데이터만 이동합니다.")
+
+                            # NIR 개수 확인 및 부족 시 추가 행 포함 (라인1)
+                            if keep_n > 0:
+                                nir_count = sum(1 for g in groups_to_move_line1 if g.get("NIR"))
+                                if nir_count < keep_n and len(sorted_line1) > data_count_limit:
+                                    additional_groups = []
+                                    for g in sorted_line1[data_count_limit:]:
+                                        if g.get("NIR"):
+                                            additional_groups.append(g)
+                                            nir_count += 1
+                                            if nir_count >= keep_n:
+                                                break
+                                    if additional_groups:
+                                        groups_to_move_line1.extend(additional_groups)
+                                        self.log_to_box(f"📊 [라인1] NIR {keep_n}개 확보를 위해 {len(additional_groups)}개 행 추가 (총 {len(groups_to_move_line1)}개)")
+
+                            self.log_to_box(f"📊 [라인1] 전체 {len(line1_groups)}개 중 {len(groups_to_move_line1)}개 데이터를 이동합니다.")
 
                         if len(line2_groups) > data_count_limit:
                             sorted_line2 = sorted(line2_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
                             groups_to_move_line2 = sorted_line2[:data_count_limit]
-                            self.log_to_box(f"📊 [라인2] 전체 {len(line2_groups)}개 중 최신 {data_count_limit}개 데이터만 이동합니다.")
+
+                            # NIR 개수 확인 및 부족 시 추가 행 포함 (라인2)
+                            if keep_n > 0:
+                                nir_count = sum(1 for g in groups_to_move_line2 if g.get("NIR"))
+                                if nir_count < keep_n and len(sorted_line2) > data_count_limit:
+                                    additional_groups = []
+                                    for g in sorted_line2[data_count_limit:]:
+                                        if g.get("NIR"):
+                                            additional_groups.append(g)
+                                            nir_count += 1
+                                            if nir_count >= keep_n:
+                                                break
+                                    if additional_groups:
+                                        groups_to_move_line2.extend(additional_groups)
+                                        self.log_to_box(f"📊 [라인2] NIR {keep_n}개 확보를 위해 {len(additional_groups)}개 행 추가 (총 {len(groups_to_move_line2)}개)")
+
+                            self.log_to_box(f"📊 [라인2] 전체 {len(line2_groups)}개 중 {len(groups_to_move_line2)}개 데이터를 이동합니다.")
 
                     msg = f"정말로 이동하시겠습니까?\n\n"
                     msg += f"[라인1 → {subject}]\n"
                     if data_count_limit > 0:
-                        msg += f"  데이터: {len(groups_to_move_line1)}개 (제한: {data_count_limit}개)\n"
+                        msg += f"  데이터: {len(groups_to_move_line1)}개 (기본 제한: {data_count_limit}개)\n"
                     else:
                         msg += f"  데이터: {len(groups_to_move_line1)}개 (전체)\n"
                     msg += f"\n[라인2 → {subject2}]\n"
                     if data_count_limit > 0:
-                        msg += f"  데이터: {len(groups_to_move_line2)}개 (제한: {data_count_limit}개)\n"
+                        msg += f"  데이터: {len(groups_to_move_line2)}개 (기본 제한: {data_count_limit}개)\n"
                     else:
                         msg += f"  데이터: {len(groups_to_move_line2)}개 (전체)\n"
                     msg += f"\nNIR: {keep_n}개 만 이동" if keep_n > 0 else "\nNIR: 전체 이동"
@@ -2102,11 +2226,28 @@ class MainWindow(QMainWindow):
                     if data_count_limit > 0 and len(self.groups) > data_count_limit:
                         sorted_groups = sorted(self.groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
                         groups_to_move = sorted_groups[:data_count_limit]
-                        self.log_to_box(f"📊 전체 {len(self.groups)}개 중 최신 {data_count_limit}개 데이터만 이동합니다.")
+
+                        # NIR 개수 확인 및 부족 시 추가 행 포함
+                        if keep_n > 0:
+                            nir_count = sum(1 for g in groups_to_move if g.get("NIR"))
+                            if nir_count < keep_n and len(sorted_groups) > data_count_limit:
+                                # 추가로 NIR 있는 행 찾기
+                                additional_groups = []
+                                for g in sorted_groups[data_count_limit:]:
+                                    if g.get("NIR"):
+                                        additional_groups.append(g)
+                                        nir_count += 1
+                                        if nir_count >= keep_n:
+                                            break
+                                if additional_groups:
+                                    groups_to_move.extend(additional_groups)
+                                    self.log_to_box(f"📊 NIR {keep_n}개 확보를 위해 {len(additional_groups)}개 행 추가 (총 {len(groups_to_move)}개)")
+
+                        self.log_to_box(f"📊 전체 {len(self.groups)}개 중 {len(groups_to_move)}개 데이터를 이동합니다.")
 
                     msg = f"정말로 이동하시겠습니까?\n"
                     if data_count_limit > 0:
-                        msg += f"데이터: {len(groups_to_move)}개 (제한: {data_count_limit}개)\n"
+                        msg += f"데이터: {len(groups_to_move)}개 (기본 제한: {data_count_limit}개)\n"
                     else:
                         msg += f"데이터: {len(groups_to_move)}개 (전체)\n"
                     msg += f"NIR: {keep_n}개 만 이동" if keep_n > 0 else "NIR: 전체 이동"

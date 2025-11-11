@@ -53,12 +53,12 @@ class FileMatcher(QObject):
                     imgs = sorted([os.path.join(folder_path, f)
                                    for f in os.listdir(folder_path)
                                    if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))])
-                    if imgs:
-                        self.unmatched_files[folder_type][folder_name] = {
-                            'dt': dt,
-                            'yml_dt': get_timestamp_from_yml(folder_path),
-                            'files': {os.path.basename(p): {"absolute_path": p} for p in imgs[:1]}
-                        }
+                    # 이미지가 없는 경우에도 폴더 추가 (빈 폴더 감지용)
+                    self.unmatched_files[folder_type][folder_name] = {
+                        'dt': dt,
+                        'yml_dt': get_timestamp_from_yml(folder_path),
+                        'files': {os.path.basename(p): {"absolute_path": p} for p in imgs[:1]} if imgs else {}
+                    }
 
         elif folder_type in ("cam1", "cam2", "cam3", "cam4", "cam5", "cam6"):
             folder_path = os.path.dirname(file_path)
@@ -166,12 +166,12 @@ class FileMatcher(QObject):
                         imgs = sorted([os.path.join(folder_path, f)
                                        for f in os.listdir(folder_path)
                                        if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp'))])
-                        if imgs:
-                            unmatched[normal_key][folder_name] = {
-                                'dt': dt,
-                                'yml_dt': get_timestamp_from_yml(folder_path),
-                                'files': {os.path.basename(p): {"absolute_path": p} for p in imgs[:1]}
-                            }
+                        # 이미지가 없는 경우에도 폴더 추가 (빈 폴더 감지용)
+                        unmatched[normal_key][folder_name] = {
+                            'dt': dt,
+                            'yml_dt': get_timestamp_from_yml(folder_path),
+                            'files': {os.path.basename(p): {"absolute_path": p} for p in imgs[:1]} if imgs else {}
+                        }
 
         # NIR 폴더 스캔 (nir, nir2)
         for nir_key in ('nir', 'nir2'):

@@ -371,6 +371,17 @@ class SettingDialog(QDialog):
         )
         other_layout.addRow("", self.use_folder_suffix)
 
+        # NIR 매칭 시간 차이 설정
+        self.nir_match_time_diff = QLineEdit()
+        self.nir_match_time_diff.setValidator(QDoubleValidator(0.0, 60.0, 2, self))
+        self.nir_match_time_diff.setPlaceholderText("초 단위 (예: 1.0)")
+        self.nir_match_time_diff.setToolTip(
+            "NIR과 일반카메라 간 최대 허용 시간 차이 (초 단위)\n"
+            "NIR 시간과 같거나 이 값 이내로 늦은 일반카메라만 매칭됩니다.\n"
+            "예) 1.0초: NIR 시간 이후 1초 이내의 일반카메라만 매칭"
+        )
+        other_layout.addRow("NIR 매칭 시간 차이(초)", self.nir_match_time_diff)
+
         layout.addLayout(other_layout)
 
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -425,6 +436,7 @@ class SettingDialog(QDialog):
             "line_mode": self.line_mode_combo.currentText(),
             "legacy_ui_mode": self.legacy_ui_mode.isChecked(),
             "use_folder_suffix": self.use_folder_suffix.isChecked(),
+            "nir_match_time_diff": float(self.nir_match_time_diff.text() or 1.0),
         }
 
 
@@ -627,8 +639,12 @@ class MonitorRow(QWidget):
     # 행 전체 선택 토글
     def _on_row_select_changed(self, state):
         checked = state == Qt.CheckState.Checked.value
-        for chk in (self.chk_norm, self.chk_nir, self.chk_cam1, self.chk_cam2, self.chk_cam3):
-            chk.setChecked(checked)
+        # 행 전체 체크박스가 체크될 때만 개별 체크박스도 체크
+        # 체크 해제할 때는 개별 체크박스를 건드리지 않음
+        # (개별 항목을 수동으로 선택/해제할 수 있도록 독립성 보장)
+        if checked:
+            for chk in (self.chk_norm, self.chk_nir, self.chk_cam1, self.chk_cam2, self.chk_cam3):
+                chk.setChecked(True)
 
     # 삭제 요청
     def _on_delete_clicked(self):

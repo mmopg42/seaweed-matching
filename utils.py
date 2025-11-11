@@ -97,6 +97,20 @@ def get_timestamp_from_yml(folder):
         print(f"[YML PARSE FAIL] {yml_path}: {e}")
     return None
 
+def normalize_path(path):
+    """
+    경로를 정규화합니다 (Windows 경로 문제 해결).
+
+    Args:
+        path (str): 파일 경로 문자열
+
+    Returns:
+        str: 정규화된 경로 (소문자, 통일된 구분자)
+    """
+    if path:
+        return os.path.normpath(path).lower()
+    return path
+
 
 class LruPixmapCache:
     """
@@ -113,6 +127,18 @@ class LruPixmapCache:
         self.cache = OrderedDict()
         self.max_items = max_items
 
+    def _normalize_key(self, key):
+        """
+        경로 키를 정규화합니다 (Windows 경로 문제 해결).
+
+        Args:
+            key: 파일 경로 문자열
+
+        Returns:
+            str: 정규화된 경로 (소문자, 통일된 구분자)
+        """
+        return normalize_path(key)
+
     def get(self, key):
         """
         캐시에서 항목을 가져옵니다. 항목에 접근하면 가장 최근에 사용된 것으로 갱신됩니다.
@@ -123,9 +149,10 @@ class LruPixmapCache:
         Returns:
             QPixmap or None: 캐시에 저장된 QPixmap 객체 또는 없을 경우 None.
         """
-        if key in self.cache:
-            self.cache.move_to_end(key)
-            return self.cache[key]
+        normalized_key = self._normalize_key(key)
+        if normalized_key in self.cache:
+            self.cache.move_to_end(normalized_key)
+            return self.cache[normalized_key]
         return None
 
     def set(self, key, value):
@@ -136,7 +163,8 @@ class LruPixmapCache:
             key: 캐시 키.
             value (QPixmap): 캐시에 저장할 QPixmap 객체.
         """
-        self.cache[key] = value
-        self.cache.move_to_end(key)
+        normalized_key = self._normalize_key(key)
+        self.cache[normalized_key] = value
+        self.cache.move_to_end(normalized_key)
         if len(self.cache) > self.max_items:
             self.cache.popitem(last=False)

@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 from typing import Tuple, List
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from PyQt6.QtWidgets import QMessageBox
 
@@ -332,25 +333,39 @@ def delete_one_row(main, row_idx: int, *, skip_confirm: bool = False, subject: s
             seen.add(key)
             unique_items.append((p, r))
 
+    # 병렬 삭제 처리
     deleted_count = 0
-    for path, role in unique_items:
-        if path.exists():
-            if move_to_delete_bucket(main, path, group_has_nir=group_has_nir, role=role, subject=subject):
-                deleted_count += 1
-                # 모델 업데이트
-                try:
-                    if path.is_dir():
-                        main.update_group_on_delete(path.name)
-                    else:
-                        if role == "nir":
-                            main.file_matcher.remove_from_unmatched(str(path), 'nir')
-                        else:
-                            main.file_matcher.remove_from_unmatched(str(path), 'normal')
-                        main.update_group_on_delete(path.name)
-                except Exception as e:
-                    main.log_to_box(f"[경고] 삭제 후 데이터 모델 업데이트 실패: {path.name} ({e})")
-        else:
+    max_workers = min(8, len(unique_items) or 1)
+
+    def _move_single_item(item_info):
+        """단일 파일/폴더를 삭제 폴더로 이동"""
+        path, role = item_info
+        if not path.exists():
             main.log_to_box(f"[경고] 파일이 이미 없음: {path.name}")
+            return False
+
+        success = move_to_delete_bucket(main, path, group_has_nir=group_has_nir, role=role, subject=subject)
+        if success:
+            # 모델 업데이트
+            try:
+                if path.is_dir():
+                    main.update_group_on_delete(path.name)
+                else:
+                    if role == "nir":
+                        main.file_matcher.remove_from_unmatched(str(path), 'nir')
+                    else:
+                        main.file_matcher.remove_from_unmatched(str(path), 'normal')
+                    main.update_group_on_delete(path.name)
+            except Exception as e:
+                main.log_to_box(f"[경고] 삭제 후 데이터 모델 업데이트 실패: {path.name} ({e})")
+        return success
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_move_single_item, item): item for item in unique_items}
+        for future in as_completed(futures):
+            if future.result():
+                deleted_count += 1
+
     return deleted_count
 
 
@@ -478,11 +493,13 @@ def delete_selected_rows(main) -> None:
     if subject is None:
         return
 
-    # ⑥ 실제 이동 (개별 confirm은 건너뜀, subject 전달, widget 전달)
+    # ⑥ 실제 이동 (병렬 처리)
     total_deleted = 0
     line1_count = 0
     line2_count = 0
 
+    # 병렬 삭제를 위한 모든 항목 수집
+    all_delete_tasks = []
     for display_idx, widget in indices_to_delete:
         # 라인 정보 확인
         group = main.display_items[display_idx]
@@ -492,11 +509,50 @@ def delete_selected_rows(main) -> None:
         else:
             line2_count += 1
 
-        # delete_one_row에서 _collect_paths_for_row 호출 시 widget 전달 필요
-        # 임시로 main에 _temp_row_widget 저장
-        main._temp_row_widget = widget
-        total_deleted += delete_one_row(main, display_idx, skip_confirm=True, subject=subject)
-        main._temp_row_widget = None
+        # 삭제할 항목 수집
+        items, _, group_has_nir, _ = _collect_paths_for_row(main, display_idx, row_widget=widget)
+
+        # 중복 제거
+        unique_items = []
+        seen = set()
+        for p, r in items:
+            key = (str(p.resolve()) if p.exists() else str(p), r)
+            if key not in seen:
+                seen.add(key)
+                unique_items.append((p, r, group_has_nir))
+
+        all_delete_tasks.extend(unique_items)
+
+    # 병렬로 삭제 실행
+    max_workers = min(8, len(all_delete_tasks) or 1)
+
+    def _move_item_task(task_info):
+        """단일 항목 삭제 작업"""
+        path, role, group_has_nir = task_info
+        if not path.exists():
+            main.log_to_box(f"[경고] 파일이 이미 없음: {path.name}")
+            return False
+
+        success = move_to_delete_bucket(main, path, group_has_nir=group_has_nir, role=role, subject=subject)
+        if success:
+            try:
+                if path.is_dir():
+                    main.update_group_on_delete(path.name)
+                else:
+                    if role in ("nir", "nir2"):
+                        main.file_matcher.remove_from_unmatched(str(path), 'nir')
+                    else:
+                        main.file_matcher.remove_from_unmatched(str(path), 'normal')
+                    main.update_group_on_delete(path.name)
+            except Exception as e:
+                main.log_to_box(f"[경고] 삭제 후 데이터 모델 업데이트 실패: {path.name} ({e})")
+        return success
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_move_item_task, task): task for task in all_delete_tasks}
+        for future in as_completed(futures):
+            if future.result():
+                total_deleted += 1
 
     # ✅ 모든 행의 선택 해제
     set_select_all(main, False)
