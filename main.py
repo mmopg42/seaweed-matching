@@ -54,10 +54,16 @@ class MonitorController(QMainWindow):
         main_label.setMinimumWidth(120)
         main_group.addWidget(main_label)
 
-        self.main_start_btn = QPushButton("실행")
+        self.main_start_btn = QPushButton("▶ 실행")
         self.main_start_btn.setMinimumHeight(40)
         self.main_start_btn.clicked.connect(self.start_main_monitoring)
         main_group.addWidget(self.main_start_btn)
+
+        self.main_stop_btn = QPushButton("■ 종료")
+        self.main_stop_btn.setMinimumHeight(40)
+        self.main_stop_btn.clicked.connect(self.stop_main_monitoring)
+        self.main_stop_btn.setEnabled(False)
+        main_group.addWidget(self.main_stop_btn)
 
         self.main_status_label = QLabel("상태: 중지됨")
         self.main_status_label.setStyleSheet("color: gray; font-weight: bold;")
@@ -73,10 +79,16 @@ class MonitorController(QMainWindow):
         nir_label.setMinimumWidth(120)
         nir_group.addWidget(nir_label)
 
-        self.nir_start_btn = QPushButton("실행")
+        self.nir_start_btn = QPushButton("▶ 실행")
         self.nir_start_btn.setMinimumHeight(40)
         self.nir_start_btn.clicked.connect(self.start_nir_monitoring)
         nir_group.addWidget(self.nir_start_btn)
+
+        self.nir_stop_btn = QPushButton("■ 종료")
+        self.nir_stop_btn.setMinimumHeight(40)
+        self.nir_stop_btn.clicked.connect(self.stop_nir_monitoring)
+        self.nir_stop_btn.setEnabled(False)
+        nir_group.addWidget(self.nir_stop_btn)
 
         self.nir_status_label = QLabel("상태: 중지됨")
         self.nir_status_label.setStyleSheet("color: gray; font-weight: bold;")
@@ -102,11 +114,21 @@ class MonitorController(QMainWindow):
             from monitoring_app import MainWindow
 
             self.main_window = MainWindow()
-            self.main_window.destroyed.connect(self.on_main_closed)
+            # destroyed 대신 closed 시그널을 사용 (closeEvent 후 발생)
+            self.main_window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+
+            # closeEvent를 오버라이드하여 닫힐 때 콜백 호출
+            original_close = self.main_window.closeEvent
+            def custom_close(event):
+                original_close(event)
+                self.on_main_closed()
+            self.main_window.closeEvent = custom_close
+
             self.main_window.show()
 
             # UI 업데이트
             self.main_start_btn.setEnabled(False)
+            self.main_stop_btn.setEnabled(True)
             self.main_status_label.setText("상태: 실행 중")
             self.main_status_label.setStyleSheet("color: green; font-weight: bold;")
 
@@ -115,10 +137,17 @@ class MonitorController(QMainWindow):
             self.main_status_label.setStyleSheet("color: red; font-weight: bold;")
             print(f"[ERROR] 메인 모니터링 시작 실패: {e}")
 
+    def stop_main_monitoring(self):
+        """메인 모니터링 중지"""
+        if self.main_window is not None:
+            self.main_window.close()
+            self.main_window = None
+
     def on_main_closed(self):
         """메인 창이 닫혔을 때"""
         self.main_window = None
         self.main_start_btn.setEnabled(True)
+        self.main_stop_btn.setEnabled(False)
         self.main_status_label.setText("상태: 중지됨")
         self.main_status_label.setStyleSheet("color: gray; font-weight: bold;")
 
@@ -136,11 +165,21 @@ class MonitorController(QMainWindow):
             from nir_app import NIRMonitorApp
 
             self.nir_window = NIRMonitorApp()
-            self.nir_window.destroyed.connect(self.on_nir_closed)
+            # destroyed 대신 closeEvent를 오버라이드
+            self.nir_window.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+
+            # closeEvent를 오버라이드하여 닫힐 때 콜백 호출
+            original_close = self.nir_window.closeEvent
+            def custom_close(event):
+                original_close(event)
+                self.on_nir_closed()
+            self.nir_window.closeEvent = custom_close
+
             self.nir_window.show()
 
             # UI 업데이트
             self.nir_start_btn.setEnabled(False)
+            self.nir_stop_btn.setEnabled(True)
             self.nir_status_label.setText("상태: 실행 중")
             self.nir_status_label.setStyleSheet("color: green; font-weight: bold;")
 
@@ -149,10 +188,17 @@ class MonitorController(QMainWindow):
             self.nir_status_label.setStyleSheet("color: red; font-weight: bold;")
             print(f"[ERROR] NIR 모니터링 시작 실패: {e}")
 
+    def stop_nir_monitoring(self):
+        """NIR 모니터링 중지"""
+        if self.nir_window is not None:
+            self.nir_window.close()
+            self.nir_window = None
+
     def on_nir_closed(self):
         """NIR 창이 닫혔을 때"""
         self.nir_window = None
         self.nir_start_btn.setEnabled(True)
+        self.nir_stop_btn.setEnabled(False)
         self.nir_status_label.setText("상태: 중지됨")
         self.nir_status_label.setStyleSheet("color: gray; font-weight: bold;")
 

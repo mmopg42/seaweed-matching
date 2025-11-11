@@ -10,10 +10,11 @@
 !*.py
 !app_icon.ico
 
-*.exe
 
 # uv 가상환경 포함 (기본 위치가 .venv 인 경우)
 !.venv/
 !.venv/**
+
+*.exe
 
 test.py
