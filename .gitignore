@@ -1,20 +1,19 @@
 # 기본: 전부 무시
 *
 
-# 폴더 탐색 허용(화이트리스트가 폴더 안으로 내려가게)
+# 폴더 탐색 허용
 !*/
 
-# .gitignore는 당연히 추적
+# 항상 추적
 !.gitignore
-
-# Python 소스만 허용
+!requirements.txt
 !*.py
-
-# 아이콘 폴더만 허용(그 밖의 이미지/파일은 계속 무시)
 !app_icon.ico
 
-!requirements.txt
+*.exe
 
-!AI 데이터 퓨전 및 통합 관제 솔루션 (Model 이비기술-MMS v2.1.exe
+# uv 가상환경 포함 (기본 위치가 .venv 인 경우)
+!.venv/
+!.venv/**
 
 test.py
