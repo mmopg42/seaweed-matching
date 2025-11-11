@@ -365,10 +365,11 @@ class FileOperationWorker(QThread):
             parent_dirs.add(os.path.dirname(d["dst_dir"]))
         for f in file_ops:
             file_dest_dirs.add(os.path.dirname(f["dst"]))
-        for d in sorted(parent_dirs):
-            self._ensure_dir(d)
-        for d in sorted(file_dest_dirs):
-            self._ensure_dir(d)
+
+        # 병렬로 디렉터리 생성
+        all_dirs = sorted(parent_dirs | file_dest_dirs)
+        with ThreadPoolExecutor(max_workers=self._max_workers) as executor:
+            list(executor.map(self._ensure_dir, all_dirs))
 
         # === 3) 파일 작업 그룹화: (src_dir, dst_dir) 페어 버킷 (배치 실행용) ===
         file_pair_map: dict[tuple[str, str], list[dict]] = {}
@@ -381,121 +382,106 @@ class FileOperationWorker(QThread):
         dirs_ok = dirs_fail = files_ok = files_fail = 0
         cancelled = False
 
-        # 4-1) 디렉터리 작업 실행 (순차 처리)
+        # 4-1) 디렉터리 충돌 사전 검사 (배치 최적화)
         for d in dir_ops:
-            if cancelled:
-                break
-
-            src_folder = d["src_dir"]
             dst_folder = d["dst_dir"]
-
-            # 목적지 폴더가 이미 있으면 사용자 확인(병합 예정)
+            src_folder = d["src_dir"]
             if os.path.exists(dst_folder):
                 if not self._check_conflict(dst_folder, src_hint=src_folder):
                     cancelled = True
                     break
 
-            try:
-                if self.mode == "복사":
-                    ok = self._copy_dir_native(src_folder, dst_folder)
-                    if ok:
+        # 4-2) 디렉터리 작업 병렬 실행
+        if not cancelled:
+            def _process_dir(d):
+                src_folder = d["src_dir"]
+                dst_folder = d["dst_dir"]
+
+                try:
+                    if self.mode == "복사":
+                        return self._copy_dir_native(src_folder, dst_folder)
+                    else:
+                        # 이동 모드
+                        parent = os.path.dirname(dst_folder)
+                        same = self._same_device(src_folder, parent)
+                        if same and not os.path.exists(dst_folder):
+                            # 같은 드라이브이고 목적지가 없으면 빠른 rename
+                            os.replace(src_folder, dst_folder)
+                            self.moved_dirs.append((dst_folder, src_folder))
+                            return True
+                        else:
+                            # 다른 드라이브이거나 병합이 필요한 경우
+                            return self._move_dir_native(src_folder, dst_folder)
+                except Exception as e:
+                    self.log_message.emit(f"[FAIL] 폴더 처리 예외: {src_folder} → {e}")
+                    return False
+
+            with ThreadPoolExecutor(max_workers=self._max_workers) as executor:
+                futures = {executor.submit(_process_dir, d): d for d in dir_ops}
+                for future in as_completed(futures):
+                    if future.result():
                         dirs_ok += 1
                     else:
                         dirs_fail += 1
-                else:
-                    # 이동 모드
-                    parent = os.path.dirname(dst_folder)
-                    same = self._same_device(src_folder, parent)
-                    if same and not os.path.exists(dst_folder):
-                        # 같은 드라이브이고 목적지가 없으면 빠른 rename
-                        os.replace(src_folder, dst_folder)
-                        self.moved_dirs.append((dst_folder, src_folder))
-                        dirs_ok += 1
-                    else:
-                        # 다른 드라이브이거나 병합이 필요한 경우
-                        ok = self._move_dir_native(src_folder, dst_folder)
-                        if ok:
-                            dirs_ok += 1
-                        else:
-                            dirs_fail += 1
 
-            except Exception as e:
-                dirs_fail += 1
-                self.log_message.emit(f"[FAIL] 폴더 처리 예외: {src_folder} → {e}")
-
-        # 4-2) 파일 작업 실행: (src_dir, dst_dir) 단위로 배치 처리
+        # 4-3) 파일 작업 충돌 사전 검사 (배치 최적화)
         if not cancelled:
+            conflict_checks = []
             for (sdir, ddir), entries in file_pair_map.items():
-                if cancelled:
-                    break
-
-                # 충돌 사전 처리
                 for fop in entries:
-                    dst = fop["dst"]
-                    src = fop["src"]
-                    if os.path.exists(dst):
-                        if not self._check_conflict(dst, src_hint=src):
-                            cancelled = True
-                            break
-                if cancelled:
+                    if os.path.exists(fop["dst"]):
+                        conflict_checks.append((fop["dst"], fop["src"]))
+
+            # 충돌 검사 병렬 실행
+            for dst, src in conflict_checks:
+                if not self._check_conflict(dst, src_hint=src):
+                    cancelled = True
                     break
 
-                # ✅ 배치 시작 로그 (폴더 이름 표시)
+        # 4-4) 파일 작업 병렬 실행
+        if not cancelled:
+            def _process_file_batch(batch_info):
+                """배치 단위로 파일 처리"""
+                (sdir, ddir), entries = batch_info
                 folder_name = os.path.basename(ddir)
                 total_in_batch = len(entries)
-                self.log_message.emit(f"📂 [{folder_name}] 파일 처리 시작... (총 {total_in_batch}개)")
+                batch_ok = 0
+                batch_fail = 0
 
-                try:
-                    batch_success = 0  # 이번 배치에서 성공한 파일 수
+                same = self._same_device(sdir, ddir)
 
-                    if self.mode == "복사":
-                        # ✅ 개별 파일 처리 시 진행률 표시
-                        for idx, e in enumerate(entries, 1):
-                            try:
-                                shutil.copy2(e["src"], e["dst"])
-                                files_ok += 1
-                                batch_success += 1
-                            except Exception as err:
-                                files_fail += 1
-                                self.log_message.emit(f"[FAIL] 파일 복사 실패: {os.path.basename(e['src'])} ({err})")
-                            if idx % 10 == 0 or idx == total_in_batch:
-                                self.log_message.emit(f"  [{folder_name}] {idx}/{total_in_batch} 복사 완료")
-                    else:  # 이동
-                        same = self._same_device(sdir, ddir)
-                        if same:
-                            # ✅ 같은 드라이브 → os.replace로 즉시 이동 (진행률 표시)
-                            for idx, e in enumerate(entries, 1):
-                                try:
-                                    os.replace(e["src"], e["dst"])
-                                    self.moved_files.append((e["dst"], e["src"]))
-                                    files_ok += 1
-                                    batch_success += 1
-                                except Exception as err:
-                                    files_fail += 1
-                                    self.log_message.emit(f"[FAIL] 파일 이동 실패: {os.path.basename(e['src'])} ({err})")
-                                if idx % 10 == 0 or idx == total_in_batch:
-                                    self.log_message.emit(f"  [{folder_name}] {idx}/{total_in_batch} 이동 완료")
-                        else:
-                            # ✅ 다른 드라이브: 개별 처리 (진행률 표시)
-                            for idx, e in enumerate(entries, 1):
-                                try:
-                                    shutil.move(e["src"], e["dst"])
-                                    self.moved_files.append((e["dst"], e["src"]))
-                                    files_ok += 1
-                                    batch_success += 1
-                                except Exception as err:
-                                    files_fail += 1
-                                    self.log_message.emit(f"[FAIL] 파일 이동 실패: {os.path.basename(e['src'])} ({err})")
-                                if idx % 10 == 0 or idx == total_in_batch:
-                                    self.log_message.emit(f"  [{folder_name}] {idx}/{total_in_batch} 이동 완료")
+                for idx, e in enumerate(entries, 1):
+                    try:
+                        if self.mode == "복사":
+                            shutil.copy2(e["src"], e["dst"])
+                            batch_ok += 1
+                        else:  # 이동
+                            if same:
+                                os.replace(e["src"], e["dst"])
+                            else:
+                                shutil.move(e["src"], e["dst"])
+                            self.moved_files.append((e["dst"], e["src"]))
+                            batch_ok += 1
+                    except Exception as err:
+                        batch_fail += 1
+                        self.log_message.emit(f"[FAIL] 파일 처리 실패: {os.path.basename(e['src'])} ({err})")
 
-                    # ✅ 배치 완료 로그
-                    if batch_success > 0:
-                        self.log_message.emit(f"✅ [{folder_name}] 완료: {batch_success}/{total_in_batch}개 파일 처리됨")
+                    # 로그 빈도 조절: 100개 단위 또는 완료 시
+                    if idx % 100 == 0 or idx == total_in_batch:
+                        action = "복사" if self.mode == "복사" else "이동"
+                        self.log_message.emit(f"  [{folder_name}] {idx}/{total_in_batch} {action} 완료")
 
-                except Exception as e:
-                    files_fail += len(entries)
-                    self.log_message.emit(f"[FAIL] 파일 처리 예외(배치): {sdir} → {ddir} : {e}")
+                return batch_ok, batch_fail, folder_name, total_in_batch
+
+            # 병렬 처리로 파일 배치 실행
+            with ThreadPoolExecutor(max_workers=self._max_workers) as executor:
+                futures = {executor.submit(_process_file_batch, item): item for item in file_pair_map.items()}
+                for future in as_completed(futures):
+                    batch_ok, batch_fail, folder_name, total = future.result()
+                    files_ok += batch_ok
+                    files_fail += batch_fail
+                    if batch_ok > 0:
+                        self.log_message.emit(f"✅ [{folder_name}] 완료: {batch_ok}/{total}개 파일 처리됨")
 
         # 요약/로그
         total_ok = dirs_ok + files_ok

@@ -212,7 +212,7 @@ class ImageLoaderWorker(QThread):
                     image_path, request_id = futures.pop(future)
                     try:
                         pixmap = future.result()
-                        if pixmap:
+                        if pixmap and not pixmap.isNull():
                             self.image_ready.emit(image_path, pixmap, request_id)
                     except Exception as e:
                         error_msg = f"이미지 로딩 실패: {os.path.basename(image_path)} - {e}"

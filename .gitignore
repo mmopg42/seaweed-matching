@@ -1,0 +1,19 @@
+# 기본: 전부 무시
+*
+
+# 폴더 탐색 허용(화이트리스트가 폴더 안으로 내려가게)
+!*/
+
+# .gitignore는 당연히 추적
+!.gitignore
+
+# Python 소스만 허용
+!*.py
+
+# 아이콘 폴더만 허용(그 밖의 이미지/파일은 계속 무시)
+!app_icon.ico
+
+!requirements.txt
+
+test.py
+nir_spectrum_monitor.py
