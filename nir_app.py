@@ -58,8 +58,8 @@ class NIRMonitorThread(QThread):
 
     def stop(self):
         """모니터링 중지"""
-        if self.monitor and self.monitor.observer:
-            self.monitor.observer.stop()
+        if self.monitor:
+            self.monitor.stop()  # NIRSpectrumMonitor의 stop() 메서드 호출
             self.running = False
 
 

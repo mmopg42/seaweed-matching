@@ -163,6 +163,11 @@ class MainWindow(QMainWindow):
         self.image_refresh_timer.timeout.connect(self.refresh_visible_images)
         self.full_scan_done = False  # 풀스캔 완료 플래그
 
+        # ✅ Watchdog 상태 모니터링 타이머 (30초마다 확인)
+        self.watchdog_monitor_timer = QTimer(self)
+        self.watchdog_monitor_timer.timeout.connect(self.check_watchdog_status)
+        self.watchdog_monitor_timer.setInterval(30000)  # 30초
+
         # ✅ 실시간 파일 개수 카운트 워커 (별도 스레드, UI 렉과 완전 독립)
         self.file_count_worker = FileCountWorker()
         self.file_count_worker.update_settings(self.settings)
@@ -1132,19 +1137,24 @@ class MainWindow(QMainWindow):
         self.full_scan_done = False
         self.full_scan_timer.start(10000)  # 10초 후 풀스캔
         self.log_to_box("[INFO] 10초 후 1회 전체 스캔이 실행됩니다.")
-    
+
+        # ✅ Watchdog 상태 모니터링 시작
+        self.watchdog_monitor_timer.start()
+        self.log_to_box("[INFO] Watchdog 상태 모니터링 시작 (30초마다 자동 확인)")
+
     def stop_watch(self):
         """감시 중지 (Stop 버튼)"""
         if not self.is_watching:
             return  # 감시 중이 아니면 무시
-        
+
         self.is_watching = False
         self.btn_run.setEnabled(True)
         self.btn_stop.setEnabled(False)
-        
+
         self.log_to_box("[INFO] 감시가 중지되었습니다.")
         self.stop_watchdog()
         self.full_scan_timer.stop()  # 풀스캔 타이머도 중지
+        self.watchdog_monitor_timer.stop()  # ✅ Watchdog 모니터링 중지
         # ✅ 파일 카운트 워커는 항상 실행 (중지하지 않음)
 
     def toggle_watch(self):
@@ -1530,21 +1540,46 @@ class MainWindow(QMainWindow):
 
     def start_watchdog(self):
         self.stop_watchdog()
-        self.observer = Observer()
-        for folder_type in ["normal", "normal2", "nir", "nir2", "cam1", "cam2", "cam3", "cam4", "cam5", "cam6"]:
-            folder = self.settings.get(folder_type, "")
-            if folder and os.path.isdir(folder):
-                handler = FolderEventHandler(self.file_event_communicator, folder_type)
-                self.observer.schedule(handler, folder, recursive=True)
-        self.observer.start()
-        self.log_to_box("[Watchdog] 폴더 감시 시작")
+        try:
+            self.observer = Observer()
+            for folder_type in ["normal", "normal2", "nir", "nir2", "cam1", "cam2", "cam3", "cam4", "cam5", "cam6"]:
+                folder = self.settings.get(folder_type, "")
+                if folder and os.path.isdir(folder):
+                    handler = FolderEventHandler(self.file_event_communicator, folder_type)
+                    self.observer.schedule(handler, folder, recursive=True)
+            self.observer.start()
+            self.log_to_box("[Watchdog] 폴더 감시 시작")
+        except Exception as e:
+            self.log_to_box(f"[ERROR] Watchdog 시작 실패: {e}")
+            print(f"[ERROR] Watchdog 시작 실패: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
 
     def stop_watchdog(self):
         if self.observer and self.observer.is_alive():
-            self.observer.stop()
-            self.observer.join()
-            self.observer = None
-            self.log_to_box("[Watchdog] 폴더 감시 종료")
+            try:
+                self.observer.stop()
+                self.observer.join(timeout=3)  # 최대 3초 대기
+                self.observer = None
+                self.log_to_box("[Watchdog] 폴더 감시 종료")
+            except Exception as e:
+                self.log_to_box(f"[WARNING] Watchdog 종료 중 오류: {e}")
+                self.observer = None
+
+    def check_watchdog_status(self):
+        """Watchdog 상태 확인 및 자동 재시작"""
+        if not self.is_watching:
+            return  # 감시 중이 아니면 체크 안 함
+
+        if self.observer is None or not self.observer.is_alive():
+            self.log_to_box("[WARNING] ⚠️ Watchdog가 중지된 것을 감지했습니다. 자동 재시작 중...")
+            print("[WARNING] Watchdog 자동 재시작", flush=True)
+            try:
+                self.start_watchdog()
+                self.log_to_box("[INFO] ✅ Watchdog가 성공적으로 재시작되었습니다.")
+            except Exception as e:
+                self.log_to_box(f"[ERROR] ❌ Watchdog 재시작 실패: {e}")
+                print(f"[ERROR] Watchdog 재시작 실패: {e}", flush=True)
 
     def restore_window_bounds(self):
         win = self.settings.get("window", {})

@@ -1,8 +1,10 @@
 # 이미지 모니터링 및 매칭 도구 의존성
 # Python 3.8 이상 권장
 
-# GUI 프레임워크
-PyQt6>=6.4.0
+# GUI 프레임워크 (QML 지원)
+PySide6>=6.4.0
+PySide6-Addons>=6.4.0  # Qt5Compat.GraphicalEffects 등
+# PyQt6>=6.4.0  # 레거시 지원용 (필요시 활성화)
 
 # 파일 시스템 모니터링
 watchdog>=2.1.0

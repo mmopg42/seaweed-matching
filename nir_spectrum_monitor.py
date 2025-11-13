@@ -10,14 +10,15 @@ from datetime import datetime
 
 class NIRSpectrumMonitor:
     def __init__(self, monitor_path, move_path):
-        self. monitor_path = monitor_path
+        self.monitor_path = monitor_path
         self.move_path = move_path
         self.observer = None
+        self.running = False
 
         os.makedirs(move_path, exist_ok=True)
 
 
-    def load_spectrum(file_path, encoding='cp949'):
+    def load_spectrum(self, file_path, encoding='cp949'):
         """가장 실용적인 버전 - 빠르고 안전함"""
         df = pd.read_csv(
             file_path,
@@ -28,11 +29,11 @@ class NIRSpectrumMonitor:
             on_bad_lines='skip',
             engine='c'
         )
-        
+
         # 숫자 아닌 값 제거
         return df.apply(pd.to_numeric, errors='coerce').dropna()
-        
-    def find_y_variation_in_x_windows(self, df, x_window=800, stride=50):
+
+    def find_y_variation_in_x_window(self, df, x_window=800, stride=50):
 
         df = df.sort_values('x').reset_index(drop=True)
         df = df[(df['x'] >= 4500) & (df['x'] <= 6500)]
@@ -125,15 +126,25 @@ class NIRSpectrumMonitor:
         self.observer = Observer()
         self.observer.schedule(handler, path=self.monitor_path, recursive=False)
         self.observer.start()
-        
+        self.running = True
+
+        print("✅ Observer 백그라운드 실행 중...", flush=True)
+
+        # 제어 가능한 루프 (렉 최소화)
         try:
-            while True:
-                time.sleep(1)
+            while self.running:
+                time.sleep(0.5)  # 짧은 간격으로 체크 (렉 감소)
         except KeyboardInterrupt:
             print("\n🛑 감시 중지 (Ctrl+C)", flush=True)
-            self.observer.stop()
 
-        self.observer.join()
+        self.stop()
+
+    def stop(self):
+        """모니터링 중지"""
+        self.running = False
+        if self.observer:
+            self.observer.stop()
+            self.observer.join(timeout=2.0)  # 최대 2초 대기
         print("NIR 모니터링 종료됨", flush=True)
 
 

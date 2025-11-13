@@ -21,8 +21,14 @@ class FolderEventHandler(FileSystemEventHandler):
         self.folder_type = folder_type
 
     def on_any_event(self, event):
-        if not event.is_directory:
-            self.comm.file_changed.emit(event.event_type, event.src_path, self.folder_type)
+        try:
+            if not event.is_directory:
+                self.comm.file_changed.emit(event.event_type, event.src_path, self.folder_type)
+        except Exception as e:
+            # 예외 발생해도 watchdog이 계속 작동하도록
+            print(f"[WARNING] FolderEventHandler 예외 발생: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
 
 
 class FileMatcher(QObject):
