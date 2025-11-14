@@ -2075,10 +2075,9 @@ class MainWindow(QMainWindow):
         return False
 
     def _is_group_fully_matched(self, group):
-        """NIR + 일반 카메라 + 모든 cam 슬롯이 채워졌는지 검사"""
+        """일반 카메라 + 모든 cam 슬롯이 채워졌는지 검사 (NIR은 선택사항)"""
         missing = []
-        if not self._has_valid_file_entry(group.get("NIR")):
-            missing.append("NIR")
+        # NIR은 완전 매칭 조건이 아님 - with/without 분류 기준으로만 사용
         if not self._has_valid_file_entry(group.get("카메라")):
             missing.append("일반카메라")
 
@@ -2121,36 +2120,30 @@ class MainWindow(QMainWindow):
             self.log_to_box(f"⚠️ {prefix}이동 제외 - {group_name}: {readable} 누락")
 
     def _ensure_minimum_nir(self, selected_groups, sorted_pool, keep_n, line_label=""):
+        """이동NIR수 제한: NIR이 있는 데이터를 keep_n개까지만 선택"""
         if keep_n <= 0:
             return selected_groups, 0, 0
 
         def has_nir(group):
             return self._has_valid_file_entry(group.get("NIR"))
 
-        filtered = [g for g in selected_groups if has_nir(g)]
-        removed = len(selected_groups) - len(filtered)
-        selected_ids = {id(g) for g in filtered}
-        added = 0
+        # NIR 있는 것과 없는 것 분리
+        with_nir = [g for g in selected_groups if has_nir(g)]
+        without_nir = [g for g in selected_groups if not has_nir(g)]
 
-        if len(filtered) < keep_n:
-            for group in sorted_pool:
-                if not has_nir(group):
-                    continue
-                if id(group) in selected_ids:
-                    continue
-                filtered.append(group)
-                selected_ids.add(id(group))
-                added += 1
-                if len(filtered) >= keep_n:
-                    break
+        # NIR이 있는 것을 keep_n개만 선택
+        limited_with_nir = with_nir[:keep_n]
+        removed_nir_count = len(with_nir) - len(limited_with_nir)
+
+        # 최종 결과: NIR keep_n개 + NIR 없는 것 전체
+        result = limited_with_nir + without_nir
 
         prefix = f"[{line_label}] " if line_label else ""
-        if removed > 0:
-            self.log_to_box(f"{prefix}keep_n 조건으로 NIR 없는 {removed}개 행 제외")
-        if added > 0:
-            self.log_to_box(f"{prefix}NIR {keep_n}개 확보를 위해 {added}개 행 추가")
+        if removed_nir_count > 0:
+            self.log_to_box(f"{prefix}이동NIR수 제한으로 NIR 있는 {removed_nir_count}개 행 제외")
 
-        return filtered, added, removed
+        # added는 항상 0 (더 이상 추가하지 않음)
+        return result, 0, removed_nir_count
 
     def execute_file_operation(self, clicked_checked=False):
         try:
@@ -2282,9 +2275,6 @@ class MainWindow(QMainWindow):
                     groups_to_process = sorted_line1[:data_count_limit]
                     limit_triggered = True
 
-                if keep_n > 0:
-                    groups_to_process, _, _ = self._ensure_minimum_nir(groups_to_process, sorted_line1, keep_n, "라인1")
-
                 if limit_triggered:
                     self.log_to_box(f"📊 [라인1] 전체 {len(line1_groups)}개 중 {len(groups_to_process)}개 데이터를 이동합니다.")
 
@@ -2315,9 +2305,6 @@ class MainWindow(QMainWindow):
                 if data_count_limit > 0 and len(sorted_line2) > data_count_limit:
                     groups_to_process = sorted_line2[:data_count_limit]
                     limit_triggered = True
-
-                if keep_n > 0:
-                    groups_to_process, _, _ = self._ensure_minimum_nir(groups_to_process, sorted_line2, keep_n, "라인2")
 
                 if limit_triggered:
                     self.log_to_box(f"📊 [라인2] 전체 {len(line2_groups)}개 중 {len(groups_to_process)}개 데이터를 이동합니다.")
@@ -2362,10 +2349,6 @@ class MainWindow(QMainWindow):
                             groups_to_move_line2 = sorted_line2[:data_count_limit]
                             log_line2 = True
 
-                    if keep_n > 0:
-                        groups_to_move_line1, _, _ = self._ensure_minimum_nir(groups_to_move_line1, sorted_line1, keep_n, "라인1")
-                        groups_to_move_line2, _, _ = self._ensure_minimum_nir(groups_to_move_line2, sorted_line2, keep_n, "라인2")
-
                     if log_line1:
                         self.log_to_box(f"📊 [라인1] 전체 {len(line1_groups)}개 중 {len(groups_to_move_line1)}개 데이터를 이동합니다.")
                     if log_line2:
@@ -2400,9 +2383,6 @@ class MainWindow(QMainWindow):
                     if data_count_limit > 0 and len(sorted_groups) > data_count_limit:
                         groups_to_move = sorted_groups[:data_count_limit]
                         log_combined = True
-
-                    if keep_n > 0:
-                        groups_to_move, _, _ = self._ensure_minimum_nir(groups_to_move, sorted_groups, keep_n, "통합")
 
                     if log_combined:
                         self.log_to_box(f"📊 전체 {len(filtered_groups)}개 중 {len(groups_to_move)}개 데이터를 이동합니다.")
