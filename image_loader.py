@@ -258,37 +258,39 @@ class ImageLoaderWorker(QThread):
         Pillow를 사용한 최적화된 썸네일 로딩
         - draft() 모드로 디코딩 단계에서 축소
         - 메모리 사용량 대폭 감소
+        - with 문으로 파일 핸들 즉시 해제
         """
         try:
-            img = Image.open(image_path)
-            
-            # EXIF orientation 처리
-            try:
-                from PIL import ImageOps
-                img = ImageOps.exif_transpose(img)
-            except Exception:
-                pass
-            
-            # RGB 모드로 변환 (RGBA, CMYK 등 처리)
-            if img.mode not in ('RGB', 'L'):
-                img = img.convert('RGB')
-            
-            # draft() 모드: 디코딩 시 축소 (JPEG에 효과적)
-            # 실제로는 thumbnail()이 더 범용적
-            img.thumbnail(size, Image.Resampling.LANCZOS)
-            
-            # PIL Image → QPixmap 변환
-            # 메모리 버퍼로 JPEG 저장 후 로드
-            from io import BytesIO
-            buffer = BytesIO()
-            img.save(buffer, format='JPEG', quality=85, optimize=True)
-            jpeg_data = buffer.getvalue()
-            
+            # with 문으로 파일 핸들 즉시 해제
+            with Image.open(image_path) as img:
+                # EXIF orientation 처리
+                try:
+                    from PIL import ImageOps
+                    img = ImageOps.exif_transpose(img)
+                except Exception:
+                    pass
+
+                # RGB 모드로 변환 (RGBA, CMYK 등 처리)
+                if img.mode not in ('RGB', 'L'):
+                    img = img.convert('RGB')
+
+                # draft() 모드: 디코딩 시 축소 (JPEG에 효과적)
+                # 실제로는 thumbnail()이 더 범용적
+                img.thumbnail(size, Image.Resampling.LANCZOS)
+
+                # PIL Image → QPixmap 변환
+                # 메모리 버퍼로 JPEG 저장 후 로드
+                from io import BytesIO
+                buffer = BytesIO()
+                img.save(buffer, format='JPEG', quality=85, optimize=True)
+                jpeg_data = buffer.getvalue()
+
+            # 여기서 이미 파일 핸들이 닫힘
             pixmap = QPixmap()
             pixmap.loadFromData(QByteArray(jpeg_data), "JPEG")
-            
+
             return pixmap
-            
+
         except Exception as e:
             print(f"[WARN] Pillow 로딩 실패, Qt 폴백: {os.path.basename(image_path)} - {e}")
             return self._load_with_qt(image_path, size)

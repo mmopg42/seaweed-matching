@@ -75,8 +75,15 @@ def find_y_variation_in_x_window(df, x_window=800, stride=50):
     return results
 
 
-def process_file(file_path, dst_dir):
+def process_file(file_path, dst_dir, log_callback=None):
     """파일 처리 (최적화 버전)"""
+    def log(msg):
+        """로그 출력 (콜백 또는 print)"""
+        if log_callback:
+            log_callback(msg)
+        else:
+            print(msg, flush=True)
+
     # 파일 정보 추출
     folder_path = os.path.dirname(file_path)
     filename = os.path.basename(file_path)
@@ -94,72 +101,85 @@ def process_file(file_path, dst_dir):
 
         if regions:
             # 김 검출 - 파일 이동
-            print(f"\n📄 {filename} 에서 적절한 y 변화 구간 발견:", flush=True)
+            log(f"\n📄 {filename} 에서 적절한 y 변화 구간 발견:")
             for i, r in enumerate(regions):
-                print(f"  ▶ 구간 {i+1}: x {r['x_start']:.1f} ~ {r['x_end']:.1f}, y 변화량 = {r['y_range']:.5f}", flush=True)
+                log(f"  ▶ 구간 {i+1}: x {r['x_start']:.1f} ~ {r['x_end']:.1f}, y 변화량 = {r['y_range']:.5f}")
 
             shutil.move(file_path, dst_dir)
-            print(f"    └ 이동됨: {filename} → {dst_dir}", flush=True)
+            log(f"    └ 이동됨: {filename} → {dst_dir}")
 
             if has_spc:
                 shutil.move(spc_path, dst_dir)
-                print(f"    └ 🗑 관련 .spc 파일도 이동됨: {os.path.basename(spc_path)}", flush=True)
+                log(f"    └ 🗑 관련 .spc 파일도 이동됨: {os.path.basename(spc_path)}")
         else:
             # 김 미검출 - 파일 삭제
-            print(f"🗑 {filename} 삭제됨 (조건 불만족)", flush=True)
+            log(f"🗑 {filename} 삭제됨 (조건 불만족)")
             os.remove(file_path)
 
             if has_spc:
                 os.remove(spc_path)
-                print(f"    └ 🗑 관련 .spc 파일도 삭제됨", flush=True)
+                log(f"    └ 🗑 관련 .spc 파일도 삭제됨")
 
     except Exception as e:
-        print(f"⚠ 오류 ({filename}): {e}", flush=True)
+        log(f"⚠ 오류 ({filename}): {e}")
 
 
 class NIRSpectrumMonitor:
-    def __init__(self, monitor_path, move_path):
+    def __init__(self, monitor_path, move_path, log_callback=None):
         self.monitor_path = monitor_path
         self.move_path = move_path
         self.observer = None
         self.running = False
+        self.log_callback = log_callback
 
         os.makedirs(move_path, exist_ok=True)
+
+    def log(self, msg):
+        """로그 출력 (콜백 또는 print)"""
+        if self.log_callback:
+            self.log_callback(msg)
+        else:
+            print(msg, flush=True)
 
     def start(self):
         """감시 시작 (Flask 버전 기반)"""
         class SpectrumHandler(FileSystemEventHandler):
-            def __init__(self, dst_dir):
+            def __init__(self, dst_dir, log_callback, parent_log_callback):
                 self.dst_dir = dst_dir
+                self.log_callback = log_callback
+                self.parent_log_callback = parent_log_callback
 
             def on_created(self, event):
                 if event.is_directory:
                     return
                 if event.src_path.lower().endswith(".txt"):
-                    print(f"\n📥 새로운 파일 발견: {event.src_path}", flush=True)
+                    if self.parent_log_callback:
+                        self.parent_log_callback(f"\n📥 새로운 파일 발견: {event.src_path}")
+                    else:
+                        print(f"\n📥 새로운 파일 발견: {event.src_path}", flush=True)
                     time.sleep(1)  # 파일 쓰기 완료 대기
-                    process_file(event.src_path, self.dst_dir)
+                    process_file(event.src_path, self.dst_dir, self.log_callback)
 
-        print("=" * 60, flush=True)
-        print(f"🔍 NIR 스펙트럼 감시 시작", flush=True)
-        print(f"   감시 폴더: {self.monitor_path}", flush=True)
-        print(f"   이동 폴더: {self.move_path}", flush=True)
-        print("=" * 60, flush=True)
+        self.log("=" * 60)
+        self.log(f"🔍 NIR 스펙트럼 감시 시작")
+        self.log(f"   감시 폴더: {self.monitor_path}")
+        self.log(f"   이동 폴더: {self.move_path}")
+        self.log("=" * 60)
 
-        handler = SpectrumHandler(self.move_path)
+        handler = SpectrumHandler(self.move_path, self.log_callback, self.log_callback)
         self.observer = Observer()
         self.observer.schedule(handler, path=self.monitor_path, recursive=False)
         self.observer.start()
         self.running = True
 
-        print("✅ Observer 백그라운드 실행 중...", flush=True)
+        self.log("✅ Observer 백그라운드 실행 중...")
 
         # GUI에서 제어 가능한 루프
         try:
             while self.running:
                 time.sleep(0.5)
         except KeyboardInterrupt:
-            print("\n🛑 감시 중지 (Ctrl+C)", flush=True)
+            self.log("\n🛑 감시 중지 (Ctrl+C)")
 
         self.stop()
 
@@ -169,7 +189,7 @@ class NIRSpectrumMonitor:
         if self.observer:
             self.observer.stop()
             self.observer.join(timeout=2.0)
-        print("NIR 모니터링 종료됨", flush=True)
+        self.log("NIR 모니터링 종료됨")
 
 
 # 스크립트로 실행될 때 자동 시작

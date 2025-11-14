@@ -32,17 +32,12 @@ class NIRMonitorThread(QThread):
     def run(self):
         """모니터링 시작"""
         try:
-            self.log_signal.emit("=" * 60)
-            self.log_signal.emit("🔍 NIR 스펙트럼 감시 시작")
-            self.log_signal.emit(f"   감시 폴더: {self.monitor_path}")
-            self.log_signal.emit(f"   이동 폴더: {self.move_path}")
-            self.log_signal.emit("=" * 60)
-
-            # sys.stdout을 가로채서 GUI로 전달
-            import io
-            from contextlib import redirect_stdout, redirect_stderr
-
-            self.monitor = NIRSpectrumMonitor(self.monitor_path, self.move_path)
+            # log_signal.emit을 콜백으로 전달
+            self.monitor = NIRSpectrumMonitor(
+                self.monitor_path,
+                self.move_path,
+                log_callback=self.log_signal.emit
+            )
             self.running = True
 
             # 모니터 시작 (무한 루프이므로 스레드에서 실행)

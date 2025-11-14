@@ -441,7 +441,7 @@ class FileOperationWorker(QThread):
         # 4-4) 파일 작업 병렬 실행
         if not cancelled:
             def _process_file_batch(batch_info):
-                """배치 단위로 파일 처리"""
+                """배치 단위로 파일 처리 (PermissionError 재시도 로직 포함)"""
                 (sdir, ddir), entries = batch_info
                 folder_name = os.path.basename(ddir)
                 total_in_batch = len(entries)
@@ -451,20 +451,38 @@ class FileOperationWorker(QThread):
                 same = self._same_device(sdir, ddir)
 
                 for idx, e in enumerate(entries, 1):
-                    try:
-                        if self.mode == "복사":
-                            shutil.copy2(e["src"], e["dst"])
-                            batch_ok += 1
-                        else:  # 이동
-                            if same:
-                                os.replace(e["src"], e["dst"])
+                    max_retries = 3
+                    retry_delay = 0.5
+
+                    for attempt in range(max_retries):
+                        try:
+                            if self.mode == "복사":
+                                shutil.copy2(e["src"], e["dst"])
+                                batch_ok += 1
+                                break
+                            else:  # 이동
+                                if same:
+                                    os.replace(e["src"], e["dst"])
+                                else:
+                                    # shutil.move는 내부적으로 복사 후 삭제
+                                    # 명시적으로 분리하여 재시도 가능하게
+                                    shutil.copy2(e["src"], e["dst"])
+                                    os.remove(e["src"])  # 복사 성공 후 삭제
+                                self.moved_files.append((e["dst"], e["src"]))
+                                batch_ok += 1
+                                break
+                        except PermissionError as err:
+                            if attempt < max_retries - 1:
+                                # 재시도
+                                time.sleep(retry_delay)
+                                continue
                             else:
-                                shutil.move(e["src"], e["dst"])
-                            self.moved_files.append((e["dst"], e["src"]))
-                            batch_ok += 1
-                    except Exception as err:
-                        batch_fail += 1
-                        self.log_message.emit(f"[FAIL] 파일 처리 실패: {os.path.basename(e['src'])} ({err})")
+                                batch_fail += 1
+                                self.log_message.emit(f"[FAIL] 파일 처리 실패 (권한 오류, {max_retries}회 재시도): {os.path.basename(e['src'])} ({err})")
+                        except Exception as err:
+                            batch_fail += 1
+                            self.log_message.emit(f"[FAIL] 파일 처리 실패: {os.path.basename(e['src'])} ({err})")
+                            break
 
                     # 로그 빈도 조절: 100개 단위 또는 완료 시
                     if idx % 100 == 0 or idx == total_in_batch:

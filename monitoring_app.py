@@ -1090,8 +1090,39 @@ class MainWindow(QMainWindow):
             self.scroll_layout.addWidget(row)
 
     def show_image_preview(self, thumb_pixmap, image_path):
-        full = QPixmap(image_path) if image_path else QPixmap()
-        pix = full if not full.isNull() else thumb_pixmap
+        """
+        미리보기 다이얼로그 표시
+        - PIL + BytesIO로 파일 핸들 즉시 해제
+        """
+        if image_path and os.path.exists(image_path):
+            # QPixmap 대신 PIL로 로드하여 즉시 닫기
+            try:
+                from PIL import Image
+                from io import BytesIO
+
+                with Image.open(image_path) as img:
+                    # EXIF 회전 처리
+                    try:
+                        from PIL import ImageOps
+                        img = ImageOps.exif_transpose(img)
+                    except Exception:
+                        pass
+
+                    # JPEG로 변환 (메모리 버퍼)
+                    buffer = BytesIO()
+                    img.save(buffer, format='JPEG', quality=95)
+                    jpeg_data = buffer.getvalue()
+
+                # 파일 핸들이 닫힌 후 QPixmap 생성
+                full = QPixmap()
+                full.loadFromData(QByteArray(jpeg_data), "JPEG")
+                pix = full if not full.isNull() else thumb_pixmap
+            except Exception as e:
+                print(f"미리보기 로드 실패: {e}")
+                pix = thumb_pixmap
+        else:
+            pix = thumb_pixmap
+
         title = os.path.basename(image_path) if image_path else "미리보기"
         dlg = PreviewDialog(pix, title=title, parent=self)
         dlg.exec()
@@ -1841,13 +1872,48 @@ class MainWindow(QMainWindow):
         """
         이미지 로딩 완료 콜백
         - 메모리 캐시에 저장
-        - 단발성 타이머로 UI 갱신 예약 (여러 이미지 동시 로드 시 한 번만 갱신)
+        - 즉시 UI 갱신 (디바운싱 제거)
         """
         self.pixmap_cache.set(image_path, pixmap)
-        
-        # 타이머가 이미 실행 중이 아니면 50ms 후 갱신 예약
-        if not self.image_refresh_timer.isActive():
-            self.image_refresh_timer.start(50)
+
+        # 즉시 갱신 (특정 이미지만 업데이트)
+        self.refresh_single_image(image_path, pixmap)
+
+    def refresh_single_image(self, image_path: str, pixmap: QPixmap):
+        """
+        특정 이미지 경로만 찾아서 즉시 업데이트
+        - 이미지 로딩 완료 시 즉시 화면에 반영
+        - 전체 레이아웃 순회 대신 해당 이미지만 빠르게 갱신
+        """
+        # 모든 탭의 레이아웃을 순회
+        all_layouts = [
+            self.scroll_layout_line1,
+            self.scroll_layout_line2,
+            self.scroll_layout_combined_line1,
+            self.scroll_layout_combined_line2
+        ]
+
+        for scroll_layout in all_layouts:
+            for i in range(scroll_layout.count()):
+                row_widget = scroll_layout.itemAt(i).widget()
+                if not isinstance(row_widget, MonitorRow):
+                    continue
+
+                # 해당 경로를 가진 위젯만 업데이트
+                image_widgets = [
+                    row_widget.nir_view,
+                    row_widget.norm_view,
+                    row_widget.cam1_view,
+                    row_widget.cam2_view,
+                    row_widget.cam3_view
+                ]
+
+                for img_widget in image_widgets:
+                    if hasattr(img_widget, '_current_path') and img_widget._current_path == image_path:
+                        # 아직 이미지가 로드되지 않은 위젯만 업데이트
+                        if img_widget._current_pixmap is None:
+                            img_widget.set_image(pixmap, image_path)
+                            return  # 찾았으면 즉시 종료
 
     def refresh_visible_images(self):
         """
@@ -1862,7 +1928,7 @@ class MainWindow(QMainWindow):
             self.scroll_layout_combined_line1,
             self.scroll_layout_combined_line2
         ]
-        
+
         updated_count = 0
         for scroll_layout in all_layouts:
             for i in range(scroll_layout.count()):
@@ -2370,6 +2436,13 @@ class MainWindow(QMainWindow):
                 else:
                     # 통합 모드: 모든 데이터를 하나의 시료명으로
                     processed_data[today_str][subject] = {"groups": groups_to_move_line1}
+
+            # ✅ 작업 시작 전: 캐시 클리어 및 가비지 컬렉션으로 파일 핸들 해제
+            self.pixmap_cache.clear()
+            import gc
+            gc.collect()
+            import time
+            time.sleep(0.1)  # 파일 시스템 동기화 대기
 
             # ✅ 작업 시작: 플래그 설정 및 버튼 비활성화
             self.is_file_operation_running = True
