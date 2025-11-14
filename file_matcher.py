@@ -22,8 +22,18 @@ class FolderEventHandler(FileSystemEventHandler):
 
     def on_any_event(self, event):
         try:
-            if not event.is_directory:
-                self.comm.file_changed.emit(event.event_type, event.src_path, self.folder_type)
+            if event.is_directory:
+                return
+
+            event_type = getattr(event, "event_type", "")
+            if event_type not in {"created", "moved"}:
+                return
+
+            path = event.src_path
+            if event_type == "moved":
+                path = getattr(event, "dest_path", path) or path
+
+            self.comm.file_changed.emit(event_type, path, self.folder_type)
         except Exception as e:
             # 예외 발생해도 watchdog이 계속 작동하도록
             print(f"[WARNING] FolderEventHandler 예외 발생: {e}", flush=True)

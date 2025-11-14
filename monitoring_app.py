@@ -1219,7 +1219,7 @@ class MainWindow(QMainWindow):
             self.event_queue.clear()
 
             for event_type, src_path, folder_type in events_to_process:
-                if event_type in ('created', 'modified'):
+                if event_type in ('created', 'modified', 'moved'):
                     if folder_type == 'nir':
                         # NIR 파일 즉시 처리 (3초 대기 없음)
                         self.file_matcher.add_nir_immediately(src_path)
@@ -2028,10 +2028,11 @@ class MainWindow(QMainWindow):
                 base = self._nir_base(fname)
                 fpath = finfo.get("absolute_path") if isinstance(finfo, dict) else None
                 buckets.setdefault(base, []).append((fname, fpath))
-            for base, files in buckets.items():
-                any_path = files[0][1] if files else None
-                dt = self._nir_dt(base, any_path)
-                bundles.append((dt, group, base, files))  # group 객체 자체를 저장
+        for base, files in buckets.items():
+            any_path = files[0][1] if files else None
+            dt = self._nir_dt(base, any_path)
+            bundles.append((dt, group, base, files))  # group 객체 자체를 저장
+
 
         if not bundles or len(bundles) <= keep_count:
             self.log_to_box(f"[NIR 정리] 묶음 수 {len(bundles)} ≤ keep {keep_count} → 삭제 없음")
@@ -2063,6 +2064,93 @@ class MainWindow(QMainWindow):
             self.process_updates()
         else:
             self.log_to_box("[NIR 정리] 삭제할 NIR이 없습니다.")
+
+    def _has_valid_file_entry(self, data_dict):
+        """dict 구조 안에 absolute_path가 있는지 확인"""
+        if not isinstance(data_dict, dict):
+            return False
+        for value in data_dict.values():
+            if isinstance(value, dict) and value.get("absolute_path"):
+                return True
+        return False
+
+    def _is_group_fully_matched(self, group):
+        """NIR + 일반 카메라 + 모든 cam 슬롯이 채워졌는지 검사"""
+        missing = []
+        if not self._has_valid_file_entry(group.get("NIR")):
+            missing.append("NIR")
+        if not self._has_valid_file_entry(group.get("카메라")):
+            missing.append("일반카메라")
+
+        line = group.get('line', 1)
+        cam_keys = ['cam1', 'cam2', 'cam3'] if line == 1 else ['cam4', 'cam5', 'cam6']
+        for key in cam_keys:
+            if not self._has_valid_file_entry(group.get(key)):
+                missing.append(key)
+
+        return len(missing) == 0, missing
+
+    def _filter_fully_matched_groups(self, groups):
+        matched = []
+        skipped = []
+        for group in groups:
+            ok, missing = self._is_group_fully_matched(group)
+            if ok:
+                matched.append(group)
+            else:
+                skipped.append((group, missing))
+        return matched, skipped
+
+    def _log_skipped_groups(self, skipped, line_label=""):
+        if not skipped:
+            return
+        label_map = {
+            "NIR": "NIR",
+            "일반카메라": "일반카메라",
+            "cam1": "Cam1",
+            "cam2": "Cam2",
+            "cam3": "Cam3",
+            "cam4": "Cam4",
+            "cam5": "Cam5",
+            "cam6": "Cam6",
+        }
+        prefix = f"[{line_label}] " if line_label else ""
+        for group, missing in skipped:
+            readable = ", ".join(label_map.get(m, m) for m in missing) if missing else "필수 데이터"
+            group_name = group.get("name", "unknown")
+            self.log_to_box(f"⚠️ {prefix}이동 제외 - {group_name}: {readable} 누락")
+
+    def _ensure_minimum_nir(self, selected_groups, sorted_pool, keep_n, line_label=""):
+        if keep_n <= 0:
+            return selected_groups, 0, 0
+
+        def has_nir(group):
+            return self._has_valid_file_entry(group.get("NIR"))
+
+        filtered = [g for g in selected_groups if has_nir(g)]
+        removed = len(selected_groups) - len(filtered)
+        selected_ids = {id(g) for g in filtered}
+        added = 0
+
+        if len(filtered) < keep_n:
+            for group in sorted_pool:
+                if not has_nir(group):
+                    continue
+                if id(group) in selected_ids:
+                    continue
+                filtered.append(group)
+                selected_ids.add(id(group))
+                added += 1
+                if len(filtered) >= keep_n:
+                    break
+
+        prefix = f"[{line_label}] " if line_label else ""
+        if removed > 0:
+            self.log_to_box(f"{prefix}keep_n 조건으로 NIR 없는 {removed}개 행 제외")
+        if added > 0:
+            self.log_to_box(f"{prefix}NIR {keep_n}개 확보를 위해 {added}개 행 추가")
+
+        return filtered, added, removed
 
     def execute_file_operation(self, clicked_checked=False):
         try:
@@ -2177,33 +2265,27 @@ class MainWindow(QMainWindow):
                 data_count_limit = 0
 
             # ✅ 탭에 따라 이동할 데이터 결정
-            line1_groups = [g for g in self.groups if g.get('line') == 1]
-            line2_groups = [g for g in self.groups if g.get('line') == 2]
+            filtered_groups, skipped_groups = self._filter_fully_matched_groups(self.groups)
+            line1_groups = [g for g in filtered_groups if g.get('line') == 1]
+            line2_groups = [g for g in filtered_groups if g.get('line') == 2]
+            skipped_line1 = [item for item in skipped_groups if item[0].get('line', 1) == 1]
+            skipped_line2 = [item for item in skipped_groups if item[0].get('line', 1) == 2]
 
             # 탭별 처리
             if current_tab_index == 0:
                 # 라인1 탭: 라인1 데이터만 이동
-                groups_to_process = line1_groups
-                if data_count_limit > 0 and len(groups_to_process) > data_count_limit:
-                    sorted_groups = sorted(groups_to_process, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
-                    groups_to_process = sorted_groups[:data_count_limit]
+                self._log_skipped_groups(skipped_line1, "라인1")
+                sorted_line1 = sorted(line1_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
+                groups_to_process = list(sorted_line1)
+                limit_triggered = False
+                if data_count_limit > 0 and len(sorted_line1) > data_count_limit:
+                    groups_to_process = sorted_line1[:data_count_limit]
+                    limit_triggered = True
 
-                    # NIR 개수 확인 및 부족 시 추가 행 포함
-                    if keep_n > 0:
-                        nir_count = sum(1 for g in groups_to_process if g.get("NIR"))
-                        if nir_count < keep_n and len(sorted_groups) > data_count_limit:
-                            # 추가로 NIR 있는 행 찾기
-                            additional_groups = []
-                            for g in sorted_groups[data_count_limit:]:
-                                if g.get("NIR"):
-                                    additional_groups.append(g)
-                                    nir_count += 1
-                                    if nir_count >= keep_n:
-                                        break
-                            if additional_groups:
-                                groups_to_process.extend(additional_groups)
-                                self.log_to_box(f"📊 [라인1] NIR {keep_n}개 확보를 위해 {len(additional_groups)}개 행 추가 (총 {len(groups_to_process)}개)")
+                if keep_n > 0:
+                    groups_to_process, _, _ = self._ensure_minimum_nir(groups_to_process, sorted_line1, keep_n, "라인1")
 
+                if limit_triggered:
                     self.log_to_box(f"📊 [라인1] 전체 {len(line1_groups)}개 중 {len(groups_to_process)}개 데이터를 이동합니다.")
 
                 target_subject = subject
@@ -2226,27 +2308,18 @@ class MainWindow(QMainWindow):
 
             elif current_tab_index == 1:
                 # 라인2 탭: 라인2 데이터만 이동
-                groups_to_process = line2_groups
-                if data_count_limit > 0 and len(groups_to_process) > data_count_limit:
-                    sorted_groups = sorted(groups_to_process, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
-                    groups_to_process = sorted_groups[:data_count_limit]
+                self._log_skipped_groups(skipped_line2, "라인2")
+                sorted_line2 = sorted(line2_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
+                groups_to_process = list(sorted_line2)
+                limit_triggered = False
+                if data_count_limit > 0 and len(sorted_line2) > data_count_limit:
+                    groups_to_process = sorted_line2[:data_count_limit]
+                    limit_triggered = True
 
-                    # NIR 개수 확인 및 부족 시 추가 행 포함
-                    if keep_n > 0:
-                        nir_count = sum(1 for g in groups_to_process if g.get("NIR"))
-                        if nir_count < keep_n and len(sorted_groups) > data_count_limit:
-                            # 추가로 NIR 있는 행 찾기
-                            additional_groups = []
-                            for g in sorted_groups[data_count_limit:]:
-                                if g.get("NIR"):
-                                    additional_groups.append(g)
-                                    nir_count += 1
-                                    if nir_count >= keep_n:
-                                        break
-                            if additional_groups:
-                                groups_to_process.extend(additional_groups)
-                                self.log_to_box(f"📊 [라인2] NIR {keep_n}개 확보를 위해 {len(additional_groups)}개 행 추가 (총 {len(groups_to_process)}개)")
+                if keep_n > 0:
+                    groups_to_process, _, _ = self._ensure_minimum_nir(groups_to_process, sorted_line2, keep_n, "라인2")
 
+                if limit_triggered:
                     self.log_to_box(f"📊 [라인2] 전체 {len(line2_groups)}개 중 {len(groups_to_process)}개 데이터를 이동합니다.")
 
                 # 분리 모드일 때는 subject2 사용, 통합 모드일 때는 subject 사용
@@ -2272,51 +2345,31 @@ class MainWindow(QMainWindow):
                 # 통합 탭 (current_tab_index == 2): 둘 다 이동
                 if is_separated:
                     # 분리 모드: 라인별로 다른 시료명
-                    groups_to_move_line1 = line1_groups
-                    groups_to_move_line2 = line2_groups
+                    self._log_skipped_groups(skipped_line1, "라인1")
+                    self._log_skipped_groups(skipped_line2, "라인2")
+                    sorted_line1 = sorted(line1_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
+                    sorted_line2 = sorted(line2_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
+                    groups_to_move_line1 = list(sorted_line1)
+                    groups_to_move_line2 = list(sorted_line2)
 
+                    log_line1 = False
+                    log_line2 = False
                     if data_count_limit > 0:
-                        if len(line1_groups) > data_count_limit:
-                            sorted_line1 = sorted(line1_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
+                        if len(sorted_line1) > data_count_limit:
                             groups_to_move_line1 = sorted_line1[:data_count_limit]
-
-                            # NIR 개수 확인 및 부족 시 추가 행 포함 (라인1)
-                            if keep_n > 0:
-                                nir_count = sum(1 for g in groups_to_move_line1 if g.get("NIR"))
-                                if nir_count < keep_n and len(sorted_line1) > data_count_limit:
-                                    additional_groups = []
-                                    for g in sorted_line1[data_count_limit:]:
-                                        if g.get("NIR"):
-                                            additional_groups.append(g)
-                                            nir_count += 1
-                                            if nir_count >= keep_n:
-                                                break
-                                    if additional_groups:
-                                        groups_to_move_line1.extend(additional_groups)
-                                        self.log_to_box(f"📊 [라인1] NIR {keep_n}개 확보를 위해 {len(additional_groups)}개 행 추가 (총 {len(groups_to_move_line1)}개)")
-
-                            self.log_to_box(f"📊 [라인1] 전체 {len(line1_groups)}개 중 {len(groups_to_move_line1)}개 데이터를 이동합니다.")
-
-                        if len(line2_groups) > data_count_limit:
-                            sorted_line2 = sorted(line2_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
+                            log_line1 = True
+                        if len(sorted_line2) > data_count_limit:
                             groups_to_move_line2 = sorted_line2[:data_count_limit]
+                            log_line2 = True
 
-                            # NIR 개수 확인 및 부족 시 추가 행 포함 (라인2)
-                            if keep_n > 0:
-                                nir_count = sum(1 for g in groups_to_move_line2 if g.get("NIR"))
-                                if nir_count < keep_n and len(sorted_line2) > data_count_limit:
-                                    additional_groups = []
-                                    for g in sorted_line2[data_count_limit:]:
-                                        if g.get("NIR"):
-                                            additional_groups.append(g)
-                                            nir_count += 1
-                                            if nir_count >= keep_n:
-                                                break
-                                    if additional_groups:
-                                        groups_to_move_line2.extend(additional_groups)
-                                        self.log_to_box(f"📊 [라인2] NIR {keep_n}개 확보를 위해 {len(additional_groups)}개 행 추가 (총 {len(groups_to_move_line2)}개)")
+                    if keep_n > 0:
+                        groups_to_move_line1, _, _ = self._ensure_minimum_nir(groups_to_move_line1, sorted_line1, keep_n, "라인1")
+                        groups_to_move_line2, _, _ = self._ensure_minimum_nir(groups_to_move_line2, sorted_line2, keep_n, "라인2")
 
-                            self.log_to_box(f"📊 [라인2] 전체 {len(line2_groups)}개 중 {len(groups_to_move_line2)}개 데이터를 이동합니다.")
+                    if log_line1:
+                        self.log_to_box(f"📊 [라인1] 전체 {len(line1_groups)}개 중 {len(groups_to_move_line1)}개 데이터를 이동합니다.")
+                    if log_line2:
+                        self.log_to_box(f"📊 [라인2] 전체 {len(line2_groups)}개 중 {len(groups_to_move_line2)}개 데이터를 이동합니다.")
 
                     msg = f"정말로 이동하시겠습니까?\n\n"
                     msg += f"[라인1 → {subject}]\n"
@@ -2340,28 +2393,19 @@ class MainWindow(QMainWindow):
                     self.prune_nir_files_before_op(keep_n, subject2, groups_to_move_line2)
                 else:
                     # 통합 모드: 모든 데이터를 하나의 시료명으로
-                    groups_to_move = self.groups
-                    if data_count_limit > 0 and len(self.groups) > data_count_limit:
-                        sorted_groups = sorted(self.groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
+                    self._log_skipped_groups(skipped_groups, "통합")
+                    sorted_groups = sorted(filtered_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
+                    groups_to_move = list(sorted_groups)
+                    log_combined = False
+                    if data_count_limit > 0 and len(sorted_groups) > data_count_limit:
                         groups_to_move = sorted_groups[:data_count_limit]
+                        log_combined = True
 
-                        # NIR 개수 확인 및 부족 시 추가 행 포함
-                        if keep_n > 0:
-                            nir_count = sum(1 for g in groups_to_move if g.get("NIR"))
-                            if nir_count < keep_n and len(sorted_groups) > data_count_limit:
-                                # 추가로 NIR 있는 행 찾기
-                                additional_groups = []
-                                for g in sorted_groups[data_count_limit:]:
-                                    if g.get("NIR"):
-                                        additional_groups.append(g)
-                                        nir_count += 1
-                                        if nir_count >= keep_n:
-                                            break
-                                if additional_groups:
-                                    groups_to_move.extend(additional_groups)
-                                    self.log_to_box(f"📊 NIR {keep_n}개 확보를 위해 {len(additional_groups)}개 행 추가 (총 {len(groups_to_move)}개)")
+                    if keep_n > 0:
+                        groups_to_move, _, _ = self._ensure_minimum_nir(groups_to_move, sorted_groups, keep_n, "통합")
 
-                        self.log_to_box(f"📊 전체 {len(self.groups)}개 중 {len(groups_to_move)}개 데이터를 이동합니다.")
+                    if log_combined:
+                        self.log_to_box(f"📊 전체 {len(filtered_groups)}개 중 {len(groups_to_move)}개 데이터를 이동합니다.")
 
                     msg = f"정말로 이동하시겠습니까?\n"
                     if data_count_limit > 0:
