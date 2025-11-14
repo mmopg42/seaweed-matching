@@ -1755,7 +1755,7 @@ class MainWindow(QMainWindow):
             if path:
                 pixmap = self.get_cached_pixmap(path)
                 # pixmap이 None이어도 경로를 저장 (나중에 캐시에서 로드하기 위해)
-                cam_widget.set_image(pixmap, normalize_path(path))
+                cam_widget.set_image(pixmap, path)
             else:
                 cam_widget.img_label.clear()
                 cam_widget.img_label.setText("X")
@@ -1814,7 +1814,7 @@ class MainWindow(QMainWindow):
         if cam1_path:
             pix = self.get_cached_pixmap(cam1_path)
             # pixmap이 None이어도 경로를 저장
-            cam_views[0].set_image(pix, normalize_path(cam1_path))
+            cam_views[0].set_image(pix, cam1_path)
             cam_views[0].set_caption(cam1_name or "")
             cam_views[0].setToolTip(cam1_name or cam1_path)
         else:
@@ -1826,7 +1826,7 @@ class MainWindow(QMainWindow):
         if cam2_path:
             pix = self.get_cached_pixmap(cam2_path)
             # pixmap이 None이어도 경로를 저장
-            cam_views[1].set_image(pix, normalize_path(cam2_path))
+            cam_views[1].set_image(pix, cam2_path)
             cam_views[1].set_caption(cam2_name or "")
             cam_views[1].setToolTip(cam2_name or cam2_path)
         else:
@@ -1838,7 +1838,7 @@ class MainWindow(QMainWindow):
         if cam3_path:
             pix = self.get_cached_pixmap(cam3_path)
             # pixmap이 None이어도 경로를 저장
-            cam_views[2].set_image(pix, normalize_path(cam3_path))
+            cam_views[2].set_image(pix, cam3_path)
             cam_views[2].set_caption(cam3_name or "")
             cam_views[2].setToolTip(cam3_name or cam3_path)
         else:
@@ -1885,6 +1885,11 @@ class MainWindow(QMainWindow):
         - 이미지 로딩 완료 시 즉시 화면에 반영
         - 전체 레이아웃 순회 대신 해당 이미지만 빠르게 갱신
         """
+        if not image_path:
+            return
+
+        target_path = normalize_path(image_path)
+
         # 모든 탭의 레이아웃을 순회
         all_layouts = [
             self.scroll_layout_line1,
@@ -1909,11 +1914,20 @@ class MainWindow(QMainWindow):
                 ]
 
                 for img_widget in image_widgets:
-                    if hasattr(img_widget, '_current_path') and img_widget._current_path == image_path:
+                    if not hasattr(img_widget, '_current_path'):
+                        continue
+
+                    current_path = img_widget._current_path or ""
+                    if not current_path:
+                        continue
+
+                    if normalize_path(current_path) == target_path:
                         # 아직 이미지가 로드되지 않은 위젯만 업데이트
                         if img_widget._current_pixmap is None:
                             img_widget.set_image(pixmap, image_path)
-                            return  # 찾았으면 즉시 종료
+                        else:
+                            img_widget.set_image(pixmap, current_path)
+                        return  # 찾았으면 즉시 종료
 
     def refresh_visible_images(self):
         """

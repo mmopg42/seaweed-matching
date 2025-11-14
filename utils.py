@@ -168,3 +168,7 @@ class LruPixmapCache:
         self.cache.move_to_end(normalized_key)
         if len(self.cache) > self.max_items:
             self.cache.popitem(last=False)
+
+    def clear(self):
+        """모든 캐시 항목을 삭제하여 참조를 즉시 해제합니다."""
+        self.cache.clear()
