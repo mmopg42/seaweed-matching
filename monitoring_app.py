@@ -2028,10 +2028,11 @@ class MainWindow(QMainWindow):
                 base = self._nir_base(fname)
                 fpath = finfo.get("absolute_path") if isinstance(finfo, dict) else None
                 buckets.setdefault(base, []).append((fname, fpath))
-        for base, files in buckets.items():
-            any_path = files[0][1] if files else None
-            dt = self._nir_dt(base, any_path)
-            bundles.append((dt, group, base, files))  # group 객체 자체를 저장
+            # 각 그룹의 NIR 묶음을 bundles에 추가
+            for base, files in buckets.items():
+                any_path = files[0][1] if files else None
+                dt = self._nir_dt(base, any_path)
+                bundles.append((dt, group, base, files))  # group 객체 자체를 저장
 
 
         if not bundles or len(bundles) <= keep_count:
