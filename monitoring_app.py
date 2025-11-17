@@ -127,9 +127,9 @@ class MainWindow(QMainWindow):
 
         self.pixmap_cache = LruPixmapCache(max_items=500)
         
-        # ✅ 비동기 이미지 로더 초기화
+        # ✅ 비동기 이미지 로더 초기화 (워커 수 자동 감지)
         thumbnail_cache_dir = os.path.join(self.config_manager.app_dir, "thumbnail_cache")
-        self.image_loader = ImageLoaderWorker(cache_dir=thumbnail_cache_dir, max_workers=6)
+        self.image_loader = ImageLoaderWorker(cache_dir=thumbnail_cache_dir)
         self.image_loader.image_ready.connect(self.on_image_loaded)
         self.image_loader.error_occurred.connect(lambda msg: print(f"[IMAGE_LOADER] {msg}"))
         self.image_loader.start()
@@ -1128,20 +1128,23 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def start_watch(self):
-        """감시 시작 (Run 버튼)"""
+        """감시 시작 (Run 버튼) - 폴더 자동 생성 포함"""
         # ✅ 이동 작업 중이면 차단
         if getattr(self, 'is_file_operation_running', False):
             self.log_to_box("⚠️ 이동 작업이 진행 중입니다. 완료 후 다시 시도하세요.")
             QMessageBox.warning(self, "작업 진행 중", "이동/복사 작업이 진행 중입니다.\n작업 완료 후 다시 시도하세요.")
             return
-        
+
         if self.is_watching:
             return  # 이미 감시 중이면 무시
-        
+
+        # ✅ 시료 폴더 자동 생성
+        self._auto_create_subject_folders()
+
         self.is_watching = True
         self.btn_run.setEnabled(False)
         self.btn_stop.setEnabled(True)
-        
+
         self.log_to_box("[INFO] 감시를 시작합니다...")
         self.groups = []
         self.provisional_nirs = {}
@@ -2712,6 +2715,66 @@ class MainWindow(QMainWindow):
             self.log_to_box(f"✅ 현재 작업 상태를 저장했습니다. (경로: {state_path})")
         except Exception as e:
             self.log_to_box(f"❌ 작업 상태 저장 실패: {e}")
+
+    def _auto_create_subject_folders(self):
+        """
+        시료 폴더 자동 생성 (Run 버튼 클릭 시 호출)
+        - 조용히 실패 (에러 대화상자 없이 로그만)
+        - with NIR / without NIR 하위 폴더 자동 생성
+
+        Returns:
+            bool: 성공 여부
+        """
+        try:
+            # 이동 대상 폴더 확인
+            output_root = self.settings.get("output", "").strip()
+            if not output_root or not os.path.isdir(output_root):
+                self.log_to_box("[WARN] 이동 대상 폴더가 설정되지 않아 시료 폴더를 생성할 수 없습니다.")
+                return False
+
+            # 시료명 수집
+            subjects = set()
+            subject1 = self.subject_folder_edit.text().strip()
+            if subject1:
+                subjects.add(subject1)
+
+            # 시료2가 있다면 추가 (분리 모드용)
+            subject2_edit = getattr(self, 'subject_folder_edit2', None)
+            if subject2_edit:
+                subject2 = subject2_edit.text().strip()
+                if subject2 and subject2 != subject1:
+                    subjects.add(subject2)
+
+            if not subjects:
+                self.log_to_box("[INFO] 시료명이 설정되지 않았습니다. 폴더 생성을 건너뜁니다.")
+                return True  # 실패는 아님
+
+            # 폴더 생성
+            created_count = 0
+            for subject in subjects:
+                subject_dir = os.path.join(output_root, subject)
+
+                # 주 폴더 생성
+                if not os.path.exists(subject_dir):
+                    os.makedirs(subject_dir, exist_ok=True)
+                    created_count += 1
+
+                # with NIR / without NIR 하위 폴더 생성
+                for sub in ("with NIR", "without NIR"):
+                    sub_dir = os.path.join(subject_dir, sub)
+                    if not os.path.exists(sub_dir):
+                        os.makedirs(sub_dir, exist_ok=True)
+
+            if created_count > 0:
+                self.log_to_box(f"[INFO] ✅ {created_count}개 시료 폴더 자동 생성 완료")
+            else:
+                self.log_to_box("[INFO] 모든 시료 폴더가 이미 존재합니다")
+
+            return True
+
+        except Exception as e:
+            self.log_to_box(f"[WARN] 시료 폴더 자동 생성 실패: {e}")
+            return False
 
     def create_subject_folder(self):  # ✅ 불필요한 쉼표 제거
         subject = self.subject_folder_edit.text().strip()

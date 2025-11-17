@@ -144,34 +144,51 @@ class ImageLoaderWorker(QThread):
     # 시그널: (error_message)
     error_occurred = pyqtSignal(str)
     
-    def __init__(self, cache_dir: str, max_workers: int = 6):
+    def __init__(self, cache_dir: str, max_workers: int = None):
         """
         Args:
             cache_dir: 썸네일 캐시 디렉토리
-            max_workers: 병렬 로딩 워커 수 (기본 6개)
+            max_workers: 병렬 로딩 워커 수 (None이면 자동 설정)
         """
         super().__init__()
         self.cache = ThumbnailCache(cache_dir)
-        self.max_workers = max_workers
-        
+
+        # ✅ Phase 1: CPU 코어 수 기반 동적 워커 수 설정
+        if max_workers is None:
+            cpu_count = os.cpu_count() or 4
+            # 최소 8개, 최대 16개, CPU 코어 수에 따라 자동 조정
+            self.max_workers = min(16, max(8, cpu_count))
+            print(f"[IMAGE_LOADER] 워커 수 자동 설정: {self.max_workers}개 (CPU 코어: {cpu_count}개)")
+        else:
+            self.max_workers = max_workers
+            print(f"[IMAGE_LOADER] 워커 수: {self.max_workers}개")
+
         # 로딩 요청 큐
         self.request_queue = Queue()
-        
+
+        # ✅ Phase 1: 중복 요청 방지를 위한 Set
+        self.pending_requests = set()  # 현재 처리 중인 이미지 경로
+
         # 실행 중 플래그
         self.running = False
-        
+
         # PIL 사용 가능 여부
         self.use_pil = PIL_AVAILABLE
     
     def request_image(self, image_path: str, size: Tuple[int, int], request_id: str = ""):
         """
         이미지 로딩 요청
-        
+
         Args:
             image_path: 이미지 파일 경로
             size: 썸네일 크기 (width, height)
             request_id: 요청 식별자 (선택, UI 업데이트용)
         """
+        # ✅ Phase 1: 중복 요청 체크
+        if image_path in self.pending_requests:
+            return  # 이미 요청된 이미지는 건너뛰기
+
+        self.pending_requests.add(image_path)
         self.request_queue.put((image_path, size, request_id))
     
     def stop(self):
@@ -217,6 +234,9 @@ class ImageLoaderWorker(QThread):
                     except Exception as e:
                         error_msg = f"이미지 로딩 실패: {os.path.basename(image_path)} - {e}"
                         self.error_occurred.emit(error_msg)
+                    finally:
+                        # ✅ Phase 1: 완료된 요청은 pending에서 제거
+                        self.pending_requests.discard(image_path)
     
     def _load_image(self, image_path: str, size: Tuple[int, int], request_id: str) -> Optional[QPixmap]:
         """
