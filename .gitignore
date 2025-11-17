@@ -9,7 +9,7 @@
 !requirements.txt
 !*.py
 !app_icon.ico
-
+!2025-01-17_image_loading_optimization_auto_folder_creation.md
 *.exe
 
 test.py
