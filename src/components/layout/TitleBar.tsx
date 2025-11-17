@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import { Minus, Square, X } from 'lucide-react'
-import { appWindow } from '@tauri-apps/api/window'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { Button } from '@/components/ui/button'
 
 export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false)
 
-  const minimize = () => appWindow.minimize()
+  const minimize = () => getCurrentWindow().minimize()
   const toggleMaximize = async () => {
-    await appWindow.toggleMaximize()
+    await getCurrentWindow().toggleMaximize()
     setIsMaximized(!isMaximized)
   }
-  const close = () => appWindow.close()
+  const close = () => getCurrentWindow().close()
 
   return (
     <div
