@@ -1,4 +1,6 @@
+# ===========================
 # Logs
+# ===========================
 logs
 *.log
 npm-debug.log*
@@ -7,46 +9,145 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# ===========================
 # Dependencies
+# ===========================
 node_modules
+**/node_modules/
 
-# Build outputs
+# ===========================
+# Frontend Build Outputs
+# ===========================
 dist
 dist-ssr
+build
 *.local
+.vite
+.turbo
+.next
+.nuxt
+.cache
 
-# Tauri build outputs
+# ===========================
+# Rust/Tauri Build Outputs
+# ===========================
 src-tauri/target/
 src-tauri/WixTools/
+src-tauri/gen/
+target/
+Cargo.lock
 
-# Environment files
+# Tauri build artifacts (exe, installers)
+src-tauri/target/release/bundle/
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.deb
+*.rpm
+
+# ===========================
+# Python
+# ===========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+*.pyo
+*.pyd
+
+# Python virtual environments
+python_backend/venv/
+python_backend/env/
+python_backend/.venv/
+
+# ===========================
+# Environment Files
+# ===========================
 .env
 .env.local
 .env.*.local
+.env.production
 
-# Editor directories and files
+# ===========================
+# Editor/IDE
+# ===========================
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+.fleet
+.devcontainer
 
-# OS files
-Thumbs.db
+# ===========================
+# OS Files
+# ===========================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
 
-# Temporary files
+# ===========================
+# Temporary Files
+# ===========================
 *.tmp
 *.temp
 *.swp
 *.swo
 *~
+.#*
 
-# Compressed files (for manual transfers)
+# ===========================
+# Testing
+# ===========================
+coverage/
+.nyc_output/
+*.lcov
+playwright-report/
+test-results/
+
+# ===========================
+# Database & Data Files (if any)
+# ===========================
+*.sqlite
+*.sqlite3
+*.db
+
+# ===========================
+# Compressed Archives
+# ===========================
 *.tar.gz
 *.zip
 *.rar
+*.7z
+
+# ===========================
+# Application Specific
+# ===========================
+# Delete history
+.delete_history/
+
+# User data (if applicable)
+user_data/
+config.json
+
+# Large test files
+test_files/
+sample_data/

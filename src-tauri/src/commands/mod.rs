@@ -1,2 +1,15 @@
 pub mod files;
 pub mod python;
+pub mod file_watcher;
+pub mod file_operations;
+pub mod image;
+pub mod file_hash;
+pub mod matcher;
+pub mod timestamp;
+pub mod config;
+pub mod delete_operations;
+pub mod folder_operations;
+pub mod nir_spectrum;
+pub mod nir_operations;
+pub mod group;
+pub mod file_stats;
