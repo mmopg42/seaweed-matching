@@ -10,7 +10,7 @@ export function StatusBar() {
         </Badge>
       </div>
       <div className="flex items-center gap-4">
-        <span>Python: Connected</span>
+        <span>Rust Backend</span>
       </div>
     </div>
   )
