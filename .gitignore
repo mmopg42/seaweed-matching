@@ -14,6 +14,9 @@ lerna-debug.log*
 # ===========================
 node_modules
 **/node_modules/
+node_modules/.cache/
+.pnp
+.pnp.js
 
 # ===========================
 # Frontend Build Outputs
@@ -27,6 +30,7 @@ build
 .next
 .nuxt
 .cache
+*.tsbuildinfo
 
 # ===========================
 # Rust/Tauri Build Outputs
@@ -36,15 +40,22 @@ src-tauri/WixTools/
 src-tauri/gen/
 target/
 Cargo.lock
+.tauri/
 
 # Tauri build artifacts (exe, installers)
 src-tauri/target/release/bundle/
+src-tauri/target/debug/bundle/
 *.exe
 *.msi
 *.dmg
+*.app
 *.AppImage
 *.deb
 *.rpm
+
+# Windows installer temp files
+src-tauri/target/release/*.wixobj
+src-tauri/target/release/*.wixpdb
 
 # ===========================
 # Python
@@ -114,6 +125,10 @@ Desktop.ini
 *~
 .#*
 
+# Vite temp files
+vite.config.*.timestamp-*
+.eslintcache
+
 # ===========================
 # Testing
 # ===========================
@@ -151,3 +166,10 @@ config.json
 # Large test files
 test_files/
 sample_data/
+
+# Generated icons (keep only source)
+# src-tauri/icons/ contents are generated, keep only app_icon.ico source
+
+# Runtime data
+*.log.json
+error_logs/
