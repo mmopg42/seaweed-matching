@@ -8,7 +8,7 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay: number
 ): (...args: Parameters<T>) => void {
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   return useCallback(
     (...args: Parameters<T>) => {
@@ -33,7 +33,7 @@ export function useThrottledCallback<T extends (...args: any[]) => any>(
   wait: number
 ): (...args: Parameters<T>) => void {
   const lastCallRef = useRef<number>(0);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   return useCallback(
     (...args: Parameters<T>) => {
@@ -125,7 +125,7 @@ export function useMemoizedArray<T>(array: T[]): T[] {
  * Returns the previous value of a state or prop
  */
 export function usePrevious<T>(value: T): T | undefined {
-  const ref = useRef<T>();
+  const ref = useRef<T | undefined>(undefined);
 
   useMemo(() => {
     ref.current = value;

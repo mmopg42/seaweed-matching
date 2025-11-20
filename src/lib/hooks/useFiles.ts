@@ -19,7 +19,7 @@ export function useDeleteFiles() {
       queryClient.invalidateQueries({ queryKey: ['files'] })
       toast.success('Files deleted successfully')
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       toast.error(`Failed to delete files: ${error}`)
     },
   })

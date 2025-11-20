@@ -47,7 +47,7 @@ export function VirtualList<T>({
           position: 'relative',
         }}
       >
-        {virtualItems.map((virtualItem) => (
+        {virtualItems.map((virtualItem: any) => (
           <div
             key={virtualItem.key}
             data-index={virtualItem.index}
@@ -113,7 +113,7 @@ export function VirtualGrid<T>({
           position: 'relative',
         }}
       >
-        {virtualRows.map((virtualRow) => {
+        {virtualRows.map((virtualRow: any) => {
           const startIndex = virtualRow.index * columnCount;
           const rowItems = items.slice(startIndex, startIndex + columnCount);
 
