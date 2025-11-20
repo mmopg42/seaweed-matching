@@ -13,3 +13,4 @@ pub mod nir_spectrum;
 pub mod nir_operations;
 pub mod group;
 pub mod file_stats;
+pub mod dialog;

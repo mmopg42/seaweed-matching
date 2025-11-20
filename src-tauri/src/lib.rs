@@ -18,11 +18,13 @@ use commands::nir_spectrum::{analyze_nir_spectrum, process_nir_file, start_nir_m
 use commands::nir_operations::prune_nir_files;
 use commands::group::{create_group, delete_group, update_group_metadata};
 use commands::file_stats::get_folder_stats;
+use commands::dialog::{select_folder, select_file, open_folder_in_explorer};
 use models::matcher::FileMatcher;
 use utils::image_cache::ImageCache;
 use std::sync::Mutex;
 use python::PythonProcess;
 use std::sync::Arc;
+use tauri::Manager;
 
 fn get_python_script_path() -> String {
     // In development, use relative path from project root
@@ -45,7 +47,22 @@ pub fn run() {
     let python_enabled = std::env::var("ENABLE_PYTHON").is_ok();
 
     let builder = tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init());
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            // Setup window close event handler
+            let windows = app.webview_windows();
+            for (_, window) in windows {
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { .. } = event {
+                        println!("Application closing - cleaning up resources...");
+                        // Note: File watcher threads will be cleaned up when process terminates
+                        // Image cache and other resources are automatically dropped
+                    }
+                });
+            }
+            Ok(())
+        });
 
     if python_enabled {
         // Initialize Python process
@@ -102,6 +119,9 @@ pub fn run() {
                         delete_group,
                         update_group_metadata,
                         get_folder_stats,
+                        select_folder,
+                        select_file,
+                        open_folder_in_explorer,
                     ])
                     .run(tauri::generate_context!())
                     .expect("error while running tauri application");
@@ -152,6 +172,9 @@ pub fn run() {
                         delete_group,
                         update_group_metadata,
                         get_folder_stats,
+                        select_folder,
+                        select_file,
+                        open_folder_in_explorer,
                     ])
                     .run(tauri::generate_context!())
                     .expect("error while running tauri application");
@@ -201,6 +224,9 @@ pub fn run() {
                 delete_group,
                 update_group_metadata,
                 get_folder_stats,
+                select_folder,
+                select_file,
+                open_folder_in_explorer,
             ])
             .run(tauri::generate_context!())
             .expect("error while running tauri application");
