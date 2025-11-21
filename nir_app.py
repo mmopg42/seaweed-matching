@@ -6,21 +6,23 @@ NIR 스펙트럼 모니터링 GUI 애플리케이션
 """
 import sys
 import os
+import platform
+import subprocess
 from pathlib import Path
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QGroupBox, QLineEdit, QFileDialog
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
-from PyQt6.QtGui import QFont
+from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtGui import QFont
 from nir_spectrum_monitor import NIRSpectrumMonitor
 from config_manager import ConfigManager
 
 
 class NIRMonitorThread(QThread):
     """NIR 모니터링을 별도 스레드에서 실행"""
-    log_signal = pyqtSignal(str)
-    error_signal = pyqtSignal(str)
+    log_signal = Signal(str)
+    error_signal = Signal(str)
 
     def __init__(self, monitor_path, move_path):
         super().__init__()
@@ -112,6 +114,10 @@ class NIRMonitorApp(QMainWindow):
         monitor_browse_btn.clicked.connect(self.browse_monitor_path)
         monitor_layout.addWidget(monitor_browse_btn)
 
+        monitor_open_btn = QPushButton("폴더열기")
+        monitor_open_btn.clicked.connect(lambda: self.open_folder(self.monitor_path_edit))
+        monitor_layout.addWidget(monitor_open_btn)
+
         layout.addLayout(monitor_layout)
 
         # 이동 폴더
@@ -127,6 +133,10 @@ class NIRMonitorApp(QMainWindow):
         move_browse_btn = QPushButton("찾아보기")
         move_browse_btn.clicked.connect(self.browse_move_path)
         move_layout.addWidget(move_browse_btn)
+
+        move_open_btn = QPushButton("폴더열기")
+        move_open_btn.clicked.connect(lambda: self.open_folder(self.move_path_edit))
+        move_layout.addWidget(move_open_btn)
 
         layout.addLayout(move_layout)
 
@@ -232,6 +242,38 @@ class NIRMonitorApp(QMainWindow):
         try:
             self.config_manager.open_appdir_folder()
             self.log(f"📁 설정 폴더 열기: {self.config_manager.app_dir}")
+        except Exception as e:
+            self.log(f"❌ 폴더 열기 실패: {e}")
+
+    def open_folder(self, edit_widget: QLineEdit):
+        """경로 입력란의 폴더를 탐색기에서 열기"""
+        path = edit_widget.text().strip()
+
+        # 경로 검증
+        if not path:
+            self.log("❌ 폴더 경로가 비어있습니다.")
+            return
+
+        if not os.path.isdir(path):
+            self.log(f"❌ 폴더가 존재하지 않습니다: {path}")
+            return
+
+        try:
+            # 플랫폼별 폴더 열기
+            system = platform.system()
+
+            if system == "Windows":
+                os.startfile(path)
+            elif system == "Darwin":  # macOS
+                subprocess.run(["open", path], check=True)
+            else:  # Linux
+                subprocess.run(["xdg-open", path], check=True)
+
+            self.log(f"📁 폴더 열기: {path}")
+        except FileNotFoundError:
+            self.log(f"❌ 폴더가 존재하지 않습니다: {path}")
+        except PermissionError:
+            self.log(f"❌ 폴더 접근 권한이 없습니다: {path}")
         except Exception as e:
             self.log(f"❌ 폴더 열기 실패: {e}")
 

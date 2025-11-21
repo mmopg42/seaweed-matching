@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from threading import Event
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 from config_manager import ConfigManager
 import json
@@ -23,12 +23,12 @@ class FileOperationWorker(QThread):
     - subprocess 제거로 안티바이러스 오탐 방지
     """
 
-    log_message = pyqtSignal(str)
-    finished = pyqtSignal(str)
-    metadata_ready = pyqtSignal(dict)
+    log_message = Signal(str)
+    finished = Signal(str)
+    metadata_ready = Signal(dict)
 
     # 충돌 시 사용자 결정 요청 (파일/폴더명, src, dst)
-    file_conflict = pyqtSignal(str, str, str)
+    file_conflict = Signal(str, str, str)
 
     def __init__(self, processed_data, output_path, mode, operation_type="file_op"):
         super().__init__()

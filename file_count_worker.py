@@ -6,7 +6,7 @@ watchdog을 사용하여 변화가 있을 때만 카운트하고, 10초 이상 �
 """
 import os
 import time
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -30,7 +30,7 @@ class FileCountWorker(QThread):
     기본적으로 비활성화 상태이며, 필요할 때만 활성화하여 렉을 최소화합니다.
     """
     # Signal: (nir_count, nir2_count, normal_count, normal2_count, cam1_count, cam2_count, cam3_count, cam4_count, cam5_count, cam6_count)
-    counts_updated = pyqtSignal(int, int, int, int, int, int, int, int, int, int)
+    counts_updated = Signal(int, int, int, int, int, int, int, int, int, int)
 
     def __init__(self):
         super().__init__()
@@ -46,6 +46,26 @@ class FileCountWorker(QThread):
         self.settings = settings.copy() if settings else {}
         # 설정이 변경되면 watchdog 재시작
         self.trigger_count()
+
+    def get_effective_path(self, base_path: str, use_camera_subfolder: bool) -> str:
+        """
+        실제 검색 경로 계산 (camera 하위폴더 옵션 반영)
+
+        Args:
+            base_path: 기본 경로
+            use_camera_subfolder: camera 하위폴더 사용 여부
+
+        Returns:
+            실제 검색할 경로
+        """
+        if not base_path:
+            return ""
+
+        if use_camera_subfolder:
+            camera_path = os.path.join(base_path, "camera")
+            return camera_path if os.path.isdir(camera_path) else base_path
+        else:
+            return base_path
 
     def trigger_count(self):
         """파일 개수 카운트 트리거"""
@@ -81,7 +101,14 @@ class FileCountWorker(QThread):
 
             # 모든 폴더 감시
             for folder_type in ["normal", "normal2", "nir", "nir2", "cam1", "cam2", "cam3", "cam4", "cam5", "cam6"]:
-                folder = self.settings.get(folder_type, "")
+                # ✅ camera 하위폴더 옵션 적용 (normal, normal2만)
+                if folder_type in ["normal", "normal2"]:
+                    base_path = self.settings.get(folder_type, "")
+                    use_camera_subfolder = self.settings.get(f"use_camera_subfolder_{folder_type}", False)
+                    folder = self.get_effective_path(base_path, use_camera_subfolder)
+                else:
+                    folder = self.settings.get(folder_type, "")
+
                 if folder and os.path.isdir(folder):
                     self.observer.schedule(handler, folder, recursive=True)
 
@@ -115,9 +142,14 @@ class FileCountWorker(QThread):
                 # 1. 변화가 감지되었거나
                 # 2. 10초 이상 변화가 없을 때 한 번 확인
                 if self.needs_count or time_since_last_change >= 10.0:
-                    # 설정에서 경로 가져오기
-                    normal_path = self.settings.get("normal", "")
-                    normal2_path = self.settings.get("normal2", "")
+                    # ✅ camera 하위폴더 옵션 적용하여 실제 경로 가져오기
+                    normal_base = self.settings.get("normal", "")
+                    normal_use_camera = self.settings.get("use_camera_subfolder_normal", False)
+                    normal_path = self.get_effective_path(normal_base, normal_use_camera)
+
+                    normal2_base = self.settings.get("normal2", "")
+                    normal2_use_camera = self.settings.get("use_camera_subfolder_normal2", False)
+                    normal2_path = self.get_effective_path(normal2_base, normal2_use_camera)
                     nir_path = self.settings.get("nir", "")
                     nir2_path = self.settings.get("nir2", "")
                     cam1_path = self.settings.get("cam1", "")

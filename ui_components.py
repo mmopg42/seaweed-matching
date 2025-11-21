@@ -2,13 +2,13 @@
 import os
 import subprocess
 import platform
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLayout,
     QPushButton, QLabel, QDialog, QFileDialog, QLineEdit,
-    QDialogButtonBox, QSizePolicy, QSpacerItem, QCheckBox, QComboBox
+    QDialogButtonBox, QSizePolicy, QSpacerItem, QCheckBox, QComboBox, QMessageBox
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QRect, QSize, QPoint
-from PyQt6.QtGui import QIntValidator, QDoubleValidator, QDragEnterEvent, QDropEvent
+from PySide6.QtCore import Qt, Signal, QRect, QSize, QPoint
+from PySide6.QtGui import QIntValidator, QDoubleValidator, QDragEnterEvent, QDropEvent
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -230,6 +230,10 @@ class SettingDialog(QDialog):
 
         self.path_fields = {}
 
+        # camera 하위폴더 옵션 체크박스
+        self.use_camera_subfolder_normal = QCheckBox("camera 하위폴더 사용")
+        self.use_camera_subfolder_normal2 = QCheckBox("camera 하위폴더 사용")
+
         # === 라인1 그룹 ===
         line1_group = QWidget()
         line1_layout = QFormLayout(line1_group)
@@ -259,6 +263,18 @@ class SettingDialog(QDialog):
             self.path_fields[key] = edit
             btn_select.clicked.connect(lambda checked, e=edit: self.select_folder(e))
             btn_open.clicked.connect(lambda checked, e=edit: self.open_folder(e))
+
+            # 일반 폴더에 대해서만 camera 하위폴더 체크박스 추가
+            if key == "normal":
+                checkbox_hbox = QHBoxLayout()
+                checkbox_hbox.addSpacing(20)  # 들여쓰기
+                self.use_camera_subfolder_normal.setToolTip(
+                    "체크 시: {경로}/camera/ 하위에서 검색\n"
+                    "해제 시: {경로}/ 직하위에서 검색"
+                )
+                checkbox_hbox.addWidget(self.use_camera_subfolder_normal)
+                checkbox_hbox.addStretch()
+                line1_layout.addRow("", checkbox_hbox)
 
         layout.addWidget(line1_group)
 
@@ -291,6 +307,18 @@ class SettingDialog(QDialog):
             self.path_fields[key] = edit
             btn_select.clicked.connect(lambda checked, e=edit: self.select_folder(e))
             btn_open.clicked.connect(lambda checked, e=edit: self.open_folder(e))
+
+            # 일반2 폴더에 대해서만 camera 하위폴더 체크박스 추가
+            if key == "normal2":
+                checkbox_hbox = QHBoxLayout()
+                checkbox_hbox.addSpacing(20)  # 들여쓰기
+                self.use_camera_subfolder_normal2.setToolTip(
+                    "체크 시: {경로}/camera/ 하위에서 검색\n"
+                    "해제 시: {경로}/ 직하위에서 검색"
+                )
+                checkbox_hbox.addWidget(self.use_camera_subfolder_normal2)
+                checkbox_hbox.addStretch()
+                line2_layout.addRow("", checkbox_hbox)
 
         layout.addWidget(line2_group)
 
@@ -397,22 +425,37 @@ class SettingDialog(QDialog):
     def open_folder(self, edit_widget: QLineEdit):
         """경로 입력란의 폴더를 탐색기에서 열기"""
         folder_path = edit_widget.text().strip()
+
+        # 경로 검증
         if not folder_path:
+            QMessageBox.warning(self, "경고", "폴더 경로가 비어있습니다.")
             return
-        
+
         if not os.path.exists(folder_path):
+            QMessageBox.warning(self, "경고", f"폴더가 존재하지 않습니다:\n{folder_path}")
             return
-        
+
+        if not os.path.isdir(folder_path):
+            QMessageBox.warning(self, "경고", f"폴더가 아닙니다:\n{folder_path}")
+            return
+
         # 플랫폼별로 폴더 열기
         try:
-            if platform.system() == "Windows":
+            system = platform.system()
+
+            if system == "Windows":
                 os.startfile(folder_path)
-            elif platform.system() == "Darwin":  # macOS
-                subprocess.Popen(["open", folder_path])
+            elif system == "Darwin":  # macOS
+                subprocess.run(["open", folder_path], check=True)
             else:  # Linux
-                subprocess.Popen(["xdg-open", folder_path])
+                subprocess.run(["xdg-open", folder_path], check=True)
+
+        except FileNotFoundError:
+            QMessageBox.critical(self, "오류", f"폴더를 찾을 수 없습니다:\n{folder_path}")
+        except PermissionError:
+            QMessageBox.critical(self, "오류", f"폴더 접근 권한이 없습니다:\n{folder_path}")
         except Exception as e:
-            print(f"폴더 열기 실패: {e}")
+            QMessageBox.critical(self, "오류", f"폴더 열기 실패:\n{e}")
 
     def get_settings(self):
         return {
@@ -437,6 +480,8 @@ class SettingDialog(QDialog):
             "legacy_ui_mode": self.legacy_ui_mode.isChecked(),
             "use_folder_suffix": self.use_folder_suffix.isChecked(),
             "nir_match_time_diff": float(self.nir_match_time_diff.text() or 1.0),
+            "use_camera_subfolder_normal": self.use_camera_subfolder_normal.isChecked(),
+            "use_camera_subfolder_normal2": self.use_camera_subfolder_normal2.isChecked(),
         }
 
 
@@ -444,7 +489,7 @@ class SettingDialog(QDialog):
 # 썸네일 위젯
 # ──────────────────────────────────────────────────────────────────────────────
 class ImageWidget(QWidget):
-    image_clicked = pyqtSignal(object, str)
+    image_clicked = Signal(object, str)
 
     def __init__(self, caption=None, show_caption=True, width=110, height=80):
         super().__init__()
@@ -507,7 +552,7 @@ class ImageWidget(QWidget):
 # 행(Row) 위젯: 좌측 고정 컨트롤 + 우측 썸네일(균등 가변 gap)
 # ──────────────────────────────────────────────────────────────────────────────
 class MonitorRow(QWidget):
-    request_delete = pyqtSignal(int)
+    request_delete = Signal(int)
 
     def __init__(self, row_idx, img_w=110, img_h=80, nir_w=180, nir_h=80):
         super().__init__()
@@ -656,7 +701,7 @@ class MonitorRow(QWidget):
 
     # 오버레이 체크박스 재배치
     def eventFilter(self, obj, event):
-        from PyQt6.QtCore import QEvent
+        from PySide6.QtCore import QEvent
         if event.type() in (QEvent.Type.Resize, QEvent.Type.Move, QEvent.Type.Show):
             for chk in (self.chk_norm, self.chk_nir, self.chk_cam1, self.chk_cam2, self.chk_cam3):
                 if getattr(chk, "_overlay_target", None) is obj:

@@ -3,25 +3,64 @@ import re
 import time
 import datetime
 from collections import defaultdict
+from pathlib import Path
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 from watchdog.events import FileSystemEventHandler
 
 from utils import extract_datetime_from_str, get_timestamp_from_yml, extract_datetime_from_nir_key
 
 
 class Communicate(QObject):
-    file_changed = pyqtSignal(str, str, str)
+    file_changed = Signal(str, str, str)
 
 
 class FolderEventHandler(FileSystemEventHandler):
-    def __init__(self, comm: Communicate, folder_type):
+    def __init__(self, comm: Communicate, folder_type, settings=None):
         super().__init__()
         self.comm = comm
         self.folder_type = folder_type
+        self.settings = settings or {}
+
+    def should_ignore_deep_folder(self, path: str) -> bool:
+        """
+        camera 하위폴더 모드에서 깊은 경로 무시 여부
+
+        Args:
+            path: 이벤트 발생 경로
+
+        Returns:
+            True: 무시, False: 처리
+        """
+        for folder_type in ["normal", "normal2"]:
+            use_subfolder_key = f"use_camera_subfolder_{folder_type}"
+            use_camera_subfolder = self.settings.get(use_subfolder_key, False)
+
+            if use_camera_subfolder:
+                base_path = self.settings.get(folder_type, "")
+                if not base_path:
+                    continue
+
+                camera_path = os.path.join(base_path, "camera")
+
+                # camera_path의 하위인지 확인
+                if path.startswith(camera_path):
+                    # camera/ 아래 상대 경로 깊이 계산
+                    rel_path = os.path.relpath(path, camera_path)
+                    depth = len(Path(rel_path).parts)
+
+                    # 2단계 이상이면 무시 (camera/C_xxx/까지만 허용)
+                    if depth > 1:
+                        return True
+
+        return False
 
     def on_any_event(self, event):
         try:
+            # ✅ camera 하위폴더 모드에서 깊은 경로 무시
+            if self.should_ignore_deep_folder(event.src_path):
+                return
+
             if event.is_directory:
                 return
 
@@ -42,7 +81,7 @@ class FolderEventHandler(FileSystemEventHandler):
 
 
 class FileMatcher(QObject):
-    log_signal = pyqtSignal(str)
+    log_signal = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -57,6 +96,26 @@ class FileMatcher(QObject):
         self.unmatched_files = unmatched_files or defaultdict(dict)
         self.consumed_nir_keys = set(consumed_nir_keys or [])
         self.log_signal.emit("♻️ 이전 상태를 복원했습니다.")
+
+    def get_effective_path(self, base_path: str, use_camera_subfolder: bool) -> str:
+        """
+        실제 검색 경로 계산
+
+        Args:
+            base_path: 기본 경로
+            use_camera_subfolder: camera 하위폴더 사용 여부
+
+        Returns:
+            실제 검색할 경로 (camera 하위폴더 옵션 반영)
+        """
+        if not base_path:
+            return ""
+
+        if use_camera_subfolder:
+            camera_path = os.path.join(base_path, "camera")
+            return camera_path if os.path.isdir(camera_path) else base_path
+        else:
+            return base_path
 
     def add_or_update_file(self, file_path, folder_type):
 
@@ -160,7 +219,11 @@ class FileMatcher(QObject):
         use_suffix = settings.get("use_folder_suffix", False)
 
         for normal_key in ('normal', 'normal2'):
-            normal_dir = settings.get(normal_key, "")
+            # ✅ camera 하위폴더 옵션 적용
+            base_path = settings.get(normal_key, "")
+            use_camera_subfolder = settings.get(f"use_camera_subfolder_{normal_key}", False)
+            normal_dir = self.get_effective_path(base_path, use_camera_subfolder)
+
             if normal_dir and os.path.isdir(normal_dir):
                 # use_folder_suffix가 True일 때만 접미사로 필터링
                 # normal은 _0, normal2는 _1

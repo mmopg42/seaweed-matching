@@ -105,7 +105,7 @@ def set_tooltip_enabled(widget, key: str, enabled: bool = True):
     위젯에 툴팁을 설정하거나 제거
 
     Args:
-        widget: PyQt6 위젯
+        widget: PySide6 위젯
         key: 툴팁 키
         enabled: True면 툴팁 설정, False면 제거
     """

@@ -6,7 +6,7 @@ from typing import Tuple, List
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 
 # =============================

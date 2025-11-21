@@ -15,8 +15,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from queue import Queue, Empty
 from typing import Tuple, Optional
 
-from PyQt6.QtCore import QThread, pyqtSignal, QByteArray
-from PyQt6.QtGui import QPixmap
+from PySide6.QtCore import QThread, Signal, QByteArray
+from PySide6.QtGui import QPixmap
 
 try:
     from PIL import Image
@@ -139,10 +139,10 @@ class ImageLoaderWorker(QThread):
     """
     
     # 시그널: (image_path, QPixmap, request_id)
-    image_ready = pyqtSignal(str, object, str)
-    
+    image_ready = Signal(str, object, str)
+
     # 시그널: (error_message)
-    error_occurred = pyqtSignal(str)
+    error_occurred = Signal(str)
     
     def __init__(self, cache_dir: str, max_workers: int = None):
         """
@@ -322,7 +322,7 @@ class ImageLoaderWorker(QThread):
         - 원본 크기로 로드 후 축소
         """
         try:
-            from PyQt6.QtCore import Qt
+            from PySide6.QtCore import Qt
             
             orig_pixmap = QPixmap(image_path)
             if orig_pixmap.isNull():
@@ -343,7 +343,7 @@ class ImageLoaderWorker(QThread):
         """QPixmap을 JPEG로 변환하여 캐시에 저장"""
         try:
             from io import BytesIO
-            from PyQt6.QtCore import QBuffer, QIODevice
+            from PySide6.QtCore import QBuffer, QIODevice
             
             # QPixmap → JPEG 바이트 데이터
             buffer = QBuffer()

@@ -1,9 +1,9 @@
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QHBoxLayout, QTextEdit,
     QPushButton, QDialog, QDialogButtonBox
 )
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QGuiApplication, QFont
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QGuiApplication, QFont
 
 
 class LogPanel(QFrame):

@@ -1,7 +1,7 @@
 # preview_dialog.py
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel
-from PyQt6.QtCore import Qt, QEvent
-from PyQt6.QtGui import QPixmap
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel
+from PySide6.QtCore import Qt, QEvent
+from PySide6.QtGui import QPixmap
 
 class PreviewDialog(QDialog):
     def __init__(self, pixmap: QPixmap, title: str = "미리보기", parent=None):

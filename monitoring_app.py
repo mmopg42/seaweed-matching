@@ -7,13 +7,13 @@ import json
 import hashlib
 import time
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QTextEdit, QScrollArea, QSizePolicy, QFrame, QMessageBox,
     QLineEdit, QComboBox, QTabWidget
 )
-from PyQt6.QtCore import Qt, QTimer, QByteArray
-from PyQt6.QtGui import QPixmap
+from PySide6.QtCore import Qt, QTimer, QByteArray
+from PySide6.QtGui import QPixmap
 from watchdog.observers import Observer
 
 from config_manager import ConfigManager
@@ -910,6 +910,10 @@ class MainWindow(QMainWindow):
             dlg.use_folder_suffix.setChecked(self.settings.get("use_folder_suffix", False))
             dlg.nir_match_time_diff.setText(str(self.settings.get("nir_match_time_diff", 1.0)))
 
+            # camera 하위폴더 옵션 로드
+            dlg.use_camera_subfolder_normal.setChecked(self.settings.get("use_camera_subfolder_normal", False))
+            dlg.use_camera_subfolder_normal2.setChecked(self.settings.get("use_camera_subfolder_normal2", False))
+
         if dlg.exec():
             was_on = self.is_watching  # 현재 감시 상태 기억
             if was_on:
@@ -960,6 +964,54 @@ class MainWindow(QMainWindow):
                 self.is_watching = True
                 self.btn_run.setEnabled(False)
                 self.btn_stop.setEnabled(True)
+
+    def get_effective_normal_path(self, folder_key: str) -> str:
+        """
+        일반카메라의 실제 검색 경로 반환
+
+        Args:
+            folder_key: "normal" 또는 "normal2"
+
+        Returns:
+            실제 검색할 경로 (camera 하위폴더 옵션 반영)
+        """
+        base_path = self.settings.get(folder_key, "").strip()
+        if not base_path:
+            return ""
+
+        use_subfolder_key = f"use_camera_subfolder_{folder_key}"
+        use_camera_subfolder = self.settings.get(use_subfolder_key, False)
+
+        if use_camera_subfolder:
+            camera_path = os.path.join(base_path, "camera")
+            if os.path.isdir(camera_path):
+                return camera_path
+            else:
+                self.log_to_box(f"⚠️ camera 하위폴더 없음: {camera_path}")
+                return base_path
+        else:
+            return base_path
+
+    def should_use_recursive_watch(self, folder_type: str) -> bool:
+        """
+        폴더 타입에 따라 재귀 감시 여부 결정
+
+        Args:
+            folder_type: "normal", "normal2", "nir", etc.
+
+        Returns:
+            True: 재귀 감시, False: 단일 레벨 감시
+        """
+        # 일반카메라에서 camera 하위폴더 사용 시 재귀 감시 비활성화
+        if folder_type in ["normal", "normal2"]:
+            use_subfolder_key = f"use_camera_subfolder_{folder_type}"
+            use_camera_subfolder = self.settings.get(use_subfolder_key, False)
+
+            if use_camera_subfolder:
+                return False  # 단일 레벨만 감시
+
+        # 나머지는 기존대로 재귀 감시
+        return True
 
     def _update_stats(self, total, with_nir, without_nir, fail):
         """매칭 통계만 업데이트 (파일 개수는 실시간 타이머에서 별도 업데이트)"""
@@ -1577,12 +1629,26 @@ class MainWindow(QMainWindow):
         try:
             self.observer = Observer()
             for folder_type in ["normal", "normal2", "nir", "nir2", "cam1", "cam2", "cam3", "cam4", "cam5", "cam6"]:
-                folder = self.settings.get(folder_type, "")
+                # ✅ 일반카메라의 경우 실제 경로 계산
+                if folder_type in ["normal", "normal2"]:
+                    folder = self.get_effective_normal_path(folder_type)
+                else:
+                    folder = self.settings.get(folder_type, "")
+
                 if folder and os.path.isdir(folder):
-                    handler = FolderEventHandler(self.file_event_communicator, folder_type)
-                    self.observer.schedule(handler, folder, recursive=True)
+                    # ✅ recursive 옵션 결정
+                    recursive = self.should_use_recursive_watch(folder_type)
+
+                    # ✅ settings 전달하여 깊이 필터링 가능하도록 함
+                    handler = FolderEventHandler(self.file_event_communicator, folder_type, self.settings)
+                    self.observer.schedule(handler, folder, recursive=recursive)
+
+                    # 로그 출력
+                    mode_str = "재귀 감시" if recursive else "단일 레벨 감시"
+                    self.log_to_box(f"[Watchdog] {folder_type}: {folder} ({mode_str})")
+
             self.observer.start()
-            self.log_to_box("[Watchdog] 폴더 감시 시작")
+            self.log_to_box("[Watchdog] 폴더 감시 시작 완료")
         except Exception as e:
             self.log_to_box(f"[ERROR] Watchdog 시작 실패: {e}")
             print(f"[ERROR] Watchdog 시작 실패: {e}", flush=True)
@@ -2603,7 +2669,7 @@ class MainWindow(QMainWindow):
 
     def _handle_file_conflict(self, filename: str, src: str, dst: str):
         """파일 충돌 시 사용자에게 확인"""
-        from PyQt6.QtWidgets import QMessageBox
+        from PySide6.QtWidgets import QMessageBox
         
         msg_box = QMessageBox(self)
         msg_box.setWindowTitle("파일 충돌")
