@@ -1073,9 +1073,14 @@ class MainWindow(QMainWindow):
             return False  # 크기를 알 수 없으면 정상으로 간주
 
         width, height = dimensions
+        
+        # ✅ [NEW] 10으로 나눈 값으로 판정 (마지막 자리 버림)
+        w_trunc = width // 10
+        h_trunc = height // 10
 
-        # OR 조건: 가로 185 이하 또는 세로 210 이상
-        return width <= 185 or height > 218
+        # OR 조건: 가로 185 이하 또는 세로 210 이상 (Truncated: 18, 21)
+        # 원래 기준: 185, 218 -> 10으로 나누면 18, 21
+        return w_trunc <= 185 or h_trunc > 218
 
     def should_use_recursive_watch(self, folder_type: str) -> bool:
         """
@@ -1990,9 +1995,9 @@ class MainWindow(QMainWindow):
                 # ✅ Phase 5: 이상치 판정
                 is_abnormal = self.is_abnormal_image(thumbnail_path)
                 
-                # ✅ [NEW] 이미지 크기 표시
+                # ✅ [NEW] 이미지 크기 표시 (10으로 나눈 값)
                 dims = self.get_image_dimensions(thumbnail_path)
-                dim_text = f"\n{dims[0]}x{dims[1]}" if dims else ""
+                dim_text = f"\n{dims[0]//10}x{dims[1]//10}" if dims else ""
             else:
                 # 썸네일 없으면 기존 방식: 첫 번째 파일의 이미지 표시
                 f_info = camera_files[0]
@@ -2004,9 +2009,9 @@ class MainWindow(QMainWindow):
                     self.register_widget_for_path(cam_widget, path)
                     cam_widget.set_image(pixmap, path)
                     
-                    # ✅ [NEW] 이미지 크기 표시
+                    # ✅ [NEW] 이미지 크기 표시 (10으로 나눈 값)
                     dims = self.get_image_dimensions(path)
-                    dim_text = f"\n{dims[0]}x{dims[1]}" if dims else ""
+                    dim_text = f"\n{dims[0]//10}x{dims[1]//10}" if dims else ""
                 else:
                     self.unregister_widget(cam_widget) # 경로 없음
                     cam_widget.img_label.clear()
