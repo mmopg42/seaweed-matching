@@ -1996,7 +1996,7 @@ class MainWindow(QMainWindow):
                             img_widget.set_image(pixmap, image_path)
                         else:
                             img_widget.set_image(pixmap, current_path)
-                        return  # 찾았으면 즉시 종료
+                        # ✅ 동일한 이미지를 사용하는 모든 위젯을 업데이트하기 위해 계속 진행
 
     def refresh_visible_images(self):
         """
