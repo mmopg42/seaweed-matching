@@ -293,7 +293,16 @@ class NIRMonitorApp(QMainWindow):
             return
 
         # 이동 폴더는 자동 생성
-        os.makedirs(move_path, exist_ok=True)
+        try:
+            if not os.path.exists(move_path):
+                os.makedirs(move_path, exist_ok=True)
+                self.log(f"✅ 이동 폴더 생성됨: {move_path}")
+            elif not os.path.isdir(move_path):
+                self.log(f"❌ 이동 경로가 폴더가 아닙니다: {move_path}")
+                return
+        except Exception as e:
+            self.log(f"❌ 이동 폴더 생성 실패: {e}")
+            return
 
         # 스레드 시작
         self.monitor_thread = NIRMonitorThread(monitor_path, move_path)

@@ -67,6 +67,27 @@ class FileCountWorker(QThread):
         else:
             return base_path
 
+    def should_use_recursive_watch(self, folder_type: str) -> bool:
+        """
+        폴더 타입에 따라 재귀 감시 여부 결정 (monitoring_app과 동일한 로직)
+
+        Args:
+            folder_type: "normal", "normal2", "nir", etc.
+
+        Returns:
+            True: 재귀 감시, False: 단일 레벨 감시
+        """
+        # 일반카메라에서 camera 하위폴더 사용 시 재귀 감시 비활성화
+        if folder_type in ["normal", "normal2"]:
+            use_subfolder_key = f"use_camera_subfolder_{folder_type}"
+            use_camera_subfolder = self.settings.get(use_subfolder_key, False)
+
+            if use_camera_subfolder:
+                return False  # 단일 레벨만 감시
+
+        # 나머지는 기존대로 재귀 감시
+        return True
+
     def trigger_count(self):
         """파일 개수 카운트 트리거"""
         if self.is_enabled:
@@ -110,7 +131,9 @@ class FileCountWorker(QThread):
                     folder = self.settings.get(folder_type, "")
 
                 if folder and os.path.isdir(folder):
-                    self.observer.schedule(handler, folder, recursive=True)
+                    # ✅ recursive 옵션 결정 (monitoring_app과 동일)
+                    recursive = self.should_use_recursive_watch(folder_type)
+                    self.observer.schedule(handler, folder, recursive=recursive)
 
             self.observer.start()
         except Exception as e:
