@@ -410,6 +410,15 @@ class SettingDialog(QDialog):
         )
         other_layout.addRow("NIR 매칭 시간 차이(초)", self.nir_match_time_diff)
 
+        # 디스크 캐시 사용 설정
+        self.use_disk_cache = QCheckBox("디스크 캐시 사용 (재실행 시 빠른 로딩)")
+        self.use_disk_cache.setToolTip(
+            "체크: 디스크 캐시 사용 - 썸네일을 디스크에 저장하여 재실행 시 빠름 (권장)\n"
+            "미체크: 메모리 캐시만 사용 - HDD 환경에서 I/O 병목 제거, 재실행 시 느림"
+        )
+        self.use_disk_cache.setChecked(True)  # 기본값: 사용
+        other_layout.addRow("", self.use_disk_cache)
+
         layout.addLayout(other_layout)
 
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -482,6 +491,7 @@ class SettingDialog(QDialog):
             "nir_match_time_diff": float(self.nir_match_time_diff.text() or 1.0),
             "use_camera_subfolder_normal": self.use_camera_subfolder_normal.isChecked(),
             "use_camera_subfolder_normal2": self.use_camera_subfolder_normal2.isChecked(),
+            "use_disk_cache": self.use_disk_cache.isChecked(),
         }
 
 

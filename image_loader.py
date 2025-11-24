@@ -12,7 +12,7 @@ import hashlib
 import time
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from queue import Queue, Empty
+from queue import Queue, Empty, PriorityQueue
 from typing import Tuple, Optional
 
 from PySide6.QtCore import QThread, Signal, QByteArray
@@ -144,14 +144,21 @@ class ImageLoaderWorker(QThread):
     # 시그널: (error_message)
     error_occurred = Signal(str)
     
-    def __init__(self, cache_dir: str, max_workers: int = None):
+    def __init__(self, cache_dir: str, max_workers: int = None, use_disk_cache: bool = True):
         """
         Args:
             cache_dir: 썸네일 캐시 디렉토리
             max_workers: 병렬 로딩 워커 수 (None이면 자동 설정)
+            use_disk_cache: 디스크 캐시 사용 여부 (기본값: True)
         """
         super().__init__()
         self.cache = ThumbnailCache(cache_dir)
+        self.use_disk_cache = use_disk_cache  # ✅ 디스크 캐시 사용 여부
+
+        if use_disk_cache:
+            print("[IMAGE_LOADER] 디스크 캐시: 사용 (재실행 시 빠름)")
+        else:
+            print("[IMAGE_LOADER] 디스크 캐시: 사용 안 함 (메모리만 사용, HDD I/O 병목 제거)")
 
         # ✅ Phase 1: CPU 코어 수 기반 동적 워커 수 설정
         if max_workers is None:
@@ -163,8 +170,8 @@ class ImageLoaderWorker(QThread):
             self.max_workers = max_workers
             print(f"[IMAGE_LOADER] 워커 수: {self.max_workers}개")
 
-        # 로딩 요청 큐
-        self.request_queue = Queue()
+        # 로딩 요청 큐 (우선순위 큐)
+        self.request_queue = PriorityQueue()
 
         # ✅ Phase 1: 중복 요청 방지를 위한 Set
         self.pending_requests = set()  # 현재 처리 중인 이미지 경로
@@ -175,7 +182,7 @@ class ImageLoaderWorker(QThread):
         # PIL 사용 가능 여부
         self.use_pil = PIL_AVAILABLE
     
-    def request_image(self, image_path: str, size: Tuple[int, int], request_id: str = ""):
+    def request_image(self, image_path: str, size: Tuple[int, int], request_id: str = "", priority: int = 5):
         """
         이미지 로딩 요청
 
@@ -183,13 +190,16 @@ class ImageLoaderWorker(QThread):
             image_path: 이미지 파일 경로
             size: 썸네일 크기 (width, height)
             request_id: 요청 식별자 (선택, UI 업데이트용)
+            priority: 우선순위 (낮을수록 우선, 0=최고, 5=중간, 10=최저)
         """
         # ✅ Phase 1: 중복 요청 체크
         if image_path in self.pending_requests:
             return  # 이미 요청된 이미지는 건너뛰기
 
         self.pending_requests.add(image_path)
-        self.request_queue.put((image_path, size, request_id))
+        # 우선순위 큐: (priority, timestamp, image_path, size, request_id)
+        # timestamp는 동일 우선순위 내에서 FIFO 보장
+        self.request_queue.put((priority, time.time(), image_path, size, request_id))
     
     def stop(self):
         """워커 중지"""
@@ -210,8 +220,9 @@ class ImageLoaderWorker(QThread):
                     
                     if item is None:  # 종료 신호
                         break
-                    
-                    image_path, size, request_id = item
+
+                    # 우선순위 큐 형식: (priority, timestamp, image_path, size, request_id)
+                    priority, timestamp, image_path, size, request_id = item
                     
                     # 백그라운드 작업 제출
                     future = executor.submit(
@@ -241,32 +252,34 @@ class ImageLoaderWorker(QThread):
     def _load_image(self, image_path: str, size: Tuple[int, int], request_id: str) -> Optional[QPixmap]:
         """
         실제 이미지 로딩 로직 (백그라운드 스레드에서 실행)
-        1. 디스크 캐시 확인
+        1. 디스크 캐시 확인 (use_disk_cache=True인 경우만)
         2. 캐시 없으면 디코딩
-        3. 캐시 저장
+        3. 캐시 저장 (use_disk_cache=True인 경우만)
         """
         try:
-            # 1. 디스크 캐시 확인
-            cached_data = self.cache.get(image_path, size)
-            if cached_data:
-                # 캐시된 JPEG 데이터를 QPixmap으로 변환
-                pixmap = QPixmap()
-                pixmap.loadFromData(QByteArray(cached_data), "JPEG")
-                if not pixmap.isNull():
-                    return pixmap
-            
-            # 2. 캐시 없음 - 이미지 디코딩
+            # 1. 디스크 캐시 확인 (옵션이 켜져 있을 때만)
+            if self.use_disk_cache:
+                cached_data = self.cache.get(image_path, size)
+                if cached_data:
+                    # 캐시된 JPEG 데이터를 QPixmap으로 변환
+                    pixmap = QPixmap()
+                    pixmap.loadFromData(QByteArray(cached_data), "JPEG")
+                    if not pixmap.isNull():
+                        return pixmap
+
+            # 2. 캐시 없음 또는 디스크 캐시 미사용 - 이미지 디코딩
             if self.use_pil and PIL_AVAILABLE:
                 pixmap = self._load_with_pil(image_path, size)
             else:
                 pixmap = self._load_with_qt(image_path, size)
-            
+
             if pixmap is None or pixmap.isNull():
                 return None
-            
-            # 3. 디스크 캐시에 저장
-            self._save_to_cache(pixmap, image_path, size)
-            
+
+            # 3. 디스크 캐시에 저장 (옵션이 켜져 있을 때만)
+            if self.use_disk_cache:
+                self._save_to_cache(pixmap, image_path, size)
+
             return pixmap
             
         except Exception as e:

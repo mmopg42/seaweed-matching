@@ -12,8 +12,8 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QTextEdit, QScrollArea, QSizePolicy, QFrame, QMessageBox,
     QLineEdit, QComboBox, QTabWidget
 )
-from PySide6.QtCore import Qt, QTimer, QByteArray
-from PySide6.QtGui import QPixmap
+from PySide6.QtCore import Qt, QTimer, QByteArray, QPoint, QRect
+from PySide6.QtGui import QPixmap, QPainter, QColor
 from watchdog.observers import Observer
 
 from config_manager import ConfigManager
@@ -129,7 +129,8 @@ class MainWindow(QMainWindow):
         
         # ✅ 비동기 이미지 로더 초기화 (워커 수 자동 감지)
         thumbnail_cache_dir = os.path.join(self.config_manager.app_dir, "thumbnail_cache")
-        self.image_loader = ImageLoaderWorker(cache_dir=thumbnail_cache_dir)
+        use_disk_cache = self.settings.get("use_disk_cache", True)  # 기본값: True
+        self.image_loader = ImageLoaderWorker(cache_dir=thumbnail_cache_dir, use_disk_cache=use_disk_cache)
         self.image_loader.image_ready.connect(self.on_image_loaded)
         self.image_loader.error_occurred.connect(lambda msg: print(f"[IMAGE_LOADER] {msg}"))
         self.image_loader.start()
@@ -914,6 +915,9 @@ class MainWindow(QMainWindow):
             dlg.use_camera_subfolder_normal.setChecked(self.settings.get("use_camera_subfolder_normal", False))
             dlg.use_camera_subfolder_normal2.setChecked(self.settings.get("use_camera_subfolder_normal2", False))
 
+            # 디스크 캐시 옵션 로드 (기본값: True)
+            dlg.use_disk_cache.setChecked(self.settings.get("use_disk_cache", True))
+
         if dlg.exec():
             was_on = self.is_watching  # 현재 감시 상태 기억
             if was_on:
@@ -991,6 +995,82 @@ class MainWindow(QMainWindow):
                 return base_path
         else:
             return base_path
+
+    def get_normal_thumbnail_path(self, folder_key: str, data_folder_name: str) -> str:
+        """
+        일반카메라 데이터 폴더의 stitched_original.png 경로 반환
+
+        Args:
+            folder_key: "normal" 또는 "normal2"
+            data_folder_name: 데이터 폴더명 (예: "C_20250101_120000")
+
+        Returns:
+            str: stitched_original.png 절대 경로 또는 None
+        """
+        if not data_folder_name:
+            return None
+
+        # 실제 검색 경로 계산 (camera 하위폴더 옵션 반영)
+        search_path = self.get_effective_normal_path(folder_key)
+        if not search_path:
+            return None
+
+        # 데이터 폴더 경로
+        data_folder_path = os.path.join(search_path, data_folder_name)
+        if not os.path.isdir(data_folder_path):
+            return None
+
+        # stitched_original.png 경로
+        thumbnail_path = os.path.join(data_folder_path, "stitched_original.png")
+
+        if os.path.exists(thumbnail_path) and os.path.isfile(thumbnail_path):
+            return thumbnail_path
+
+        return None
+
+    def get_image_dimensions(self, image_path: str):
+        """
+        이미지 파일의 크기(width, height) 반환
+
+        Args:
+            image_path: 이미지 파일 절대 경로
+
+        Returns:
+            tuple: (width, height) 또는 None
+        """
+        if not image_path or not os.path.exists(image_path):
+            return None
+
+        try:
+            from PIL import Image
+            with Image.open(image_path) as img:
+                return img.size  # (width, height)
+        except Exception as e:
+            self.log_to_box(f"⚠️ 이미지 크기 추출 실패: {os.path.basename(image_path)} - {e}")
+            return None
+
+    def is_abnormal_image(self, image_path: str) -> bool:
+        """
+        이미지 이상치 여부 판정
+
+        기준:
+        - 가로(width) <= 185 픽셀 OR
+        - 세로(height) >= 210 픽셀
+
+        Args:
+            image_path: 이미지 파일 절대 경로
+
+        Returns:
+            bool: True if 이상치, False if 정상
+        """
+        dimensions = self.get_image_dimensions(image_path)
+        if dimensions is None:
+            return False  # 크기를 알 수 없으면 정상으로 간주
+
+        width, height = dimensions
+
+        # OR 조건: 가로 185 이하 또는 세로 210 이상
+        return width <= 185 or height >= 210
 
     def should_use_recursive_watch(self, folder_type: str) -> bool:
         """
@@ -1514,7 +1594,9 @@ class MainWindow(QMainWindow):
                 row_widget.delete_btn.setEnabled(True)
                 row_widget.delete_btn.setToolTip("그룹을 삭제합니다")
 
-            self._update_row_widget(row_widget, group_data)
+            # 가시성 판단하여 우선순위 결정
+            is_visible = self.is_row_visible(scroll_area, row_widget)
+            self._update_row_widget(row_widget, group_data, is_visible)
 
             # 해시 저장
             row_widget.last_hash = current_hash
@@ -1810,27 +1892,50 @@ class MainWindow(QMainWindow):
                         self.log_to_box(f"[데이터 변경] 그룹 '{group['name']}'에서 '{basename}' 삭제됨")
                     return
 
-    def _update_row_widget(self, row_widget, group):
+    def _update_row_widget(self, row_widget, group, is_visible=True):
         # h_layout = row_widget.layout()
         camera_files = [v for k, v in group.get("카메라", {}).items() if isinstance(v, dict)]
+
+        # 우선순위 결정: 화면에 보이는 행은 0 (최고), 안 보이는 행은 5 (중간)
+        priority = 0 if is_visible else 5
 
         # 레이아웃 인덱스:
         # 0: 삭제 버튼, 1: NIR, 2~5: 카메라 이미지 위젯들
         cam_widget = row_widget.norm_view
 
-        if camera_files:
-            f_info = camera_files[0]
-            path = f_info.get("absolute_path")
-            if path:
-                pixmap = self.get_cached_pixmap(path)
-                # pixmap이 None이어도 경로를 저장 (나중에 캐시에서 로드하기 위해)
-                cam_widget.set_image(pixmap, path)
-            else:
-                cam_widget.img_label.clear()
-                cam_widget.img_label.setText("X")
+        # ✅ Phase 5: 이상치 판정을 위한 변수 초기화
+        is_abnormal = False
 
+        if camera_files:
+            # ✅ Phase 4: 일반카메라 썸네일 표시 (stitched_original.png)
             folder_name = group.get("카메라", {}).get("folder_label", "Unknown")
             timestamp = group.get("카메라", {}).get("timestamp", "")
+
+            # line에 따라 folder_key 결정 (1: "normal", 2: "normal2")
+            line = group.get('line', 1)
+            folder_key = "normal" if line == 1 else "normal2"
+
+            # stitched_original.png 경로 가져오기
+            thumbnail_path = self.get_normal_thumbnail_path(folder_key, folder_name)
+
+            if thumbnail_path:
+                # 썸네일 이미지 로딩 및 표시
+                pixmap = self.get_cached_pixmap(thumbnail_path, priority)
+                cam_widget.set_image(pixmap, thumbnail_path)
+
+                # ✅ Phase 5: 이상치 판정
+                is_abnormal = self.is_abnormal_image(thumbnail_path)
+            else:
+                # 썸네일 없으면 기존 방식: 첫 번째 파일의 이미지 표시
+                f_info = camera_files[0]
+                path = f_info.get("absolute_path")
+                if path:
+                    pixmap = self.get_cached_pixmap(path, priority)
+                    cam_widget.set_image(pixmap, path)
+                else:
+                    cam_widget.img_label.clear()
+                    cam_widget.img_label.setText("X")
+
             cam_widget.text_label.setText(f"{folder_name}\n{timestamp}" if timestamp else folder_name)
         else:
             cam_widget.img_label.clear()
@@ -1855,7 +1960,10 @@ class MainWindow(QMainWindow):
             nir_widget.img_label.setStyleSheet("background: #ffe8e8; font-size: 9px;")
         nir_widget.text_label.clear()
 
-        if group.get("type") == "누락발생":
+        # ✅ Phase 5: 행 스타일 적용 (이상치 > 누락발생 > 기본)
+        if is_abnormal:
+            row_widget.setStyleSheet("border: 2px solid red;")
+        elif group.get("type") == "누락발생":
             row_widget.setStyleSheet("background-color: #ffe0e0;")
         else:
             row_widget.setStyleSheet("")
@@ -1881,7 +1989,7 @@ class MainWindow(QMainWindow):
         # 첫 번째 카메라 (라인1: cam1, 라인2: cam4)
         cam1_name, cam1_path = _first_name_and_path(group.get(cam_keys[0], {}))
         if cam1_path:
-            pix = self.get_cached_pixmap(cam1_path)
+            pix = self.get_cached_pixmap(cam1_path, priority)
             # pixmap이 None이어도 경로를 저장
             cam_views[0].set_image(pix, cam1_path)
             cam_views[0].set_caption(cam1_name or "")
@@ -1893,7 +2001,7 @@ class MainWindow(QMainWindow):
         # 두 번째 카메라 (라인1: cam2, 라인2: cam5)
         cam2_name, cam2_path = _first_name_and_path(group.get(cam_keys[1], {}))
         if cam2_path:
-            pix = self.get_cached_pixmap(cam2_path)
+            pix = self.get_cached_pixmap(cam2_path, priority)
             # pixmap이 None이어도 경로를 저장
             cam_views[1].set_image(pix, cam2_path)
             cam_views[1].set_caption(cam2_name or "")
@@ -1905,7 +2013,7 @@ class MainWindow(QMainWindow):
         # 세 번째 카메라 (라인1: cam3, 라인2: cam6)
         cam3_name, cam3_path = _first_name_and_path(group.get(cam_keys[2], {}))
         if cam3_path:
-            pix = self.get_cached_pixmap(cam3_path)
+            pix = self.get_cached_pixmap(cam3_path, priority)
             # pixmap이 None이어도 경로를 저장
             cam_views[2].set_image(pix, cam3_path)
             cam_views[2].set_caption(cam3_name or "")
@@ -1914,11 +2022,72 @@ class MainWindow(QMainWindow):
             cam_views[2].set_image(None, "")
             cam_views[2].set_caption("")
 
-    def get_cached_pixmap(self, path):
+    def is_row_visible(self, scroll_area, row_widget):
+        """
+        행이 화면(viewport)에 보이는지 확인
+
+        Args:
+            scroll_area: QScrollArea 위젯
+            row_widget: MonitorRow 위젯
+
+        Returns:
+            bool: True if 보임, False if 안 보임
+        """
+        if not scroll_area or not row_widget:
+            return False
+
+        viewport = scroll_area.viewport()
+        if not viewport:
+            return False
+
+        viewport_rect = viewport.rect()
+
+        # 위젯의 viewport 상의 좌표 계산
+        try:
+            widget_pos = row_widget.mapTo(viewport, QPoint(0, 0))
+            widget_rect = QRect(widget_pos, row_widget.size())
+
+            # viewport와 교차하는지 확인
+            return viewport_rect.intersects(widget_rect)
+        except:
+            # 위젯이 아직 렌더링되지 않았거나 에러 발생 시 False
+            return False
+
+    def get_placeholder_pixmap(self):
+        """
+        로딩 중 플레이스홀더 이미지 반환
+        - 회색 배경 + "로딩 중..." 텍스트
+        - 한 번만 생성하고 재사용
+        """
+        if hasattr(self, '_placeholder_pixmap') and self._placeholder_pixmap is not None:
+            return self._placeholder_pixmap
+
+        img_w = self.settings.get("img_width", 110)
+        img_h = self.settings.get("img_height", 80)
+
+        # 회색 배경의 Pixmap 생성
+        pixmap = QPixmap(img_w, img_h)
+        pixmap.fill(QColor(200, 200, 200))  # 회색 배경
+
+        # "로딩 중..." 텍스트 그리기
+        painter = QPainter(pixmap)
+        painter.setPen(QColor(100, 100, 100))
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "로딩 중...")
+        painter.end()
+
+        # 캐시하여 재사용
+        self._placeholder_pixmap = pixmap
+        return pixmap
+
+    def get_cached_pixmap(self, path, priority=5):
         """
         비동기 이미지 로딩
         - 메모리 캐시에 있으면 즉시 반환
-        - 없으면 백그라운드 로더에 요청하고 None 반환
+        - 없으면 백그라운드 로더에 요청하고 Placeholder 반환
+
+        Args:
+            path: 이미지 파일 경로
+            priority: 로딩 우선순위 (0=최고, 5=중간, 10=최저)
         """
         if not path or not os.path.exists(path):
             return None
@@ -1932,10 +2101,10 @@ class MainWindow(QMainWindow):
         if pixmap is not None:
             return pixmap
 
-        # 2. 캐시 없음 → 백그라운드 로더에 요청하고 None 반환
+        # 2. 캐시 없음 → 백그라운드 로더에 요청하고 Placeholder 반환
         request_id = f"{path}_{time.time()}"
-        self.image_loader.request_image(path, thumb_size, request_id)
-        return None
+        self.image_loader.request_image(path, thumb_size, request_id, priority)  # ✅ 우선순위 전달
+        return self.get_placeholder_pixmap()  # ✅ None 대신 Placeholder 반환
     
     def on_image_loaded(self, image_path: str, pixmap: QPixmap, request_id: str = ""):
         """
