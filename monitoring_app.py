@@ -1070,7 +1070,7 @@ class MainWindow(QMainWindow):
         width, height = dimensions
 
         # OR 조건: 가로 185 이하 또는 세로 210 이상
-        return width <= 185 or height >= 210
+        return width <= 185 or height > 218
 
     def should_use_recursive_watch(self, folder_type: str) -> bool:
         """

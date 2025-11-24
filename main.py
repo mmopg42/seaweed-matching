@@ -14,7 +14,7 @@ from PySide6.QtCore import Qt
 class MonitorController(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AI 데이터 퓨전 및 통합 관제 솔루션 (Model 이비기술-MMS v0.5.1)")
+        self.setWindowTitle("AI 데이터 퓨전 및 통합 관제 솔루션 (Model 이비기술-MMS ver0.5.7)")
         self.setGeometry(100, 100, 600, 300)
 
         # 창 참조
