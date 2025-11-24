@@ -288,11 +288,19 @@ class NIRMonitorApp(QMainWindow):
             self.log("❌ 폴더 경로를 모두 입력하세요!")
             return
 
-        if not os.path.isdir(monitor_path):
-            self.log(f"❌ 감시 폴더가 존재하지 않습니다: {monitor_path}")
+        # 감시 폴더 자동 생성
+        try:
+            if not os.path.exists(monitor_path):
+                os.makedirs(monitor_path, exist_ok=True)
+                self.log(f"✅ 감시 폴더 생성됨: {monitor_path}")
+            elif not os.path.isdir(monitor_path):
+                self.log(f"❌ 감시 경로가 폴더가 아닙니다: {monitor_path}")
+                return
+        except Exception as e:
+            self.log(f"❌ 감시 폴더 생성 실패: {e}")
             return
 
-        # 이동 폴더는 자동 생성
+        # 이동 폴더 자동 생성
         try:
             if not os.path.exists(move_path):
                 os.makedirs(move_path, exist_ok=True)
