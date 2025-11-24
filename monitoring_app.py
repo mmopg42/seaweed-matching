@@ -138,6 +138,11 @@ class MainWindow(QMainWindow):
         # 이미지 로딩 요청 추적 (request_id → 위젯 매핑)
         self.pending_image_requests = {}  # {request_id: (widget, attribute)}
 
+        # ✅ [Registry Pattern] 이미지 경로 ↔ 위젯 매핑 (O(1) 업데이트용)
+        from collections import defaultdict
+        self.image_path_to_widgets = defaultdict(list)  # {path: [widget1, widget2, ...]}
+        self.widget_to_image_path = {}              # {widget: path}
+
         self.file_event_communicator = Communicate()
         self.file_event_communicator.file_changed.connect(self.handle_file_event)
 
@@ -1115,6 +1120,45 @@ class MainWindow(QMainWindow):
         self.lbl_without_line2.setText(str(without_nir_line2))
         self.lbl_fail_line2.setText(str(fail_line2))
 
+    def register_widget_for_path(self, widget, path: str):
+        """
+        위젯을 특정 이미지 경로에 등록 (Registry Pattern)
+        - 기존 경로에서 제거 후 새 경로에 등록
+        - O(1) 업데이트를 위해 필수
+        """
+        if not widget:
+            return
+
+        # 1. 기존 등록된 경로가 있다면 제거
+        old_path = self.widget_to_image_path.get(widget)
+        if old_path and old_path != path:
+            if widget in self.image_path_to_widgets[old_path]:
+                self.image_path_to_widgets[old_path].remove(widget)
+            if not self.image_path_to_widgets[old_path]:
+                del self.image_path_to_widgets[old_path]
+
+        # 2. 새 경로에 등록 (path가 있을 때만)
+        if path:
+            if widget not in self.image_path_to_widgets[path]:
+                self.image_path_to_widgets[path].append(widget)
+            self.widget_to_image_path[widget] = path
+        else:
+            # path가 없으면(초기화 등) 매핑만 제거
+            if widget in self.widget_to_image_path:
+                del self.widget_to_image_path[widget]
+
+    def unregister_widget(self, widget):
+        """위젯을 레지스트리에서 완전히 제거 (삭제 시 호출)"""
+        if not widget:
+            return
+        
+        old_path = self.widget_to_image_path.pop(widget, None)
+        if old_path and old_path in self.image_path_to_widgets:
+            if widget in self.image_path_to_widgets[old_path]:
+                self.image_path_to_widgets[old_path].remove(widget)
+            if not self.image_path_to_widgets[old_path]:
+                del self.image_path_to_widgets[old_path]
+
     def save_today_date(self):
         self.settings["today_date"] = self.today_edit.text().strip()
         self.config_manager.save(self.settings)
@@ -1204,6 +1248,14 @@ class MainWindow(QMainWindow):
         while self.scroll_layout.count():
             item = self.scroll_layout.takeAt(0)
             if item.widget():
+                # ✅ 삭제 전 레지스트리 정리
+                if isinstance(item.widget(), MonitorRow):
+                    row = item.widget()
+                    self.unregister_widget(row.nir_view)
+                    self.unregister_widget(row.norm_view)
+                    self.unregister_widget(row.cam1_view)
+                    self.unregister_widget(row.cam2_view)
+                    self.unregister_widget(row.cam3_view)
                 item.widget().deleteLater()
 
         img_w = self.settings.get("img_width", 110)
@@ -1687,6 +1739,15 @@ class MainWindow(QMainWindow):
 
         # _temp_row_widget 설정하여 delete_one_row에서 사용
         self._temp_row_widget = widget
+        
+        # ✅ 삭제 전 레지스트리 정리 (delete_one_row 내부에서 삭제되지만, 안전을 위해 여기서 처리)
+        if isinstance(widget, MonitorRow):
+            self.unregister_widget(widget.nir_view)
+            self.unregister_widget(widget.norm_view)
+            self.unregister_widget(widget.cam1_view)
+            self.unregister_widget(widget.cam2_view)
+            self.unregister_widget(widget.cam3_view)
+
         deleted = delete_one_row(self, display_idx, ignore_checkboxes=False)
         self._temp_row_widget = None
 
@@ -1921,22 +1982,40 @@ class MainWindow(QMainWindow):
             if thumbnail_path:
                 # 썸네일 이미지 로딩 및 표시
                 pixmap = self.get_cached_pixmap(thumbnail_path, priority)
+                
+                # ✅ [Registry] 위젯 등록
+                self.register_widget_for_path(cam_widget, thumbnail_path)
                 cam_widget.set_image(pixmap, thumbnail_path)
 
                 # ✅ Phase 5: 이상치 판정
                 is_abnormal = self.is_abnormal_image(thumbnail_path)
+                
+                # ✅ [NEW] 이미지 크기 표시
+                dims = self.get_image_dimensions(thumbnail_path)
+                dim_text = f"\n{dims[0]}x{dims[1]}" if dims else ""
             else:
                 # 썸네일 없으면 기존 방식: 첫 번째 파일의 이미지 표시
                 f_info = camera_files[0]
                 path = f_info.get("absolute_path")
                 if path:
                     pixmap = self.get_cached_pixmap(path, priority)
+                    
+                    # ✅ [Registry] 위젯 등록
+                    self.register_widget_for_path(cam_widget, path)
                     cam_widget.set_image(pixmap, path)
+                    
+                    # ✅ [NEW] 이미지 크기 표시
+                    dims = self.get_image_dimensions(path)
+                    dim_text = f"\n{dims[0]}x{dims[1]}" if dims else ""
                 else:
+                    self.unregister_widget(cam_widget) # 경로 없음
                     cam_widget.img_label.clear()
                     cam_widget.img_label.setText("X")
+                    dim_text = ""
 
-            cam_widget.text_label.setText(f"{folder_name}\n{timestamp}" if timestamp else folder_name)
+            # ✅ 라벨 텍스트 업데이트 (크기 정보 포함)
+            base_text = f"{folder_name}\n{timestamp}" if timestamp else folder_name
+            cam_widget.text_label.setText(base_text + dim_text)
         else:
             cam_widget.img_label.clear()
             cam_widget.text_label.setText("")
@@ -1991,10 +2070,12 @@ class MainWindow(QMainWindow):
         if cam1_path:
             pix = self.get_cached_pixmap(cam1_path, priority)
             # pixmap이 None이어도 경로를 저장
+            self.register_widget_for_path(cam_views[0], cam1_path)
             cam_views[0].set_image(pix, cam1_path)
             cam_views[0].set_caption(cam1_name or "")
             cam_views[0].setToolTip(cam1_name or cam1_path)
         else:
+            self.unregister_widget(cam_views[0])
             cam_views[0].set_image(None, "")
             cam_views[0].set_caption("")
 
@@ -2003,10 +2084,12 @@ class MainWindow(QMainWindow):
         if cam2_path:
             pix = self.get_cached_pixmap(cam2_path, priority)
             # pixmap이 None이어도 경로를 저장
+            self.register_widget_for_path(cam_views[1], cam2_path)
             cam_views[1].set_image(pix, cam2_path)
             cam_views[1].set_caption(cam2_name or "")
             cam_views[1].setToolTip(cam2_name or cam2_path)
         else:
+            self.unregister_widget(cam_views[1])
             cam_views[1].set_image(None, "")
             cam_views[1].set_caption("")
 
@@ -2015,10 +2098,12 @@ class MainWindow(QMainWindow):
         if cam3_path:
             pix = self.get_cached_pixmap(cam3_path, priority)
             # pixmap이 None이어도 경로를 저장
+            self.register_widget_for_path(cam_views[2], cam3_path)
             cam_views[2].set_image(pix, cam3_path)
             cam_views[2].set_caption(cam3_name or "")
             cam_views[2].setToolTip(cam3_name or cam3_path)
         else:
+            self.unregister_widget(cam_views[2])
             cam_views[2].set_image(None, "")
             cam_views[2].set_caption("")
 
@@ -2119,73 +2204,51 @@ class MainWindow(QMainWindow):
 
     def refresh_single_image(self, image_path: str, pixmap: QPixmap):
         """
-        특정 이미지 경로만 찾아서 즉시 업데이트
-        - 이미지 로딩 완료 시 즉시 화면에 반영
-        - 전체 레이아웃 순회 대신 해당 이미지만 빠르게 갱신
+        특정 이미지 경로만 찾아서 즉시 업데이트 (Registry Pattern 적용)
+        - O(N^2) → O(1) 최적화 완료
         """
         if not image_path:
             return
 
-        target_path = normalize_path(image_path)
-
-        # 모든 탭의 레이아웃을 순회
-        all_layouts = [
-            self.scroll_layout_line1,
-            self.scroll_layout_line2,
-            self.scroll_layout_combined_line1,
-            self.scroll_layout_combined_line2
-        ]
-
-        for scroll_layout in all_layouts:
-            for i in range(scroll_layout.count()):
-                row_widget = scroll_layout.itemAt(i).widget()
-                if not isinstance(row_widget, MonitorRow):
-                    continue
-
-                # 해당 경로를 가진 위젯만 업데이트
-                image_widgets = [
-                    row_widget.nir_view,
-                    row_widget.norm_view,
-                    row_widget.cam1_view,
-                    row_widget.cam2_view,
-                    row_widget.cam3_view
-                ]
-
-                for img_widget in image_widgets:
-                    if not hasattr(img_widget, '_current_path'):
-                        continue
-
-                    current_path = img_widget._current_path or ""
-                    if not current_path:
-                        continue
-
-                    if normalize_path(current_path) == target_path:
-                        # 아직 이미지가 로드되지 않은 위젯만 업데이트
-                        if img_widget._current_pixmap is None:
-                            img_widget.set_image(pixmap, image_path)
-                        else:
-                            img_widget.set_image(pixmap, current_path)
-                        # ✅ 동일한 이미지를 사용하는 모든 위젯을 업데이트하기 위해 계속 진행
+        # ✅ Registry를 통해 해당 경로를 보고 있는 위젯들만 즉시 조회
+        widgets = self.image_path_to_widgets.get(image_path, [])
+        
+        for widget in widgets:
+            try:
+                # 위젯이 삭제되었거나 유효하지 않을 수 있으므로 체크
+                if widget and not widget.isHidden(): # 간단한 유효성 체크
+                    widget.set_image(pixmap, image_path)
+            except RuntimeError:
+                # C++ 객체가 이미 삭제된 경우 (드물지만 발생 가능)
+                pass
 
     def refresh_visible_images(self):
         """
         화면에 표시된 행들의 이미지를 캐시에서 다시 로드하여 갱신
         - 새로고침 버튼 클릭 시
         - 이미지 로딩 완료 시 (타이머를 통해)
+        - ✅ 최적화: 화면에 보이는 행만 업데이트
         """
         # 모든 탭의 레이아웃을 순회하며 이미지 갱신
         all_layouts = [
-            self.scroll_layout_line1,
-            self.scroll_layout_line2,
-            self.scroll_layout_combined_line1,
-            self.scroll_layout_combined_line2
+            (self.scroll_area_line1, self.scroll_layout_line1),
+            (self.scroll_area_line2, self.scroll_layout_line2),
+            (self.scroll_area_combined_line1, self.scroll_layout_combined_line1),
+            (self.scroll_area_combined_line2, self.scroll_layout_combined_line2)
         ]
 
-        updated_count = 0
-        for scroll_layout in all_layouts:
+        for scroll_area, scroll_layout in all_layouts:
+            # 탭이 보이지 않으면 스킵 (선택적 최적화)
+            if not scroll_area.isVisible():
+                continue
+
             for i in range(scroll_layout.count()):
                 row_widget = scroll_layout.itemAt(i).widget()
                 if not isinstance(row_widget, MonitorRow):
+                    continue
+
+                # ✅ 화면에 보이는지 확인
+                if not self.is_row_visible(scroll_area, row_widget):
                     continue
 
                 # 각 이미지 위젯의 경로를 확인하고 캐시에 이미지가 있으면 업데이트
