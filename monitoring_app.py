@@ -1401,6 +1401,9 @@ class MainWindow(QMainWindow):
         self.log_to_box("[INFO] Watchdog 상태 모니터링 시작 (30초마다 자동 확인)")
         self.log_to_box("[INFO] 백그라운드 스캔 활성화 (10초마다 자동 스캔)")
 
+        # ✅ 백그라운드 파일 매칭 워커 활성화
+        self.file_matcher_worker.enable()
+
     def stop_watch(self):
         """감시 중지 (Stop 버튼)"""
         if not self.is_watching:
@@ -1413,7 +1416,10 @@ class MainWindow(QMainWindow):
         self.log_to_box("[INFO] 감시가 중지되었습니다.")
         self.stop_watchdog()
         self.watchdog_monitor_timer.stop()  # ✅ Watchdog 모니터링 중지
-        # ✅ 파일 카운트 워커와 매칭 워커는 항상 실행 (중지하지 않음)
+
+        # ✅ 파일 매칭 워커 비활성화 (Stop 상태에서는 백그라운드 스캔 중지)
+        self.file_matcher_worker.disable()
+        # ✅ 파일 카운트 워커는 항상 실행 유지 (파일 개수 표시용)
 
     def toggle_watch(self):
         """하위 호환성을 위해 남겨둔 메서드 (내부에서 사용)"""

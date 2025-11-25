@@ -305,6 +305,7 @@ class FileMatcherWorker(QThread):
     - WSL 환경에서 watchdog 이벤트가 발생하지 않는 문제 해결
     - 10초마다 자동 스캔 (실시간 모니터링 보장)
     - watchdog 이벤트 발생 시 즉시 스캔 트리거 가능
+    - 기본적으로 비활성화 상태이며, 필요할 때만 활성화
     """
     # Signal: 스캔 완료 시 unmatched 데이터 전달
     scan_completed = Signal(dict)
@@ -314,17 +315,29 @@ class FileMatcherWorker(QThread):
         self.file_matcher = file_matcher
         self.settings = {}
         self.is_running = True
+        self.is_enabled = False  # 기본적으로 비활성화
         self.needs_scan = True  # 초기 스캔 필요
         self.last_scan_time = time.time()
 
     def update_settings(self, settings: dict):
         """설정 업데이트 (스레드 안전)"""
         self.settings = settings.copy()
-        self.trigger_scan()  # 설정 변경 시 즉시 스캔
+        if self.is_enabled:
+            self.trigger_scan()  # 활성화 상태에서만 스캔 트리거
 
     def trigger_scan(self):
         """스캔 트리거 (watchdog 이벤트 등에서 호출)"""
-        self.needs_scan = True
+        if self.is_enabled:
+            self.needs_scan = True
+
+    def enable(self):
+        """파일 매칭 워커 활성화"""
+        self.is_enabled = True
+        self.needs_scan = True  # 즉시 스캔
+
+    def disable(self):
+        """파일 매칭 워커 비활성화 (Stop 상태)"""
+        self.is_enabled = False
 
     def stop(self):
         """워커 종료"""
@@ -335,6 +348,11 @@ class FileMatcherWorker(QThread):
         """백그라운드 스레드 실행"""
         while self.is_running:
             try:
+                # 비활성화 상태면 스캔하지 않음
+                if not self.is_enabled:
+                    self.msleep(500)  # 0.5초 대기
+                    continue
+
                 current_time = time.time()
                 time_since_last_scan = current_time - self.last_scan_time
 
