@@ -118,6 +118,8 @@ class FileMatcher(QObject):
             return base_path
 
     def add_or_update_file(self, file_path, folder_type):
+        # ✅ folder_type 키가 없으면 생성 (KeyError 방지)
+        self.unmatched_files.setdefault(folder_type, {})
 
         if folder_type in ("normal", "normal2"):
             folder_path = os.path.dirname(file_path)
@@ -152,13 +154,13 @@ class FileMatcher(QObject):
 
         if folder_type in ("normal", "normal2"):
             key_to_remove = os.path.basename(os.path.dirname(file_path))
-            if key_to_remove in self.unmatched_files.get(folder_type, {}):
+            if folder_type in self.unmatched_files and key_to_remove in self.unmatched_files[folder_type]:
                 del self.unmatched_files[folder_type][key_to_remove]
                 self.log_signal.emit(f"[미매칭 제거] '{basename}'이(가) 대기 목록에서 삭제되었습니다.")
 
         elif folder_type in ("nir", "nir2"):
             key_to_remove = os.path.splitext(re.sub(r'[A-Z]$', '', basename))[0]
-            if key_to_remove in self.unmatched_files.get(folder_type, {}):
+            if folder_type in self.unmatched_files and key_to_remove in self.unmatched_files[folder_type]:
                 del self.unmatched_files[folder_type][key_to_remove]
                 self.log_signal.emit(f"[미매칭 제거] '{basename}'이(가) 대기 목록에서 삭제되었습니다.")
 
@@ -170,7 +172,7 @@ class FileMatcher(QObject):
                 del files[basename]
                 self.log_signal.emit(f"[미매칭 제거] {folder_type}/{folder_label}에서 '{basename}' 제거")
                 # 비면 버킷도 정리
-                if not files:
+                if not files and folder_type in self.unmatched_files:
                     self.unmatched_files[folder_type].pop(folder_label, None)
 
     def add_nir_immediately(self, file_path):
@@ -198,6 +200,9 @@ class FileMatcher(QObject):
         if dt_from_name is None:
             mtime = min(os.path.getmtime(spc_path), os.path.getmtime(txt_path))
             dt_from_name = datetime.datetime.fromtimestamp(mtime)
+
+        # ✅ 'nir' 키가 없으면 생성 (KeyError 방지)
+        self.unmatched_files.setdefault('nir', {})
 
         self.unmatched_files['nir'][prefix_base] = {
             'key': prefix_base,
