@@ -5,7 +5,7 @@ import datetime
 from collections import defaultdict
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, QThread
 from watchdog.events import FileSystemEventHandler
 
 from utils import extract_datetime_from_str, get_timestamp_from_yml, extract_datetime_from_nir_key
@@ -297,3 +297,64 @@ class FileMatcher(QObject):
                     files_dict[fname] = {'absolute_path': abs_path}
 
         return unmatched
+
+
+class FileMatcherWorker(QThread):
+    """
+    백그라운드에서 주기적으로 파일 스캔을 수행하는 워커
+    - WSL 환경에서 watchdog 이벤트가 발생하지 않는 문제 해결
+    - 10초마다 자동 스캔 (실시간 모니터링 보장)
+    - watchdog 이벤트 발생 시 즉시 스캔 트리거 가능
+    """
+    # Signal: 스캔 완료 시 unmatched 데이터 전달
+    scan_completed = Signal(dict)
+
+    def __init__(self, file_matcher: FileMatcher):
+        super().__init__()
+        self.file_matcher = file_matcher
+        self.settings = {}
+        self.is_running = True
+        self.needs_scan = True  # 초기 스캔 필요
+        self.last_scan_time = time.time()
+
+    def update_settings(self, settings: dict):
+        """설정 업데이트 (스레드 안전)"""
+        self.settings = settings.copy()
+        self.trigger_scan()  # 설정 변경 시 즉시 스캔
+
+    def trigger_scan(self):
+        """스캔 트리거 (watchdog 이벤트 등에서 호출)"""
+        self.needs_scan = True
+
+    def stop(self):
+        """워커 종료"""
+        self.is_running = False
+        self.wait()  # 스레드가 완전히 종료될 때까지 대기
+
+    def run(self):
+        """백그라운드 스레드 실행"""
+        while self.is_running:
+            try:
+                current_time = time.time()
+                time_since_last_scan = current_time - self.last_scan_time
+
+                # 10초마다 또는 변화 감지 시 스캔
+                if self.needs_scan or time_since_last_scan >= 10.0:
+                    # 백그라운드에서 풀스캔 실행
+                    unmatched = self.file_matcher.scan_and_build_unmatched(self.settings)
+
+                    # Signal 발생 (메인 스레드로 자동 전달)
+                    self.scan_completed.emit(unmatched)
+
+                    # 플래그 초기화
+                    self.needs_scan = False
+                    self.last_scan_time = current_time
+
+            except Exception as e:
+                # 에러가 발생해도 스레드는 계속 실행
+                print(f"[FileMatcherWorker] 스캔 오류: {e}")
+                import traceback
+                traceback.print_exc()
+
+            # 0.1초마다 체크 (실제 스캔은 변화가 있거나 10초마다만)
+            self.msleep(100)

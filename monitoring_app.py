@@ -18,7 +18,7 @@ from watchdog.observers import Observer
 
 from config_manager import ConfigManager
 from ui_components import SettingDialog, MonitorRow, FlowLayout_
-from file_matcher import Communicate, FolderEventHandler, FileMatcher
+from file_matcher import Communicate, FolderEventHandler, FileMatcher, FileMatcherWorker
 from group_manager import GroupManager
 from file_operations import FileOperationWorker
 from utils import extract_datetime_from_str, LruPixmapCache, normalize_path
@@ -158,16 +158,10 @@ class MainWindow(QMainWindow):
         self.update_timer.setSingleShot(True)
         self.update_timer.timeout.connect(self.process_event_queue)
 
-        # 10초 무변화 시 1회 풀스캔용 타이머
-        self.full_scan_timer = QTimer(self)
-        self.full_scan_timer.setSingleShot(True)
-        self.full_scan_timer.timeout.connect(self.do_full_scan_once)
-
         # 이미지 갱신용 타이머 (이벤트 기반, 단발성)
         self.image_refresh_timer = QTimer(self)
         self.image_refresh_timer.setSingleShot(True)
         self.image_refresh_timer.timeout.connect(self.refresh_visible_images)
-        self.full_scan_done = False  # 풀스캔 완료 플래그
 
         # ✅ Watchdog 상태 모니터링 타이머 (30초마다 확인)
         self.watchdog_monitor_timer = QTimer(self)
@@ -179,6 +173,11 @@ class MainWindow(QMainWindow):
         self.file_count_worker.update_settings(self.settings)
         self.file_count_worker.counts_updated.connect(self.on_file_counts_updated)
 
+        # ✅ 백그라운드 파일 매칭 워커 (WSL 환경 대응: 10초마다 주기적 풀스캔)
+        self.file_matcher_worker = FileMatcherWorker(self.file_matcher)
+        self.file_matcher_worker.update_settings(self.settings)
+        self.file_matcher_worker.scan_completed.connect(self.on_scan_completed)
+
         self.init_ui()
         self.setWindowTitle("메인 모니터링")
         self.resize(1200, 800)
@@ -187,6 +186,9 @@ class MainWindow(QMainWindow):
         # ✅ 실시간 파일 개수 카운트 워커 시작 및 활성화
         self.file_count_worker.enable()  # 활성화
         self.file_count_worker.start()
+
+        # ✅ 백그라운드 파일 매칭 워커 시작
+        self.file_matcher_worker.start()
 
         self.file_matcher.log_signal.connect(self.log_to_box)
 
@@ -587,6 +589,37 @@ class MainWindow(QMainWindow):
             # 에러가 발생해도 무시
             pass
 
+    def on_scan_completed(self, unmatched):
+        """
+        백그라운드 워커가 풀스캔을 완료했을 때 호출됨 (메인 스레드)
+
+        Args:
+            unmatched: scan_and_build_unmatched()의 결과
+        """
+        try:
+            # unmatched 데이터 업데이트
+            self.file_matcher.unmatched_files = unmatched
+
+            # NIR 파일 매칭 수행
+            nir_match_time_diff = self.settings.get("nir_match_time_diff", 300)
+            self.group_manager.match_and_group(
+                self.file_matcher.unmatched_files,
+                self.file_matcher.consumed_nir_keys,
+                nir_match_time_diff=nir_match_time_diff
+            )
+
+            # UI 업데이트 (통계만, 이미지는 버튼으로)
+            legacy_mode = self.settings.get("legacy_ui_mode", False)
+            if legacy_mode:
+                self.update_monitoring_view(update_ui=True)
+            else:
+                self.update_monitoring_view(update_ui=False)
+
+        except Exception as e:
+            self.log_to_box(f"[ERROR] 스캔 완료 처리 중 오류: {e}")
+            import traceback
+            traceback.print_exc()
+
     def _extract_date_from_paths(self, settings: dict) -> str | None:
         """
         설정된 경로들에서 8자리 날짜 패턴(YYYYMMDD)을 추출합니다.
@@ -789,6 +822,9 @@ class MainWindow(QMainWindow):
         self.file_count_worker.stop_watchdog()
         self.file_count_worker.start_watchdog()
 
+        # ✅ 파일 매칭 워커에도 새 설정 전달
+        self.file_matcher_worker.update_settings(self.settings)
+
     def _maybe_load_groups_json(self):
         """외부 공정이 groups_state.json을 바꿨다면 불러와 UI 반영"""
         try:
@@ -956,6 +992,10 @@ class MainWindow(QMainWindow):
             self.file_count_worker.update_settings(self.settings)
             self.file_count_worker.stop_watchdog()
             self.file_count_worker.start_watchdog()
+
+            # ✅ 파일 매칭 워커에도 새 설정 전달
+            self.file_matcher_worker.update_settings(self.settings)
+
             self.log_to_box("[설정] 설정이 저장되었습니다. 변경 사항을 반영합니다...")
 
             # 내부 상태 초기화 + UI 초기화
@@ -1080,7 +1120,7 @@ class MainWindow(QMainWindow):
 
         # OR 조건: 가로 185 이하 또는 세로 210 이상 (Truncated: 18, 21)
         # 원래 기준: 185, 218 -> 10으로 나누면 18, 21
-        return w_trunc <= 185 or h_trunc > 218
+        return w_trunc < 184 or h_trunc >= 218
 
     def should_use_recursive_watch(self, folder_type: str) -> bool:
         """
@@ -1356,14 +1396,10 @@ class MainWindow(QMainWindow):
             self.update_timer.setInterval(1000)
             self.log_to_box("[경고] 인터벌 설정값이 유효하지 않습니다. 기본값 1초로 설정됩니다.")
 
-        # 풀스캔 플래그 초기화 및 10초 타이머 시작
-        self.full_scan_done = False
-        self.full_scan_timer.start(10000)  # 10초 후 풀스캔
-        self.log_to_box("[INFO] 10초 후 1회 전체 스캔이 실행됩니다.")
-
         # ✅ Watchdog 상태 모니터링 시작
         self.watchdog_monitor_timer.start()
         self.log_to_box("[INFO] Watchdog 상태 모니터링 시작 (30초마다 자동 확인)")
+        self.log_to_box("[INFO] 백그라운드 스캔 활성화 (10초마다 자동 스캔)")
 
     def stop_watch(self):
         """감시 중지 (Stop 버튼)"""
@@ -1376,9 +1412,8 @@ class MainWindow(QMainWindow):
 
         self.log_to_box("[INFO] 감시가 중지되었습니다.")
         self.stop_watchdog()
-        self.full_scan_timer.stop()  # 풀스캔 타이머도 중지
         self.watchdog_monitor_timer.stop()  # ✅ Watchdog 모니터링 중지
-        # ✅ 파일 카운트 워커는 항상 실행 (중지하지 않음)
+        # ✅ 파일 카운트 워커와 매칭 워커는 항상 실행 (중지하지 않음)
 
     def toggle_watch(self):
         """하위 호환성을 위해 남겨둔 메서드 (내부에서 사용)"""
@@ -1442,19 +1477,6 @@ class MainWindow(QMainWindow):
             else:
                 self.update_monitoring_view(update_ui=False)
                 self.log_to_box("✅ 통계 업데이트 완료.")
-
-    def do_full_scan_once(self):
-        """10초 무변화 시 1회만 전체 스캔 실행"""
-        if not self.is_watching:
-            return
-
-        if self.full_scan_done:
-            return  # 이미 풀스캔 완료됨
-
-        self.log_to_box("[풀스캔] 10초 무변화 감지 - 전체 폴더 1회 스캔 중...")
-        self.process_updates(force_full_scan=True)
-        self.full_scan_done = True
-        self.log_to_box("[풀스캔] 완료. 이후에는 watchdog만 동작합니다.")
 
     def ensure_rows_for_layout(self, layout, count):
         """
@@ -1893,10 +1915,8 @@ class MainWindow(QMainWindow):
         if not self.update_timer.isActive():
             self.update_timer.start()
 
-        # ✅ 파일 변화가 있으면 풀스캔 타이머 리셋 (10초 재시작)
-        if not self.full_scan_done:
-            self.full_scan_timer.stop()
-            self.full_scan_timer.start(10000)
+        # ✅ 파일 변화가 있으면 백그라운드 워커에 스캔 트리거
+        self.file_matcher_worker.trigger_scan()
 
     def process_event_queue(self):
         if hasattr(self, 'is_processing_delete') and self.is_processing_delete:
@@ -2988,6 +3008,10 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'file_count_worker'):
             self.file_count_worker.stop()
             print("[MAIN] 파일 카운트 워커 종료", flush=True)
+        # ✅ 파일 매칭 워커 종료
+        if hasattr(self, 'file_matcher_worker'):
+            self.file_matcher_worker.stop()
+            print("[MAIN] 파일 매칭 워커 종료", flush=True)
         # ✅ 이미지 로더 워커 종료
         if hasattr(self, 'image_loader'):
             self.image_loader.stop()
