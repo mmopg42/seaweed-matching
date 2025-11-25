@@ -600,9 +600,9 @@ class MainWindow(QMainWindow):
             # unmatched 데이터 업데이트
             self.file_matcher.unmatched_files = unmatched
 
-            # NIR 파일 매칭 수행
-            nir_match_time_diff = self.settings.get("nir_match_time_diff", 300)
-            self.group_manager.match_and_group(
+            # NIR 파일 매칭 및 그룹 생성
+            nir_match_time_diff = self.settings.get("nir_match_time_diff", 1.0)
+            self.groups = self.group_manager.build_all_groups(
                 self.file_matcher.unmatched_files,
                 self.file_matcher.consumed_nir_keys,
                 nir_match_time_diff=nir_match_time_diff
