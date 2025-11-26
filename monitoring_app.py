@@ -23,6 +23,7 @@ from group_manager import GroupManager
 from file_operations import FileOperationWorker
 from utils import extract_datetime_from_str, LruPixmapCache, normalize_path, get_image_dimensions
 from path_utils import get_normal_thumbnail_path, extract_date_from_paths, auto_update_paths_with_date
+from window_state_manager import WindowStateManager
 from preview_dialog import PreviewDialog
 from log_panel import LogPanel
 from delete_manager import (
@@ -113,6 +114,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.config_manager = ConfigManager()
+        self.window_state_manager = WindowStateManager()
         self.settings = self.config_manager.load()
         self.group_manager = GroupManager(log_emitter_func=self.log_to_box)
         self.file_matcher = FileMatcher()
@@ -1772,57 +1774,10 @@ class MainWindow(QMainWindow):
                 print(f"[ERROR] Watchdog 재시작 실패: {e}", flush=True)
 
     def restore_window_bounds(self):
-        win = self.settings.get("window", {})
-        geo_hex = win.get("geometry")
-        restored = False
-        if geo_hex:
-            try:
-                ba = QByteArray.fromHex(geo_hex.encode("ascii"))
-                restored = self.restoreGeometry(ba)  # 성공 여부 리턴
-            except Exception:
-                restored = False
-
-        # 🔸 restoreGeometry 실패했을 때만 x,y,w,h 사용 (fallback)
-        if not restored:
-            x, y, w, h = (win.get("x"), win.get("y"), win.get("w"), win.get("h"))
-            if all(v is not None for v in (x, y, w, h)):
-                self.setGeometry(int(x), int(y), int(w), int(h))
-
-        # 🔸 최대화 상태는 마지막에 적용
-        if win.get("maximized", False):
-            self.showMaximized()
-
-        # 🔸 (옵션) 화면 밖 좌표 방지
-        try:
-            screen = self.screen() or QApplication.primaryScreen()
-            if screen:
-                ag = screen.availableGeometry()
-                g = self.frameGeometry()
-                if not ag.contains(g.topLeft()) and not self.isMaximized():
-                    # 화면 밖이면 중앙으로 이동
-                    self.move(ag.center() - self.rect().center())
-        except Exception:
-            pass
+        self.window_state_manager.restore_window_bounds(self, self.config_manager)
 
     def save_window_bounds(self):
-        geo_hex = bytes(self.saveGeometry().toHex()).decode("ascii")
-        if self.isMaximized():
-            # 최대화일 때는 normalGeometry 기준으로 백업 좌표를 저장
-            ng = self.normalGeometry()
-            x, y, w, h = ng.x(), ng.y(), ng.width(), ng.height()
-        else:
-            x, y, w, h = self.x(), self.y(), self.width(), self.height()
-
-        self.settings["window"] = {
-            "geometry": geo_hex,
-            "maximized": self.isMaximized(),
-            # 사람이 읽기 쉬운 백업 좌표(restoreGeometry 실패 시에만 사용)
-            "x": x,
-            "y": y,
-            "w": w,
-            "h": h,
-        }
-        self.config_manager.save(self.settings)
+        self.window_state_manager.save_window_bounds(self, self.config_manager)
 
     def handle_file_event(self, event_type, src_path, folder_type):
         if not self.is_watching:
