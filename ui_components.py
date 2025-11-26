@@ -419,6 +419,18 @@ class SettingDialog(QDialog):
         self.use_disk_cache.setChecked(True)  # 기본값: 사용
         other_layout.addRow("", self.use_disk_cache)
 
+        # 복합카메라 시간 기반 매칭 설정
+        self.use_cam_time_matching = QCheckBox("복합카메라 시간 기반 매칭 사용 (4-6초 범위)")
+        self.use_cam_time_matching.setToolTip(
+            "체크: 시간 기반 매칭 - 일반카메라와 복합카메라(cam1-6)를 시간차(4-6초)로 매칭\n"
+            "       → 일반카메라 촬영 후 4-6초 이내에 찍힌 복합카메라 이미지만 매칭\n"
+            "       → 시간 범위 밖의 이미지는 매칭하지 않음\n"
+            "미체크: 순차 매칭 (기존 방식) - 큐에서 순서대로 매칭 (시간 무관)\n"
+            "       → 단순히 차례대로 이미지 할당"
+        )
+        self.use_cam_time_matching.setChecked(True)  # 기본값: 활성화 (권장)
+        other_layout.addRow("", self.use_cam_time_matching)
+
         layout.addLayout(other_layout)
 
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -476,7 +488,7 @@ class SettingDialog(QDialog):
             "cam2": self.path_fields["cam2"].text(),
             "cam3": self.path_fields["cam3"].text(),
             "cam4": self.path_fields["cam4"].text(),
-            "cam5": self.path_fields["cam5"].text(),
+            "cam5": self.path_fields["cam6"].text(),
             "cam6": self.path_fields["cam6"].text(),
             "output": self.path_fields["output"].text(),
             "delete": self.path_fields["delete"].text(),
@@ -492,6 +504,7 @@ class SettingDialog(QDialog):
             "use_camera_subfolder_normal": self.use_camera_subfolder_normal.isChecked(),
             "use_camera_subfolder_normal2": self.use_camera_subfolder_normal2.isChecked(),
             "use_disk_cache": self.use_disk_cache.isChecked(),
+            "use_cam_time_matching": self.use_cam_time_matching.isChecked(),
         }
 
 

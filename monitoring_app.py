@@ -605,7 +605,8 @@ class MainWindow(QMainWindow):
             self.groups = self.group_manager.build_all_groups(
                 self.file_matcher.unmatched_files,
                 self.file_matcher.consumed_nir_keys,
-                nir_match_time_diff=nir_match_time_diff
+                nir_match_time_diff=nir_match_time_diff,
+                use_cam_time_matching=self.settings.get("use_cam_time_matching", True)
             )
 
             # UI 업데이트 (통계만, 이미지는 버튼으로)
@@ -958,6 +959,9 @@ class MainWindow(QMainWindow):
 
             # 디스크 캐시 옵션 로드 (기본값: True)
             dlg.use_disk_cache.setChecked(self.settings.get("use_disk_cache", True))
+
+            # 복합카메라 시간 기반 매칭 옵션 로드 (기본값: True)
+            dlg.use_cam_time_matching.setChecked(self.settings.get("use_cam_time_matching", True))
 
         if dlg.exec():
             was_on = self.is_watching  # 현재 감시 상태 기억
