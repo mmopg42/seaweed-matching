@@ -431,6 +431,27 @@ class SettingDialog(QDialog):
         self.use_cam_time_matching.setChecked(True)  # 기본값: 활성화 (권장)
         other_layout.addRow("", self.use_cam_time_matching)
 
+        # 복합카메라 매칭 시간 범위 설정
+        self.cam_match_min_diff = QLineEdit()
+        self.cam_match_min_diff.setValidator(QDoubleValidator(0.0, 60.0, 2, self))
+        self.cam_match_min_diff.setPlaceholderText("초 단위 (예: 4.0)")
+        self.cam_match_min_diff.setToolTip(
+            "복합카메라 매칭 최소 시간 차이 (초 단위)\n"
+            "일반카메라 촬영 후 이 시간 이상 지난 복합카메라만 매칭됩니다.\n"
+            "예) 4.0초: 일반카메라 촬영 4초 이후부터 매칭 시작"
+        )
+        other_layout.addRow("복합카메라 최소 시간(초)", self.cam_match_min_diff)
+
+        self.cam_match_max_diff = QLineEdit()
+        self.cam_match_max_diff.setValidator(QDoubleValidator(0.0, 60.0, 2, self))
+        self.cam_match_max_diff.setPlaceholderText("초 단위 (예: 6.0)")
+        self.cam_match_max_diff.setToolTip(
+            "복합카메라 매칭 최대 시간 차이 (초 단위)\n"
+            "일반카메라 촬영 후 이 시간 이내의 복합카메라만 매칭됩니다.\n"
+            "예) 6.0초: 일반카메라 촬영 6초 이전까지만 매칭"
+        )
+        other_layout.addRow("복합카메라 최대 시간(초)", self.cam_match_max_diff)
+
         layout.addLayout(other_layout)
 
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -505,6 +526,8 @@ class SettingDialog(QDialog):
             "use_camera_subfolder_normal2": self.use_camera_subfolder_normal2.isChecked(),
             "use_disk_cache": self.use_disk_cache.isChecked(),
             "use_cam_time_matching": self.use_cam_time_matching.isChecked(),
+            "cam_match_min_diff": float(self.cam_match_min_diff.text() or 4.0),
+            "cam_match_max_diff": float(self.cam_match_max_diff.text() or 6.0),
         }
 
 

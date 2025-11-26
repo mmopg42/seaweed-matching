@@ -612,7 +612,9 @@ class MainWindow(QMainWindow):
                 self.file_matcher.unmatched_files,
                 self.file_matcher.consumed_nir_keys,
                 nir_match_time_diff=nir_match_time_diff,
-                use_cam_time_matching=self.settings.get("use_cam_time_matching", True)
+                use_cam_time_matching=self.settings.get("use_cam_time_matching", True),
+                cam_match_min_diff=self.settings.get("cam_match_min_diff", 4.0),
+                cam_match_max_diff=self.settings.get("cam_match_max_diff", 6.0)
             )
 
             # UI 업데이트 (통계만, 이미지는 버튼으로)
@@ -876,7 +878,10 @@ class MainWindow(QMainWindow):
         self.groups = self.group_manager.build_all_groups(
             self.file_matcher.unmatched_files,
             self.file_matcher.consumed_nir_keys,
-            nir_match_time_diff=nir_match_time_diff
+            nir_match_time_diff=nir_match_time_diff,
+            use_cam_time_matching=self.settings.get("use_cam_time_matching", True),
+            cam_match_min_diff=self.settings.get("cam_match_min_diff", 4.0),
+            cam_match_max_diff=self.settings.get("cam_match_max_diff", 6.0)
         )
         self.update_monitoring_view()
 
@@ -968,6 +973,10 @@ class MainWindow(QMainWindow):
 
             # 복합카메라 시간 기반 매칭 옵션 로드 (기본값: True)
             dlg.use_cam_time_matching.setChecked(self.settings.get("use_cam_time_matching", True))
+
+            # 복합카메라 시간 범위 로드 (기본값: 4.0 ~ 6.0초)
+            dlg.cam_match_min_diff.setText(str(self.settings.get("cam_match_min_diff", 4.0)))
+            dlg.cam_match_max_diff.setText(str(self.settings.get("cam_match_max_diff", 6.0)))
 
         if dlg.exec():
             was_on = self.is_watching  # 현재 감시 상태 기억
@@ -1511,7 +1520,10 @@ class MainWindow(QMainWindow):
         self.groups = self.group_manager.build_all_groups(
             self.file_matcher.unmatched_files,
             self.file_matcher.consumed_nir_keys,
-            nir_match_time_diff=nir_match_time_diff
+            nir_match_time_diff=nir_match_time_diff,
+            use_cam_time_matching=self.settings.get("use_cam_time_matching", True),
+            cam_match_min_diff=self.settings.get("cam_match_min_diff", 4.0),
+            cam_match_max_diff=self.settings.get("cam_match_max_diff", 6.0)
         )
 
         # ✅ UI 모드에 따라 분기
@@ -2002,7 +2014,10 @@ class MainWindow(QMainWindow):
         self.groups = self.group_manager.build_all_groups(
             self.file_matcher.unmatched_files,
             self.file_matcher.consumed_nir_keys,
-            nir_match_time_diff=nir_match_time_diff
+            nir_match_time_diff=nir_match_time_diff,
+            use_cam_time_matching=self.settings.get("use_cam_time_matching", True),
+            cam_match_min_diff=self.settings.get("cam_match_min_diff", 4.0),
+            cam_match_max_diff=self.settings.get("cam_match_max_diff", 6.0)
         )
 
         # ✅ UI 모드에 따라 분기

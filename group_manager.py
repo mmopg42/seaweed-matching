@@ -13,7 +13,8 @@ class GroupManager:
         self.log = log_emitter_func
         self.group_counter = 0
 
-    def build_all_groups(self, unmatched_data, consumed_nir_keys, nir_match_time_diff=1.0, use_cam_time_matching=True):
+    def build_all_groups(self, unmatched_data, consumed_nir_keys, nir_match_time_diff=1.0, use_cam_time_matching=True,
+                         cam_match_min_diff=4.0, cam_match_max_diff=6.0):
         """
         순서:
           1) normal(일반 카메라) 기준으로 베이스 그룹 생성
@@ -26,6 +27,8 @@ class GroupManager:
         Args:
             nir_match_time_diff: NIR 매칭 최대 시간 차이 (초)
             use_cam_time_matching: 복합카메라 시간 기반 매칭 사용 여부 (기본: True)
+            cam_match_min_diff: 복합카메라 매칭 최소 시간 차이 (초, 기본: 4.0)
+            cam_match_max_diff: 복합카메라 매칭 최대 시간 차이 (초, 기본: 6.0)
         """
         groups = []
 
@@ -33,7 +36,9 @@ class GroupManager:
         groups_line1 = self._build_line_groups(
             unmatched_data, consumed_nir_keys, line=1,
             nir_match_time_diff=nir_match_time_diff,
-            use_cam_time_matching=use_cam_time_matching
+            use_cam_time_matching=use_cam_time_matching,
+            cam_match_min_diff=cam_match_min_diff,
+            cam_match_max_diff=cam_match_max_diff
         )
         for g in groups_line1:
             g['line'] = 1
@@ -43,7 +48,9 @@ class GroupManager:
         groups_line2 = self._build_line_groups(
             unmatched_data, consumed_nir_keys, line=2,
             nir_match_time_diff=nir_match_time_diff,
-            use_cam_time_matching=use_cam_time_matching
+            use_cam_time_matching=use_cam_time_matching,
+            cam_match_min_diff=cam_match_min_diff,
+            cam_match_max_diff=cam_match_max_diff
         )
         for g in groups_line2:
             g['line'] = 2
@@ -57,12 +64,15 @@ class GroupManager:
         self.group_counter = len(groups)
         return groups
 
-    def _build_line_groups(self, unmatched_data, consumed_nir_keys, line=1, nir_match_time_diff=1.0, use_cam_time_matching=True):
+    def _build_line_groups(self, unmatched_data, consumed_nir_keys, line=1, nir_match_time_diff=1.0, use_cam_time_matching=True,
+                           cam_match_min_diff=4.0, cam_match_max_diff=6.0):
         """
         라인별 그룹 생성
 
         Args:
-            use_cam_time_matching: True이면 시간 기반 매칭 (4-6초 범위), False이면 순차 매칭
+            use_cam_time_matching: True이면 시간 기반 매칭, False이면 순차 매칭
+            cam_match_min_diff: 복합카메라 매칭 최소 시간 차이 (초)
+            cam_match_max_diff: 복합카메라 매칭 최대 시간 차이 (초)
         """
         groups = []
 
@@ -101,7 +111,12 @@ class GroupManager:
             cam_data = [{}, {}, {}]
             for i, queue in enumerate(cam_queues):
                 # 시간 기반 매칭 또는 순차 매칭
-                picked = self.find_matching_cam_file(t_norm, queue, use_time_matching=use_cam_time_matching)
+                picked = self.find_matching_cam_file(
+                    t_norm, queue,
+                    use_time_matching=use_cam_time_matching,
+                    cam_match_min_diff=cam_match_min_diff,
+                    cam_match_max_diff=cam_match_max_diff
+                )
                 if picked:
                     fname, abspath, mtime, ctime, is_copy = picked
                     cam_data[i] = {fname: {"absolute_path": abspath}}
@@ -186,17 +201,19 @@ class GroupManager:
     def pop_one(self, queue):
         return queue.pop(0) if queue else None
 
-    def is_valid_cam_match(self, normal_dt, cam_dt):
+    def is_valid_cam_match(self, normal_dt, cam_dt, cam_match_min_diff=4.0, cam_match_max_diff=6.0):
         """
         일반카메라와 복합카메라의 타임스탬프가 매칭 범위 내인지 확인
 
         매칭 조건:
         - 복합카메라 촬영 시간이 일반카메라보다 늦어야 함 (diff > 0)
-        - 4초 <= 시간 차이 <= 6초
+        - cam_match_min_diff <= 시간 차이 <= cam_match_max_diff
 
         Args:
             normal_dt (datetime.datetime): 일반카메라 폴더 타임스탬프
             cam_dt (datetime.datetime): 복합카메라 파일 타임스탬프
+            cam_match_min_diff (float): 최소 시간 차이 (초, 기본: 4.0)
+            cam_match_max_diff (float): 최대 시간 차이 (초, 기본: 6.0)
 
         Returns:
             bool: True (매칭 성공), False (매칭 실패)
@@ -207,12 +224,13 @@ class GroupManager:
         # 시간 차이 계산 (복합카메라 - 일반카메라)
         diff = (cam_dt - normal_dt).total_seconds()
 
-        # 조건: diff가 양수이고, 4-6초 범위 내
-        is_valid = CAM_MATCH_MIN_DIFF <= diff <= CAM_MATCH_MAX_DIFF
+        # 조건: diff가 양수이고, 설정된 시간 범위 내
+        is_valid = cam_match_min_diff <= diff <= cam_match_max_diff
 
         return is_valid
 
-    def find_matching_cam_file(self, normal_dt, cam_queue, use_time_matching=True):
+    def find_matching_cam_file(self, normal_dt, cam_queue, use_time_matching=True,
+                               cam_match_min_diff=4.0, cam_match_max_diff=6.0):
         """
         cam 큐에서 일반카메라 타임스탬프와 매칭되는 파일 찾기
 
@@ -220,6 +238,8 @@ class GroupManager:
             normal_dt (datetime.datetime): 일반카메라 폴더 타임스탬프
             cam_queue (list): [(filename, abspath, mtime, ctime, is_copy), ...]
             use_time_matching (bool): True이면 시간 기반 매칭, False이면 순차 pop
+            cam_match_min_diff (float): 최소 시간 차이 (초, 기본: 4.0)
+            cam_match_max_diff (float): 최대 시간 차이 (초, 기본: 6.0)
 
         Returns:
             tuple or None: 매칭된 파일 튜플 또는 None
@@ -248,7 +268,7 @@ class GroupManager:
                 continue
 
             # 시간 범위 확인
-            if self.is_valid_cam_match(normal_dt, cam_dt):
+            if self.is_valid_cam_match(normal_dt, cam_dt, cam_match_min_diff, cam_match_max_diff):
                 # 매칭 성공 - 큐에서 제거하고 반환
                 matched_item = cam_queue.pop(idx)
                 return matched_item

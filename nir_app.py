@@ -19,6 +19,42 @@ from nir_spectrum_monitor import NIRSpectrumMonitor
 from config_manager import ConfigManager
 
 
+def auto_update_date_in_path(path: str) -> tuple:
+    """
+    경로의 마지막 부분이 \MM\DD 형식이면 오늘 날짜로 자동 변경
+
+    Args:
+        path (str): 원본 경로 (예: "D:\\NIR\\01\\25")
+
+    Returns:
+        tuple[str, bool]: (변경된 경로, 변경 여부)
+    """
+    import re
+    from datetime import datetime
+
+    if not path:
+        return path, False
+
+    # 경로의 마지막이 \숫자2개\숫자2개 패턴인지 확인
+    pattern = r'(.*)[\\\/](\d{2})[\\\/](\d{2})$'
+    match = re.match(pattern, path)
+
+    if not match:
+        return path, False
+
+    # 오늘 날짜로 교체
+    base_path = match.group(1)
+    today = datetime.now()
+    new_month = f"{today.month:02d}"
+    new_day = f"{today.day:02d}"
+
+    # OS에 맞는 경로 구분자 사용
+    separator = '\\' if '\\' in path else '/'
+    new_path = f"{base_path}{separator}{new_month}{separator}{new_day}"
+
+    return new_path, True
+
+
 class NIRMonitorThread(QThread):
     """NIR 모니터링을 별도 스레드에서 실행"""
     log_signal = Signal(str)
@@ -227,14 +263,29 @@ class NIRMonitorApp(QMainWindow):
             self.log(f"❌ 설정 저장 실패: {e}")
 
     def load_settings_to_ui(self):
-        """설정을 UI에 로드"""
+        """설정 파일에서 UI로 경로 로드 + 날짜 자동 업데이트"""
         monitor_path = self.settings.get("nir_monitor_path", "")
         move_path = self.settings.get("nir_move_path", "")
 
-        self.monitor_path_edit.setText(monitor_path)
-        self.move_path_edit.setText(move_path)
+        # 날짜 자동 업데이트
+        updated_monitor_path, monitor_changed = auto_update_date_in_path(monitor_path)
+        updated_move_path, move_changed = auto_update_date_in_path(move_path)
 
-        if monitor_path or move_path:
+        # UI에 표시
+        self.monitor_path_edit.setText(updated_monitor_path)
+        self.move_path_edit.setText(updated_move_path)
+
+        # 변경 사항이 있으면 즉시 config에 저장
+        if monitor_changed or move_changed:
+            self.settings["nir_monitor_path"] = updated_monitor_path
+            self.settings["nir_move_path"] = updated_move_path
+            self.config_manager.save(self.settings)
+            self.log(f"✓ NIR 경로가 오늘 날짜로 자동 업데이트되었습니다.")
+            if monitor_changed:
+                self.log(f"  - 모니터링 경로: {updated_monitor_path}")
+            if move_changed:
+                self.log(f"  - 이동 경로: {updated_move_path}")
+        elif monitor_path or move_path:
             self.log("✅ 저장된 설정을 불러왔습니다.")
 
     def open_settings_folder(self):
