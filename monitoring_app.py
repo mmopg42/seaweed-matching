@@ -621,40 +621,6 @@ class MainWindow(QMainWindow):
             import traceback
             traceback.print_exc()
 
-    def _extract_date_from_paths(self, settings: dict) -> str | None:
-        """
-        설정된 경로들에서 8자리 날짜 패턴(YYYYMMDD)을 추출합니다.
-        여러 경로에서 발견되면 가장 많이 나타나는 날짜를 반환합니다.
-
-        Args:
-            settings: 설정 딕셔너리
-
-        Returns:
-            추출된 날짜 문자열 (YYYYMMDD) 또는 None
-        """
-        date_pattern = re.compile(r'\d{8}')
-        date_counts = {}
-
-        # 모든 경로 키를 확인
-        path_keys = ["normal", "normal2", "nir", "nir2", "cam1", "cam2", "cam3", "cam4", "cam5", "cam6", "output", "delete"]
-
-        for key in path_keys:
-            path = settings.get(key, "")
-            if not path:
-                continue
-
-            # 경로에서 8자리 날짜 패턴 찾기
-            matches = date_pattern.findall(path)
-            for match in matches:
-                date_counts[match] = date_counts.get(match, 0) + 1
-
-        if not date_counts:
-            return None
-
-        # 가장 많이 나타나는 날짜 반환
-        most_common_date = max(date_counts, key=date_counts.get)
-        return most_common_date
-
     def path_auto_setting_edit_config(self):
         """
         today_edit에 입력된 날짜(YYYYMMDD)를 기준으로
@@ -980,7 +946,7 @@ class MainWindow(QMainWindow):
             self.update_line_mode_ui()
 
             # ✅ 경로에서 날짜 자동 추출 및 반영
-            extracted_date = self._extract_date_from_paths(self.settings)
+            extracted_date = extract_date_from_paths(self.settings)
             if extracted_date:
                 old_date = self.settings.get("today_date", "")
                 if old_date != extracted_date:
