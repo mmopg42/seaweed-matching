@@ -367,13 +367,11 @@ class MainWindow(QMainWindow):
         self.chip_with, self.lbl_with = chip("with NIR")
         self.chip_without, self.lbl_without = chip("without NIR")
         self.chip_fail, self.lbl_fail = chip("실패")
-        self.chip_abnormal, self.lbl_abnormal = chip("이상치")
 
         matching_layout.addWidget(self.chip_total)
         matching_layout.addWidget(self.chip_with)
         matching_layout.addWidget(self.chip_without)
         matching_layout.addWidget(self.chip_fail)
-        matching_layout.addWidget(self.chip_abnormal)
         matching_layout.addStretch(1)
 
         # ✅ 매칭 현황 (분리 모드 - 라인1, 라인2)
@@ -392,13 +390,11 @@ class MainWindow(QMainWindow):
         self.chip_with_line1, self.lbl_with_line1 = chip("NIR")
         self.chip_without_line1, self.lbl_without_line1 = chip("NO-NIR")
         self.chip_fail_line1, self.lbl_fail_line1 = chip("실패")
-        self.chip_abnormal_line1, self.lbl_abnormal_line1 = chip("이상치")
 
         matching_sep_layout.addWidget(self.chip_total_line1)
         matching_sep_layout.addWidget(self.chip_with_line1)
         matching_sep_layout.addWidget(self.chip_without_line1)
         matching_sep_layout.addWidget(self.chip_fail_line1)
-        matching_sep_layout.addWidget(self.chip_abnormal_line1)
 
         # 라인2 통계
         lbl_line2_title = QLabel("🔗 라인2:")
@@ -409,13 +405,11 @@ class MainWindow(QMainWindow):
         self.chip_with_line2, self.lbl_with_line2 = chip("NIR")
         self.chip_without_line2, self.lbl_without_line2 = chip("NO-NIR")
         self.chip_fail_line2, self.lbl_fail_line2 = chip("실패")
-        self.chip_abnormal_line2, self.lbl_abnormal_line2 = chip("이상치")
 
         matching_sep_layout.addWidget(self.chip_total_line2)
         matching_sep_layout.addWidget(self.chip_with_line2)
         matching_sep_layout.addWidget(self.chip_without_line2)
         matching_sep_layout.addWidget(self.chip_fail_line2)
-        matching_sep_layout.addWidget(self.chip_abnormal_line2)
         matching_sep_layout.addStretch(1)
 
         # 두 줄을 컨테이너에 추가
@@ -611,10 +605,7 @@ class MainWindow(QMainWindow):
             self.groups = self.group_manager.build_all_groups(
                 self.file_matcher.unmatched_files,
                 self.file_matcher.consumed_nir_keys,
-                nir_match_time_diff=nir_match_time_diff,
-                use_cam_time_matching=self.settings.get("use_cam_time_matching", True),
-                cam_match_min_diff=self.settings.get("cam_match_min_diff", 4.0),
-                cam_match_max_diff=self.settings.get("cam_match_max_diff", 6.0)
+                nir_match_time_diff=nir_match_time_diff
             )
 
             # UI 업데이트 (통계만, 이미지는 버튼으로)
@@ -878,10 +869,7 @@ class MainWindow(QMainWindow):
         self.groups = self.group_manager.build_all_groups(
             self.file_matcher.unmatched_files,
             self.file_matcher.consumed_nir_keys,
-            nir_match_time_diff=nir_match_time_diff,
-            use_cam_time_matching=self.settings.get("use_cam_time_matching", True),
-            cam_match_min_diff=self.settings.get("cam_match_min_diff", 4.0),
-            cam_match_max_diff=self.settings.get("cam_match_max_diff", 6.0)
+            nir_match_time_diff=nir_match_time_diff
         )
         self.update_monitoring_view()
 
@@ -970,13 +958,6 @@ class MainWindow(QMainWindow):
 
             # 디스크 캐시 옵션 로드 (기본값: True)
             dlg.use_disk_cache.setChecked(self.settings.get("use_disk_cache", True))
-
-            # 복합카메라 시간 기반 매칭 옵션 로드 (기본값: True)
-            dlg.use_cam_time_matching.setChecked(self.settings.get("use_cam_time_matching", True))
-
-            # 복합카메라 시간 범위 로드 (기본값: 4.0 ~ 6.0초)
-            dlg.cam_match_min_diff.setText(str(self.settings.get("cam_match_min_diff", 4.0)))
-            dlg.cam_match_max_diff.setText(str(self.settings.get("cam_match_max_diff", 6.0)))
 
         if dlg.exec():
             was_on = self.is_watching  # 현재 감시 상태 기억
@@ -1132,7 +1113,7 @@ class MainWindow(QMainWindow):
             return False  # 크기를 알 수 없으면 정상으로 간주
 
         width, height = dimensions
-
+        
         # ✅ [NEW] 10으로 나눈 값으로 판정 (마지막 자리 버림)
         w_trunc = width // 10
         h_trunc = height // 10
@@ -1140,39 +1121,6 @@ class MainWindow(QMainWindow):
         # OR 조건: 가로 185 이하 또는 세로 210 이상 (Truncated: 18, 21)
         # 원래 기준: 185, 218 -> 10으로 나누면 18, 21
         return w_trunc < 184 or h_trunc >= 218
-
-    def is_group_abnormal(self, group: dict) -> bool:
-        """
-        그룹이 이상치인지 판정
-
-        기준:
-        1. NIR-only 그룹 (카메라 없고 NIR만 있는 경우)
-        2. 이미지 크기 이상 (가로 <= 185px OR 세로 >= 210px)
-
-        Args:
-            group: 그룹 데이터
-
-        Returns:
-            bool: True if 이상치, False if 정상
-        """
-        # 1. NIR-only 체크
-        camera_files = group.get("카메라", {})
-        nir_items = group.get("NIR", {})
-        if not camera_files and nir_items:
-            return True
-
-        # 2. 이미지 크기 이상 체크 (카메라 파일이 있는 경우)
-        if camera_files:
-            line = group.get('line', 1)
-            folder_key = "normal" if line == 1 else "normal2"
-            folder_name = group.get("카메라", {}).get("folder_label", "")
-
-            if folder_name:
-                thumbnail_path = self.get_normal_thumbnail_path(folder_key, folder_name)
-                if thumbnail_path and self.is_abnormal_image(thumbnail_path):
-                    return True
-
-        return False
 
     def should_use_recursive_watch(self, folder_type: str) -> bool:
         """
@@ -1195,30 +1143,27 @@ class MainWindow(QMainWindow):
         # 나머지는 기존대로 재귀 감시
         return True
 
-    def _update_stats(self, total, with_nir, without_nir, fail, abnormal):
+    def _update_stats(self, total, with_nir, without_nir, fail):
         """매칭 통계만 업데이트 (파일 개수는 실시간 타이머에서 별도 업데이트)"""
         self.lbl_total.setText(str(total))
         self.lbl_with.setText(str(with_nir))
         self.lbl_without.setText(str(without_nir))
         self.lbl_fail.setText(str(fail))
-        self.lbl_abnormal.setText(str(abnormal))
 
-    def _update_stats_separated(self, total_line1, with_nir_line1, without_nir_line1, fail_line1, abnormal_line1,
-                                total_line2, with_nir_line2, without_nir_line2, fail_line2, abnormal_line2):
+    def _update_stats_separated(self, total_line1, with_nir_line1, without_nir_line1, fail_line1,
+                                total_line2, with_nir_line2, without_nir_line2, fail_line2):
         """분리 모드 통계 업데이트 (라인별 통계)"""
         # Line1 통계
         self.lbl_total_line1.setText(str(total_line1))
         self.lbl_with_line1.setText(str(with_nir_line1))
         self.lbl_without_line1.setText(str(without_nir_line1))
         self.lbl_fail_line1.setText(str(fail_line1))
-        self.lbl_abnormal_line1.setText(str(abnormal_line1))
 
         # Line2 통계
         self.lbl_total_line2.setText(str(total_line2))
         self.lbl_with_line2.setText(str(with_nir_line2))
         self.lbl_without_line2.setText(str(without_nir_line2))
         self.lbl_fail_line2.setText(str(fail_line2))
-        self.lbl_abnormal_line2.setText(str(abnormal_line2))
 
     def register_widget_for_path(self, widget, path: str):
         """
@@ -1520,10 +1465,7 @@ class MainWindow(QMainWindow):
         self.groups = self.group_manager.build_all_groups(
             self.file_matcher.unmatched_files,
             self.file_matcher.consumed_nir_keys,
-            nir_match_time_diff=nir_match_time_diff,
-            use_cam_time_matching=self.settings.get("use_cam_time_matching", True),
-            cam_match_min_diff=self.settings.get("cam_match_min_diff", 4.0),
-            cam_match_max_diff=self.settings.get("cam_match_max_diff", 6.0)
+            nir_match_time_diff=nir_match_time_diff
         )
 
         # ✅ UI 모드에 따라 분기
@@ -1669,19 +1611,17 @@ class MainWindow(QMainWindow):
             with_nir_line1 = sum(1 for g in line1_items if g.get("NIR"))
             without_nir_line1 = max(total_line1 - with_nir_line1, 0)
             fail_line1 = sum(1 for g in line1_items if g.get("type") == "누락발생" or not g.get("카메라"))
-            abnormal_line1 = sum(1 for g in line1_items if self.is_group_abnormal(g))
 
             # Line2 통계
             total_line2 = sum(1 for g in line2_items if g.get("카메라"))
             with_nir_line2 = sum(1 for g in line2_items if g.get("NIR"))
             without_nir_line2 = max(total_line2 - with_nir_line2, 0)
             fail_line2 = sum(1 for g in line2_items if g.get("type") == "누락발생" or not g.get("카메라"))
-            abnormal_line2 = sum(1 for g in line2_items if self.is_group_abnormal(g))
 
             # 분리 모드 통계 업데이트
             self._update_stats_separated(
-                total_line1, with_nir_line1, without_nir_line1, fail_line1, abnormal_line1,
-                total_line2, with_nir_line2, without_nir_line2, fail_line2, abnormal_line2
+                total_line1, with_nir_line1, without_nir_line1, fail_line1,
+                total_line2, with_nir_line2, without_nir_line2, fail_line2
             )
         else:
             # 통합 모드: 전체 통계 계산
@@ -1689,8 +1629,7 @@ class MainWindow(QMainWindow):
             with_nir = sum(1 for g in display_items if g.get("NIR"))
             without_nir = max(total - with_nir, 0)
             fail = sum(1 for g in display_items if g.get("type") == "누락발생" or not g.get("카메라"))
-            abnormal = sum(1 for g in display_items if self.is_group_abnormal(g))
-            self._update_stats(total, with_nir, without_nir, fail, abnormal)
+            self._update_stats(total, with_nir, without_nir, fail)
 
         # ✅ 감시 중일 때는 여기서 종료 (UI 안 그림, JSON만 저장)
         if not update_ui:
@@ -2014,10 +1953,7 @@ class MainWindow(QMainWindow):
         self.groups = self.group_manager.build_all_groups(
             self.file_matcher.unmatched_files,
             self.file_matcher.consumed_nir_keys,
-            nir_match_time_diff=nir_match_time_diff,
-            use_cam_time_matching=self.settings.get("use_cam_time_matching", True),
-            cam_match_min_diff=self.settings.get("cam_match_min_diff", 4.0),
-            cam_match_max_diff=self.settings.get("cam_match_max_diff", 6.0)
+            nir_match_time_diff=nir_match_time_diff
         )
 
         # ✅ UI 모드에 따라 분기
@@ -2115,11 +2051,6 @@ class MainWindow(QMainWindow):
             cam_widget.img_label.clear()
             cam_widget.text_label.setText("")
 
-            # ✅ NIR-only 이상치 판정 (카메라 없고 NIR만 있는 경우)
-            nir_items_for_check = group.get("NIR", {})
-            if nir_items_for_check:
-                is_abnormal = True
-
         # NIR 위젯
         nir_widget = row_widget.nir_view
         nir_items = group.get("NIR", {})
@@ -2140,11 +2071,10 @@ class MainWindow(QMainWindow):
         nir_widget.text_label.clear()
 
         # ✅ Phase 5: 행 스타일 적용 (이상치 > 누락발생 > 기본)
-        # QWidget#MonitorRow 선택자를 사용하여 최상위 컨테이너에만 스타일 적용
         if is_abnormal:
-            row_widget.setStyleSheet("QWidget#MonitorRow { border: 2px solid red; }")
+            row_widget.setStyleSheet("border: 2px solid red;")
         elif group.get("type") == "누락발생":
-            row_widget.setStyleSheet("QWidget#MonitorRow { background-color: #ffe0e0; }")
+            row_widget.setStyleSheet("background-color: #ffe0e0;")
         else:
             row_widget.setStyleSheet("")
 

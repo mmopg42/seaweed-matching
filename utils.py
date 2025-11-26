@@ -57,37 +57,6 @@ def extract_datetime_from_str(s, prefix):
             return None
     return None
 
-def extract_datetime_from_composite_cam(filename: str):
-    """
-    복합카메라 파일명에서 타임스탬프 추출
-
-    형식: YYYYMMDD_HHMMSS_XXX (XXX는 3자리 이상 숫자)
-    예: 20250120_143052_001.jpg → 2025-01-20 14:30:52
-
-    Args:
-        filename (str): 파일명 (예: "20250120_143052_001.jpg")
-
-    Returns:
-        datetime.datetime or None: 추출된 datetime 객체 또는 파싱 실패 시 None
-    """
-    # 정규표현식: YYYYMMDD_HHMMSS_숫자
-    # 파일명에서 날짜와 시간 패턴 추출
-    pattern = r'(\d{8})_(\d{6})_\d+'
-    match = re.search(pattern, filename)
-
-    if not match:
-        return None
-
-    date_str = match.group(1)  # YYYYMMDD
-    time_str = match.group(2)  # HHMMSS
-
-    try:
-        # datetime 객체로 변환
-        dt = datetime.datetime.strptime(f"{date_str}_{time_str}", "%Y%m%d_%H%M%S")
-        return dt
-    except ValueError:
-        return None
-
 def yml_timestamp_to_short(ts_str):
     """
     YAML 파일의 타임스탬프 형식('20250521_145701')을 내부 처리용 형식('250521T145701')으로 변환합니다.
