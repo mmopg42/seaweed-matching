@@ -21,7 +21,8 @@ from ui_components import SettingDialog, MonitorRow, FlowLayout_
 from file_matcher import Communicate, FolderEventHandler, FileMatcher, FileMatcherWorker
 from group_manager import GroupManager
 from file_operations import FileOperationWorker
-from utils import extract_datetime_from_str, LruPixmapCache, normalize_path
+from utils import extract_datetime_from_str, LruPixmapCache, normalize_path, get_image_dimensions
+from path_utils import get_normal_thumbnail_path, extract_date_from_paths, auto_update_paths_with_date
 from preview_dialog import PreviewDialog
 from log_panel import LogPanel
 from delete_manager import (
@@ -1041,59 +1042,6 @@ class MainWindow(QMainWindow):
         else:
             return base_path
 
-    def get_normal_thumbnail_path(self, folder_key: str, data_folder_name: str) -> str:
-        """
-        일반카메라 데이터 폴더의 stitched_original.png 경로 반환
-
-        Args:
-            folder_key: "normal" 또는 "normal2"
-            data_folder_name: 데이터 폴더명 (예: "C_20250101_120000")
-
-        Returns:
-            str: stitched_original.png 절대 경로 또는 None
-        """
-        if not data_folder_name:
-            return None
-
-        # 실제 검색 경로 계산 (camera 하위폴더 옵션 반영)
-        search_path = self.get_effective_normal_path(folder_key)
-        if not search_path:
-            return None
-
-        # 데이터 폴더 경로
-        data_folder_path = os.path.join(search_path, data_folder_name)
-        if not os.path.isdir(data_folder_path):
-            return None
-
-        # stitched_original.png 경로
-        thumbnail_path = os.path.join(data_folder_path, "stitched_original.png")
-
-        if os.path.exists(thumbnail_path) and os.path.isfile(thumbnail_path):
-            return thumbnail_path
-
-        return None
-
-    def get_image_dimensions(self, image_path: str):
-        """
-        이미지 파일의 크기(width, height) 반환
-
-        Args:
-            image_path: 이미지 파일 절대 경로
-
-        Returns:
-            tuple: (width, height) 또는 None
-        """
-        if not image_path or not os.path.exists(image_path):
-            return None
-
-        try:
-            from PIL import Image
-            with Image.open(image_path) as img:
-                return img.size  # (width, height)
-        except Exception as e:
-            self.log_to_box(f"⚠️ 이미지 크기 추출 실패: {os.path.basename(image_path)} - {e}")
-            return None
-
     def is_abnormal_image(self, image_path: str) -> bool:
         """
         이미지 이상치 여부 판정
@@ -1108,7 +1056,7 @@ class MainWindow(QMainWindow):
         Returns:
             bool: True if 이상치, False if 정상
         """
-        dimensions = self.get_image_dimensions(image_path)
+        dimensions = get_image_dimensions(image_path)
         if dimensions is None:
             return False  # 크기를 알 수 없으면 정상으로 간주
 
@@ -2008,7 +1956,7 @@ class MainWindow(QMainWindow):
             folder_key = "normal" if line == 1 else "normal2"
 
             # stitched_original.png 경로 가져오기
-            thumbnail_path = self.get_normal_thumbnail_path(folder_key, folder_name)
+            thumbnail_path = get_normal_thumbnail_path(folder_key, folder_name, self.settings)
 
             if thumbnail_path:
                 # 썸네일 이미지 로딩 및 표시
