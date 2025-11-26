@@ -579,6 +579,7 @@ class MonitorRow(QWidget):
 
     def __init__(self, row_idx, img_w=110, img_h=80, nir_w=180, nir_h=80):
         super().__init__()
+        self.setObjectName("MonitorRow")  # 스타일시트 선택자를 위한 이름 설정
         self.row_idx = row_idx
         self.display_item = None
         self.last_hash = None  # UI 업데이트 최적화용: 마지막으로 렌더링한 그룹 데이터의 해시
