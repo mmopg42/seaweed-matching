@@ -2219,7 +2219,39 @@ class MainWindow(QMainWindow):
 
 
 
+
+    def _prune_nir_files_if_needed(self, current_tab_index, is_separated, keep_n, subject, subject2, groups_line1, groups_line2):
+        """
+        조건에 따라 NIR 파일 정리 수행 (Phase 2.4)
+        """
+        if keep_n <= 0:
+            return
+
+        if current_tab_index == 0:
+            # 라인1 탭
+            if groups_line1:
+                self.prune_nir_files_before_op(keep_n, subject, groups_line1)
+                
+        elif current_tab_index == 1:
+            # 라인2 탭
+            if groups_line2:
+                target = subject2 if is_separated else subject
+                self.prune_nir_files_before_op(keep_n, target, groups_line2)
+                
+        else:
+            # 통합 탭
+            if is_separated:
+                if groups_line1:
+                    self.prune_nir_files_before_op(keep_n, subject, groups_line1)
+                if groups_line2:
+                    self.prune_nir_files_before_op(keep_n, subject2, groups_line2)
+            else:
+                # 통합 모드 (line1에 모두 있음)
+                if groups_line1:
+                    self.prune_nir_files_before_op(keep_n, subject, groups_line1)
+
     def _check_and_confirm_already_moved(self, operation_mode, groups_line1, groups_line2, subject, subject2, is_separated):
+
         """
         이미 이동된 시료인지 확인하고 사용자 확인 (Phase 2.3)
         
@@ -2541,8 +2573,6 @@ class MainWindow(QMainWindow):
                     self.log_to_box("⏹️ 이동 작업이 사용자에 의해 취소되었습니다.")
                     return
 
-                self.prune_nir_files_before_op(keep_n, target_subject, groups_to_move_line1)
-
             elif current_tab_index == 1:
                 # 라인2 탭
                 self._log_skipped_groups(selection["line2_skipped"], "라인2")
@@ -2559,8 +2589,6 @@ class MainWindow(QMainWindow):
                 if reply != QMessageBox.StandardButton.Yes:
                     self.log_to_box("⏹️ 이동 작업이 사용자에 의해 취소되었습니다.")
                     return
-
-                self.prune_nir_files_before_op(keep_n, target_subject, groups_to_move_line2)
 
             else:
                 # 통합 탭
@@ -2585,8 +2613,6 @@ class MainWindow(QMainWindow):
                         self.log_to_box("⏹️ 이동 작업이 사용자에 의해 취소되었습니다.")
                         return
 
-                    self.prune_nir_files_before_op(keep_n, subject, groups_to_move_line1)
-                    self.prune_nir_files_before_op(keep_n, subject2, groups_to_move_line2)
                 else:
                     # 통합 모드
                     self._log_skipped_groups(selection["line1_skipped"], "통합")
@@ -2604,8 +2630,12 @@ class MainWindow(QMainWindow):
                         self.log_to_box("⏹️ 이동 작업이 사용자에 의해 취소되었습니다.")
                         return
 
-                    self.prune_nir_files_before_op(keep_n, subject, groups_to_move_line1)
-                    groups_to_move_line2 = []
+            # ✅ NIR 파일 정리 (Phase 2.4 - 헬퍼 사용)
+            self._prune_nir_files_if_needed(
+                current_tab_index, is_separated, keep_n, 
+                subject, subject2, groups_to_move_line1, groups_to_move_line2
+            )
+
 
             operation_mode = self.combo_mode.currentText()  # "복사" | "이동"
             self.log_to_box(f"🚀 **[{operation_mode}] 작업을 시작합니다...**")
