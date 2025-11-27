@@ -37,8 +37,10 @@ from statistics_calculator import StatisticsCalculator
 from abnormal_detector import AbnormalDetector
 from path_utils import get_normal_thumbnail_path, extract_date_from_paths, auto_update_paths_with_date
 from image_registry import ImageRegistry
+from image_manager import ImageManager
 from window_state_manager import WindowStateManager
 from view_manager import ViewManager
+from group_state_manager import GroupStateManager
 
 class DragSelectWidget(QWidget):
     """드래그로 여러 행을 선택할 수 있는 컨테이너 위젯"""
@@ -146,13 +148,30 @@ class MainWindow(QMainWindow):
         self.image_path_to_widgets = self.image_registry.image_path_to_widgets
         self.widget_to_image_path = self.image_registry.widget_to_image_path
 
+        self.image_manager = ImageManager(self.settings, None, max_cache_items=500)
+
+        # ✅ 비동기 이미지 로더 초기화
+        thumbnail_cache_dir = os.path.join(self.config_manager.app_dir, "thumbnail_cache")
+        use_disk_cache = self.settings.get("use_disk_cache", True)
+        self.image_loader = ImageLoaderWorker(cache_dir=thumbnail_cache_dir, use_disk_cache=use_disk_cache)
+        self.image_loader.image_ready.connect(self.on_image_loaded)
+        self.image_loader.error_occurred.connect(lambda msg: print(f"[IMAGE_LOADER] {msg}"))
+        self.image_loader.start()
+        
+        # ImageManager에 image_loader 연결
+        self.image_manager.image_loader = self.image_loader
+
         self.file_event_communicator = Communicate()
         self.file_event_communicator.file_changed.connect(self.handle_file_event)
 
-        self._last_groups_hash = ""      # 마지막으로 그린 UI 상태의 해시
+        # ✅ GroupStateManager 초기화
         self._json_path = os.path.join(self.config_manager.app_dir, "groups_state.json")
-        self._json_mtime = 0.0           # 외부/내부 JSON 최신 mtime
-        self._last_json_write_ts = 0.0   # 디바운스 쓰기용
+        self.group_state_manager = GroupStateManager(self._json_path, log_callback=self.log_to_box)
+        
+        # 하위 호환성을 위한 속성 (기존 코드와의 연결)
+        self._last_groups_hash = ""
+        self._json_mtime = 0.0
+        self._last_json_write_ts = 0.0
 
 
         # watchdog 이벤트 디바운스 타이머 (설정 인터벌로 동작)
@@ -539,38 +558,24 @@ class MainWindow(QMainWindow):
         self.update_tooltips()
 
     def _groups_to_canonical_json(self, groups: list) -> str:
-        # keys 정렬 + 한글 유지로 "동일 구조=동일 문자열"
-        return json.dumps(groups, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        """그룹을 정규화된 JSON으로 변환 - GroupStateManager에 위임"""
+        return self.group_state_manager._groups_to_canonical_json(groups)
+
 
     def _calc_group_hash(self, group: dict) -> str:
-        """
-        개별 그룹의 해시를 계산합니다.
-        UI 업데이트가 필요한지 판단하는데 사용됩니다.
-        """
-        # 정렬된 JSON 문자열로 변환 후 해시 계산
-        s = json.dumps(group, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-        return hashlib.sha1(s.encode("utf-8")).hexdigest()
+        """개별 그룹 해시 계산 - GroupStateManager에 위임"""
+        return self.group_state_manager._calc_group_hash(group)
+
 
     def _calc_groups_hash(self, groups: list) -> str:
-        s = self._groups_to_canonical_json(groups)
-        return hashlib.sha1(s.encode("utf-8")).hexdigest()
+        """전체 그룹 해시 계산 - GroupStateManager에 위임"""
+        return self.group_state_manager._calc_groups_hash(groups)
+
 
     def _maybe_save_groups_json(self, groups: list, debounce_ms=300):
-        now = time.time()
-        if (now - self._last_json_write_ts) * 1000.0 < debounce_ms:
-            return
-        try:
-            os.makedirs(self.config_manager.app_dir, exist_ok=True)
-            with open(self._json_path, "w", encoding="utf-8") as f:
-                payload = {
-                    "saved_at": datetime.datetime.now().isoformat(),
-                    "groups": groups,
-                }
-                json.dump(payload, f, ensure_ascii=False, sort_keys=True, indent=0)
-            self._last_json_write_ts = now
-            self._json_mtime = os.path.getmtime(self._json_path)
-        except Exception as e:
-            self.log_to_box(f"❌ groups_state.json 저장 실패: {e}")
+        """그룹 상태 JSON 저장 - GroupStateManager에 위임"""
+        self.group_state_manager._maybe_save_groups_json(groups, debounce_ms)
+
 
     def on_file_counts_updated(self, nir_count, nir2_count, normal_count, normal2_count, cam1_count, cam2_count, cam3_count, cam4_count, cam5_count, cam6_count):
         """
@@ -795,20 +800,9 @@ class MainWindow(QMainWindow):
         self.file_matcher_worker.update_settings(self.settings)
 
     def _maybe_load_groups_json(self):
-        """외부 공정이 groups_state.json을 바꿨다면 불러와 UI 반영"""
-        try:
-            if not os.path.isfile(self._json_path):
-                return None
-            mtime = os.path.getmtime(self._json_path)
-            if mtime <= self._json_mtime:
-                return None
-            with open(self._json_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            self._json_mtime = mtime
-            return data.get("groups")
-        except Exception as e:
-            self.log_to_box(f"❌ groups_state.json 로드 실패: {e}")
-            return None
+        """외부 JSON 로드 - GroupStateManager에 위임"""
+        return self.group_state_manager._maybe_load_groups_json()
+
         
     def refresh_rows_action(self):
         """
@@ -1020,6 +1014,7 @@ class MainWindow(QMainWindow):
         Returns:
             True: 재귀 감시, False: 단일 레벨 감시
         """
+        if folder_type in ["normal", "normal2"]:
             use_subfolder_key = f"use_camera_subfolder_{folder_type}"
             use_camera_subfolder = self.settings.get(use_subfolder_key, False)
 
@@ -1723,7 +1718,7 @@ class MainWindow(QMainWindow):
 
         # ✅ 파일 변화가 있으면 백그라운드 워커에 스캔 트리거
         self.file_matcher_worker.trigger_scan()
-
+    
     def process_event_queue(self):
         if hasattr(self, 'is_processing_delete') and self.is_processing_delete:
             return
@@ -1996,110 +1991,26 @@ class MainWindow(QMainWindow):
         return pixmap
 
     def get_cached_pixmap(self, path, priority=5):
-        """
-        비동기 이미지 로딩
-        - 메모리 캐시에 있으면 즉시 반환
-        - 없으면 백그라운드 로더에 요청하고 Placeholder 반환
-
-        Args:
-            path: 이미지 파일 경로
-            priority: 로딩 우선순위 (0=최고, 5=중간, 10=최저)
-        """
-        if not path or not os.path.exists(path):
-            return None
-
-        img_w = self.settings.get("img_width", 110)
-        img_h = self.settings.get("img_height", 80)
-        thumb_size = (img_w, img_h)
-
-        # 1. 메모리 캐시 확인
-        pixmap = self.pixmap_cache.get(path)
-        if pixmap is not None:
-            return pixmap
-
-        # 2. 캐시 없음 → 백그라운드 로더에 요청하고 Placeholder 반환
-        request_id = f"{path}_{time.time()}"
-        self.image_loader.request_image(path, thumb_size, request_id, priority)  # ✅ 우선순위 전달
-        return self.get_placeholder_pixmap()  # ✅ None 대신 Placeholder 반환
+        """비동기 이미지 로딩 - ImageManager에 위임"""
+        return self.image_manager.get_cached_pixmap(path, priority)
     
     def on_image_loaded(self, image_path: str, pixmap: QPixmap, request_id: str = ""):
-        """
-        이미지 로딩 완료 콜백
-        - 메모리 캐시에 저장
-        - 즉시 UI 갱신 (디바운싱 제거)
-        """
-        self.pixmap_cache.set(image_path, pixmap)
-
-        # 즉시 갱신 (특정 이미지만 업데이트)
-        self.refresh_single_image(image_path, pixmap)
+        """이미지 로딩 완료 콜백 - ImageManager에 위임"""
+        self.image_manager.on_image_loaded(image_path, pixmap, request_id)
 
     def refresh_single_image(self, image_path: str, pixmap: QPixmap):
-        """
-        특정 이미지 경로만 찾아서 즉시 업데이트 (Registry Pattern 적용)
-        - O(N^2) → O(1) 최적화 완료
-        """
-        if not image_path:
-            return
-
-        # ✅ Registry를 통해 해당 경로를 보고 있는 위젯들만 즉시 조회
-        widgets = self.image_path_to_widgets.get(image_path, [])
-        
-        for widget in widgets:
-            try:
-                # 위젯이 삭제되었거나 유효하지 않을 수 있으므로 체크
-                if widget and not widget.isHidden(): # 간단한 유효성 체크
-                    widget.set_image(pixmap, image_path)
-            except RuntimeError:
-                # C++ 객체가 이미 삭제된 경우 (드물지만 발생 가능)
-                pass
+        """특정 이미지 즉시 업데이트 - ImageManager에 위임"""
+        self.image_manager.refresh_single_image(image_path, pixmap)
 
     def refresh_visible_images(self):
-        """
-        화면에 표시된 행들의 이미지를 캐시에서 다시 로드하여 갱신
-        - 새로고침 버튼 클릭 시
-        - 이미지 로딩 완료 시 (타이머를 통해)
-        - ✅ 최적화: 화면에 보이는 행만 업데이트
-        """
-        # 모든 탭의 레이아웃을 순회하며 이미지 갱신
+        """화면 이미지 갱신 - ImageManager에 위임"""
         all_layouts = [
             (self.scroll_area_line1, self.scroll_layout_line1),
             (self.scroll_area_line2, self.scroll_layout_line2),
             (self.scroll_area_combined_line1, self.scroll_layout_combined_line1),
             (self.scroll_area_combined_line2, self.scroll_layout_combined_line2)
         ]
-
-        for scroll_area, scroll_layout in all_layouts:
-            # 탭이 보이지 않으면 스킵 (선택적 최적화)
-            if not scroll_area.isVisible():
-                continue
-
-            for i in range(scroll_layout.count()):
-                row_widget = scroll_layout.itemAt(i).widget()
-                if not isinstance(row_widget, MonitorRow):
-                    continue
-
-                # ✅ 화면에 보이는지 확인
-                if not self.is_row_visible(scroll_area, row_widget):
-                    continue
-
-                # 각 이미지 위젯의 경로를 확인하고 캐시에 이미지가 있으면 업데이트
-                image_widgets = [
-                    row_widget.nir_view,
-                    row_widget.norm_view,
-                    row_widget.cam1_view,
-                    row_widget.cam2_view,
-                    row_widget.cam3_view
-                ]
-
-                for img_widget in image_widgets:
-                    if hasattr(img_widget, '_current_path') and img_widget._current_path:
-                        # 캐시에서 이미지 가져오기
-                        widget_path = img_widget._current_path
-                        cached_pixmap = self.pixmap_cache.get(widget_path)
-                        if cached_pixmap is not None:
-                            # 캐시된 이미지로 무조건 업데이트
-                            if img_widget._current_pixmap is None:
-                                img_widget.set_image(cached_pixmap, widget_path)
+        self.image_manager.refresh_visible_images(all_layouts)
 
     def scroll_to_bottom(self):
         bar = self.scroll_area.verticalScrollBar()
@@ -2278,24 +2189,51 @@ class MainWindow(QMainWindow):
         # added는 항상 0 (더 이상 추가하지 않음)
         return result, 0, removed_nir_count
 
+
+    def _validate_file_operation_basic_inputs(self):
+        """
+        파일 작업 기본 입력 검증 (Phase 2.1)
+        
+        Returns:
+            tuple: (is_valid: bool, error_messages: list)
+        """
+        errors = []
+        
+        # 1. 작업 진행 중 확인
+        if getattr(self, 'is_file_operation_running', False):
+            errors.append(("진행 중", "이동/복사 작업이 진행 중입니다.\n작업 완료 후 다시 시도하세요."))
+            return (False, errors)
+        
+        # 2. 출력 경로 확인
+        output_dir = self.settings.get("output")
+        if not output_dir or not os.path.isdir(output_dir):
+            errors.append(("경로 오류", "'이동 대상 폴더'가 설정되지 않았거나 잘못된 경로입니다."))
+            return (False, errors)
+        
+        # 3. 그룹 존재 확인
+        if not self.groups:
+            errors.append(("데이터 없음", "처리할 데이터가 없습니다. 먼저 감시를 실행해주세요."))
+            return (False, errors)
+        
+        return (True, [])
+
     def execute_file_operation(self, clicked_checked=False):
         try:
-            # ✅ 이동 작업 중이면 차단
-            if getattr(self, 'is_file_operation_running', False):
-                self.log_to_box("⚠️ 이동 작업이 진행 중입니다. 완료 후 다시 시도하세요.")
-                QMessageBox.warning(self, "작업 진행 중", "이동/복사 작업이 진행 중입니다.\n작업 완료 후 다시 시도하세요.")
-                return
-
-            output_dir = self.settings.get("output")
-            if not output_dir or not os.path.isdir(output_dir):
-                self.log_to_box("❌ [오류] '이동 대상 폴더'가 설정되지 않았거나 잘못된 경로입니다.")
-                return
-
-            if not self.groups:
-                self.log_to_box("ℹ️ [정보] 처리할 데이터가 없습니다. 먼저 감시를 실행해주세요.")
+            # ✅ 기본 입력 검증 (Phase 2.1 - 추출된 메서드 사용)
+            is_valid, errors = self._validate_file_operation_basic_inputs()
+            if not is_valid:
+                for title, msg in errors:
+                    if title == "진행 중":
+                        self.log_to_box(f"⚠️ {msg.split(chr(10))[0]}")
+                        QMessageBox.warning(self, "작업 " + title, msg)
+                    elif title == "경로 오류":
+                        self.log_to_box(f"❌ [오류] {msg}")
+                    elif title == "데이터 없음":
+                        self.log_to_box(f"ℹ️ [정보] {msg}")
                 return
 
             # ✅ 현재 선택된 탭 확인
+
             current_tab_index = self.tab_widget.currentIndex()
             # 0: 라인1, 1: 라인2, 2: 통합
 
