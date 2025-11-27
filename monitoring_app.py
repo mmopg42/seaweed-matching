@@ -1012,12 +1012,21 @@ class MainWindow(QMainWindow):
             if os.path.isdir(camera_path):
                 return camera_path
             else:
+                self.log_to_box(f"⚠️ camera 하위폴더 없음: {camera_path}")
+                return base_path
+        else:
+            return base_path
+
+    def should_use_recursive_watch(self, folder_type: str) -> bool:
+        """
+        폴더 타입에 따라 재귀 감시 여부 결정
+
+        Args:
+            folder_type: "normal", "normal2", "nir", etc.
 
         Returns:
             True: 재귀 감시, False: 단일 레벨 감시
         """
-        # 일반카메라에서 camera 하위폴더 사용 시 재귀 감시 비활성화
-        if folder_type in ["normal", "normal2"]:
             use_subfolder_key = f"use_camera_subfolder_{folder_type}"
             use_camera_subfolder = self.settings.get(use_subfolder_key, False)
 
