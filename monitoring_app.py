@@ -2218,7 +2218,101 @@ class MainWindow(QMainWindow):
         return (True, [])
 
 
+
+    def _check_and_confirm_already_moved(self, operation_mode, groups_line1, groups_line2, subject, subject2, is_separated):
+        """
+        이미 이동된 시료인지 확인하고 사용자 확인 (Phase 2.3)
+        
+        Returns:
+            bool: 계속 진행 여부 (True=진행, False=취소)
+        """
+        if operation_mode != "이동":
+            return True
+            
+        today_str = datetime.datetime.now().strftime("%y%m%d")
+        
+        # 라인1 확인
+        if groups_line1:
+            exists1, last_iso1 = self.config_manager.was_subject_moved(today_str, subject)
+            if exists1:
+                pretty1 = last_iso1
+                try:
+                    pretty_dt1 = datetime.datetime.fromisoformat(last_iso1)
+                    pretty1 = pretty_dt1.strftime("%H:%M:%S")
+                except Exception:
+                    pass
+                
+                reply = QMessageBox.question(
+                    self,
+                    "이미 완료된 시료",
+                    f"시료('{subject}')는 오늘 {pretty1}에 이동 완료 이력이 있습니다.\n또 진행하시겠습니까?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return False
+
+        # 라인2 확인
+        if groups_line2:
+            target_subject_line2 = subject2 if is_separated else subject
+            exists2, last_iso2 = self.config_manager.was_subject_moved(today_str, target_subject_line2)
+            if exists2:
+                pretty2 = last_iso2
+                try:
+                    pretty_dt2 = datetime.datetime.fromisoformat(last_iso2)
+                    pretty2 = pretty_dt2.strftime("%H:%M:%S")
+                except Exception:
+                    pass
+                
+                reply = QMessageBox.question(
+                    self,
+                    "이미 완료된 시료",
+                    f"시료('{target_subject_line2}')는 오늘 {pretty2}에 이동 완료 이력이 있습니다.\n또 진행하시겠습니까?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return False
+                    
+        return True
+
+    def _build_file_operation_data(self, current_tab_index, is_separated, subject, subject2, groups_line1, groups_line2):
+        """
+        FileOperationWorker용 데이터 구성 (Phase 2.3)
+        
+        Returns:
+            dict: processed_data
+        """
+        today_str = datetime.datetime.now().strftime("%y%m%d")
+        processed_data = {today_str: {}}
+        
+        if current_tab_index == 0:
+            # 라인1 탭: 라인1만
+            if groups_line1:
+                processed_data[today_str][subject] = {"groups": groups_line1}
+                
+        elif current_tab_index == 1:
+            # 라인2 탭: 라인2만 (분리 모드면 subject2, 통합 모드면 subject)
+            if groups_line2:
+                target_subject = subject2 if is_separated else subject
+                processed_data[today_str][target_subject] = {"groups": groups_line2}
+                
+        else:
+            # 통합 탭
+            if is_separated:
+                # 분리 모드: 라인1과 라인2를 다른 시료명으로
+                if groups_line1:
+                    processed_data[today_str][subject] = {"groups": groups_line1}
+                if groups_line2:
+                    processed_data[today_str][subject2] = {"groups": groups_line2}
+            else:
+                # 통합 모드: 모든 데이터를 하나의 시료명으로
+                # 통합 모드에서는 _select_target_groups에서 이미 line1에 모두 모아둠
+                if groups_line1:
+                    processed_data[today_str][subject] = {"groups": groups_line1}
+                    
+        return processed_data
+
     def _select_target_groups(self, tab_index, is_separated, data_count_limit):
+
         """
         탭과 모드에 따라 대상 그룹 선택 및 필터링 (Phase 2.2)
         
@@ -2516,74 +2610,20 @@ class MainWindow(QMainWindow):
             operation_mode = self.combo_mode.currentText()  # "복사" | "이동"
             self.log_to_box(f"🚀 **[{operation_mode}] 작업을 시작합니다...**")
 
-            today_str = datetime.datetime.now().strftime("%y%m%d")
+            # ✅ 이미 이동된 시료인지 확인 (Phase 2.3 - 헬퍼 사용)
+            if not self._check_and_confirm_already_moved(
+                operation_mode, groups_to_move_line1, groups_to_move_line2, 
+                subject, subject2, is_separated
+            ):
+                self.log_to_box("⏹️ 이동 작업이 사용자에 의해 취소되었습니다.")
+                return
 
-            # ✅ 탭과 모드에 따라 데이터 구성
-            processed_data = {today_str: {}}
+            # ✅ 탭과 모드에 따라 데이터 구성 (Phase 2.3 - 헬퍼 사용)
+            processed_data = self._build_file_operation_data(
+                current_tab_index, is_separated, subject, subject2, 
+                groups_to_move_line1, groups_to_move_line2
+            )
 
-            # 이동 이력 확인 및 데이터 구성
-            if operation_mode == "이동":
-                # 라인1 데이터가 있으면 확인
-                if groups_to_move_line1:
-                    exists1, last_iso1 = self.config_manager.was_subject_moved(today_str, subject)
-                    if exists1:
-                        pretty1 = last_iso1
-                        try:
-                            pretty_dt1 = datetime.datetime.fromisoformat(last_iso1)
-                            pretty1 = pretty_dt1.strftime("%H:%M:%S")
-                        except Exception:
-                            pass
-                        reply = QMessageBox.question(
-                            self,
-                            "이미 완료된 시료",
-                            f"시료('{subject}')는 오늘 {pretty1}에 이동 완료 이력이 있습니다.\n또 진행하시겠습니까?",
-                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                        )
-                        if reply != QMessageBox.StandardButton.Yes:
-                            self.log_to_box("⏹️ 이동 작업이 사용자에 의해 취소되었습니다.")
-                            return
-
-                # 라인2 데이터가 있으면 확인
-                if groups_to_move_line2:
-                    # 분리 모드일 때는 subject2, 통합 모드일 때는 subject 사용
-                    target_subject_line2 = subject2 if is_separated else subject
-                    exists2, last_iso2 = self.config_manager.was_subject_moved(today_str, target_subject_line2)
-                    if exists2:
-                        pretty2 = last_iso2
-                        try:
-                            pretty_dt2 = datetime.datetime.fromisoformat(last_iso2)
-                            pretty2 = pretty_dt2.strftime("%H:%M:%S")
-                        except Exception:
-                            pass
-                        reply = QMessageBox.question(
-                            self,
-                            "이미 완료된 시료",
-                            f"시료('{target_subject_line2}')는 오늘 {pretty2}에 이동 완료 이력이 있습니다.\n또 진행하시겠습니까?",
-                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                        )
-                        if reply != QMessageBox.StandardButton.Yes:
-                            self.log_to_box("⏹️ 이동 작업이 사용자에 의해 취소되었습니다.")
-                            return
-
-            # 데이터 구성
-            if current_tab_index == 0:
-                # 라인1 탭: 라인1만
-                processed_data[today_str][subject] = {"groups": groups_to_move_line1}
-            elif current_tab_index == 1:
-                # 라인2 탭: 라인2만 (분리 모드면 subject2, 통합 모드면 subject)
-                target_subject_line2 = subject2 if is_separated else subject
-                processed_data[today_str][target_subject_line2] = {"groups": groups_to_move_line2}
-            else:
-                # 통합 탭
-                if is_separated:
-                    # 분리 모드: 라인1과 라인2를 다른 시료명으로
-                    if groups_to_move_line1:
-                        processed_data[today_str][subject] = {"groups": groups_to_move_line1}
-                    if groups_to_move_line2:
-                        processed_data[today_str][subject2] = {"groups": groups_to_move_line2}
-                else:
-                    # 통합 모드: 모든 데이터를 하나의 시료명으로
-                    processed_data[today_str][subject] = {"groups": groups_to_move_line1}
 
             # ✅ 작업 시작 전: 캐시 클리어 및 가비지 컬렉션으로 파일 핸들 해제
             self.pixmap_cache.clear()
