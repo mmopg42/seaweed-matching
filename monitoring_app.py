@@ -33,6 +33,12 @@ from delete_manager import (
 from image_loader import ImageLoaderWorker, prefetch_images
 from file_count_worker import FileCountWorker
 
+from statistics_calculator import StatisticsCalculator
+from abnormal_detector import AbnormalDetector
+from path_utils import get_normal_thumbnail_path, extract_date_from_paths, auto_update_paths_with_date
+from image_registry import ImageRegistry
+from window_state_manager import WindowStateManager
+from view_manager import ViewManager
 
 class DragSelectWidget(QWidget):
     """드래그로 여러 행을 선택할 수 있는 컨테이너 위젯"""
@@ -115,6 +121,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.config_manager = ConfigManager()
         self.window_state_manager = WindowStateManager()
+        self.abnormal_detector = AbnormalDetector()
         self.settings = self.config_manager.load()
         self.group_manager = GroupManager(log_emitter_func=self.log_to_box)
         self.file_matcher = FileMatcher()
@@ -1005,45 +1012,6 @@ class MainWindow(QMainWindow):
             if os.path.isdir(camera_path):
                 return camera_path
             else:
-                self.log_to_box(f"⚠️ camera 하위폴더 없음: {camera_path}")
-                return base_path
-        else:
-            return base_path
-
-    def is_abnormal_image(self, image_path: str) -> bool:
-        """
-        이미지 이상치 여부 판정
-
-        기준:
-        - 가로(width) <= 185 픽셀 OR
-        - 세로(height) >= 210 픽셀
-
-        Args:
-            image_path: 이미지 파일 절대 경로
-
-        Returns:
-            bool: True if 이상치, False if 정상
-        """
-        dimensions = get_image_dimensions(image_path)
-        if dimensions is None:
-            return False  # 크기를 알 수 없으면 정상으로 간주
-
-        width, height = dimensions
-        
-        # ✅ [NEW] 10으로 나눈 값으로 판정 (마지막 자리 버림)
-        w_trunc = width // 10
-        h_trunc = height // 10
-
-        # OR 조건: 가로 185 이하 또는 세로 210 이상 (Truncated: 18, 21)
-        # 원래 기준: 185, 218 -> 10으로 나누면 18, 21
-        return w_trunc < 184 or h_trunc >= 218
-
-    def should_use_recursive_watch(self, folder_type: str) -> bool:
-        """
-        폴더 타입에 따라 재귀 감시 여부 결정
-
-        Args:
-            folder_type: "normal", "normal2", "nir", etc.
 
         Returns:
             True: 재귀 감시, False: 단일 레벨 감시
@@ -1888,7 +1856,7 @@ class MainWindow(QMainWindow):
                 cam_widget.set_image(pixmap, thumbnail_path)
 
                 # ✅ Phase 5: 이상치 판정
-                is_abnormal = self.is_abnormal_image(thumbnail_path)
+                is_abnormal = self.abnormal_detector.is_image_abnormal(thumbnail_path)
                 
                 # ✅ [NEW] 이미지 크기 표시 (10으로 나눈 값)
                 dims = self.get_image_dimensions(thumbnail_path)
