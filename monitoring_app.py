@@ -2217,7 +2217,103 @@ class MainWindow(QMainWindow):
         
         return (True, [])
 
+
+    def _select_target_groups(self, tab_index, is_separated, data_count_limit):
+        """
+        탭과 모드에 따라 대상 그룹 선택 및 필터링 (Phase 2.2)
+        
+        Returns:
+            dict: {
+                "line1": list,
+                "line2": list,
+                "line1_skipped": list,
+                "line2_skipped": list,
+                "line1_total": int,
+                "line2_total": int,
+                "limit_triggered": bool
+            }
+        """
+        # 1. 완전 매칭 필터링
+        filtered_groups, skipped_groups = self._filter_fully_matched_groups(self.groups)
+        
+        # 2. 라인별 분리
+        line1_groups = [g for g in filtered_groups if g.get('line') == 1]
+        line2_groups = [g for g in filtered_groups if g.get('line') == 2]
+        
+        skipped_line1 = [item for item in skipped_groups if item[0].get('line', 1) == 1]
+        skipped_line2 = [item for item in skipped_groups if item[0].get('line', 1) == 2]
+        
+        # 정렬 (시간순)
+        line1_groups.sort(key=lambda x: datetime.datetime.fromisoformat(x["time"]))
+        line2_groups.sort(key=lambda x: datetime.datetime.fromisoformat(x["time"]))
+        
+        result = {
+            "line1": [],
+            "line2": [],
+            "line1_skipped": [],
+            "line2_skipped": [],
+            "line1_total": len(line1_groups),
+            "line2_total": len(line2_groups),
+            "limit_triggered": False
+        }
+        
+        if tab_index == 0:
+            # 라인1 탭
+            result["line1_skipped"] = skipped_line1
+            target = line1_groups
+            if data_count_limit > 0 and len(target) > data_count_limit:
+                target = target[:data_count_limit]
+                result["limit_triggered"] = True
+            result["line1"] = target
+            
+        elif tab_index == 1:
+            # 라인2 탭
+            result["line2_skipped"] = skipped_line2
+            target = line2_groups
+            if data_count_limit > 0 and len(target) > data_count_limit:
+                target = target[:data_count_limit]
+                result["limit_triggered"] = True
+            result["line2"] = target
+            
+        else:
+            # 통합 탭
+            if is_separated:
+                # 분리 모드
+                result["line1_skipped"] = skipped_line1
+                result["line2_skipped"] = skipped_line2
+                
+                target1 = line1_groups
+                target2 = line2_groups
+                
+                if data_count_limit > 0:
+                    if len(target1) > data_count_limit:
+                        target1 = target1[:data_count_limit]
+                        result["limit_triggered"] = True
+                    if len(target2) > data_count_limit:
+                        target2 = target2[:data_count_limit]
+                        result["limit_triggered"] = True
+                
+                result["line1"] = target1
+                result["line2"] = target2
+            else:
+                # 통합 모드 (모두 합쳐서 처리)
+                # 통합 모드에서는 전체 skipped를 line1_skipped에 넣어서 로깅 유도
+                result["line1_skipped"] = skipped_groups 
+                
+                all_groups = sorted(filtered_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
+                
+                if data_count_limit > 0 and len(all_groups) > data_count_limit:
+                    all_groups = all_groups[:data_count_limit]
+                    result["limit_triggered"] = True
+                
+                # 통합 모드에서는 line1에 모두 넣어서 반환
+                result["line1"] = all_groups
+                result["line2"] = []
+                
+        return result
+
     def execute_file_operation(self, clicked_checked=False):
+
         try:
             # ✅ 기본 입력 검증 (Phase 2.1 - 추출된 메서드 사용)
             is_valid, errors = self._validate_file_operation_basic_inputs()
@@ -2328,34 +2424,22 @@ class MainWindow(QMainWindow):
             except ValueError:
                 data_count_limit = 0
 
-            # ✅ 탭에 따라 이동할 데이터 결정
-            filtered_groups, skipped_groups = self._filter_fully_matched_groups(self.groups)
-            line1_groups = [g for g in filtered_groups if g.get('line') == 1]
-            line2_groups = [g for g in filtered_groups if g.get('line') == 2]
-            skipped_line1 = [item for item in skipped_groups if item[0].get('line', 1) == 1]
-            skipped_line2 = [item for item in skipped_groups if item[0].get('line', 1) == 2]
-
-            # 탭별 처리
+            # ✅ 탭에 따라 이동할 데이터 결정 (Phase 2.2 - 헬퍼 사용)
+            selection = self._select_target_groups(current_tab_index, is_separated, data_count_limit)
+            groups_to_move_line1 = selection["line1"]
+            groups_to_move_line2 = selection["line2"]
+            
+            # 탭별 UI 및 NIR 정리
             if current_tab_index == 0:
-                # 라인1 탭: 라인1 데이터만 이동
-                self._log_skipped_groups(skipped_line1, "라인1")
-                sorted_line1 = sorted(line1_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
-                groups_to_process = list(sorted_line1)
-                limit_triggered = False
-                if data_count_limit > 0 and len(sorted_line1) > data_count_limit:
-                    groups_to_process = sorted_line1[:data_count_limit]
-                    limit_triggered = True
-
-                if limit_triggered:
-                    self.log_to_box(f"📊 [라인1] 전체 {len(line1_groups)}개 중 {len(groups_to_process)}개 데이터를 이동합니다.")
+                # 라인1 탭
+                self._log_skipped_groups(selection["line1_skipped"], "라인1")
+                
+                if len(groups_to_move_line1) < selection["line1_total"]:
+                    self.log_to_box(f"📊 [라인1] 전체 {selection['line1_total']}개 중 {len(groups_to_move_line1)}개 데이터를 이동합니다.")
 
                 target_subject = subject
-                msg = f"정말로 이동하시겠습니까?\n\n"
-                msg += f"[라인1 → {subject}]\n"
-                if data_count_limit > 0:
-                    msg += f"  데이터: {len(groups_to_process)}개 (기본 제한: {data_count_limit}개)\n"
-                else:
-                    msg += f"  데이터: {len(groups_to_process)}개 (전체)\n"
+                msg = f"정말로 이동하시겠습니까?\n\n[라인1 → {subject}]\n"
+                msg += f"  데이터: {len(groups_to_move_line1)}개 ({'기본 제한: ' + str(data_count_limit) if data_count_limit > 0 else '전체'})\n"
                 msg += f"NIR: {keep_n}개 만 이동" if keep_n > 0 else "NIR: 전체 이동"
 
                 reply = QMessageBox.question(self, "이동 확인", msg, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
@@ -2363,31 +2447,18 @@ class MainWindow(QMainWindow):
                     self.log_to_box("⏹️ 이동 작업이 사용자에 의해 취소되었습니다.")
                     return
 
-                self.prune_nir_files_before_op(keep_n, target_subject, groups_to_process)
-                groups_to_move_line1 = groups_to_process
-                groups_to_move_line2 = []
+                self.prune_nir_files_before_op(keep_n, target_subject, groups_to_move_line1)
 
             elif current_tab_index == 1:
-                # 라인2 탭: 라인2 데이터만 이동
-                self._log_skipped_groups(skipped_line2, "라인2")
-                sorted_line2 = sorted(line2_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
-                groups_to_process = list(sorted_line2)
-                limit_triggered = False
-                if data_count_limit > 0 and len(sorted_line2) > data_count_limit:
-                    groups_to_process = sorted_line2[:data_count_limit]
-                    limit_triggered = True
+                # 라인2 탭
+                self._log_skipped_groups(selection["line2_skipped"], "라인2")
+                
+                if len(groups_to_move_line2) < selection["line2_total"]:
+                    self.log_to_box(f"📊 [라인2] 전체 {selection['line2_total']}개 중 {len(groups_to_move_line2)}개 데이터를 이동합니다.")
 
-                if limit_triggered:
-                    self.log_to_box(f"📊 [라인2] 전체 {len(line2_groups)}개 중 {len(groups_to_process)}개 데이터를 이동합니다.")
-
-                # 분리 모드일 때는 subject2 사용, 통합 모드일 때는 subject 사용
                 target_subject = subject2 if is_separated else subject
-                msg = f"정말로 이동하시겠습니까?\n\n"
-                msg += f"[라인2 → {target_subject}]\n"
-                if data_count_limit > 0:
-                    msg += f"  데이터: {len(groups_to_process)}개 (기본 제한: {data_count_limit}개)\n"
-                else:
-                    msg += f"  데이터: {len(groups_to_process)}개 (전체)\n"
+                msg = f"정말로 이동하시겠습니까?\n\n[라인2 → {target_subject}]\n"
+                msg += f"  데이터: {len(groups_to_move_line2)}개 ({'기본 제한: ' + str(data_count_limit) if data_count_limit > 0 else '전체'})\n"
                 msg += f"NIR: {keep_n}개 만 이동" if keep_n > 0 else "NIR: 전체 이동"
 
                 reply = QMessageBox.question(self, "이동 확인", msg, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
@@ -2395,47 +2466,24 @@ class MainWindow(QMainWindow):
                     self.log_to_box("⏹️ 이동 작업이 사용자에 의해 취소되었습니다.")
                     return
 
-                self.prune_nir_files_before_op(keep_n, target_subject, groups_to_process)
-                groups_to_move_line1 = []
-                groups_to_move_line2 = groups_to_process
+                self.prune_nir_files_before_op(keep_n, target_subject, groups_to_move_line2)
 
             else:
-                # 통합 탭 (current_tab_index == 2): 둘 다 이동
+                # 통합 탭
                 if is_separated:
-                    # 분리 모드: 라인별로 다른 시료명
-                    self._log_skipped_groups(skipped_line1, "라인1")
-                    self._log_skipped_groups(skipped_line2, "라인2")
-                    sorted_line1 = sorted(line1_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
-                    sorted_line2 = sorted(line2_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
-                    groups_to_move_line1 = list(sorted_line1)
-                    groups_to_move_line2 = list(sorted_line2)
+                    # 분리 모드
+                    self._log_skipped_groups(selection["line1_skipped"], "라인1")
+                    self._log_skipped_groups(selection["line2_skipped"], "라인2")
+                    
+                    if len(groups_to_move_line1) < selection["line1_total"]:
+                        self.log_to_box(f"📊 [라인1] 전체 {selection['line1_total']}개 중 {len(groups_to_move_line1)}개 데이터를 이동합니다.")
+                    if len(groups_to_move_line2) < selection["line2_total"]:
+                        self.log_to_box(f"📊 [라인2] 전체 {selection['line2_total']}개 중 {len(groups_to_move_line2)}개 데이터를 이동합니다.")
 
-                    log_line1 = False
-                    log_line2 = False
-                    if data_count_limit > 0:
-                        if len(sorted_line1) > data_count_limit:
-                            groups_to_move_line1 = sorted_line1[:data_count_limit]
-                            log_line1 = True
-                        if len(sorted_line2) > data_count_limit:
-                            groups_to_move_line2 = sorted_line2[:data_count_limit]
-                            log_line2 = True
-
-                    if log_line1:
-                        self.log_to_box(f"📊 [라인1] 전체 {len(line1_groups)}개 중 {len(groups_to_move_line1)}개 데이터를 이동합니다.")
-                    if log_line2:
-                        self.log_to_box(f"📊 [라인2] 전체 {len(line2_groups)}개 중 {len(groups_to_move_line2)}개 데이터를 이동합니다.")
-
-                    msg = f"정말로 이동하시겠습니까?\n\n"
-                    msg += f"[라인1 → {subject}]\n"
-                    if data_count_limit > 0:
-                        msg += f"  데이터: {len(groups_to_move_line1)}개 (기본 제한: {data_count_limit}개)\n"
-                    else:
-                        msg += f"  데이터: {len(groups_to_move_line1)}개 (전체)\n"
+                    msg = f"정말로 이동하시겠습니까?\n\n[라인1 → {subject}]\n"
+                    msg += f"  데이터: {len(groups_to_move_line1)}개 ({'기본 제한: ' + str(data_count_limit) if data_count_limit > 0 else '전체'})\n"
                     msg += f"\n[라인2 → {subject2}]\n"
-                    if data_count_limit > 0:
-                        msg += f"  데이터: {len(groups_to_move_line2)}개 (기본 제한: {data_count_limit}개)\n"
-                    else:
-                        msg += f"  데이터: {len(groups_to_move_line2)}개 (전체)\n"
+                    msg += f"  데이터: {len(groups_to_move_line2)}개 ({'기본 제한: ' + str(data_count_limit) if data_count_limit > 0 else '전체'})\n"
                     msg += f"\nNIR: {keep_n}개 만 이동" if keep_n > 0 else "\nNIR: 전체 이동"
 
                     reply = QMessageBox.question(self, "이동 확인", msg, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
@@ -2446,23 +2494,15 @@ class MainWindow(QMainWindow):
                     self.prune_nir_files_before_op(keep_n, subject, groups_to_move_line1)
                     self.prune_nir_files_before_op(keep_n, subject2, groups_to_move_line2)
                 else:
-                    # 통합 모드: 모든 데이터를 하나의 시료명으로
-                    self._log_skipped_groups(skipped_groups, "통합")
-                    sorted_groups = sorted(filtered_groups, key=lambda x: datetime.datetime.fromisoformat(x["time"]))
-                    groups_to_move = list(sorted_groups)
-                    log_combined = False
-                    if data_count_limit > 0 and len(sorted_groups) > data_count_limit:
-                        groups_to_move = sorted_groups[:data_count_limit]
-                        log_combined = True
-
-                    if log_combined:
-                        self.log_to_box(f"📊 전체 {len(filtered_groups)}개 중 {len(groups_to_move)}개 데이터를 이동합니다.")
+                    # 통합 모드
+                    self._log_skipped_groups(selection["line1_skipped"], "통합")
+                    
+                    total_available = selection["line1_total"] + selection["line2_total"]
+                    if len(groups_to_move_line1) < total_available:
+                        self.log_to_box(f"📊 전체 {total_available}개 중 {len(groups_to_move_line1)}개 데이터를 이동합니다.")
 
                     msg = f"정말로 이동하시겠습니까?\n"
-                    if data_count_limit > 0:
-                        msg += f"데이터: {len(groups_to_move)}개 (기본 제한: {data_count_limit}개)\n"
-                    else:
-                        msg += f"데이터: {len(groups_to_move)}개 (전체)\n"
+                    msg += f"데이터: {len(groups_to_move_line1)}개 ({'기본 제한: ' + str(data_count_limit) if data_count_limit > 0 else '전체'})\n"
                     msg += f"NIR: {keep_n}개 만 이동" if keep_n > 0 else "NIR: 전체 이동"
 
                     reply = QMessageBox.question(self, "이동 확인", msg, QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
@@ -2470,8 +2510,7 @@ class MainWindow(QMainWindow):
                         self.log_to_box("⏹️ 이동 작업이 사용자에 의해 취소되었습니다.")
                         return
 
-                    self.prune_nir_files_before_op(keep_n, subject, groups_to_move)
-                    groups_to_move_line1 = groups_to_move
+                    self.prune_nir_files_before_op(keep_n, subject, groups_to_move_line1)
                     groups_to_move_line2 = []
 
             operation_mode = self.combo_mode.currentText()  # "복사" | "이동"
