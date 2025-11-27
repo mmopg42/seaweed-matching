@@ -1051,45 +1051,6 @@ class MainWindow(QMainWindow):
         self.lbl_without_line2.setText(str(without_nir_line2))
         self.lbl_fail_line2.setText(str(fail_line2))
 
-    def register_widget_for_path(self, widget, path: str):
-        """
-        위젯을 특정 이미지 경로에 등록 (Registry Pattern)
-        - 기존 경로에서 제거 후 새 경로에 등록
-        - O(1) 업데이트를 위해 필수
-        """
-        if not widget:
-            return
-
-        # 1. 기존 등록된 경로가 있다면 제거
-        old_path = self.widget_to_image_path.get(widget)
-        if old_path and old_path != path:
-            if widget in self.image_path_to_widgets[old_path]:
-                self.image_path_to_widgets[old_path].remove(widget)
-            if not self.image_path_to_widgets[old_path]:
-                del self.image_path_to_widgets[old_path]
-
-        # 2. 새 경로에 등록 (path가 있을 때만)
-        if path:
-            if widget not in self.image_path_to_widgets[path]:
-                self.image_path_to_widgets[path].append(widget)
-            self.widget_to_image_path[widget] = path
-        else:
-            # path가 없으면(초기화 등) 매핑만 제거
-            if widget in self.widget_to_image_path:
-                del self.widget_to_image_path[widget]
-
-    def unregister_widget(self, widget):
-        """위젯을 레지스트리에서 완전히 제거 (삭제 시 호출)"""
-        if not widget:
-            return
-        
-        old_path = self.widget_to_image_path.pop(widget, None)
-        if old_path and old_path in self.image_path_to_widgets:
-            if widget in self.image_path_to_widgets[old_path]:
-                self.image_path_to_widgets[old_path].remove(widget)
-            if not self.image_path_to_widgets[old_path]:
-                del self.image_path_to_widgets[old_path]
-
     def save_today_date(self):
         self.settings["today_date"] = self.today_edit.text().strip()
         self.config_manager.save(self.settings)
