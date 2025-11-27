@@ -122,6 +122,7 @@ class MainWindow(QMainWindow):
         self.config_manager = ConfigManager()
         self.window_state_manager = WindowStateManager()
         self.abnormal_detector = AbnormalDetector()
+        self.statistics_calculator = StatisticsCalculator()
         self.settings = self.config_manager.load()
         self.group_manager = GroupManager(log_emitter_func=self.log_to_box)
         self.file_matcher = FileMatcher()
@@ -137,21 +138,13 @@ class MainWindow(QMainWindow):
 
         self.pixmap_cache = LruPixmapCache(max_items=500)
         
-        # ✅ 비동기 이미지 로더 초기화 (워커 수 자동 감지)
-        thumbnail_cache_dir = os.path.join(self.config_manager.app_dir, "thumbnail_cache")
-        use_disk_cache = self.settings.get("use_disk_cache", True)  # 기본값: True
-        self.image_loader = ImageLoaderWorker(cache_dir=thumbnail_cache_dir, use_disk_cache=use_disk_cache)
-        self.image_loader.image_ready.connect(self.on_image_loaded)
-        self.image_loader.error_occurred.connect(lambda msg: print(f"[IMAGE_LOADER] {msg}"))
-        self.image_loader.start()
+        # ✅ ImageRegistry 인스턴스 생성 (기존 pixmap_cache 활용)
+        self.image_registry = ImageRegistry(pixmap_cache=self.pixmap_cache)
         
-        # 이미지 로딩 요청 추적 (request_id → 위젯 매핑)
-        self.pending_image_requests = {}  # {request_id: (widget, attribute)}
-
         # ✅ [Registry Pattern] 이미지 경로 ↔ 위젯 매핑 (O(1) 업데이트용)
-        from collections import defaultdict
-        self.image_path_to_widgets = defaultdict(list)  # {path: [widget1, widget2, ...]}
-        self.widget_to_image_path = {}              # {widget: path}
+        # ImageRegistry로 대체됨 - 하위 호환성을 위해 아래 속성을 ImageRegistry 인스턴스로 연결
+        self.image_path_to_widgets = self.image_registry.image_path_to_widgets
+        self.widget_to_image_path = self.image_registry.widget_to_image_path
 
         self.file_event_communicator = Communicate()
         self.file_event_communicator.file_changed.connect(self.handle_file_event)
