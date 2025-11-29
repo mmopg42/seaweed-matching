@@ -39,7 +39,6 @@ from path_utils import get_normal_thumbnail_path, extract_date_from_paths, auto_
 from image_registry import ImageRegistry
 from image_manager import ImageManager
 from window_state_manager import WindowStateManager
-from view_manager import ViewManager
 from group_state_manager import GroupStateManager
 
 class DragSelectWidget(QWidget):

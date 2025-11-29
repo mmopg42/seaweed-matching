@@ -20,7 +20,7 @@ from config_manager import ConfigManager
 
 
 def auto_update_date_in_path(path: str) -> tuple:
-    """
+    r"""
     경로의 마지막 부분이 \MM\DD 형식이면 오늘 날짜로 자동 변경
 
     Args:

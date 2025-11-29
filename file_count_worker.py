@@ -9,6 +9,8 @@ import time
 from PySide6.QtCore import QThread, Signal
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from path_utils import get_effective_path
+
 
 
 class CountFolderEventHandler(FileSystemEventHandler):
@@ -46,26 +48,6 @@ class FileCountWorker(QThread):
         self.settings = settings.copy() if settings else {}
         # 설정이 변경되면 watchdog 재시작
         self.trigger_count()
-
-    def get_effective_path(self, base_path: str, use_camera_subfolder: bool) -> str:
-        """
-        실제 검색 경로 계산 (camera 하위폴더 옵션 반영)
-
-        Args:
-            base_path: 기본 경로
-            use_camera_subfolder: camera 하위폴더 사용 여부
-
-        Returns:
-            실제 검색할 경로
-        """
-        if not base_path:
-            return ""
-
-        if use_camera_subfolder:
-            camera_path = os.path.join(base_path, "camera")
-            return camera_path if os.path.isdir(camera_path) else base_path
-        else:
-            return base_path
 
     def should_use_recursive_watch(self, folder_type: str) -> bool:
         """
@@ -126,7 +108,7 @@ class FileCountWorker(QThread):
                 if folder_type in ["normal", "normal2"]:
                     base_path = self.settings.get(folder_type, "")
                     use_camera_subfolder = self.settings.get(f"use_camera_subfolder_{folder_type}", False)
-                    folder = self.get_effective_path(base_path, use_camera_subfolder)
+                    folder = get_effective_path(base_path, use_camera_subfolder)
                 else:
                     folder = self.settings.get(folder_type, "")
 
@@ -168,11 +150,11 @@ class FileCountWorker(QThread):
                     # ✅ camera 하위폴더 옵션 적용하여 실제 경로 가져오기
                     normal_base = self.settings.get("normal", "")
                     normal_use_camera = self.settings.get("use_camera_subfolder_normal", False)
-                    normal_path = self.get_effective_path(normal_base, normal_use_camera)
+                    normal_path = get_effective_path(normal_base, normal_use_camera)
 
                     normal2_base = self.settings.get("normal2", "")
                     normal2_use_camera = self.settings.get("use_camera_subfolder_normal2", False)
-                    normal2_path = self.get_effective_path(normal2_base, normal2_use_camera)
+                    normal2_path = get_effective_path(normal2_base, normal2_use_camera)
                     nir_path = self.settings.get("nir", "")
                     nir2_path = self.settings.get("nir2", "")
                     cam1_path = self.settings.get("cam1", "")

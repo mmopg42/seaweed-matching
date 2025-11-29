@@ -32,8 +32,8 @@ class ImageRegistry:
         else:
             self.pixmap_cache = LruPixmapCache(max_items=max_cache_items)
         
-        # 플레이스홀더 캐시
-        self._placeholder_pixmap = None
+        # 플레이스홀더 캐시 (크기별)
+        self._placeholder_cache = {}
     
     def register_widget(self, widget, image_path: str):
         """
@@ -88,6 +88,44 @@ class ImageRegistry:
         """
         return self.image_path_to_widgets.get(image_path, [])
     
+    # ===== 캐시 관리 메서드 (권장) =====
+    
+    def get_pixmap(self, path: str):
+        """
+        메모리 캐시에서 QPixmap 조회 (권장 메서드)
+        
+        Args:
+            path: 이미지 파일 경로
+            
+        Returns:
+            QPixmap or None: 캐시된 pixmap 또는 None
+        """
+        return self.pixmap_cache.get(path)
+    
+    def set_pixmap(self, path: str, pixmap):
+        """
+        메모리 캐시에 QPixmap 저장 (권장 메서드)
+        
+        Args:
+            path: 이미지 파일 경로
+            pixmap: QPixmap 객체
+        """
+        self.pixmap_cache.set(path, pixmap)
+    
+    def has_pixmap(self, path: str) -> bool:
+        """
+        캐시에 해당 경로의 pixmap이 있는지 확인
+        
+        Args:
+            path: 이미지 파일 경로
+            
+        Returns:
+            bool: 캐시에 존재하면 True, 없으면 False
+        """
+        return self.pixmap_cache.get(path) is not None
+    
+    # ===== Registry 패턴 메서드 =====
+    
     def refresh_single_image(self, image_path: str, pixmap):
         """
         특정 이미지 경로만 찾아서 즉시 업데이트
@@ -103,34 +141,11 @@ class ImageRegistry:
             if hasattr(widget, 'set_image'):
                 widget.set_image(pixmap, image_path)
     
-    def get_cached_pixmap(self, path: str):
-        """
-        캐시에서 QPixmap 조회
-        
-        Args:
-            path: 이미지 파일 경로
-            
-        Returns:
-            QPixmap or None: 캐시된 pixmap 또는 None
-        """
-        return self.pixmap_cache.get(path)
-    
-    def set_cached_pixmap(self, path: str, pixmap):
-        """
-        캐시에 QPixmap 저장
-        
-        Args:
-            path: 이미지 파일 경로
-            pixmap: QPixmap 객체
-        """
-        self.pixmap_cache.set(path, pixmap)
+
     
     def get_placeholder_pixmap(self, width=200, height=150):
         """
-        로딩 중 플레이스홀더 이미지 반환
-        
-        - 회색 배경 + "로딩 중..." 텍스트
-        - 한 번만 생성하고 재사용
+        로딩 중 플레이스홀더 이미지 반환 (크기별 캐싱)
         
         Args:
             width: 플레이스홀더 너비
@@ -139,26 +154,30 @@ class ImageRegistry:
         Returns:
             QPixmap: 플레이스홀더 pixmap
         """
-        if self._placeholder_pixmap is None:
-            from PySide6.QtGui import QPixmap, QPainter, QColor, QFont
-            from PySide6.QtCore import Qt
-            
-            pixmap = QPixmap(width, height)
-            pixmap.fill(QColor(200, 200, 200))
-            
-            painter = QPainter(pixmap)
-            painter.setPen(QColor(100, 100, 100))
-            font = QFont()
-            font.setPointSize(12)
-            painter.setFont(font)
-            painter.drawText(pixmap.rect(), Qt.AlignCenter, "로딩 중...")
-            painter.end()
-            
-            self._placeholder_pixmap = pixmap
+        key = f"{width}x{height}"
+        if key not in self._placeholder_cache:
+            self._placeholder_cache[key] = self._create_placeholder(width, height)
+        return self._placeholder_cache[key]
+
+    def _create_placeholder(self, width, height):
+        """플레이스홀더 QPixmap 생성"""
+        from PySide6.QtGui import QPixmap, QPainter, QColor, QFont
+        from PySide6.QtCore import Qt
         
-        return self._placeholder_pixmap
+        pixmap = QPixmap(width, height)
+        pixmap.fill(QColor(200, 200, 200))
+        
+        painter = QPainter(pixmap)
+        painter.setPen(QColor(100, 100, 100))
+        font = QFont()
+        font.setPointSize(12)
+        painter.setFont(font)
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "로딩 중...")
+        painter.end()
+        
+        return pixmap
     
     def clear_cache(self):
         """모든 캐시 초기화"""
         self.pixmap_cache.clear()
-        self._placeholder_pixmap = None
+        self._placeholder_cache.clear()

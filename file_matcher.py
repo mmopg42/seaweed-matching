@@ -9,6 +9,7 @@ from PySide6.QtCore import QObject, Signal, QThread
 from watchdog.events import FileSystemEventHandler
 
 from utils import extract_datetime_from_str, get_timestamp_from_yml, extract_datetime_from_nir_key
+from path_utils import get_effective_path
 
 
 class Communicate(QObject):
@@ -96,26 +97,6 @@ class FileMatcher(QObject):
         self.unmatched_files = unmatched_files or defaultdict(dict)
         self.consumed_nir_keys = set(consumed_nir_keys or [])
         self.log_signal.emit("♻️ 이전 상태를 복원했습니다.")
-
-    def get_effective_path(self, base_path: str, use_camera_subfolder: bool) -> str:
-        """
-        실제 검색 경로 계산
-
-        Args:
-            base_path: 기본 경로
-            use_camera_subfolder: camera 하위폴더 사용 여부
-
-        Returns:
-            실제 검색할 경로 (camera 하위폴더 옵션 반영)
-        """
-        if not base_path:
-            return ""
-
-        if use_camera_subfolder:
-            camera_path = os.path.join(base_path, "camera")
-            return camera_path if os.path.isdir(camera_path) else base_path
-        else:
-            return base_path
 
     def add_or_update_file(self, file_path, folder_type):
         # ✅ folder_type 키가 없으면 생성 (KeyError 방지)
@@ -227,7 +208,7 @@ class FileMatcher(QObject):
             # ✅ camera 하위폴더 옵션 적용
             base_path = settings.get(normal_key, "")
             use_camera_subfolder = settings.get(f"use_camera_subfolder_{normal_key}", False)
-            normal_dir = self.get_effective_path(base_path, use_camera_subfolder)
+            normal_dir = get_effective_path(base_path, use_camera_subfolder)
 
             if normal_dir and os.path.isdir(normal_dir):
                 # use_folder_suffix가 True일 때만 접미사로 필터링

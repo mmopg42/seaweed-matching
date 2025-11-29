@@ -57,6 +57,27 @@ def extract_datetime_from_str(s, prefix):
             return None
     return None
 
+def extract_datetime_from_composite_cam(filename: str):
+    """
+    복합카메라 파일명에서 타임스탬프를 추출합니다.
+    형식: YYYYMMDD_HHMMSS_XXX.jpg (예: 20250120_143052_001.jpg)
+
+    Args:
+        filename (str): 파일명
+
+    Returns:
+        datetime.datetime or None: 추출된 datetime 객체
+    """
+    # 패턴: YYYYMMDD_HHMMSS
+    m = re.search(r'(\d{8})_(\d{6})', filename)
+    if m:
+        try:
+            dt_str = f"{m.group(1)}_{m.group(2)}"
+            return datetime.datetime.strptime(dt_str, "%Y%m%d_%H%M%S")
+        except ValueError:
+            return None
+    return None
+
 def yml_timestamp_to_short(ts_str):
     """
     YAML 파일의 타임스탬프 형식('20250521_145701')을 내부 처리용 형식('250521T145701')으로 변환합니다.
@@ -172,3 +193,25 @@ class LruPixmapCache:
     def clear(self):
         """모든 캐시 항목을 삭제하여 참조를 즉시 해제합니다."""
         self.cache.clear()
+
+
+def get_image_dimensions(image_path: str):
+    """
+    이미지 파일의 크기(width, height) 반환
+
+    Args:
+        image_path: 이미지 파일 절대 경로
+
+    Returns:
+        tuple: (width, height) 또는 None
+    """
+    if not image_path or not os.path.exists(image_path):
+        return None
+
+    try:
+        from PIL import Image
+        with Image.open(image_path) as img:
+            return img.size  # (width, height)
+    except Exception:
+        # 에러 발생 시 None 반환 (로그는 호출하는 곳에서 처리)
+        return None
