@@ -2178,9 +2178,10 @@ class MainWindow(QMainWindow):
                     elif title == "데이터 없음":
                         self.log_to_box(f"ℹ️ [정보] {msg}")
                 return
-
+            
+            output_dir = self.settings.get("output", "")
+            
             # ✅ 현재 선택된 탭 확인
-
             current_tab_index = self.tab_widget.currentIndex()
             # 0: 라인1, 1: 라인2, 2: 통합
 
