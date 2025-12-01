@@ -566,8 +566,8 @@ class MainWindow(QMainWindow):
             # NIR 파일 매칭 및 그룹 생성
             nir_match_time_diff = self.settings.get("nir_match_time_diff", 1.0)
             use_cam_time_matching = self.settings.get("use_cam_time_matching", True)
-            cam_match_min_diff = self.settings.get("cam_match_min_diff")
-            cam_match_max_diff = self.settings.get("cam_match_max_diff")
+            cam_match_min_diff = self.settings.get("cam_match_min_diff", 4.0)
+            cam_match_max_diff = self.settings.get("cam_match_max_diff", 6.0)
 
             self.groups = self.group_manager.build_all_groups(
                 self.file_matcher.unmatched_files,
@@ -815,8 +815,8 @@ class MainWindow(QMainWindow):
         # 2) 그룹 재구성 + UI 갱신
         nir_match_time_diff = self.settings.get("nir_match_time_diff", 1.0)
         use_cam_time_matching = self.settings.get("use_cam_time_matching", True)
-        cam_match_min_diff = self.settings.get("cam_match_min_diff")
-        cam_match_max_diff = self.settings.get("cam_match_max_diff")
+        cam_match_min_diff = self.settings.get("cam_match_min_diff", 4.0)
+        cam_match_max_diff = self.settings.get("cam_match_max_diff", 6.0)
         self.groups = self.group_manager.build_all_groups(
             self.file_matcher.unmatched_files,
             self.file_matcher.consumed_nir_keys,
@@ -2617,20 +2617,27 @@ class MainWindow(QMainWindow):
 
     def _on_loading_progress(self, loaded: int, total: int):
         """
-        이미지 로딩 진행률 업데이트 - StatisticsPresenter에 위임
+        이미지 로딩 진행률 업데이트 - GUI 위젯 사용
         
         Args:
             loaded: 로딩 완료된 이미지 수
             total: 전체 이미지 수
         """
-        # 10개마다만 로그 출력 (로그 스팸 방지)
-        if loaded % 10 == 0 or loaded == total:
-            # ✅ Phase 3: StatisticsPresenter로 포맷팅 위임
+        # ✅ Phase 3.3: GUI 위젯으로 진행률 표시
+        if hasattr(self, 'progress_frame') and hasattr(self, 'progress_bar'):
+            # 프레임 보이기
+            self.progress_frame.setVisible(True)
+            
+            # 진행률 바 업데이트
+            self.progress_bar.setMaximum(total)
+            self.progress_bar.setValue(loaded)
+            
+            # 진행률 레이블 업데이트 (StatisticsPresenter 사용)
             style = self.settings.get("progress_style", "bar")
             message = self.statistics_presenter.format_loading_progress(
                 loaded, total, style=style
             )
-            self.log_to_box(message)
+            self.progress_label.setText(message)
 
     def _on_all_images_loaded(self):
         """모든 이미지 로딩 완료"""

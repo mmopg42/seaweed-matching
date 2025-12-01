@@ -339,12 +339,12 @@ class GroupManager:
                 # 타임스탬프 추출 실패 시 스킵
                 continue
             
-            # 시간 차이 계산 (cam2/3은 cam1 이후여야 함)
+            # 시간 차이 계산 (cam2/3은 cam1과 같거나 이후여야 함)
             diff = (cam_dt - reference_dt).total_seconds()
-            
-            # 조건: 0 < diff <= max_diff (cam1 이후 1초 이내)
-            # cam1보다 나중에 촬영된 파일만 매칭
-            if 0 < diff <= max_diff:
+
+            # 조건: 0 <= diff <= max_diff (cam1과 같은 시간 또는 1초 이내)
+            # cam1과 같은 시간이거나 cam1 이후에 촬영된 파일만 매칭
+            if 0 <= diff <= max_diff:
                 # 매칭 성공 - 큐에서 제거하고 반환
                 matched_item = cam_queue.pop(idx)
                 return matched_item
