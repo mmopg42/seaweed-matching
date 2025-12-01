@@ -144,6 +144,10 @@ class ImageLoaderWorker(QThread):
     # 시그널: (error_message)
     error_occurred = Signal(str)
     
+    # ✅ Phase 2: 벌크 로딩 진행률 시그널
+    loading_progress = Signal(int, int)  # (loaded_count, total_count)
+    all_images_loaded = Signal()         # 전체 로딩 완료
+    
     def __init__(self, cache_dir: str, max_workers: int = None, use_disk_cache: bool = True):
         """
         Args:
@@ -160,12 +164,13 @@ class ImageLoaderWorker(QThread):
         else:
             print("[IMAGE_LOADER] 디스크 캐시: 사용 안 함 (메모리만 사용, HDD I/O 병목 제거)")
 
-        # ✅ Phase 1: CPU 코어 수 기반 동적 워커 수 설정
+        # ✅ Phase 1: I/O bound 최적화 - 워커 수 증가
         if max_workers is None:
             cpu_count = os.cpu_count() or 4
-            # 최소 8개, 최대 16개, CPU 코어 수에 따라 자동 조정
-            self.max_workers = min(16, max(8, cpu_count))
-            print(f"[IMAGE_LOADER] 워커 수 자동 설정: {self.max_workers}개 (CPU 코어: {cpu_count}개)")
+            # I/O bound 작업: CPU 코어의 2배
+            # 최소 16개, 최대 32개
+            self.max_workers = min(32, max(16, cpu_count * 2))
+            print(f"[IMAGE_LOADER] 워커 수 (I/O 최적화): {self.max_workers}개 (CPU 코어: {cpu_count}개)")
         else:
             self.max_workers = max_workers
             print(f"[IMAGE_LOADER] 워커 수: {self.max_workers}개")
@@ -178,6 +183,11 @@ class ImageLoaderWorker(QThread):
 
         # 실행 중 플래그
         self.running = False
+        
+        # ✅ Phase 2: 벌크 로딩 추적 변수
+        self.bulk_loading_total = 0
+        self.bulk_loading_current = 0
+        self.is_bulk_loading = False
 
         # PIL 사용 가능 여부
         self.use_pil = PIL_AVAILABLE
@@ -200,6 +210,18 @@ class ImageLoaderWorker(QThread):
         # 우선순위 큐: (priority, timestamp, image_path, size, request_id)
         # timestamp는 동일 우선순위 내에서 FIFO 보장
         self.request_queue.put((priority, time.time(), image_path, size, request_id))
+    
+    def start_bulk_loading(self, total_count: int):
+        """
+        벌크 로딩 세션 시작
+        
+        Args:
+            total_count: 로딩할 전체 이미지 개수
+        """
+        self.is_bulk_loading = True
+        self.bulk_loading_total = total_count
+        self.bulk_loading_current = 0
+        print(f"[IMAGE_LOADER] 벌크 로딩 시작: {total_count}개 이미지")
     
     def stop(self):
         """워커 중지"""
@@ -242,6 +264,21 @@ class ImageLoaderWorker(QThread):
                         pixmap = future.result()
                         if pixmap and not pixmap.isNull():
                             self.image_ready.emit(image_path, pixmap, request_id)
+                            
+                            # ✅ Phase 2: 벌크 로딩 진행률 업데이트
+                            if self.is_bulk_loading:
+                                self.bulk_loading_current += 1
+                                self.loading_progress.emit(
+                                    self.bulk_loading_current,
+                                    self.bulk_loading_total
+                                )
+                                
+                                # 전체 완료 체크
+                                if self.bulk_loading_current >= self.bulk_loading_total:
+                                    self.is_bulk_loading = False
+                                    self.all_images_loaded.emit()
+                                    print(f"[IMAGE_LOADER] 벌크 로딩 완료: {self.bulk_loading_total}개")
+                                    
                     except Exception as e:
                         error_msg = f"이미지 로딩 실패: {os.path.basename(image_path)} - {e}"
                         self.error_occurred.emit(error_msg)
@@ -301,6 +338,10 @@ class ImageLoaderWorker(QThread):
             # 메모리 데이터에서 이미지 열기
             from io import BytesIO
             with Image.open(BytesIO(image_data)) as img:
+                # ✅ Phase 1: JPEG draft 모드 - 디코딩 단계에서 축소 (4배 빠름)
+                if img.format == 'JPEG':
+                    img.draft('RGB', size)
+                
                 # EXIF orientation 처리
                 try:
                     from PIL import ImageOps

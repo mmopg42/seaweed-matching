@@ -35,6 +35,15 @@ class ImageManager:
         self.image_path_to_widgets = self.image_registry.image_path_to_widgets
         self.widget_to_image_path = self.image_registry.widget_to_image_path
     
+    def start_bulk_load_session(self, estimated_count: int):
+        """
+        벌크 로딩 세션 시작 - ImageLoader에 위임
+        
+        Args:
+            estimated_count: 로딩할 예상 이미지 개수
+        """
+        self.image_loader.start_bulk_loading(estimated_count)
+    
     def get_cached_pixmap(self, path, priority=5):
         """
         비동기 이미지 로딩

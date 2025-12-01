@@ -163,3 +163,59 @@ class StatisticsPresenter:
         """라인별 그룹 통계"""
         line_groups = [g for g in groups if g.get("line") == line]
         return self._count_all_groups(line_groups)
+    
+    # ========================================
+    # ✅ Phase 3: 이미지 로딩 진행률 포맷팅
+    # ========================================
+    
+    def format_loading_progress(self, loaded: int, total: int, style="text") -> str:
+        """
+        진행률 메시지 포맷팅
+        
+        Args:
+            loaded: 로딩 완료된 개수
+            total: 전체 개수
+            style: "text" (기본), "bar" (텍스트 바), "emoji" (이모지 바)
+            
+        Returns:
+            str: 포맷팅된 진행률 메시지
+        """
+        if total == 0:
+            return "🔄 이미지 로딩 중..."
+        
+        percent = int(loaded / total * 100)
+        
+        if style == "text":
+            return f"🔄 이미지 로딩 중... ({loaded}/{total}, {percent}%)"
+        
+        elif style == "bar":
+            bar = self.generate_progress_bar(loaded, total, length=20)
+            return f"🔄 [{bar}] {loaded}/{total} ({percent}%)"
+        
+        elif style == "emoji":
+            bar = self.generate_progress_bar(loaded, total, length=10, filled="🟦", empty="⬜")
+            return f"🔄 {bar} {loaded}/{total}"
+        
+        # 기본값
+        return f"🔄 ({loaded}/{total})"
+    
+    def generate_progress_bar(self, loaded: int, total: int, length=20, 
+                              filled="█", empty="░") -> str:
+        """
+        텍스트 진행률 바 생성
+        
+        Args:
+            loaded: 현재 값
+            total: 최대 값
+            length: 바 길이 (문자 수)
+            filled: 채워진 문자 (기본: █)
+            empty: 빈 문자 (기본: ░)
+            
+        Returns:
+            str: 진행률 바 ("████████████░░░░░░░░")
+        """
+        if total == 0:
+            return empty * length
+        
+        filled_length = int(length * loaded / total)
+        return (filled * filled_length) + (empty * (length - filled_length))

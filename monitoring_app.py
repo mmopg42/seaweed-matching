@@ -82,12 +82,16 @@ class MainWindow(QMainWindow):
         thumbnail_cache_dir = os.path.join(self.config_manager.app_dir, "thumbnail_cache")
         use_disk_cache = self.settings.get("use_disk_cache", True)
         self.image_loader = ImageLoaderWorker(cache_dir=thumbnail_cache_dir, use_disk_cache=use_disk_cache)
+
         self.image_loader.image_ready.connect(self.on_image_loaded)
         self.image_loader.error_occurred.connect(lambda msg: print(f"[IMAGE_LOADER] {msg}"))
         self.image_loader.start()
         
         # ImageManager에 image_loader 연결
         self.image_manager.image_loader = self.image_loader
+
+        self.image_loader.loading_progress.connect(self._on_loading_progress)
+        self.image_loader.all_images_loaded.connect(self._on_all_images_loaded)
 
         self.file_event_communicator = Communicate()
         self.file_event_communicator.file_changed.connect(self.handle_file_event)
@@ -561,10 +565,18 @@ class MainWindow(QMainWindow):
 
             # NIR 파일 매칭 및 그룹 생성
             nir_match_time_diff = self.settings.get("nir_match_time_diff", 1.0)
+            use_cam_time_matching = self.settings.get("use_cam_time_matching", True)
+            cam_match_min_diff = self.settings.get("cam_match_min_diff")
+            cam_match_max_diff = self.settings.get("cam_match_max_diff")
+
             self.groups = self.group_manager.build_all_groups(
                 self.file_matcher.unmatched_files,
                 self.file_matcher.consumed_nir_keys,
-                nir_match_time_diff=nir_match_time_diff
+                nir_match_time_diff=nir_match_time_diff,
+                use_cam_time_matching=use_cam_time_matching,
+                cam_match_min_diff=cam_match_min_diff,
+                cam_match_max_diff=cam_match_max_diff
+
             )
 
             # UI 업데이트 (통계만, 이미지는 버튼으로)
@@ -753,6 +765,29 @@ class MainWindow(QMainWindow):
         """외부 JSON 로드 - GroupStateManager에 위임"""
         return self.group_state_manager._maybe_load_groups_json()
 
+    def _count_total_images(self, groups):
+        """
+        그룹에서 총 이미지 개수 계산
+        
+        Args:
+            groups: 그룹 리스트
+            
+        Returns:
+            int: 총 이미지 개수
+        """
+        count = 0
+        for g in groups:
+            # 카메라 이미지
+            if g.get("카메라"):
+                count += 1
+            # NIR 이미지
+            if g.get("NIR"):
+                count += len(g["NIR"])
+            # 복합 카메라
+            for cam_key in ["cam1", "cam2", "cam3", "cam4", "cam5", "cam6"]:
+                if g.get(cam_key):
+                    count += len(g[cam_key])
+        return count
         
     def refresh_rows_action(self):
         """
@@ -795,8 +830,6 @@ class MainWindow(QMainWindow):
         # ✅ 새로고침 후 모든 선택 해제 (혹시 남아있을 수 있는 선택 상태 제거)
         set_select_all(self, False)
         self._all_selected = False
-
-        self.log_to_box("✅ 이미지 불러오기 완료.")
 
         # ✅ 새로고침 완료 후 이벤트 처리
         QApplication.processEvents()
@@ -2581,6 +2614,27 @@ class MainWindow(QMainWindow):
             self.save_current_state()
         print("[MAIN] 정리 완료", flush=True)
         super().closeEvent(event)
+
+    def _on_loading_progress(self, loaded: int, total: int):
+        """
+        이미지 로딩 진행률 업데이트 - StatisticsPresenter에 위임
+        
+        Args:
+            loaded: 로딩 완료된 이미지 수
+            total: 전체 이미지 수
+        """
+        # 10개마다만 로그 출력 (로그 스팸 방지)
+        if loaded % 10 == 0 or loaded == total:
+            # ✅ Phase 3: StatisticsPresenter로 포맷팅 위임
+            style = self.settings.get("progress_style", "bar")
+            message = self.statistics_presenter.format_loading_progress(
+                loaded, total, style=style
+            )
+            self.log_to_box(message)
+
+    def _on_all_images_loaded(self):
+        """모든 이미지 로딩 완료"""
+        self.log_to_box("✅ 이미지 불러오기 완료.")
 
     def save_current_state(self):
         subject = self.subject_folder_edit.text().strip()
