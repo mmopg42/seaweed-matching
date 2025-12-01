@@ -2375,7 +2375,7 @@ class MainWindow(QMainWindow):
 
             # ✅ 탭과 모드에 따라 데이터 구성 (Phase 2.3 - 헬퍼 사용)
             processed_data = self.operation_planner.build_file_operation_data(
-                current_tab_index, is_separated, subject, subject2, groups_line1, groups_line2
+                current_tab_index, is_separated, subject, subject2, groups_to_move_line1, groups_to_move_line2
             )
 
 
