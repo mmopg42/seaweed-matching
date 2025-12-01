@@ -41,80 +41,13 @@ from image_manager import ImageManager
 from window_state_manager import WindowStateManager
 from group_state_manager import GroupStateManager
 
-class DragSelectWidget(QWidget):
-    """드래그로 여러 행을 선택할 수 있는 컨테이너 위젯"""
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.main_window = parent
-        self.drag_start_pos = None
-        self.drag_start_row = None
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            # 클릭한 위치에 있는 위젯 확인
-            child = self.childAt(event.pos())
-            # 체크박스, 버튼, 라벨이 아닌 경우에만 드래그 시작 (이미지나 빈 공간)
-            if child:
-                widget_name = child.__class__.__name__
-                # 체크박스, 버튼은 드래그 시작 안 함
-                if widget_name in ['QCheckBox', 'QPushButton']:
-                    super().mousePressEvent(event)
-                    return
-
-            # 행 위치 확인
-            row_idx = self._get_row_at_pos(event.pos())
-            if row_idx is not None:
-                self.drag_start_pos = event.pos()
-                self.drag_start_row = row_idx
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        if self.drag_start_pos is not None and self.drag_start_row is not None:
-            current_row = self._get_row_at_pos(event.pos())
-            if current_row is not None:
-                # 드래그 범위의 행들을 선택
-                start_idx = min(self.drag_start_row, current_row)
-                end_idx = max(self.drag_start_row, current_row)
-                self._select_rows_in_range(start_idx, end_idx)
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.drag_start_pos = None
-            self.drag_start_row = None
-        super().mouseReleaseEvent(event)
-
-    def _get_row_at_pos(self, pos):
-        """주어진 위치에 있는 행의 인덱스를 반환"""
-        if not self.main_window or not hasattr(self.main_window, 'scroll_layout'):
-            return None
-
-        layout = self.main_window.scroll_layout
-        for i in range(layout.count()):
-            item = layout.itemAt(i)
-            if item and item.widget():
-                widget = item.widget()
-                if widget.isVisible():
-                    widget_pos = widget.mapToParent(widget.rect().topLeft())
-                    widget_bottom = widget_pos.y() + widget.height()
-                    if widget_pos.y() <= pos.y() <= widget_bottom:
-                        return i
-        return None
-
-    def _select_rows_in_range(self, start_idx, end_idx):
-        """지정된 범위의 행들을 선택"""
-        if not self.main_window or not hasattr(self.main_window, 'scroll_layout'):
-            return
-
-        layout = self.main_window.scroll_layout
-        for i in range(layout.count()):
-            item = layout.itemAt(i)
-            if item and item.widget():
-                widget = item.widget()
-                if hasattr(widget, 'row_select'):
-                    # 범위 내의 행만 선택
-                    should_select = start_idx <= i <= end_idx
-                    widget.row_select.setChecked(should_select)
+from ui.drag_select_widget import DragSelectWidget
+from services.nir_pruning_service import NirPruningService
+from services.operation_validator import OperationValidator
+from services.operation_planner import OperationPlanner
+from services.statistics_presenter import StatisticsPresenter
+from infrastructure.watchdog_manager import WatchdogManager
+from services.monitoring_orchestrator import MonitoringOrchestrator
 
 
 class MainWindow(QMainWindow):
@@ -167,6 +100,38 @@ class MainWindow(QMainWindow):
         self._json_path = os.path.join(self.config_manager.app_dir, "groups_state.json")
         self.group_state_manager = GroupStateManager(self._json_path, log_callback=self.log_to_box)
         
+        # ✅ NirPruningService 초기화
+        self.nir_pruning_service = NirPruningService(self.file_matcher, log_callback=self.log_to_box)
+        
+        # ✅ OperationValidator 초기화
+        self.operation_validator = OperationValidator(
+            settings=self.settings,
+            groups_ref=lambda: self.groups
+        )
+        
+        # ✅ OperationPlanner 초기화
+        self.operation_planner = OperationPlanner(self.config_manager)
+        
+        # ✅ StatisticsPresenter 초기화
+        self.statistics_presenter = StatisticsPresenter(self.config_manager)
+        
+        # Phase 5: WatchdogManager 초기화
+        self.watchdog_manager = WatchdogManager(
+            settings=self.settings,
+            event_callback=self.handle_file_event,
+            log_callback=self.log_to_box,
+            get_effective_path_func=self.get_effective_normal_path,
+            should_use_recursive_func=self.should_use_recursive_watch
+        )
+        # Phase 5: MonitoringOrchestrator 초기화
+        self.monitoring_orchestrator = MonitoringOrchestrator(
+            file_matcher=self.file_matcher,
+            group_manager=self.group_manager,
+            settings=self.settings,
+            log_callback=self.log_to_box
+        )
+
+
         # 하위 호환성을 위한 속성 (기존 코드와의 연결)
         self._last_groups_hash = ""
         self._json_mtime = 0.0
@@ -576,24 +541,29 @@ class MainWindow(QMainWindow):
         self.group_state_manager._maybe_save_groups_json(groups, debounce_ms)
 
 
-    def on_file_counts_updated(self, nir_count, nir2_count, normal_count, normal2_count, cam1_count, cam2_count, cam3_count, cam4_count, cam5_count, cam6_count):
-        """
-        별도 스레드에서 카운트된 파일 개수를 받아서 UI 업데이트
-        """
+    def on_file_counts_updated(self, nir_count, nir2_count, normal_count, normal2_count, 
+                            cam1_count, cam2_count, cam3_count, cam4_count, cam5_count, cam6_count):
+        """별도 스레드에서 카운트된 파일 개수를 받아서 UI 업데이트"""
         try:
-            # 통계 바 업데이트
-            self.lbl_nir_count.setText(str(nir_count))
-            self.lbl_nir2_count.setText(str(nir2_count))
-            self.lbl_normal_count.setText(str(normal_count))
-            self.lbl_normal2_count.setText(str(normal2_count))
-            self.lbl_cam1_count.setText(str(cam1_count))
-            self.lbl_cam2_count.setText(str(cam2_count))
-            self.lbl_cam3_count.setText(str(cam3_count))
-            self.lbl_cam4_count.setText(str(cam4_count))
-            self.lbl_cam5_count.setText(str(cam5_count))
-            self.lbl_cam6_count.setText(str(cam6_count))
+            # StatisticsPresenter를 통해 UI 표시용 데이터 받기
+            display_data = self.statistics_presenter.format_file_counts(
+                nir_count, nir2_count, normal_count, normal2_count,
+                cam1_count, cam2_count, cam3_count, 
+                cam4_count, cam5_count, cam6_count
+            )
+            
+            # UI 업데이트
+            self.lbl_nir_count.setText(display_data["lbl_nir_count"])
+            self.lbl_nir2_count.setText(display_data["lbl_nir2_count"])
+            self.lbl_normal_count.setText(display_data["lbl_normal_count"])
+            self.lbl_normal2_count.setText(display_data["lbl_normal2_count"])
+            self.lbl_cam1_count.setText(display_data["lbl_cam1_count"])
+            self.lbl_cam2_count.setText(display_data["lbl_cam2_count"])
+            self.lbl_cam3_count.setText(display_data["lbl_cam3_count"])
+            self.lbl_cam4_count.setText(display_data["lbl_cam4_count"])
+            self.lbl_cam5_count.setText(display_data["lbl_cam5_count"])
+            self.lbl_cam6_count.setText(display_data["lbl_cam6_count"])
         except Exception:
-            # 에러가 발생해도 무시
             pass
 
     def on_scan_completed(self, unmatched):
@@ -1032,18 +1002,23 @@ class MainWindow(QMainWindow):
 
     def _update_stats_separated(self, total_line1, with_nir_line1, without_nir_line1, fail_line1,
                                 total_line2, with_nir_line2, without_nir_line2, fail_line2):
-        """분리 모드 통계 업데이트 (라인별 통계)"""
-        # Line1 통계
-        self.lbl_total_line1.setText(str(total_line1))
-        self.lbl_with_line1.setText(str(with_nir_line1))
-        self.lbl_without_line1.setText(str(without_nir_line1))
-        self.lbl_fail_line1.setText(str(fail_line1))
-
-        # Line2 통계
-        self.lbl_total_line2.setText(str(total_line2))
-        self.lbl_with_line2.setText(str(with_nir_line2))
-        self.lbl_without_line2.setText(str(without_nir_line2))
-        self.lbl_fail_line2.setText(str(fail_line2))
+        """분리 모드 통계 업데이트"""
+        # StatisticsPresenter를 통해 UI 표시용 데이터 받기
+        display_data = self.statistics_presenter.format_separated_stats(
+            total_line1, with_nir_line1, without_nir_line1, fail_line1,
+            total_line2, with_nir_line2, without_nir_line2, fail_line2
+        )
+        
+        # UI 업데이트  
+        self.lbl_total_line1.setText(display_data["lbl_total_line1"])
+        self.lbl_with_line1.setText(display_data["lbl_with_nir_line1"])
+        self.lbl_without_line1.setText(display_data["lbl_without_nir_line1"])
+        self.lbl_fail_line1.setText(display_data["lbl_fail_line1"])
+        
+        self.lbl_total_line2.setText(display_data["lbl_total_line2"])
+        self.lbl_with_line2.setText(display_data["lbl_with_nir_line2"])
+        self.lbl_without_line2.setText(display_data["lbl_without_nir_line2"])
+        self.lbl_fail_line2.setText(display_data["lbl_fail_line2"])
 
     def save_today_date(self):
         self.settings["today_date"] = self.today_edit.text().strip()
@@ -1137,11 +1112,11 @@ class MainWindow(QMainWindow):
                 # ✅ 삭제 전 레지스트리 정리
                 if isinstance(item.widget(), MonitorRow):
                     row = item.widget()
-                    self.unregister_widget(row.nir_view)
-                    self.unregister_widget(row.norm_view)
-                    self.unregister_widget(row.cam1_view)
-                    self.unregister_widget(row.cam2_view)
-                    self.unregister_widget(row.cam3_view)
+                    self.image_registry.unregister_widget(row.nir_view)
+                    self.image_registry.unregister_widget(row.norm_view)
+                    self.image_registry.unregister_widget(row.cam1_view)
+                    self.image_registry.unregister_widget(row.cam2_view)
+                    self.image_registry.unregister_widget(row.cam3_view)
                 item.widget().deleteLater()
 
         img_w = self.settings.get("img_width", 110)
@@ -1202,26 +1177,27 @@ class MainWindow(QMainWindow):
         # ✅ 이동 작업 중이면 차단
         if getattr(self, 'is_file_operation_running', False):
             self.log_to_box("⚠️ 이동 작업이 진행 중입니다. 완료 후 다시 시도하세요.")
-            QMessageBox.warning(self, "작업 진행 중", "이동/복사 작업이 진행 중입니다.\n작업 완료 후 다시 시도하세요.")
+            QMessageBox.warning(self, "작업 진행 중", "이동/복사 작업이 진행 중입니다.\\n작업 완료 후 다시 시도하세요.")
             return
-
         if self.is_watching:
             return  # 이미 감시 중이면 무시
-
         # ✅ 시료 폴더 자동 생성
         self._auto_create_subject_folders()
-
         self.is_watching = True
         self.btn_run.setEnabled(False)
         self.btn_stop.setEnabled(True)
-
         self.log_to_box("[INFO] 감시를 시작합니다...")
         self.groups = []
         self.provisional_nirs = {}
-        self.file_matcher.reset_state()
-        self.process_updates(initial=True)
-        self.start_watchdog()
-
+        
+        # MonitoringOrchestrator로 초기 스캔
+        self.monitoring_orchestrator.reset_state()
+        result = self.monitoring_orchestrator.perform_initial_scan()
+        self.groups = result["groups"]
+        
+        # WatchdogManager로 감시 시작
+        self.watchdog_manager.start_watchdog()
+        
         # watchdog 디바운스 인터벌 설정
         try:
             interval_sec = float(self.settings.get("interval", "0") or "0")
@@ -1230,37 +1206,35 @@ class MainWindow(QMainWindow):
                 self.update_timer.setInterval(interval_ms)
                 self.log_to_box(f"[INFO] watchdog 디바운스: {interval_sec}초")
             else:
-                # 인터벌 미설정 시 기본값 1초
                 self.update_timer.setInterval(1000)
                 self.log_to_box("[INFO] watchdog 디바운스: 1초 (기본값)")
         except (ValueError, TypeError):
             self.update_timer.setInterval(1000)
             self.log_to_box("[경고] 인터벌 설정값이 유효하지 않습니다. 기본값 1초로 설정됩니다.")
-
         # ✅ Watchdog 상태 모니터링 시작
         self.watchdog_monitor_timer.start()
         self.log_to_box("[INFO] Watchdog 상태 모니터링 시작 (30초마다 자동 확인)")
         self.log_to_box("[INFO] 백그라운드 스캔 활성화 (10초마다 자동 스캔)")
-
         # ✅ 백그라운드 파일 매칭 워커 활성화
         self.file_matcher_worker.enable()
+        
+        # UI 업데이트
+        self.update_monitoring_view(update_ui=False)
 
     def stop_watch(self):
         """감시 중지 (Stop 버튼)"""
         if not self.is_watching:
             return  # 감시 중이 아니면 무시
-
         self.is_watching = False
         self.btn_run.setEnabled(True)
         self.btn_stop.setEnabled(False)
-
         self.log_to_box("[INFO] 감시가 중지되었습니다.")
-        self.stop_watchdog()
-        self.watchdog_monitor_timer.stop()  # ✅ Watchdog 모니터링 중지
-
-        # ✅ 파일 매칭 워커 비활성화 (Stop 상태에서는 백그라운드 스캔 중지)
+        
+        # WatchdogManager로 감시 중지
+        self.watchdog_manager.stop_watchdog()
+        self.watchdog_monitor_timer.stop()
+        # ✅ 파일 매칭 워커 비활성화
         self.file_matcher_worker.disable()
-        # ✅ 파일 카운트 워커는 항상 실행 유지 (파일 개수 표시용)
 
     def toggle_watch(self):
         """하위 호환성을 위해 남겨둔 메서드 (내부에서 사용)"""
@@ -1271,53 +1245,19 @@ class MainWindow(QMainWindow):
 
     def process_updates(self, initial=False, force_full_scan=False):
         if initial or force_full_scan:
-            if initial:
-                self.log_to_box("[INFO] 초기 파일 스캔 시작...")
-            else:
-                self.log_to_box("[재스캔] 전체 폴더 재스캔 중...")
-            QApplication.processEvents()  # ✅ 스캔 시작 전 이벤트 처리
-
-            unmatched = self.file_matcher.scan_and_build_unmatched(self.settings)
-            self.file_matcher.unmatched_files = unmatched
-
-            QApplication.processEvents()  # ✅ 스캔 완료 후 이벤트 처리
-            if initial:
-                self.log_to_box("[INFO] 초기 스캔 완료.")
-            else:
-                self.log_to_box("[재스캔] 전체 폴더 재스캔 완료.")
+            # MonitoringOrchestrator로 초기 스캔
+            result = self.monitoring_orchestrator.perform_initial_scan(force_full_scan=force_full_scan)
+            self.groups = result["groups"]
         else:
-            self.log_to_box(f"🔄 {len(self.event_queue)}개 파일 변경 감지...")
-            QApplication.processEvents()  # ✅ 처리 시작 전 이벤트 처리
-
-            events_to_process = self.event_queue.copy()
-            self.event_queue.clear()
-
-            for event_type, src_path, folder_type in events_to_process:
-                if event_type in ('created', 'modified', 'moved'):
-                    if folder_type == 'nir':
-                        # NIR 파일 즉시 처리 (3초 대기 없음)
-                        self.file_matcher.add_nir_immediately(src_path)
-                    else:
-                        self.file_matcher.add_or_update_file(src_path, folder_type)
-
-            QApplication.processEvents()  # ✅ 이벤트 처리 완료 후
-
-        nir_match_time_diff = self.settings.get("nir_match_time_diff", 1.0)
-        self.groups = self.group_manager.build_all_groups(
-            self.file_matcher.unmatched_files,
-            self.file_matcher.consumed_nir_keys,
-            nir_match_time_diff=nir_match_time_diff
-        )
-
-        # ✅ UI 모드에 따라 분기
+            # 이벤트 큐 처리
+            self.process_event_queue()
+            return
+        # UI 모드에 따라 분기
         legacy_mode = self.settings.get("legacy_ui_mode", False)
-
         if legacy_mode:
-            # 레거시 모드: 항상 이미지 포함 전체 UI 업데이트
             self.update_monitoring_view(update_ui=True)
             self.log_to_box("✅ UI 업데이트 완료 (레거시 모드).")
         else:
-            # 새 모드: 통계만 업데이트 (이미지는 버튼으로)
             if initial or force_full_scan:
                 self.update_monitoring_view(update_ui=False)
                 self.log_to_box("✅ 통계 업데이트 완료 (UI는 '이미지 불러오기' 버튼으로 표시).")
@@ -1616,11 +1556,11 @@ class MainWindow(QMainWindow):
         
         # ✅ 삭제 전 레지스트리 정리 (delete_one_row 내부에서 삭제되지만, 안전을 위해 여기서 처리)
         if isinstance(widget, MonitorRow):
-            self.unregister_widget(widget.nir_view)
-            self.unregister_widget(widget.norm_view)
-            self.unregister_widget(widget.cam1_view)
-            self.unregister_widget(widget.cam2_view)
-            self.unregister_widget(widget.cam3_view)
+            self.image_registry.unregister_widget(widget.nir_view)
+            self.image_registry.unregister_widget(widget.norm_view)
+            self.image_registry.unregister_widget(widget.cam1_view)
+            self.image_registry.unregister_widget(widget.cam2_view)
+            self.image_registry.unregister_widget(widget.cam3_view)
 
         deleted = delete_one_row(self, display_idx, ignore_checkboxes=False)
         self._temp_row_widget = None
@@ -1642,61 +1582,16 @@ class MainWindow(QMainWindow):
             self.log_to_box("ℹ️ 선택된 삭제 대상이 없습니다.")
 
     def start_watchdog(self):
-        self.stop_watchdog()
-        try:
-            self.observer = Observer()
-            for folder_type in ["normal", "normal2", "nir", "nir2", "cam1", "cam2", "cam3", "cam4", "cam5", "cam6"]:
-                # ✅ 일반카메라의 경우 실제 경로 계산
-                if folder_type in ["normal", "normal2"]:
-                    folder = self.get_effective_normal_path(folder_type)
-                else:
-                    folder = self.settings.get(folder_type, "")
-
-                if folder and os.path.isdir(folder):
-                    # ✅ recursive 옵션 결정
-                    recursive = self.should_use_recursive_watch(folder_type)
-
-                    # ✅ settings 전달하여 깊이 필터링 가능하도록 함
-                    handler = FolderEventHandler(self.file_event_communicator, folder_type, self.settings)
-                    self.observer.schedule(handler, folder, recursive=recursive)
-
-                    # 로그 출력
-                    mode_str = "재귀 감시" if recursive else "단일 레벨 감시"
-                    self.log_to_box(f"[Watchdog] {folder_type}: {folder} ({mode_str})")
-
-            self.observer.start()
-            self.log_to_box("[Watchdog] 폴더 감시 시작 완료")
-        except Exception as e:
-            self.log_to_box(f"[ERROR] Watchdog 시작 실패: {e}")
-            print(f"[ERROR] Watchdog 시작 실패: {e}", flush=True)
-            import traceback
-            traceback.print_exc()
+        """Watchdog 시작 - WatchdogManager에 위임"""
+        self.watchdog_manager.start_watchdog()
 
     def stop_watchdog(self):
-        if self.observer and self.observer.is_alive():
-            try:
-                self.observer.stop()
-                self.observer.join(timeout=3)  # 최대 3초 대기
-                self.observer = None
-                self.log_to_box("[Watchdog] 폴더 감시 종료")
-            except Exception as e:
-                self.log_to_box(f"[WARNING] Watchdog 종료 중 오류: {e}")
-                self.observer = None
+        """Watchdog 종료 - WatchdogManager에 위임"""
+        self.watchdog_manager.stop_watchdog()
 
     def check_watchdog_status(self):
-        """Watchdog 상태 확인 및 자동 재시작"""
-        if not self.is_watching:
-            return  # 감시 중이 아니면 체크 안 함
-
-        if self.observer is None or not self.observer.is_alive():
-            self.log_to_box("[WARNING] ⚠️ Watchdog가 중지된 것을 감지했습니다. 자동 재시작 중...")
-            print("[WARNING] Watchdog 자동 재시작", flush=True)
-            try:
-                self.start_watchdog()
-                self.log_to_box("[INFO] ✅ Watchdog가 성공적으로 재시작되었습니다.")
-            except Exception as e:
-                self.log_to_box(f"[ERROR] ❌ Watchdog 재시작 실패: {e}")
-                print(f"[ERROR] Watchdog 재시작 실패: {e}", flush=True)
+        """Watchdog 상태 확인 - WatchdogManager에 위임"""
+        self.watchdog_manager.check_status()
 
     def restore_window_bounds(self):
         self.window_state_manager.restore_window_bounds(self, self.config_manager)
@@ -1723,43 +1618,25 @@ class MainWindow(QMainWindow):
             return
         if not self.event_queue:
             return
-
-        self.log_to_box(f"🔄 {len(self.event_queue)}개의 파일 변경 감지. 업데이트 시작...")
-        QApplication.processEvents()  # ✅ 처리 시작 전 이벤트 처리
-
+        # 이벤트 큐 복사 및 클리어
         events_to_process = self.event_queue.copy()
         self.event_queue.clear()
-
+        
+        # MonitoringOrchestrator로 이벤트 처리
+        result = self.monitoring_orchestrator.process_file_events(events_to_process)
+        self.groups = result["groups"]
+        
+        # 삭제 이벤트 처리
         for event_type, src_path, folder_type in events_to_process:
-            if event_type in ('created', 'modified'):
-                if folder_type == 'nir':
-                    # NIR 파일 즉시 처리 (3초 대기 없음)
-                    self.file_matcher.add_nir_immediately(src_path)
-                else:
-                    self.file_matcher.add_or_update_file(src_path, folder_type)
-            elif event_type in ('deleted', 'moved'):
-                self.file_matcher.remove_from_unmatched(src_path, folder_type)
+            if event_type in ('deleted', 'moved'):
                 self.update_group_on_delete(os.path.basename(src_path))
-
-        QApplication.processEvents()  # ✅ 이벤트 처리 완료 후
-
-        nir_match_time_diff = self.settings.get("nir_match_time_diff", 1.0)
-        self.groups = self.group_manager.build_all_groups(
-            self.file_matcher.unmatched_files,
-            self.file_matcher.consumed_nir_keys,
-            nir_match_time_diff=nir_match_time_diff
-        )
-
-        # ✅ UI 모드에 따라 분기
+        # UI 모드에 따라 분기
         legacy_mode = self.settings.get("legacy_ui_mode", False)
-
         if legacy_mode:
-            # 레거시 모드: 항상 이미지 포함 전체 UI 업데이트
             self.update_monitoring_view(update_ui=True)
             self.log_to_box(f"[DBG] 그룹 재구성 결과: {len(self.groups)}개")
             self.log_to_box("✅ UI 업데이트 완료 (레거시 모드).")
         else:
-            # 새 모드: 감시 중일 때는 통계만 업데이트 (UI 안 그림)
             self.update_monitoring_view(update_ui=False)
             self.log_to_box(f"[DBG] 그룹 재구성 결과: {len(self.groups)}개 (통계만 업데이트)")
             self.log_to_box("✅ 통계 업데이트 완료 (UI는 '이미지 불러오기' 시 표시).")
@@ -1809,14 +1686,14 @@ class MainWindow(QMainWindow):
                 pixmap = self.get_cached_pixmap(thumbnail_path, priority)
                 
                 # ✅ [Registry] 위젯 등록
-                self.register_widget_for_path(cam_widget, thumbnail_path)
+                self.image_registry.register_widget(cam_widget, thumbnail_path)
                 cam_widget.set_image(pixmap, thumbnail_path)
 
                 # ✅ Phase 5: 이상치 판정
                 is_abnormal = self.abnormal_detector.is_image_abnormal(thumbnail_path)
                 
                 # ✅ [NEW] 이미지 크기 표시 (10으로 나눈 값)
-                dims = self.get_image_dimensions(thumbnail_path)
+                dims = get_image_dimensions(thumbnail_path)
                 dim_text = f"\n{dims[0]//10}x{dims[1]//10}" if dims else ""
             else:
                 # 썸네일 없으면 기존 방식: 첫 번째 파일의 이미지 표시
@@ -1826,14 +1703,14 @@ class MainWindow(QMainWindow):
                     pixmap = self.get_cached_pixmap(path, priority)
                     
                     # ✅ [Registry] 위젯 등록
-                    self.register_widget_for_path(cam_widget, path)
+                    self.image_registry.register_widget(cam_widget, path)
                     cam_widget.set_image(pixmap, path)
                     
                     # ✅ [NEW] 이미지 크기 표시 (10으로 나눈 값)
-                    dims = self.get_image_dimensions(path)
+                    dims = get_image_dimensions(path)
                     dim_text = f"\n{dims[0]//10}x{dims[1]//10}" if dims else ""
                 else:
-                    self.unregister_widget(cam_widget) # 경로 없음
+                    self.image_registry.unregister_widget(cam_widget) # 경로 없음
                     cam_widget.img_label.clear()
                     cam_widget.img_label.setText("X")
                     dim_text = ""
@@ -1895,12 +1772,12 @@ class MainWindow(QMainWindow):
         if cam1_path:
             pix = self.get_cached_pixmap(cam1_path, priority)
             # pixmap이 None이어도 경로를 저장
-            self.register_widget_for_path(cam_views[0], cam1_path)
+            self.image_registry.register_widget(cam_views[0], cam1_path)
             cam_views[0].set_image(pix, cam1_path)
             cam_views[0].set_caption(cam1_name or "")
             cam_views[0].setToolTip(cam1_name or cam1_path)
         else:
-            self.unregister_widget(cam_views[0])
+            self.image_registry.unregister_widget(cam_views[0])
             cam_views[0].set_image(None, "")
             cam_views[0].set_caption("")
 
@@ -1909,12 +1786,12 @@ class MainWindow(QMainWindow):
         if cam2_path:
             pix = self.get_cached_pixmap(cam2_path, priority)
             # pixmap이 None이어도 경로를 저장
-            self.register_widget_for_path(cam_views[1], cam2_path)
+            self.image_registry.register_widget(cam_views[1], cam2_path)
             cam_views[1].set_image(pix, cam2_path)
             cam_views[1].set_caption(cam2_name or "")
             cam_views[1].setToolTip(cam2_name or cam2_path)
         else:
-            self.unregister_widget(cam_views[1])
+            self.image_registry.unregister_widget(cam_views[1])
             cam_views[1].set_image(None, "")
             cam_views[1].set_caption("")
 
@@ -1923,12 +1800,12 @@ class MainWindow(QMainWindow):
         if cam3_path:
             pix = self.get_cached_pixmap(cam3_path, priority)
             # pixmap이 None이어도 경로를 저장
-            self.register_widget_for_path(cam_views[2], cam3_path)
+            self.image_registry.register_widget(cam_views[2], cam3_path)
             cam_views[2].set_image(pix, cam3_path)
             cam_views[2].set_caption(cam3_name or "")
             cam_views[2].setToolTip(cam3_name or cam3_path)
         else:
-            self.unregister_widget(cam_views[2])
+            self.image_registry.unregister_widget(cam_views[2])
             cam_views[2].set_image(None, "")
             cam_views[2].set_caption("")
 
@@ -2020,93 +1897,6 @@ class MainWindow(QMainWindow):
         bar = scroll_area.verticalScrollBar()
         bar.setValue(bar.maximum())
 
-    def _nir_base(self, fname: str) -> str:
-        m = re.search(r"(run_1\d{8}T\d{6})", fname)
-        return m.group(1) if m else os.path.splitext(fname)[0]
-
-    def _nir_dt(self, base: str, any_path: str | None) -> datetime.datetime:
-        dt = extract_datetime_from_str(base, "run_1")
-        if isinstance(dt, datetime.datetime):
-            return dt
-        try:
-            if any_path and os.path.exists(any_path):
-                return datetime.datetime.fromtimestamp(os.path.getmtime(any_path))
-        except Exception:
-            pass
-        return datetime.datetime.min
-
-    def prune_nir_files_before_op(self, keep_count: int, subject, target_groups: list):
-        """
-        이동 대상 그룹의 NIR 타임스탬프 묶음 중 오래된 순으로 keep_count개만 남기고
-        나머지 묶음에 속한 파일(.spc, A.txt 등)은 전부 '삭제 폴더'로 이동한다.
-
-        Args:
-            keep_count: 유지할 NIR 개수
-            subject: 시료명
-            target_groups: 이동 대상 그룹 목록 (data_count_edit 범위 내의 그룹만)
-        """
-        # 1) 감시 OFF 보장
-        if not ensure_watching_off(self):
-            return
-        # 2) 삭제 폴더 설정 확인 (없으면 즉시 취소)
-        if ensure_delete_folder(self) is None:
-            self.log_to_box("[NIR 정리] 삭제 폴더가 없어 정리를 취소합니다.")
-            return
-
-        if keep_count <= 0:
-            self.log_to_box("[NIR 정리] keep=0 → 전체 유지")
-            return
-
-        self.log_to_box(f"[NIR 정리] 이동 대상 {len(target_groups)}개 그룹 내에서 NIR {keep_count}개만 유지합니다.")
-
-        # 3) 이동 대상 그룹에서만 묶음 수집: (대표dt, group, base_key, [(fname, fpath), ...])
-        bundles = []
-        for group in target_groups:
-            nir_map = group.get("NIR", {}) or {}
-            if not nir_map:
-                continue
-            buckets = {}
-            for fname, finfo in nir_map.items():
-                base = self._nir_base(fname)
-                fpath = finfo.get("absolute_path") if isinstance(finfo, dict) else None
-                buckets.setdefault(base, []).append((fname, fpath))
-            # 각 그룹의 NIR 묶음을 bundles에 추가
-            for base, files in buckets.items():
-                any_path = files[0][1] if files else None
-                dt = self._nir_dt(base, any_path)
-                bundles.append((dt, group, base, files))  # group 객체 자체를 저장
-
-
-        if not bundles or len(bundles) <= keep_count:
-            self.log_to_box(f"[NIR 정리] 묶음 수 {len(bundles)} ≤ keep {keep_count} → 삭제 없음")
-            return
-
-        # 4) 오래된 → 최신 정렬 후, 앞 keep_count만 유지
-        bundles.sort(key=lambda x: x[0])
-        to_delete = bundles[keep_count:]
-
-        self.log_to_box(f"[NIR 정리] NIR 파일 {len(bundles)}개 중 {len(to_delete)}개를 삭제합니다.")
-
-        # 5) 삭제 폴더로 이동
-        moved_files = 0
-        for _, group, base, files in to_delete:  # group 객체 직접 사용
-            nir_map = group.get("NIR", {}) or {}
-            for fname, fpath in files:
-                if fpath and os.path.exists(fpath):
-                    # with NIR 버킷, NIR 세부 폴더로 이동
-                    if move_to_delete_bucket(self, Path(fpath), group_has_nir=True, role="nir", subject=subject):
-                        moved_files += 1
-                        try:
-                            self.file_matcher.remove_from_unmatched(fpath, "nir")
-                        except Exception:
-                            pass
-                nir_map.pop(fname, None)
-
-        if moved_files:
-            self.log_to_box(f"🧹 [NIR 정리] NIR 총 {moved_files}개 파일을 삭제 폴더로 이동했습니다.")
-            self.process_updates()
-        else:
-            self.log_to_box("[NIR 정리] 삭제할 NIR이 없습니다.")
 
     def _has_valid_file_entry(self, data_dict):
         """dict 구조 안에 absolute_path가 있는지 확인"""
@@ -2189,36 +1979,6 @@ class MainWindow(QMainWindow):
         return result, 0, removed_nir_count
 
 
-    def _validate_file_operation_basic_inputs(self):
-        """
-        파일 작업 기본 입력 검증 (Phase 2.1)
-        
-        Returns:
-            tuple: (is_valid: bool, error_messages: list)
-        """
-        errors = []
-        
-        # 1. 작업 진행 중 확인
-        if getattr(self, 'is_file_operation_running', False):
-            errors.append(("진행 중", "이동/복사 작업이 진행 중입니다.\n작업 완료 후 다시 시도하세요."))
-            return (False, errors)
-        
-        # 2. 출력 경로 확인
-        output_dir = self.settings.get("output")
-        if not output_dir or not os.path.isdir(output_dir):
-            errors.append(("경로 오류", "'이동 대상 폴더'가 설정되지 않았거나 잘못된 경로입니다."))
-            return (False, errors)
-        
-        # 3. 그룹 존재 확인
-        if not self.groups:
-            errors.append(("데이터 없음", "처리할 데이터가 없습니다. 먼저 감시를 실행해주세요."))
-            return (False, errors)
-        
-        return (True, [])
-
-
-
-
     def _prune_nir_files_if_needed(self, current_tab_index, is_separated, keep_n, subject, subject2, groups_line1, groups_line2):
         """
         조건에 따라 NIR 파일 정리 수행 (Phase 2.4)
@@ -2229,25 +1989,25 @@ class MainWindow(QMainWindow):
         if current_tab_index == 0:
             # 라인1 탭
             if groups_line1:
-                self.prune_nir_files_before_op(keep_n, subject, groups_line1)
+                self.nir_pruning_service.prune_nir_files(self, keep_n, subject, groups_line1)
                 
         elif current_tab_index == 1:
             # 라인2 탭
             if groups_line2:
                 target = subject2 if is_separated else subject
-                self.prune_nir_files_before_op(keep_n, target, groups_line2)
+                self.nir_pruning_service.prune_nir_files(self, keep_n, target, groups_line2)
                 
         else:
             # 통합 탭
             if is_separated:
                 if groups_line1:
-                    self.prune_nir_files_before_op(keep_n, subject, groups_line1)
+                    self.nir_pruning_service.prune_nir_files(self, keep_n, subject, groups_line1)
                 if groups_line2:
-                    self.prune_nir_files_before_op(keep_n, subject2, groups_line2)
+                    self.nir_pruning_service.prune_nir_files(self, keep_n, subject2, groups_line2)
             else:
                 # 통합 모드 (line1에 모두 있음)
                 if groups_line1:
-                    self.prune_nir_files_before_op(keep_n, subject, groups_line1)
+                    self.nir_pruning_service.prune_nir_files(self, keep_n, subject, groups_line1)
 
     def _check_and_confirm_already_moved(self, operation_mode, groups_line1, groups_line2, subject, subject2, is_separated):
 
@@ -2305,42 +2065,6 @@ class MainWindow(QMainWindow):
                     
         return True
 
-    def _build_file_operation_data(self, current_tab_index, is_separated, subject, subject2, groups_line1, groups_line2):
-        """
-        FileOperationWorker용 데이터 구성 (Phase 2.3)
-        
-        Returns:
-            dict: processed_data
-        """
-        today_str = datetime.datetime.now().strftime("%y%m%d")
-        processed_data = {today_str: {}}
-        
-        if current_tab_index == 0:
-            # 라인1 탭: 라인1만
-            if groups_line1:
-                processed_data[today_str][subject] = {"groups": groups_line1}
-                
-        elif current_tab_index == 1:
-            # 라인2 탭: 라인2만 (분리 모드면 subject2, 통합 모드면 subject)
-            if groups_line2:
-                target_subject = subject2 if is_separated else subject
-                processed_data[today_str][target_subject] = {"groups": groups_line2}
-                
-        else:
-            # 통합 탭
-            if is_separated:
-                # 분리 모드: 라인1과 라인2를 다른 시료명으로
-                if groups_line1:
-                    processed_data[today_str][subject] = {"groups": groups_line1}
-                if groups_line2:
-                    processed_data[today_str][subject2] = {"groups": groups_line2}
-            else:
-                # 통합 모드: 모든 데이터를 하나의 시료명으로
-                # 통합 모드에서는 _select_target_groups에서 이미 line1에 모두 모아둠
-                if groups_line1:
-                    processed_data[today_str][subject] = {"groups": groups_line1}
-                    
-        return processed_data
 
     def _select_target_groups(self, tab_index, is_separated, data_count_limit):
 
@@ -2441,7 +2165,9 @@ class MainWindow(QMainWindow):
 
         try:
             # ✅ 기본 입력 검증 (Phase 2.1 - 추출된 메서드 사용)
-            is_valid, errors = self._validate_file_operation_basic_inputs()
+            is_valid, errors = self.operation_validator.validate_basic_inputs(
+                is_file_operation_running=getattr(self, 'is_file_operation_running', False)
+            )
             if not is_valid:
                 for title, msg in errors:
                     if title == "진행 중":
@@ -2648,9 +2374,8 @@ class MainWindow(QMainWindow):
                 return
 
             # ✅ 탭과 모드에 따라 데이터 구성 (Phase 2.3 - 헬퍼 사용)
-            processed_data = self._build_file_operation_data(
-                current_tab_index, is_separated, subject, subject2, 
-                groups_to_move_line1, groups_to_move_line2
+            processed_data = self.operation_planner.build_file_operation_data(
+                current_tab_index, is_separated, subject, subject2, groups_line1, groups_line2
             )
 
 

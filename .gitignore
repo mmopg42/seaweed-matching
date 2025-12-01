@@ -8,9 +8,12 @@
 !.gitignore
 !requirements.txt
 !*.py
-!*.md
+# !*.md
 !app_icon.ico
-!docs/**
+# !docs/**
 *.exe
 
+test
+
 test.py
+test_get_effective_path.py
