@@ -354,7 +354,8 @@ class ImageLoaderWorker(QThread):
                     img = img.convert('RGB')
                 
                 # 썸네일 생성
-                img.thumbnail(size, Image.Resampling.LANCZOS)
+                # ✅ Phase 4: BILINEAR for speed (10-15% faster than LANCZOS)
+                img.thumbnail(size, Image.Resampling.BILINEAR)
                 
                 # PIL Image → JPEG 변환
                 buffer = BytesIO()

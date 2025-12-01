@@ -44,6 +44,25 @@ class ImageManager:
         """
         self.image_loader.start_bulk_loading(estimated_count)
     
+    def warmup_cache(self, image_paths: list, size: tuple = None):
+        """
+        자주 보는 이미지 선제 캐싱 (Phase 4)
+        
+        Args:
+            image_paths: 캐싱할 이미지 경로 리스트
+            size: 썸네일 크기 (None이면 설정값 사용)
+        """
+        if size is None:
+            size = (
+                self.settings.get("img_width", 110),
+                self.settings.get("img_height", 80)
+            )
+        
+        # 낮은 우선순위로 백그라운드 로딩
+        for path in image_paths:
+            if path and os.path.exists(path):
+                self.get_cached_pixmap(path, priority=10)
+    
     def get_cached_pixmap(self, path, priority=5):
         """
         비동기 이미지 로딩

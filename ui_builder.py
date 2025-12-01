@@ -210,12 +210,60 @@ class UIBuilder:
         stats_layout.addWidget(matching_frame_unified)
         stats_layout.addWidget(matching_frame_separated)
         
+        # ✅ Phase 3: 진행률 위젯 추가
+        progress_frame = self._build_progress_bar()
+        stats_layout.addWidget(progress_frame)
+        
         # 위젯 저장
         self._store_widget("stats_container", stats_container)
         self._store_widget("matching_frame_unified", matching_frame_unified)
         self._store_widget("matching_frame_separated", matching_frame_separated)
         
         return stats_container
+    
+    def _build_progress_bar(self) -> QFrame:
+        """진행률 표시 바 (Phase 3)"""
+        from PySide6.QtWidgets import QProgressBar
+        
+        frame = QFrame()
+        frame.setObjectName("ProgressBar")
+        frame.setVisible(False)  # 기본 숨김
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(12)
+        
+        # 진행률 레이블
+        progress_label = QLabel("")
+        progress_label.setStyleSheet("font-weight:600; font-size:12px; color:#059669;")
+        progress_label.setMinimumWidth(300)
+        
+        # 진행률 바
+        progress_bar = QProgressBar()
+        progress_bar.setTextVisible(True)
+        progress_bar.setFormat("%v/%m (%p%)")
+        progress_bar.setMaximumHeight(20)
+        progress_bar.setStyleSheet("""
+            QProgressBar {
+                border: 1px solid #d1d5db;
+                border-radius: 4px;
+                text-align: center;
+            }
+            QProgressBar::chunk {
+                background-color: #10b981;
+                border-radius: 3px;
+            }
+        """)
+        
+        layout.addWidget(progress_label)
+        layout.addWidget(progress_bar, stretch=1)
+        layout.addStretch()
+        
+        # 위젯 저장
+        self._store_widget("progress_frame", frame)
+        self._store_widget("progress_label", progress_label)
+        self._store_widget("progress_bar", progress_bar)
+        
+        return frame
     
     def _build_file_count_bar(self) -> QFrame:
         """파일 개수 현황 바"""
