@@ -82,6 +82,44 @@
 
 ---
 
+### 서비스 레이어 (Phase 2-5)
+
+**[operation_validator.md](operation_validator.md)** - 파일 작업 검증 (108줄)
+- 작업 전 입력 검증
+- 경로 유효성 확인
+- 검증 오류 메시지 생성
+
+**[operation_planner.md](operation_planner.md)** - 파일 작업 계획 (131줄)
+- 작업 대상 그룹 결정
+- 워커 데이터 구성
+- 탭/모드별 데이터 분리
+
+**[nir_pruning_service.md](nir_pruning_service.md)** - NIR 파일 정리 (138줄)
+- NIR 파일 개수 제한
+- 시간순 정렬 및 삭제
+- 안전 삭제 처리
+
+**[statistics_presenter.md](statistics_presenter.md)** - 통계 표시 (204줄)
+- 통계 데이터 → UI 문자열 변환
+- 통합/분리 모드 포맷팅
+- 백분율 자동 계산
+
+**[monitoring_orchestrator.md](monitoring_orchestrator.md)** - 모니터링 조율 (179줄)
+- 초기 스캔 조율
+- 이벤트 처리 조율
+- FileMatcher + GroupManager 협업
+
+---
+
+### 인프라 레이어 (Phase 5)
+
+**[watchdog_manager.md](watchdog_manager.md)** - Watchdog 관리 (173줄)
+- Observer 생명주기 관리
+- 폴더별 이벤트 핸들러
+- 상태 모니터링 및 자동 재시작
+
+---
+
 ### 이미지 처리
 
 **[image_manager.md](image_manager.md)** - 이미지 로딩 조정 (234줄)
@@ -159,17 +197,19 @@
 
 ## 📊 통계
 
-- **총 모듈**: 28개
+- **총 모듈**: 34개
 - **코어/UI**: 8개
 - **파일 처리**: 4개
 - **그룹/상태**: 3개
+- **서비스 레이어**: 5개 (Phase 2-5)
+- **인프라 레이어**: 1개 (Phase 5)
 - **이미지**: 3개
 - **설정/상태**: 2개
 - **유틸리티**: 4개
 - **NIR 관련**: 2개 (nir_app, nir_spectrum_monitor)
 - **기타**: 2개
 
-**총 코드 라인 수**: 약 9,200줄 (NIR 631줄 포함)
+**총 코드 라인 수**: 약 10,133줄 (NIR 631줄 포함, Phase 2-5 추가 933줄)
 
 ---
 

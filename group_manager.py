@@ -109,17 +109,44 @@ class GroupManager:
 
             # cam 데이터 구성
             cam_data = [{}, {}, {}]
-            for i, queue in enumerate(cam_queues):
-                # 시간 기반 매칭 또는 순차 매칭
-                picked = self.find_matching_cam_file(
-                    t_norm, queue,
-                    use_time_matching=use_cam_time_matching,
-                    cam_match_min_diff=cam_match_min_diff,
-                    cam_match_max_diff=cam_match_max_diff
-                )
-                if picked:
-                    fname, abspath, mtime, ctime, is_copy = picked
-                    cam_data[i] = {fname: {"absolute_path": abspath}}
+            cam1_dt = None  # cam1의 타임스탬프 저장용
+            
+            # cam1(cam4) - normal 기준 매칭
+            picked_cam1 = self.find_matching_cam_file(
+                t_norm, cam_queues[0],
+                use_time_matching=use_cam_time_matching,
+                cam_match_min_diff=cam_match_min_diff,
+                cam_match_max_diff=cam_match_max_diff
+            )
+            if picked_cam1:
+                fname, abspath, mtime, ctime, is_copy = picked_cam1
+                cam_data[0] = {fname: {"absolute_path": abspath}}
+                # cam1 타임스탬프 추출
+                cam1_dt = extract_datetime_from_composite_cam(fname)
+            
+            # cam2/3(cam5/6) - cam1(cam4) 기준 매칭 (±1초)
+            if cam1_dt:
+                for i in [1, 2]:  # cam2, cam3 (또는 cam5, cam6)
+                    picked_cam = self.find_matching_cam_file_from_reference(
+                        cam1_dt, cam_queues[i],
+                        use_time_matching=use_cam_time_matching,
+                        max_diff=1.0  # ±1초 허용
+                    )
+                    if picked_cam:
+                        fname, abspath, mtime, ctime, is_copy = picked_cam
+                        cam_data[i] = {fname: {"absolute_path": abspath}}
+            else:
+                # cam1이 없으면 기존 방식대로 처리
+                for i in [1, 2]:
+                    picked = self.find_matching_cam_file(
+                        t_norm, cam_queues[i],
+                        use_time_matching=use_cam_time_matching,
+                        cam_match_min_diff=cam_match_min_diff,
+                        cam_match_max_diff=cam_match_max_diff
+                    )
+                    if picked:
+                        fname, abspath, mtime, ctime, is_copy = picked
+                        cam_data[i] = {fname: {"absolute_path": abspath}}
 
             groups.append({
                 "type": "누락없음",
@@ -273,6 +300,54 @@ class GroupManager:
                 matched_item = cam_queue.pop(idx)
                 return matched_item
 
+        # 매칭 실패 - 큐에 적합한 파일 없음
+        return None
+
+    def find_matching_cam_file_from_reference(self, reference_dt, cam_queue, use_time_matching=True, max_diff=1.0):
+        """
+        cam 큐에서 참조 타임스탬프(cam1 또는 cam4)와 매칭되는 파일 찾기
+        
+        Args:
+            reference_dt (datetime.datetime): 참조 카메라 타임스탬프 (cam1 또는 cam4)
+            cam_queue (list): [(filename, abspath, mtime, ctime, is_copy), ...]
+            use_time_matching (bool): True이면 시간 기반 매칭, False이면 순차 pop
+            max_diff (float): 최대 시간 차이 (초, 기본: 1.0, ±1초 허용)
+        
+        Returns:
+            tuple or None: 매칭된 파일 튜플 또는 None
+                          반환 시 큐에서 해당 항목 제거됨
+        """
+        if not cam_queue:
+            return None
+        
+        # 시간 기반 매칭 비활성화 시 기존 방식
+        if not use_time_matching:
+            return self.pop_one(cam_queue)
+        
+        # 시간 기반 매칭 활성화
+        if not reference_dt:
+            return None
+        
+        # 큐를 순회하며 매칭되는 파일 찾기
+        for idx, item in enumerate(cam_queue):
+            filename, abspath, mtime, ctime, is_copy = item
+            
+            # 파일명에서 타임스탬프 추출
+            cam_dt = extract_datetime_from_composite_cam(filename)
+            
+            if cam_dt is None:
+                # 타임스탬프 추출 실패 시 스킵
+                continue
+            
+            # 시간 차이 계산 (절댓값)
+            diff = abs((cam_dt - reference_dt).total_seconds())
+            
+            # 조건: max_diff 이내 (±1초)
+            if diff <= max_diff:
+                # 매칭 성공 - 큐에서 제거하고 반환
+                matched_item = cam_queue.pop(idx)
+                return matched_item
+        
         # 매칭 실패 - 큐에 적합한 파일 없음
         return None
 

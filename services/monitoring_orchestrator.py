@@ -60,10 +60,17 @@ class MonitoringOrchestrator:
         
         # 그룹 재구성
         nir_match_time_diff = self.settings.get("nir_match_time_diff", 1.0)
+        use_cam_time_matching = self.settings.get("use_cam_time_matching", True)
+        cam_match_min_diff = self.settings.get("cam_match_min_diff", 4.0)
+        cam_match_max_diff = self.settings.get("cam_match_max_diff", 6.0)
+        
         groups = self.group_manager.build_all_groups(
             self.file_matcher.unmatched_files,
             self.file_matcher.consumed_nir_keys,
-            nir_match_time_diff=nir_match_time_diff
+            nir_match_time_diff=nir_match_time_diff,
+            use_cam_time_matching=use_cam_time_matching,
+            cam_match_min_diff=cam_match_min_diff,
+            cam_match_max_diff=cam_match_max_diff
         )
         
         return {
@@ -106,10 +113,17 @@ class MonitoringOrchestrator:
         
         # 그룹 재구성
         nir_match_time_diff = self.settings.get("nir_match_time_diff", 1.0)
+        use_cam_time_matching = self.settings.get("use_cam_time_matching", True)
+        cam_match_min_diff = self.settings.get("cam_match_min_diff", 4.0)
+        cam_match_max_diff = self.settings.get("cam_match_max_diff", 6.0)
+        
         groups = self.group_manager.build_all_groups(
             self.file_matcher.unmatched_files,
             self.file_matcher.consumed_nir_keys,
-            nir_match_time_diff=nir_match_time_diff
+            nir_match_time_diff=nir_match_time_diff,
+            use_cam_time_matching=use_cam_time_matching,
+            cam_match_min_diff=cam_match_min_diff,
+            cam_match_max_diff=cam_match_max_diff
         )
         
         return {
