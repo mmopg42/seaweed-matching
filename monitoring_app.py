@@ -14,16 +14,13 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer, QByteArray, QPoint, QRect
 from PySide6.QtGui import QPixmap, QPainter, QColor
-from watchdog.observers import Observer
 
 from config_manager import ConfigManager
 from ui_components import SettingDialog, MonitorRow, FlowLayout_
-from file_matcher import Communicate, FolderEventHandler, FileMatcher, FileMatcherWorker
+from file_matcher import Communicate, FileMatcher, FileMatcherWorker
 from group_manager import GroupManager
 from file_operations import FileOperationWorker
 from utils import extract_datetime_from_str, LruPixmapCache, normalize_path, get_image_dimensions
-from path_utils import get_normal_thumbnail_path, extract_date_from_paths, auto_update_paths_with_date
-from window_state_manager import WindowStateManager
 from preview_dialog import PreviewDialog
 from log_panel import LogPanel
 from delete_manager import (
@@ -67,7 +64,6 @@ class MainWindow(QMainWindow):
         self.completed_groups_count = 0
 
         self.is_watching = False
-        self.observer = None
         self.op_worker = None
 
         self.pixmap_cache = LruPixmapCache(max_items=500)
@@ -151,7 +147,7 @@ class MainWindow(QMainWindow):
 
         # ✅ Watchdog 상태 모니터링 타이머 (30초마다 확인)
         self.watchdog_monitor_timer = QTimer(self)
-        self.watchdog_monitor_timer.timeout.connect(self.check_watchdog_status)
+        self.watchdog_monitor_timer.timeout.connect(self.watchdog_manager.check_status)
         self.watchdog_monitor_timer.setInterval(30000)  # 30초
 
         # ✅ 실시간 파일 개수 카운트 워커 (별도 스레드, UI 렉과 완전 독립)
@@ -521,20 +517,6 @@ class MainWindow(QMainWindow):
         # 도움말 초기화
         self.update_tooltips()
 
-    def _groups_to_canonical_json(self, groups: list) -> str:
-        """그룹을 정규화된 JSON으로 변환 - GroupStateManager에 위임"""
-        return self.group_state_manager._groups_to_canonical_json(groups)
-
-
-    def _calc_group_hash(self, group: dict) -> str:
-        """개별 그룹 해시 계산 - GroupStateManager에 위임"""
-        return self.group_state_manager._calc_group_hash(group)
-
-
-    def _calc_groups_hash(self, groups: list) -> str:
-        """전체 그룹 해시 계산 - GroupStateManager에 위임"""
-        return self.group_state_manager._calc_groups_hash(groups)
-
 
     def _maybe_save_groups_json(self, groups: list, debounce_ms=300):
         """그룹 상태 JSON 저장 - GroupStateManager에 위임"""
@@ -747,17 +729,16 @@ class MainWindow(QMainWindow):
         # 감시 중이었다면 재시작
         was_watching = self.is_watching
         if was_watching:
-            self.stop_watchdog()
+            self.watchdog_manager.stop_watchdog()
 
         # 내부 상태 초기화
         self.groups = []
-        self.provisional_nirs = {}
         self.file_matcher.reset_state()
         self.reset_monitor_rows()
 
         # 감시가 켜져있었다면 새 경로로 재시작
         if was_watching:
-            self.start_watchdog()
+            self.watchdog_manager.start_watchdog()
             self.log_to_box("🔄 감시를 새 경로로 재시작했습니다.")
 
         # ✅ 경로 자동 설정 후에도 워커에 새 설정 전달 (watchdog 재시작)
@@ -891,11 +872,16 @@ class MainWindow(QMainWindow):
             # 디스크 캐시 옵션 로드 (기본값: True)
             dlg.use_disk_cache.setChecked(self.settings.get("use_disk_cache", True))
 
+            # 복합카메라 시간 기반 매칭 옵션 로드 (기본값: True)
+            dlg.use_cam_time_matching.setChecked(self.settings.get("use_cam_time_matching", True))
+            dlg.cam_match_min_diff.setText(str(self.settings.get("cam_match_min_diff", 4.0)))
+            dlg.cam_match_max_diff.setText(str(self.settings.get("cam_match_max_diff", 6.0)))
+
         if dlg.exec():
             was_on = self.is_watching  # 현재 감시 상태 기억
             if was_on:
                 # 감시 일시 정지 (기존 경로의 옵저버 종료)
-                self.stop_watchdog()
+                self.watchdog_manager.stop_watchdog()
     
             # 설정 저장 (기존 설정 값 보존)
             new_settings = dlg.get_settings()
@@ -932,7 +918,6 @@ class MainWindow(QMainWindow):
 
             # 내부 상태 초기화 + UI 초기화
             self.groups = []
-            self.provisional_nirs = {}
             self.file_matcher.reset_state()
             self.reset_monitor_rows()
 
@@ -941,7 +926,7 @@ class MainWindow(QMainWindow):
 
             # 감시가 원래 ON이었다면 새 경로로 감시 재시작
             if was_on:
-                self.start_watchdog()
+                self.watchdog_manager.start_watchdog()
                 self.is_watching = True
                 self.btn_run.setEnabled(False)
                 self.btn_stop.setEnabled(True)
@@ -1188,7 +1173,6 @@ class MainWindow(QMainWindow):
         self.btn_stop.setEnabled(True)
         self.log_to_box("[INFO] 감시를 시작합니다...")
         self.groups = []
-        self.provisional_nirs = {}
         
         # MonitoringOrchestrator로 초기 스캔
         self.monitoring_orchestrator.reset_state()
@@ -1445,7 +1429,7 @@ class MainWindow(QMainWindow):
                 continue
 
             # 그룹 데이터의 해시 계산
-            current_hash = self._calc_group_hash(group_data)
+            current_hash = self.group_state_manager._calc_group_hash(group_data)
 
             # 변경되지 않았으면 스킵 (최적화!)
             if row_widget.last_hash == current_hash:
@@ -1580,18 +1564,6 @@ class MainWindow(QMainWindow):
                 self.log_to_box(f"[경고] 자동 갱신 실패: {e}")
         else:
             self.log_to_box("ℹ️ 선택된 삭제 대상이 없습니다.")
-
-    def start_watchdog(self):
-        """Watchdog 시작 - WatchdogManager에 위임"""
-        self.watchdog_manager.start_watchdog()
-
-    def stop_watchdog(self):
-        """Watchdog 종료 - WatchdogManager에 위임"""
-        self.watchdog_manager.stop_watchdog()
-
-    def check_watchdog_status(self):
-        """Watchdog 상태 확인 - WatchdogManager에 위임"""
-        self.watchdog_manager.check_status()
 
     def restore_window_bounds(self):
         self.window_state_manager.restore_window_bounds(self, self.config_manager)
@@ -2584,7 +2556,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         print("[MAIN] 프로그램 종료 요청 받음", flush=True)
         self.log_to_box("[INFO] 프로그램 종료 중...")
-        self.stop_watchdog()
+        self.watchdog_manager.stop_watchdog()
         # ✅ 파일 카운트 워커 종료
         if hasattr(self, 'file_count_worker'):
             self.file_count_worker.stop()
