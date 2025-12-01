@@ -2181,6 +2181,9 @@ class MainWindow(QMainWindow):
             
             output_dir = self.settings.get("output", "")
             
+            # ✅ 오늘 날짜 문자열 (이동 기록용)
+            today_str = datetime.datetime.now().strftime("%Y%m%d")
+            
             # ✅ 현재 선택된 탭 확인
             current_tab_index = self.tab_widget.currentIndex()
             # 0: 라인1, 1: 라인2, 2: 통합
