@@ -294,34 +294,36 @@ class ImageLoaderWorker(QThread):
         - with 문으로 파일 핸들 즉시 해제
         """
         try:
-            # with 문으로 파일 핸들 즉시 해제
-            with Image.open(image_path) as img:
+            # 파일을 한 번에 메모리로 로드
+            with open(image_path, 'rb') as f:
+                image_data = f.read()
+            
+            # 메모리 데이터에서 이미지 열기
+            from io import BytesIO
+            with Image.open(BytesIO(image_data)) as img:
                 # EXIF orientation 처리
                 try:
                     from PIL import ImageOps
                     img = ImageOps.exif_transpose(img)
                 except Exception:
                     pass
-
-                # RGB 모드로 변환 (RGBA, CMYK 등 처리)
+                
+                # RGB 모드로 변환
                 if img.mode not in ('RGB', 'L'):
                     img = img.convert('RGB')
-
-                # draft() 모드: 디코딩 시 축소 (JPEG에 효과적)
-                # 실제로는 thumbnail()이 더 범용적
+                
+                # 썸네일 생성
                 img.thumbnail(size, Image.Resampling.LANCZOS)
-
-                # PIL Image → QPixmap 변환
-                # 메모리 버퍼로 JPEG 저장 후 로드
-                from io import BytesIO
+                
+                # PIL Image → JPEG 변환
                 buffer = BytesIO()
                 img.save(buffer, format='JPEG', quality=85, optimize=True)
                 jpeg_data = buffer.getvalue()
-
-            # 여기서 이미 파일 핸들이 닫힘
+            
+            # QPixmap 생성
             pixmap = QPixmap()
             pixmap.loadFromData(QByteArray(jpeg_data), "JPEG")
-
+            
             return pixmap
 
         except Exception as e:
