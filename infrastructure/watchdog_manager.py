@@ -2,68 +2,77 @@
 WatchdogManager: 파일 시스템 감시 관리
 
 watchdog 라이브러리를 사용하여 폴더를 감시하고 파일 변경 이벤트를 처리합니다.
+Qt Signal/Slot을 사용하여 스레드 안전하게 이벤트를 전달합니다.
 """
 
 import os
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from PySide6.QtCore import QObject
 
 
 class FolderEventHandler(FileSystemEventHandler):
     """
     폴더별 파일 시스템 이벤트 핸들러
-    
-    파일 생성, 수정, 삭제 이벤트를 감지하고 콜백으로 전달합니다.
+
+    파일 생성, 수정, 삭제 이벤트를 감지하고 Qt Signal을 통해 전달합니다.
+    Signal/Slot 메커니즘을 사용하여 watchdog 스레드에서 메인 GUI 스레드로 안전하게 이벤트를 전달합니다.
     """
-    
-    def __init__(self, event_callback, folder_type: str, settings: dict):
+
+    def __init__(self, event_signal: QObject, folder_type: str, settings: dict):
         """
         Args:
-            event_callback: 이벤트 발생 시 호출할 콜백 (event_type, src_path, folder_type)
+            event_signal: Qt Signal 객체 (file_changed Signal을 가진 QObject)
             folder_type: 폴더 타입 ("normal", "nir", "cam1" 등)
             settings: 설정 딕셔너리
         """
         super().__init__()
-        self.event_callback = event_callback
+        self.event_signal = event_signal
         self.folder_type = folder_type
         self.settings = settings
-    
+
     def on_any_event(self, event):
-        """모든 파일 시스템 이벤트 처리"""
+        """
+        모든 파일 시스템 이벤트 처리
+
+        watchdog 스레드에서 실행되며, Qt Signal을 emit하여
+        메인 GUI 스레드로 이벤트를 안전하게 전달합니다.
+        """
         if event.is_directory:
             return
-        
+
         event_type = event.event_type  # 'created', 'modified', 'deleted', 'moved'
         src_path = event.src_path
-        
-        # 콜백 호출
-        if self.event_callback:
-            self.event_callback(event_type, src_path, self.folder_type)
+
+        # ✓ Signal emit (스레드 안전)
+        # Qt가 자동으로 메인 스레드로 전환하여 슬롯 실행
+        if self.event_signal:
+            self.event_signal.file_changed.emit(event_type, src_path, self.folder_type)
 
 
 class WatchdogManager:
     """
     Watchdog 파일 시스템 감시 관리자
-    
-    여러 폴더를 감시하고 파일 변경 이벤트를 처리합니다.
+
+    여러 폴더를 감시하고 파일 변경 이벤트를 Qt Signal을 통해 처리합니다.
     """
-    
-    def __init__(self, settings: dict, event_callback, log_callback, 
+
+    def __init__(self, settings: dict, event_signal: QObject, log_callback,
                  get_effective_path_func, should_use_recursive_func):
         """
         Args:
             settings: 설정 딕셔너리 (폴더 경로 등)
-            event_callback: 파일 이벤트 콜백 (event_type, src_path, folder_type)
+            event_signal: Qt Signal 객체 (file_changed Signal을 가진 QObject, 예: Communicate 인스턴스)
             log_callback: 로그 출력 콜백
             get_effective_path_func: 일반카메라 실제 경로 계산 함수
             should_use_recursive_func: 재귀 감시 여부 결정 함수
         """
         self.settings = settings
-        self.event_callback = event_callback
+        self.event_signal = event_signal
         self.log_callback = log_callback
         self.get_effective_path = get_effective_path_func
         self.should_use_recursive = should_use_recursive_func
-        
+
         self.observer = None
     
     def start_watchdog(self):
@@ -91,10 +100,10 @@ class WatchdogManager:
                 if folder and os.path.isdir(folder):
                     # 재귀 옵션 결정
                     recursive = self.should_use_recursive(folder_type)
-                    
+
                     # 이벤트 핸들러 생성 및 스케줄링
                     handler = FolderEventHandler(
-                        self.event_callback,
+                        self.event_signal,  # ✓ Signal 객체 전달
                         folder_type,
                         self.settings
                     )

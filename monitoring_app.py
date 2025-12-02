@@ -118,7 +118,7 @@ class MainWindow(QMainWindow):
         # Phase 5: WatchdogManager 초기화
         self.watchdog_manager = WatchdogManager(
             settings=self.settings,
-            event_callback=self.handle_file_event,
+            event_signal=self.file_event_communicator,
             log_callback=self.log_to_box,
             get_effective_path_func=self.get_effective_normal_path,
             should_use_recursive_func=self.should_use_recursive_watch
