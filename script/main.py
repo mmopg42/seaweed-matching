@@ -4,12 +4,19 @@
 - exe 환경에서도 정상 작동
 """
 import sys
+import logging
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QGroupBox
 )
 from PySide6.QtCore import Qt
+from debug import setup_crash_logger
 
+log_file = setup_crash_logger(log_dir="logs", app_name="monitoring")
+print(f"📝 Crash log: {log_file}")
+logging.info("="*80)
+logging.info("🚀 애플리케이션 시작")
+logging.info("="*80)
 
 class MonitorController(QMainWindow):
     def __init__(self):
