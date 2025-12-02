@@ -16,13 +16,13 @@ from PySide6.QtCore import Qt, QTimer, QByteArray, QPoint, QRect
 from PySide6.QtGui import QPixmap, QPainter, QColor
 
 from config_manager import ConfigManager
-from ui_components import SettingDialog, MonitorRow, FlowLayout_
+from ui.components.ui_components import SettingDialog, MonitorRow, FlowLayout_
 from file_matcher import Communicate, FileMatcher, FileMatcherWorker
 from group_manager import GroupManager
 from file_operations import FileOperationWorker
 from utils import extract_datetime_from_str, LruPixmapCache, normalize_path, get_image_dimensions
-from preview_dialog import PreviewDialog
-from log_panel import LogPanel
+from ui.dialogs.preview_dialog import PreviewDialog
+from ui.panels.log_panel import LogPanel
 from delete_manager import (
     delete_selected_rows, set_select_all, delete_one_row,
     move_to_delete_bucket, ensure_watching_off, ensure_delete_folder
@@ -35,7 +35,7 @@ from abnormal_detector import AbnormalDetector
 from path_utils import get_normal_thumbnail_path, extract_date_from_paths, auto_update_paths_with_date
 from image_registry import ImageRegistry
 from image_manager import ImageManager
-from window_state_manager import WindowStateManager
+from ui.utils.window_state_manager import WindowStateManager
 from group_state_manager import GroupStateManager
 
 from ui.drag_select_widget import DragSelectWidget
@@ -45,7 +45,7 @@ from services.operation_planner import OperationPlanner
 from services.statistics_presenter import StatisticsPresenter
 from infrastructure.watchdog_manager import WatchdogManager
 from services.monitoring_orchestrator import MonitoringOrchestrator
-
+from ui.utils.tooltips import set_tooltip_enabled
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -1071,7 +1071,7 @@ class MainWindow(QMainWindow):
 
     def update_tooltips(self):
         """도움말 표시 설정에 따라 툴팁을 업데이트"""
-        from tooltips import set_tooltip_enabled
+
 
         enabled = self.settings.get("show_tooltips", True)
 

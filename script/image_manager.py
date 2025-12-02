@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QApplication
 
 from image_registry import ImageRegistry
 from image_loader import ImageLoaderWorker
-from preview_dialog import PreviewDialog
+from ui.dialogs.preview_dialog import PreviewDialog
 
 
 class ImageManager:
@@ -149,7 +149,7 @@ class ImageManager:
         Args:
             all_layouts: [(scroll_area, scroll_layout), ...] 리스트
         """
-        from ui_components import MonitorRow
+        from ui.components.ui_components import MonitorRow
         
         for scroll_area, scroll_layout in all_layouts:
             # 탭이 보이지 않으면 스킵
