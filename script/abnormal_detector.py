@@ -1,6 +1,6 @@
 # abnormal_detector.py
 
-from utils import get_image_dimensions
+from utils.utils import get_image_dimensions
 
 
 class AbnormalDetector:

@@ -8,8 +8,8 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Signal, QThread
 from watchdog.events import FileSystemEventHandler
 
-from utils import extract_datetime_from_str, get_timestamp_from_yml, extract_datetime_from_nir_key
-from path_utils import get_effective_path
+from utils.utils import extract_datetime_from_str, get_timestamp_from_yml, extract_datetime_from_nir_key
+from utils.path_utils import get_effective_path
 
 
 class Communicate(QObject):

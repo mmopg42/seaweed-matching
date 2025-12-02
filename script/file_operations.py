@@ -9,7 +9,7 @@ from threading import Event
 
 from PySide6.QtCore import QThread, Signal
 
-from config_manager import ConfigManager
+from infrastructure.config_manager import ConfigManager
 import json
 import time
 

@@ -9,7 +9,7 @@ import time
 from PySide6.QtCore import QThread, Signal
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from path_utils import get_effective_path
+from utils.path_utils import get_effective_path
 
 
 

@@ -111,7 +111,7 @@ class NirPruningService:
 
     def _nir_dt(self, base: str, any_path: str | None) -> datetime:
         """NIR 베이스명에서 datetime 추출 (monitoring_app.py 로직)"""
-        from utils import extract_datetime_from_str
+        from utils.utils import extract_datetime_from_str
         
         dt = extract_datetime_from_str(base, "run_1")
         if isinstance(dt, datetime):

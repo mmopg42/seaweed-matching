@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QFont
 from nir_spectrum_monitor import NIRSpectrumMonitor
-from config_manager import ConfigManager
+from infrastructure.config_manager import ConfigManager
 
 
 def auto_update_date_in_path(path: str) -> tuple:

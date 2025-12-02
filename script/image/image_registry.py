@@ -1,7 +1,7 @@
 # image_registry.py
 
 from collections import defaultdict
-from utils import LruPixmapCache
+from utils.utils import LruPixmapCache
 
 
 class ImageRegistry:

@@ -2,7 +2,7 @@
 import datetime
 from pathlib import Path
 import os
-from utils import extract_datetime_from_composite_cam
+from utils.utils import extract_datetime_from_composite_cam
 
 # 복합카메라 매칭 시간 범위 (초)
 CAM_MATCH_MIN_DIFF = 4.0  # 최소 시간 차이
