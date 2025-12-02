@@ -166,7 +166,7 @@ class PyArrowImpl(BaseImpl):
         )
         import pyarrow.parquet
 
-        # from script import utils to register the pyarrow extension types
+        # from script from script from script import utils to register the pyarrow extension types
         import pandas.core.arrays.arrow.extension_types  # pyright: ignore[reportUnusedImport] # noqa: F401
 
         self.api = pyarrow

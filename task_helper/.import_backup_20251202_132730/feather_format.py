@@ -111,7 +111,7 @@ def read_feather(
     import_optional_dependency("pyarrow")
     from pyarrow import feather
 
-    # from script import utils to register the pyarrow extension types
+    # import utils to register the pyarrow extension types
     import pandas.core.arrays.arrow.extension_types  # pyright: ignore[reportUnusedImport] # noqa: F401
 
     check_dtype_backend(dtype_backend)

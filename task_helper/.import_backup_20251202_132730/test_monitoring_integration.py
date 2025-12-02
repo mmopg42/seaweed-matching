@@ -6,7 +6,7 @@ import pytest
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from PySide6.QtWidgets import QApplication
-from monitoring_app from script from script from script import mainWindow
+from monitoring_app from script from script import mainWindow
 
 # Ensure QApplication is initialized only once
 @pytest.fixture(scope="session")

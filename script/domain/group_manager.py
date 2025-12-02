@@ -68,6 +68,16 @@ class GroupManager:
                            cam_match_min_diff=4.0, cam_match_max_diff=6.0):
         """
         라인별 그룹 생성
+        
+        처리 순서:
+        1. normal 기반 그룹 생성
+        2. cam-only 그룹 생성 (drain_cam_to_groups)
+        3. NIR 부착 및 NIR-only 그룹 생성
+        4. 최종 시간순 정렬 (모든 그룹 타입 포함)
+        
+        Note: 정렬은 모든 그룹 생성 후 한 번만 수행하여
+              normal, cam-only, NIR-only 그룹이 모두
+              시간순으로 정렬되도록 보장합니다.
 
         Args:
             use_cam_time_matching: True이면 시간 기반 매칭, False이면 순차 매칭
@@ -163,10 +173,7 @@ class GroupManager:
         for i, cam_key in enumerate(cam_keys):
             self.drain_cam_to_groups(groups, cam_key, cam_queues[i])
 
-        # --- (E) 시간 정렬 (NIR 부착 전에도 정렬 유지) ---
-        groups.sort(key=lambda x: datetime.datetime.fromisoformat(x["time"]))
-
-        # --- (F) NIR 부착: 가장 가까운 시간의 그룹에 부착 (최대 허용 시간 차이 내) ---
+        # --- (E) NIR 부착: 가장 가까운 시간의 그룹에 부착 (최대 허용 시간 차이 내) ---
         for (t_nir, nir_key_val, nir_files) in available_nirs:
             target_idx = None
             min_diff = None
@@ -198,6 +205,10 @@ class GroupManager:
                 groups.append(nir_only_group)
             else:
                 groups[target_idx]["NIR"] = nir_files
+
+        # --- (F) 최종 시간순 정렬 (모든 그룹 타입 포함) ---
+        # 모든 그룹(normal, cam-only, NIR-only)이 생성된 후 한 번만 정렬
+        groups.sort(key=lambda x: datetime.datetime.fromisoformat(x["time"]))
 
         return groups
 
@@ -356,15 +367,28 @@ class GroupManager:
         """
         cam 큐에 남은 항목을 cam-only 그룹으로 생성.
         한 항목(1장) = 1그룹. 필요 시 정책 변경 가능.
+        
+        타임스탬프 추출 우선순위:
+        1. 파일명에서 추출 (extract_datetime_from_composite_cam)
+        2. 파일 mtime (수정 시간)
+        3. 현재 시간 (fallback)
         """
         # cam_key에 따라 모든 cam 키 결정
         all_cam_keys = ['cam1', 'cam2', 'cam3', 'cam4', 'cam5', 'cam6']
 
         for fname, abspath, mtime, ctime, is_copy in queue:
-            grp_time = (
-                datetime.datetime.fromtimestamp(mtime).isoformat()
-                if mtime else datetime.datetime.now().isoformat()
-            )
+            # 타임스탬프 추출 우선순위: 파일명 → mtime → 현재 시간
+            cam_dt = extract_datetime_from_composite_cam(fname)
+            
+            if cam_dt:
+                grp_time = cam_dt.isoformat()
+            elif mtime:
+                grp_time = datetime.datetime.fromtimestamp(mtime).isoformat()
+            else:
+                # Fallback to current time
+                grp_time = datetime.datetime.now().isoformat()
+                self.log(f"[WARNING] Failed to extract timestamp for {fname}, using current time")
+            
             new_group = {
                 "type": "누락없음",
                 "name": "",

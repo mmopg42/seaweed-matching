@@ -31,7 +31,7 @@ def _pyi_rthook():
 
         if (
             len(sys.argv) >= 2 and sys.argv[-2] == '-c' and sys.argv[-1].startswith(
-                ('from multiprocessing.resource_tracker from script import main', 'from multiprocessing.forkserver from script import main')
+                ('from multiprocessing.resource_tracker from script from script from script import main', 'from multiprocessing.forkserver from script from script from script import main')
             ) and set(sys.argv[1:-2]) == set(_args_from_interpreter_flags())
         ):
             exec(sys.argv[-1])

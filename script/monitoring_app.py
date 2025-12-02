@@ -16,11 +16,16 @@ from PySide6.QtCore import Qt, QTimer, QByteArray, QPoint, QRect
 from PySide6.QtGui import QPixmap, QPainter, QColor
 
 from infrastructure.config_manager import ConfigManager
-from ui.components.ui_components import SettingDialog, MonitorRow, FlowLayout_
-from file_matcher import Communicate, FileMatcher, FileMatcherWorker
-from group_manager import GroupManager
-from file_operations import FileOperationWorker
+
+
+from domain.file_matcher import Communicate, FileMatcher, FileMatcherWorker
+from domain.group_manager import GroupManager
+from domain.file_operations import FileOperationWorker
+from domain.group_state_manager import GroupStateManager
+
 from utils.utils import extract_datetime_from_str, LruPixmapCache, normalize_path, get_image_dimensions
+
+from ui.components.ui_components import SettingDialog, MonitorRow, FlowLayout_
 from ui.dialogs.preview_dialog import PreviewDialog
 from ui.panels.log_panel import LogPanel
 from delete_manager import (
@@ -36,7 +41,6 @@ from utils.path_utils import get_normal_thumbnail_path, extract_date_from_paths,
 from image.image_registry import ImageRegistry
 from image.image_manager import ImageManager
 from ui.utils.window_state_manager import WindowStateManager
-from group_state_manager import GroupStateManager
 
 from ui.drag_select_widget import DragSelectWidget
 from services.nir_pruning_service import NirPruningService
@@ -1700,11 +1704,12 @@ class MainWindow(QMainWindow):
                 self.image_registry.register_widget(cam_widget, thumbnail_path)
                 cam_widget.set_image(pixmap, thumbnail_path)
 
-                # ✅ Phase 5: 이상치 판정
-                is_abnormal = self.abnormal_detector.is_image_abnormal(thumbnail_path)
+                # ✅ Phase 5: 이상치 판정 (z-score 기반)
+                dims = get_image_dimensions(thumbnail_path)
+                is_abnormal = self.abnormal_detector.add_and_check_image(dims[0], dims[1]) if dims else False
                 
                 # ✅ [NEW] 이미지 크기 표시 (10으로 나눈 값)
-                dims = get_image_dimensions(thumbnail_path)
+
                 dim_text = f"\n{dims[0]//10}x{dims[1]//10}" if dims else ""
             else:
                 # 썸네일 없으면 기존 방식: 첫 번째 파일의 이미지 표시
@@ -1720,6 +1725,7 @@ class MainWindow(QMainWindow):
                     # ✅ [NEW] 이미지 크기 표시 (10으로 나눈 값)
                     dims = get_image_dimensions(path)
                     dim_text = f"\n{dims[0]//10}x{dims[1]//10}" if dims else ""
+                    is_abnormal = self.abnormal_detector.add_and_check_image(dims[0], dims[1]) if dims else False
                 else:
                     self.image_registry.unregister_widget(cam_widget) # 경로 없음
                     cam_widget.img_label.clear()

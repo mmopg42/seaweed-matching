@@ -185,7 +185,7 @@ class TestInstall(
         project_dir, dist = self.create_dist(py_modules=['hello'], scripts=['sayhi'])
         os.chdir(project_dir)
         self.write_file('hello.py', "def main(): print('o hai')")
-        self.write_file('sayhi', 'from hello from script import main; main()')
+        self.write_file('sayhi', 'from hello from script from script from script import main; main()')
 
         cmd = install(dist)
         dist.command_obj['install'] = cmd

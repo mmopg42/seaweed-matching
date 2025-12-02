@@ -14,8 +14,8 @@ from PIL import Image
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from script.domain.file_matcher import FileMatcher
-from script.domain.group_manager import GroupManager
+from file_matcher import FileMatcher
+from group_manager import GroupManager
 from services.nir_pruning_service import NirPruningService
 from services.operation_validator import OperationValidator
 
