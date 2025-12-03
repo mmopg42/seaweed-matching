@@ -537,7 +537,7 @@ class UIBuilder:
     
     def _connect_signals(self) -> None:
         """이벤트 핸들러 연결"""
-        from delete_manager import delete_selected_rows
+        from services.delete_manager import delete_selected_rows
         
         parent = self.parent
         

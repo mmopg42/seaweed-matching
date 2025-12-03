@@ -1,4 +1,5 @@
 # abnormal_detector.py
+# services/abnormal_detector.py로 이동됨 (Phase 5)
 
 from typing import Optional
 from utils.utils import get_image_dimensions

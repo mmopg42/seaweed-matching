@@ -20,23 +20,23 @@ from infrastructure.config_manager import ConfigManager
 
 from domain.file_matcher import Communicate, FileMatcher, FileMatcherWorker
 from domain.group_manager import GroupManager
-from domain.file_operations import FileOperationWorker
 from domain.group_state_manager import GroupStateManager
+from services.file_operations import FileOperationWorker
 
 from utils.utils import extract_datetime_from_str, LruPixmapCache, normalize_path, get_image_dimensions
 
 from ui.components.ui_components import SettingDialog, MonitorRow, FlowLayout_
 from ui.dialogs.preview_dialog import PreviewDialog
 from ui.panels.log_panel import LogPanel
-from delete_manager import (
+from services.delete_manager import (
     delete_selected_rows, set_select_all, delete_one_row,
     move_to_delete_bucket, ensure_watching_off, ensure_delete_folder
 )
 from image.image_loader import ImageLoaderWorker, prefetch_images
-from file_count_worker import FileCountWorker
+from services.file_count_worker import FileCountWorker
 
-from statistics_calculator import StatisticsCalculator
-from abnormal_detector import AbnormalDetector
+from services.statistics_calculator import StatisticsCalculator
+from services.abnormal_detector import AbnormalDetector
 from utils.path_utils import get_normal_thumbnail_path, extract_date_from_paths, auto_update_paths_with_date
 from image.image_registry import ImageRegistry
 from image.image_manager import ImageManager

@@ -7,7 +7,7 @@ monitoring_app.py의 prune_nir_files_before_op() 로직을 서비스로 분리
 import os
 from pathlib import Path
 from datetime import datetime
-from delete_manager import move_to_delete_bucket, ensure_watching_off, ensure_delete_folder
+from .delete_manager import move_to_delete_bucket, ensure_watching_off, ensure_delete_folder
 
 
 class NirPruningService:
