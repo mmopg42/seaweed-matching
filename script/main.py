@@ -10,11 +10,13 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QGroupBox
 )
 from PySide6.QtCore import Qt
-from debug import setup_crash_logger
+from debug import setup_crash_logger, setup_signal_handlers
 
 log_file = setup_crash_logger(log_dir="logs", app_name="monitoring")
-print(f"📝 Crash log: {log_file}")
+setup_signal_handlers()
+
 logging.info("="*80)
+logging.info(f"📝 Crash log: {log_file}")
 logging.info("🚀 애플리케이션 시작")
 logging.info("="*80)
 

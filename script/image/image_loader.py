@@ -167,10 +167,10 @@ class ImageLoaderWorker(QThread):
         # ✅ Phase 1: I/O bound 최적화 - 워커 수 증가
         if max_workers is None:
             cpu_count = os.cpu_count() or 4
-            # I/O bound 작업: CPU 코어의 2배
-            # 최소 16개, 최대 32개
-            self.max_workers = min(32, max(16, cpu_count * 2))
-            print(f"[IMAGE_LOADER] 워커 수 (I/O 최적화): {self.max_workers}개 (CPU 코어: {cpu_count}개)")
+            # I/O bound 작업: CPU 코어 수와 동일
+            # 최소 4개, 최대 16개 (메모리 부족 방지)
+            self.max_workers = min(16, max(4, cpu_count))
+            print(f"[IMAGE_LOADER] 워커 수 (메모리 최적화): {self.max_workers}개 (CPU 코어: {cpu_count}개)")
         else:
             self.max_workers = max_workers
             print(f"[IMAGE_LOADER] 워커 수: {self.max_workers}개")
@@ -600,10 +600,10 @@ class ImageLoaderWorker(QThread):
         # ✅ Phase 1: I/O bound 최적화 - 워커 수 증가
         if max_workers is None:
             cpu_count = os.cpu_count() or 4
-            # I/O bound 작업: CPU 코어의 2배
-            # 최소 16개, 최대 32개
-            self.max_workers = min(32, max(16, cpu_count * 2))
-            print(f"[IMAGE_LOADER] 워커 수 (I/O 최적화): {self.max_workers}개 (CPU 코어: {cpu_count}개)")
+            # I/O bound 작업: CPU 코어 수와 동일
+            # 최소 4개, 최대 16개 (메모리 부족 방지)
+            self.max_workers = min(16, max(4, cpu_count))
+            print(f"[IMAGE_LOADER] 워커 수 (메모리 최적화): {self.max_workers}개 (CPU 코어: {cpu_count}개)")
         else:
             self.max_workers = max_workers
             print(f"[IMAGE_LOADER] 워커 수: {self.max_workers}개")

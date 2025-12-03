@@ -6,6 +6,7 @@ from pathlib import Path
 import json
 import hashlib
 import time
+import logging
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -16,6 +17,9 @@ from PySide6.QtCore import Qt, QTimer, QByteArray, QPoint, QRect
 from PySide6.QtGui import QPixmap, QPainter, QColor
 
 from infrastructure.config_manager import ConfigManager
+
+# 로거 초기화
+logger = logging.getLogger(__name__)
 
 
 from domain.file_matcher import Communicate, FileMatcher, FileMatcherWorker
@@ -50,6 +54,7 @@ from services.statistics_presenter import StatisticsPresenter
 from infrastructure.watchdog_manager import WatchdogManager
 from services.monitoring_orchestrator import MonitoringOrchestrator
 from ui.utils.tooltips import set_tooltip_enabled
+from debug import Heartbeat, MemoryMonitor
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -58,6 +63,10 @@ class MainWindow(QMainWindow):
         self.window_state_manager = WindowStateManager()
         self.abnormal_detector = AbnormalDetector()
         self.statistics_calculator = StatisticsCalculator()
+        
+        # ✅ 디버그 모니터링
+        self.heartbeat = Heartbeat(interval_sec=30)  # 30초마다 상태 로깅
+        self.memory_monitor = MemoryMonitor(interval_sec=60, threshold_percent=80)  # 1분마다 메모리 체크
         self.settings = self.config_manager.load()
         self.group_manager = GroupManager(log_emitter_func=self.log_to_box)
         self.file_matcher = FileMatcher()
@@ -2599,26 +2608,35 @@ class MainWindow(QMainWindow):
             self.log_to_box(f"❌ '{filename}' 저장 실패: {e}")
 
     def closeEvent(self, event):
-        print("[MAIN] 프로그램 종료 요청 받음", flush=True)
+        logger.info("[MAIN] 프로그램 종료 요청 받음")
         self.log_to_box("[INFO] 프로그램 종료 중...")
+        
+        # ✅ 디버그 모니터 종료
+        if hasattr(self, 'heartbeat'):
+            self.heartbeat.stop()
+        if hasattr(self, 'memory_monitor'):
+            stats = self.memory_monitor.get_stats()
+            logger.info(f"💾 최종 메모리: {stats['current_mb']:.1f} MB (Peak: {stats['peak_mb']:.1f} MB)")
+            self.memory_monitor.stop()
+        
         self.watchdog_manager.stop_watchdog()
         # ✅ 파일 카운트 워커 종료
         if hasattr(self, 'file_count_worker'):
             self.file_count_worker.stop()
-            print("[MAIN] 파일 카운트 워커 종료", flush=True)
+            logger.info("[MAIN] 파일 카운트 워커 종료")
         # ✅ 파일 매칭 워커 종료
         if hasattr(self, 'file_matcher_worker'):
             self.file_matcher_worker.stop()
-            print("[MAIN] 파일 매칭 워커 종료", flush=True)
+            logger.info("[MAIN] 파일 매칭 워커 종료")
         # ✅ 이미지 로더 워커 종료
         if hasattr(self, 'image_loader'):
             self.image_loader.stop()
             self.image_loader.wait(2000)  # 최대 2초 대기
-            print("[MAIN] 이미지 로더 워커 종료", flush=True)
+            logger.info("[MAIN] 이미지 로더 워커 종료")
         self.save_window_bounds()
         if self.is_watching:
             self.save_current_state()
-        print("[MAIN] 정리 완료", flush=True)
+        logger.info("[MAIN] 정리 완료")
         super().closeEvent(event)
 
     def _on_loading_progress(self, loaded: int, total: int):
