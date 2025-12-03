@@ -17,6 +17,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QFont
 from apps.nir_spectrum_monitor import NIRSpectrumMonitor
 from infrastructure.config_manager import ConfigManager
+from infrastructure.nir_status_monitor import NIRStatusManager
 
 
 def auto_update_date_in_path(path: str) -> tuple:
@@ -109,7 +110,16 @@ class NIRMonitorApp(QMainWindow):
         )
         self.settings = self.config_manager.load()
 
+        # NIR 상태 관리자
+        self.status_manager = NIRStatusManager()
+        self.processed_file_count = 0
+
         self.monitor_thread = None
+        
+        # 상태 업데이트 타이머 (2초마다 상태 파일 갱신)
+        self.status_update_timer = QTimer(self)
+        self.status_update_timer.timeout.connect(self.update_status_file)
+        
         self.init_ui()
         self.load_settings_to_ui()
 
@@ -376,6 +386,18 @@ class NIRMonitorApp(QMainWindow):
         self.status_label.setText("상태: 실행 중")
         self.status_label.setStyleSheet("color: green; font-weight: bold; font-size: 14px;")
         self.log("모니터링이 시작되었습니다.")
+        
+        # 상태 파일 기록
+        self.processed_file_count = 0
+        self.status_manager.write_status(
+            is_running=True,
+            monitor_path=monitor_path,
+            move_path=move_path,
+            file_count=0
+        )
+        
+        # 상태 업데이트 타이머 시작 (2초마다)
+        self.status_update_timer.start(2000)
 
     def stop_monitoring(self):
         """모니터링 중지"""
@@ -395,7 +417,24 @@ class NIRMonitorApp(QMainWindow):
         self.status_label.setText("상태: 중지됨")
         self.status_label.setStyleSheet("color: gray; font-weight: bold; font-size: 14px;")
         self.log("모니터링이 중지되었습니다.")
+        
+        # 상태 업데이트 타이머 중지
+        self.status_update_timer.stop()
+        
+        # 상태 파일 기록
+        self.status_manager.write_status(is_running=False)
 
+    def update_status_file(self):
+        """상태 파일 주기적 업데이트 (타이머 콜백)"""
+        if hasattr(self, 'monitor_thread') and self.monitor_thread and self.monitor_thread.running:
+            self.status_manager.write_status(
+                is_running=True,
+                monitor_path=self.monitor_path_edit.text().strip(),
+                move_path=self.move_path_edit.text().strip(),
+                last_file="",
+                file_count=self.processed_file_count
+            )
+    
     def log(self, message):
         """로그 추가"""
         self.log_text.append(message)
@@ -403,16 +442,44 @@ class NIRMonitorApp(QMainWindow):
         cursor = self.log_text.textCursor()
         cursor.movePosition(cursor.MoveOperation.End)
         self.log_text.setTextCursor(cursor)
+        
+        # 파일 처리 로그 시 카운트 증가 및 상태 업데이트
+        if "처리 완료" in message or "이동됨" in message:
+            self.processed_file_count += 1
+            if hasattr(self, 'monitor_thread') and self.monitor_thread and self.monitor_thread.running:
+                # 마지막 파일명 추출
+                last_file = ""
+                if "→" in message:
+                    parts = message.split("→")
+                    if len(parts) > 0:
+                        last_file = parts[0].strip().split()[-1]
+                
+                self.status_manager.write_status(
+                    is_running=True,
+                    monitor_path=self.monitor_path_edit.text().strip(),
+                    move_path=self.move_path_edit.text().strip(),
+                    last_file=last_file,
+                    file_count=self.processed_file_count
+                )
 
     # === 프로그램 종료 ===
 
     def closeEvent(self, event):
         """프로그램 종료 시 모니터링 중지"""
+        # 상태 업데이트 타이머 중지
+        if hasattr(self, 'status_update_timer'):
+            self.status_update_timer.stop()
+        
         if self.monitor_thread and self.monitor_thread.running:
             self.monitor_thread.stop()
             self.monitor_thread.wait(2000)
             if self.monitor_thread.isRunning():
                 self.monitor_thread.terminate()
+        
+        # 상태 파일 정리
+        self.status_manager.clear_status()
+        super().closeEvent(event)
+        
         event.accept()
 
 

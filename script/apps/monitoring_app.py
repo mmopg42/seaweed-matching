@@ -32,6 +32,7 @@ from utils.utils import extract_datetime_from_str, LruPixmapCache, normalize_pat
 from ui.components.ui_components import SettingDialog, MonitorRow, FlowLayout_
 from ui.dialogs.preview_dialog import PreviewDialog
 from ui.panels.log_panel import LogPanel
+from ui.components.nir_status_widget import NIRStatusWidget
 from services.delete_manager import (
     delete_selected_rows, set_select_all, delete_one_row,
     move_to_delete_bucket, ensure_watching_off, ensure_delete_folder
@@ -115,6 +116,9 @@ class MainWindow(QMainWindow):
         
         # ✅ NirPruningService 초기화
         self.nir_pruning_service = NirPruningService(self.file_matcher, log_callback=self.log_to_box)
+
+        
+        self.nir_status_widget = NIRStatusWidget(self, update_interval_ms=2000)
         
         # ✅ OperationValidator 초기화
         self.operation_validator = OperationValidator(
@@ -418,6 +422,9 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(self.stats_container)
         # === 통계 바 끝 ===
+
+        # === NIR 모니터링 상태 위젯 ===
+        main_layout.addWidget(self.nir_status_widget)
 
         # === 탭 위젯 추가 ===
         self.tab_widget = QTabWidget()
@@ -2672,6 +2679,10 @@ class MainWindow(QMainWindow):
             self.image_loader.stop()
             self.image_loader.wait(2000)  # 최대 2초 대기
             logger.info("[MAIN] 이미지 로더 워커 종료")
+        # ✅ NIR 상태 위젯 타이머 종료
+        if hasattr(self, 'nir_status_widget'):
+            self.nir_status_widget.stop_timer()
+            logger.info("[MAIN] NIR 상태 위젯 타이머 종료")
         self.save_window_bounds()
         if self.is_watching:
             self.save_current_state()
