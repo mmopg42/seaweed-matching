@@ -12,14 +12,14 @@ from PySide6.QtCore import QTimer, QObject
 class Heartbeat(QObject):
     """주기적 상태 로깅"""
     
-    def __init__(self, interval_ms=60000, parent=None):
+    def __init__(self, interval_sec=60, parent=None):
         """
         Args:
-            interval_ms: Heartbeat 간격 (밀리초, 기본 60초)
+            interval_sec: Heartbeat 간격 (초, 기본 60초)
             parent: Qt 부모 객체
         """
         super().__init__(parent)
-        self.interval_ms = interval_ms
+        self.interval_ms = int(interval_sec * 1000)  # 초를 밀리초로 변환
         self.beat_count = 0
         
         # 상태 수집 콜백들
@@ -29,7 +29,7 @@ class Heartbeat(QObject):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._beat)
         
-        logging.info(f"💓 Heartbeat 초기화: {interval_ms}ms 간격")
+        logging.info(f"💓 Heartbeat 초기화: {interval_sec}초 ({self.interval_ms}ms) 간격")
     
     def start(self):
         """Heartbeat 시작"""
