@@ -118,7 +118,7 @@ class MonitorController(QMainWindow):
 
         try:
             # monitoring_app의 MainWindow를 직접 import하여 실행
-            from monitoring_app import MainWindow
+            from apps.monitoring_app import MainWindow
 
             self.main_window = MainWindow()
             # destroyed 대신 closed 시그널을 사용 (closeEvent 후 발생)
@@ -169,7 +169,7 @@ class MonitorController(QMainWindow):
 
         try:
             # nir_app의 NIRMonitorApp을 직접 import하여 실행
-            from nir_app import NIRMonitorApp
+            from apps.nir_app import NIRMonitorApp
 
             self.nir_window = NIRMonitorApp()
             # destroyed 대신 closeEvent를 오버라이드

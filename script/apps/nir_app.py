@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QFont
-from nir_spectrum_monitor import NIRSpectrumMonitor
+from apps.nir_spectrum_monitor import NIRSpectrumMonitor
 from infrastructure.config_manager import ConfigManager
 
 
