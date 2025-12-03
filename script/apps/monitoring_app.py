@@ -572,6 +572,11 @@ class MainWindow(QMainWindow):
         Args:
             unmatched: scan_and_build_unmatched()의 결과
         """
+        # ✅ Stop 상태면 스캔 결과 무시
+        if not self.is_watching:
+            self.log_to_box("[DEBUG] Stop 상태이므로 스캔 결과를 무시합니다.")
+            return
+        
         try:
             # unmatched 데이터 업데이트
             self.file_matcher.unmatched_files = unmatched
@@ -1214,7 +1219,7 @@ class MainWindow(QMainWindow):
         # ✅ 이동 작업 중이면 차단
         if getattr(self, 'is_file_operation_running', False):
             self.log_to_box("⚠️ 이동 작업이 진행 중입니다. 완료 후 다시 시도하세요.")
-            QMessageBox.warning(self, "작업 진행 중", "이동/복사 작업이 진행 중입니다.\\n작업 완료 후 다시 시도하세요.")
+            QMessageBox.warning(self, "작업 진행 중", "이동/복사 작업이 진행 중입니다.\n작업 완료 후 다시 시도하세요.")
             return
         if self.is_watching:
             return  # 이미 감시 중이면 무시
@@ -1264,13 +1269,23 @@ class MainWindow(QMainWindow):
         self.is_watching = False
         self.btn_run.setEnabled(True)
         self.btn_stop.setEnabled(False)
-        self.log_to_box("[INFO] 감시가 중지되었습니다.")
+        # ✅ 모든 타이머 중지
+        self.update_timer.stop()
+        self.watchdog_monitor_timer.stop()
         
         # WatchdogManager로 감시 중지
         self.watchdog_manager.stop_watchdog()
-        self.watchdog_monitor_timer.stop()
+        
         # ✅ 파일 매칭 워커 비활성화
         self.file_matcher_worker.disable()
+        
+        # ✅ 이벤트 큐 비우기
+        cleared_count = len(self.event_queue)
+        self.event_queue.clear()
+        
+        self.log_to_box("[INFO] 감시가 중지되었습니다.")
+        if cleared_count > 0:
+            self.log_to_box(f"[DEBUG] 처리되지 않은 이벤트 {cleared_count}개 제거됨")
 
     def toggle_watch(self):
         """하위 호환성을 위해 남겨둔 메서드 (내부에서 사용)"""
@@ -1638,6 +1653,10 @@ class MainWindow(QMainWindow):
         self.file_matcher_worker.trigger_scan()
     
     def process_event_queue(self):
+        # ✅ Stop 상태면 처리하지 않음
+        if not self.is_watching:
+            return
+        
         if hasattr(self, 'is_processing_delete') and self.is_processing_delete:
             return
         if not self.event_queue:
