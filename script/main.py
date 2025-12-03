@@ -23,7 +23,7 @@ logging.info("="*80)
 class MonitorController(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AI 데이터 퓨전 및 통합 관제 솔루션 (Model 이비기술-MMS ver0.6.2)")
+        self.setWindowTitle("AI 데이터 퓨전 및 통합 관제 솔루션 (Model 이비기술-MMS ver0.7)")
         self.setGeometry(100, 100, 600, 300)
 
         # 창 참조
