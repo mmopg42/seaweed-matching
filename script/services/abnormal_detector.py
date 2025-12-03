@@ -28,7 +28,7 @@ class AbnormalDetector:
         self.width_buffer = []
         self.height_buffer = []
     
-    def add_and_check_image(self, width: int, height: int) -> bool:
+    def add_and_check_image(self, width: int, height: int) -> tuple[bool, Optional[float], Optional[float]]:
         """
         이미지 크기를 버퍼에 추가하고 이상치 여부 판정
         
@@ -37,14 +37,17 @@ class AbnormalDetector:
             height: 이미지 세로 크기 (픽셀)
         
         Returns:
-            bool: True (이상치), False (정상 또는 판정 보류)
+            tuple: (is_abnormal, z_width, z_height)
+                - is_abnormal: True (이상치), False (정상 또는 판정 보류)
+                - z_width: 가로 z-score (None이면 판정 보류)
+                - z_height: 세로 z-score (None이면 판정 보류)
         """
         # 최소 샘플 수 미만이면 판정 보류 (현재 값 추가 전에 체크)
         if len(self.width_buffer) < self.min_samples:
             # 버퍼에 추가만 하고 판정은 보류
             self.width_buffer.append(width)
             self.height_buffer.append(height)
-            return False
+            return False, None, None
         
         # 이전 데이터를 기준으로 z-score 계산 (현재 값 제외)
         z_width = self._calculate_z_score(width, self.width_buffer)
@@ -59,7 +62,7 @@ class AbnormalDetector:
             if len(self.width_buffer) > self.window_size:
                 self.width_buffer.pop(0)
                 self.height_buffer.pop(0)
-            return False
+            return False, None, None
         
         # 이상치 여부 판정
         is_abnormal = abs(z_width) > self.threshold or abs(z_height) > self.threshold
@@ -73,7 +76,8 @@ class AbnormalDetector:
             self.width_buffer.pop(0)
             self.height_buffer.pop(0)
         
-        return is_abnormal
+        return is_abnormal, z_width, z_height
+
     
     def _calculate_z_score(self, value: float, values_list: list) -> Optional[float]:
         """

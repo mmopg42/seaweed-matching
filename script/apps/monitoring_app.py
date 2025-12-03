@@ -1715,11 +1715,19 @@ class MainWindow(QMainWindow):
 
                 # ✅ Phase 5: 이상치 판정 (z-score 기반)
                 dims = get_image_dimensions(thumbnail_path)
-                is_abnormal = self.abnormal_detector.add_and_check_image(dims[0], dims[1]) if dims else False
+                if dims:
+                    is_abnormal, z_w, z_h = self.abnormal_detector.add_and_check_image(dims[0], dims[1])
+                else:
+                    is_abnormal, z_w, z_h = False, None, None
+
                 
                 # ✅ [NEW] 이미지 크기 표시 (10으로 나눈 값)
 
-                dim_text = f"\n{dims[0]//10}x{dims[1]//10}" if dims else ""
+                if dims:
+                    z_text = f" (z:{z_w:.1f},{z_h:.1f})" if z_w is not None else ""
+                    dim_text = f"\n{dims[0]//10}x{dims[1]//10}{z_text}"
+                else:
+                    dim_text = ""
             else:
                 # 썸네일 없으면 기존 방식: 첫 번째 파일의 이미지 표시
                 f_info = camera_files[0]
@@ -1733,8 +1741,14 @@ class MainWindow(QMainWindow):
                     
                     # ✅ [NEW] 이미지 크기 표시 (10으로 나눈 값)
                     dims = get_image_dimensions(path)
-                    dim_text = f"\n{dims[0]//10}x{dims[1]//10}" if dims else ""
-                    is_abnormal = self.abnormal_detector.add_and_check_image(dims[0], dims[1]) if dims else False
+
+                    if dims:
+                        is_abnormal, z_w, z_h = self.abnormal_detector.add_and_check_image(dims[0], dims[1])
+                        z_text = f" (z:{z_w:.1f},{z_h:.1f})" if z_w is not None else ""
+                        dim_text = f"\n{dims[0]//10}x{dims[1]//10}{z_text}"
+                    else:
+                        is_abnormal, z_w, z_h = False, None, None
+                        dim_text = ""
                 else:
                     self.image_registry.unregister_widget(cam_widget) # 경로 없음
                     cam_widget.img_label.clear()
