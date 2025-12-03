@@ -1259,6 +1259,9 @@ class MainWindow(QMainWindow):
         # ✅ 백그라운드 파일 매칭 워커 활성화
         self.file_matcher_worker.enable()
         
+        # ✅ FileMatcher 활성화 (로그 발생 허용)
+        self.file_matcher.is_enabled = True
+        
         # UI 업데이트
         self.update_monitoring_view(update_ui=False)
 
@@ -1278,6 +1281,9 @@ class MainWindow(QMainWindow):
         
         # ✅ 파일 매칭 워커 비활성화
         self.file_matcher_worker.disable()
+        
+        # ✅ FileMatcher 비활성화 (로그 발생 차단)
+        self.file_matcher.is_enabled = False
         
         # ✅ 이벤트 큐 비우기
         cleared_count = len(self.event_queue)

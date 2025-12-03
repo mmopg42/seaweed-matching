@@ -86,6 +86,7 @@ class FileMatcher(QObject):
 
     def __init__(self):
         super().__init__()
+        self.is_enabled = True  # 기본적으로 활성화
         self.reset_state()
 
     def reset_state(self):
@@ -99,6 +100,10 @@ class FileMatcher(QObject):
         self.log_signal.emit("♻️ 이전 상태를 복원했습니다.")
 
     def add_or_update_file(self, file_path, folder_type):
+        # ✅ 비활성화 상태면 처리하지 않음 (Stop 시)
+        if not self.is_enabled:
+            return
+        
         # ✅ folder_type 키가 없으면 생성 (KeyError 방지)
         self.unmatched_files.setdefault(folder_type, {})
 
@@ -131,6 +136,10 @@ class FileMatcher(QObject):
 
 
     def remove_from_unmatched(self, file_path, folder_type):
+        # ✅ 비활성화 상태면 처리하지 않음 (Stop 시)
+        if not self.is_enabled:
+            return
+        
         basename = os.path.basename(file_path)
 
         if folder_type in ("normal", "normal2"):
