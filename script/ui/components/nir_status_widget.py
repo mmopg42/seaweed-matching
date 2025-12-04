@@ -130,3 +130,4 @@ class NIRStatusWidget(QFrame):
             self.timer.start(self.update_interval)
             self.update_status()
 
+

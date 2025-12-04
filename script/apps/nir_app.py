@@ -315,6 +315,9 @@ class NIRMonitorApp(QMainWindow):
             self.log("❌ 폴더 경로가 비어있습니다.")
             return
 
+        # OS에 맞게 경로 정규화
+        path = os.path.normpath(path)
+
         if not os.path.isdir(path):
             self.log(f"❌ 폴더가 존재하지 않습니다: {path}")
             return

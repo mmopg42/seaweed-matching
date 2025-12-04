@@ -62,7 +62,8 @@ class ConfigManager:
         설정 파일이 저장된 폴더를 시스템 파일 탐색기에서 엽니다.
         윈도우, macOS, 리눅스를 모두 지원합니다.
         """
-        path = self.app_dir
+        # OS에 맞게 경로 정규화
+        path = os.path.normpath(self.app_dir)
         try:
             if sys.platform == "win32":
                 os.startfile(path)
@@ -76,9 +77,11 @@ class ConfigManager:
 
     def open_folder(self, path):
         """
-        설정 파일이 저장된 폴더를 시스템 파일 탐색기에서 엽니다.
+        지정된 폴더를 시스템 파일 탐색기에서 엽니다.
         윈도우, macOS, 리눅스를 모두 지원합니다.
         """
+        # OS에 맞게 경로 정규화
+        path = os.path.normpath(path)
         try:
             if sys.platform == "win32":
                 os.startfile(path)
@@ -87,7 +90,7 @@ class ConfigManager:
             else: # Linux
                 subprocess.run(["xdg-open", path])
         except Exception as e:
-            print(f"[ERROR] 설정 폴더를 여는 데 실패했습니다: {e}")
+            print(f"[ERROR] 폴더를 여는 데 실패했습니다: {e}")
 
     def get_daily_log_dir(self, date_str: str) -> str:
         """오늘 일자 폴더 경로 반환"""

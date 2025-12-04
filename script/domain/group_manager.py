@@ -170,6 +170,7 @@ class GroupManager:
             })
 
         # --- (D) 남은 cam 큐를 cam-only 그룹으로 소진 ---
+        # cam-only 그룹은 여기서 groups 리스트에 추가되지만 아직 정렬되지 않음
         for i, cam_key in enumerate(cam_keys):
             self.drain_cam_to_groups(groups, cam_key, cam_queues[i])
 
@@ -192,6 +193,7 @@ class GroupManager:
 
             if target_idx is None:
                 # 붙일 곳이 없다면 NIR-only 그룹 생성
+                # NIR-only 그룹도 groups 리스트에 추가되지만 아직 정렬되지 않음
                 nir_only_group = {
                     "type": "누락없음",
                     "name": "",
@@ -207,7 +209,9 @@ class GroupManager:
                 groups[target_idx]["NIR"] = nir_files
 
         # --- (F) 최종 시간순 정렬 (모든 그룹 타입 포함) ---
-        # 모든 그룹(normal, cam-only, NIR-only)이 생성된 후 한 번만 정렬
+        # 중요: 정렬은 모든 그룹(normal, cam-only, NIR-only)이 생성된 후 한 번만 수행
+        # 이렇게 하면 cam-only와 NIR-only 그룹이 리스트 끝에 추가되지 않고
+        # 타임스탬프에 따라 올바른 시간순 위치에 배치됨
         groups.sort(key=lambda x: datetime.datetime.fromisoformat(x["time"]))
 
         return groups
@@ -370,8 +374,27 @@ class GroupManager:
         
         타임스탬프 추출 우선순위:
         1. 파일명에서 추출 (extract_datetime_from_composite_cam)
+           - 파일명이 YYYYMMDD_HHMMSS 형식을 포함하는 경우
+           - 가장 정확한 촬영 시간 정보
+        
         2. 파일 mtime (수정 시간)
+           - 파일명에서 추출 실패 시 사용
+           - 파일 시스템 메타데이터 기반
+           - 파일 복사/이동 시 변경될 수 있음
+        
         3. 현재 시간 (fallback)
+           - 위 두 방법 모두 실패 시 최후 수단
+           - 경고 로그 출력: "[WARNING] Failed to extract timestamp for {filename}"
+           - 정렬 시 리스트 끝에 배치됨
+        
+        Args:
+            groups (list): 그룹 리스트 (cam-only 그룹이 추가됨)
+            cam_key (str): 카메라 키 (cam1, cam2, cam3, cam4, cam5, cam6)
+            queue (list): [(filename, abspath, mtime, ctime, is_copy), ...] 형식의 큐
+        
+        Note:
+            - 생성된 cam-only 그룹은 groups 리스트에 추가되지만 정렬되지 않음
+            - 정렬은 _build_line_groups() 마지막에 한 번만 수행됨
         """
         # cam_key에 따라 모든 cam 키 결정
         all_cam_keys = ['cam1', 'cam2', 'cam3', 'cam4', 'cam5', 'cam6']

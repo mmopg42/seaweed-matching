@@ -884,7 +884,14 @@ class MainWindow(QMainWindow):
 
     def open_output_folder_clicked(self):
         path = self.settings.get("output", "")
-        if not path or not os.path.isdir(path):
+        if not path:
+            QMessageBox.warning(self, "경고", "이동 대상 폴더 경로가 비었습니다 또는 존재하지 않습니다.")
+            return
+        
+        # OS에 맞게 경로 정규화
+        path = os.path.normpath(path)
+        
+        if not os.path.isdir(path):
             QMessageBox.warning(self, "경고", "이동 대상 폴더 경로가 비었습니다 또는 존재하지 않습니다.")
             return
         self.config_manager.open_folder(path)

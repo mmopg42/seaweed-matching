@@ -473,6 +473,9 @@ class SettingDialog(QDialog):
             QMessageBox.warning(self, "경고", "폴더 경로가 비어있습니다.")
             return
 
+        # OS에 맞게 경로 정규화
+        folder_path = os.path.normpath(folder_path)
+
         if not os.path.exists(folder_path):
             QMessageBox.warning(self, "경고", f"폴더가 존재하지 않습니다:\n{folder_path}")
             return
