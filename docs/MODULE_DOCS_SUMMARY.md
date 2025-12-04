@@ -68,9 +68,14 @@
 
 ### 그룹 및 상태 관리
 
-**[group_manager.md](group_manager.md)** - 그룹 생성 로직
+**[group_manager.md](group_manager.md)** - 그룹 생성 로직 (286줄)
 - NIR 매칭 (타임스탬프 ±10초)
 - 복합 카메라 매칭 (±3초)
+- 시간순 정렬 (normal, cam-only, NIR-only 통합)
+- 타임스탬프 추출 우선순위: 파일명 → mtime → fallback
+- 모든 그룹 타입 생성 후 최종 정렬 수행
+- 성능: 1000개 그룹 정렬 < 100ms (실측 ~0.5ms)
+- 테스트: test_group_sorting_unit.py (8개 단위 테스트), test_group_sorting_properties.py (7개 속성 테스트, 100회 반복), test_drain_cam_timestamp_handling.py
 
 **[group_state_manager.md](group_state_manager.md)** - 그룹 상태 영속성 (149줄)
 - groups.json 저장/로드

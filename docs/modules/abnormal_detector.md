@@ -3,9 +3,32 @@
 ## 개요
 통계적 z-score 기반 이상치 감지 모듈입니다. 슬라이딩 윈도우 방식으로 최근 데이터의 분포를 분석하여 이상치 여부를 판정합니다.
 
-**파일 크기**: 4.8KB (148 라인)  
-**총 클래스**: 1개  
-**총 메서드**: 4개
+**파일 경로**: `script/services/abnormal_detector.py`  
+**파일 크기**: 약 160 라인  
+**총 클래스**: 1개 (`AbnormalDetector`)  
+**총 메서드**: 5개  
+**업데이트**: 2025-12-04
+
+---
+
+## 🔥 중요: API 변경 (Breaking Change) - 2025-12-03
+
+### Before (2025-12-02 이전)
+```python
+is_abnormal = detector.add_and_check_image(width, height)
+# Returns: bool
+```
+
+### After (2025-12-03)
+```python
+is_abnormal, z_w, z_h = detector.add_and_check_image(width, height)
+# Returns: tuple[bool, Optional[float], Optional[float]]
+```
+
+**주요 변경사항:**
+- **반환값 확장**: `bool` → `(is_abnormal, z_width, z_height)` 튜플
+- **z-score 반환**: UI에서 z-score 표시 가능 (예: `(z:0.5,0.3)`)
+- **None 반환**: 판정 보류 시 z-score는 None
 
 ---
 
@@ -25,33 +48,42 @@ AbnormalDetector(window_size=100, min_samples=10, threshold=3.0)
 
 ### 메서드
 
-#### `add_and_check_image(width: int, height: int) -> bool`
-- **설명**: 이미지 크기를 버퍼에 추가하고 이상치 여부 판정
+#### `add_and_check_image(width: int, height: int) -> tuple[bool, Optional[float], Optional[float]]`
+- **설명**: 이미지 크기를 버퍼에 추가하고 이상치 여부 판정 + z-score 반환
 - **매개변수**: 
   - `width` - 이미지 가로 크기 (픽셀)
   - `height` - 이미지 세로 크기 (픽셀)
-- **반환값**: True (이상치), False (정상 또는 판정 보류)
+- **반환값**: `(is_abnormal, z_width, z_height)` 튜플
+  - `is_abnormal` (bool): True (이상치), False (정상 또는 판정 보류)
+  - `z_width` (float | None): 가로 크기의 z-score (판정 보류 시 None)
+  - `z_height` (float | None): 세로 크기의 z-score (판정 보류 시 None)
 - **동작**:
   1. 버퍼에 width/height 추가
   2. 윈도우 크기 초과 시 오래된 데이터 제거
-  3. 최소 샘플 수 미만이면 `False` 반환 (판정 보류)
+  3. 최소 샘플 수 미만이면 `(False, None, None)` 반환 (판정 보류)
   4. z-score 계산: `z = (value - mean) / std`
   5. `|z| > threshold` 이면 이상치로 판정
+  6. z-score 값 반환 (UI 표시용)
 
-**예시**:
+**예시 (API 변경 후)**:
 ```python
 detector = AbnormalDetector()
 
 # 처음 9개: 판정 보류 (min_samples=10)
 for i in range(9):
-    result = detector.add_and_check_image(200, 150)
-    # result = False (판정 보류)
+    is_abnormal, z_w, z_h = detector.add_and_check_image(200, 150)
+    # is_abnormal = False, z_w = None, z_h = None (판정 보류)
 
 # 10번째부터 정상 판정
-detector.add_and_check_image(200, 150)  # False (정상)
+is_abnormal, z_w, z_h = detector.add_and_check_image(200, 150)
+# is_abnormal = False, z_w = 0.0, z_h = 0.0 (정상)
 
 # 튀는 값 발견
-detector.add_and_check_image(350, 150)  # True (이상치!)
+is_abnormal, z_w, z_h = detector.add_and_check_image(350, 150)
+# is_abnormal = True, z_w = 3.5, z_h = 0.0 (이상치!)
+
+# UI에서 z-score 표시
+print(f"200x150 (z:{z_w:.1f},{z_h:.1f})")  # "200x150 (z:0.0,0.0)"
 ```
 
 ---
@@ -86,6 +118,39 @@ detector.add_and_check_image(350, 150)  # True (이상치!)
     ...
 }
 ```
+
+---
+
+#### `_calculate_z_score(value: float, values_list: list) -> Optional[float]`
+- **설명**: z-score 계산 (내부 메서드)
+- **매개변수**:
+  - `value`: 판정할 값
+  - `values_list`: 기준이 되는 값들의 리스트
+- **반환값**: z-score (float) 또는 None (계산 불가능 시)
+- **동작**:
+  1. 리스트가 비어있거나 2개 미만이면 None 반환
+  2. 평균(mean) 계산: `sum(values) / len(values)`
+  3. 분산(variance) 계산: `sum((x - mean)^2) / len(values)`
+  4. 표준편차(std) 계산: `sqrt(variance)`
+  5. std가 0이면 None 반환 (모든 값이 동일)
+  6. z-score 계산: `(value - mean) / std`
+
+**계산식**:
+```python
+mean = sum(values_list) / len(values_list)
+variance = sum((x - mean) ** 2 for x in values_list) / len(values_list)
+std = sqrt(variance)
+
+if std == 0:
+    return None  # 모든 값이 동일
+
+z_score = (value - mean) / std
+```
+
+**특징**:
+- **numpy 없이 구현**: 순수 Python으로 계산 (의존성 최소화)
+- **0 나누기 방지**: std가 0이면 None 반환
+- **빠른 계산**: 리스트 크기가 작아 성능 문제 없음
 
 ---
 

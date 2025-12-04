@@ -1,19 +1,20 @@
 # 기본: 전부 무시
 *
 
-# 폴더 탐색 허용
+# 폴더는 탐색 가능하게
 !*/
 
-# 항상 추적
+# 항상 추적할 것들
 !.gitignore
 !requirements.txt
-!*.py
-# !*.md
 !app_icon.ico
-# !docs/**
+
+# script 폴더 안의 파이썬 파일만 추적
+!script/*.py
+!script/**/*.py
+
+
+!docs/modules/*.md
+
+# exe 파일은 항상 무시
 *.exe
-
-test
-
-test.py
-test_get_effective_path.py
