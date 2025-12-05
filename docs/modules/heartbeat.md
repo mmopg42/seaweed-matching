@@ -274,3 +274,4 @@ class MainWindow(QMainWindow):
 **관련 모듈:** `crash_logger.py`, `memory_monitor.py`
 
 
+

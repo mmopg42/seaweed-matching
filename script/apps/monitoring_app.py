@@ -57,6 +57,25 @@ from services.monitoring_orchestrator import MonitoringOrchestrator
 from ui.utils.tooltips import set_tooltip_enabled
 from debug import Heartbeat, MemoryMonitor
 
+# ✅ Task 2.1: 이미지 타입별 우선순위 맵
+# 낮은 값 = 높은 우선순위 (먼저 로드됨)
+PRIORITY_MAP = {
+    # 최우선: 일반카메라 + NIR (즉시 표시 필요)
+    'normal': 0,      # 라인1 일반카메라 (stitched_original.png)
+    'normal2': 0,     # 라인2 일반카메라
+    'nir': 0,         # NIR (텍스트지만 중요 정보)
+    
+    # 고우선: cam1, cam4 (빠른 표시 필요)
+    'cam1': 1,        # 라인1 첫 번째 카메라
+    'cam4': 1,        # 라인2 첫 번째 카메라
+    
+    # 중우선: cam2, cam3, cam5, cam6 (나중에 표시)
+    'cam2': 3,
+    'cam3': 3,
+    'cam5': 3,
+    'cam6': 3,
+}
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -98,7 +117,8 @@ class MainWindow(QMainWindow):
         self.image_loader = ImageLoaderWorker(cache_dir=thumbnail_cache_dir, use_disk_cache=use_disk_cache)
 
         self.image_loader.image_ready.connect(self.on_image_loaded)
-        self.image_loader.error_occurred.connect(lambda msg: print(f"[IMAGE_LOADER] {msg}"))
+        # ✅ Task 1.3: 에러 시그널 연결 - 경로와 메시지 모두 받음
+        self.image_loader.error_occurred.connect(self.on_image_load_error)
         self.image_loader.start()
         
         # ImageManager에 image_loader 연결
@@ -1509,6 +1529,19 @@ class MainWindow(QMainWindow):
 
         updated_count = 0
         skipped_count = 0
+        
+        # ✅ Task 5.1: 이미지 개수 계산 (각 그룹당 최대 5개 이미지: normal, cam1, cam2, cam3, NIR 제외)
+        total_images = 0
+        for group_data in display_items:
+            # 일반카메라 (normal/normal2)
+            if group_data.get("카메라"):
+                total_images += 1
+            # cam1, cam2, cam3 (라인1) 또는 cam4, cam5, cam6 (라인2)
+            line = group_data.get('line', 1)
+            cam_keys = ['cam1', 'cam2', 'cam3'] if line == 1 else ['cam4', 'cam5', 'cam6']
+            for cam_key in cam_keys:
+                if group_data.get(cam_key):
+                    total_images += 1
 
         for idx, group_data in enumerate(display_items):
             row_widget = scroll_layout.itemAt(idx).widget()
@@ -1555,6 +1588,10 @@ class MainWindow(QMainWindow):
         should_scroll_bottom = self.is_watching or is_at_bottom
         if should_scroll_bottom:
             QTimer.singleShot(0, lambda: self.scroll_to_bottom_for_area(scroll_area))
+        
+        # ✅ Task 5.1: 벌크 로딩 시작 (이미지 개수가 있을 때만)
+        if total_images > 0:
+            self.image_loader.start_bulk_loading(total_images)
 
     def on_row_delete_requested(self, _clicked_row_idx: int):
         # 행 삭제 버튼은 해당 행의 선택된 항목만 삭제 (체크박스 상태 반영)
@@ -1718,12 +1755,36 @@ class MainWindow(QMainWindow):
                         self.log_to_box(f"[데이터 변경] 그룹 '{group['name']}'에서 '{basename}' 삭제됨")
                     return
 
+    def _get_image_priority(self, image_type: str, is_visible: bool) -> int:
+        """
+        ✅ Task 2.2: 이미지 타입과 가시성 기반 우선순위 계산
+        
+        Args:
+            image_type: 이미지 타입 ('normal', 'normal2', 'nir', 'cam1', 'cam2', etc.)
+            is_visible: 화면에 보이는지 여부
+            
+        Returns:
+            우선순위 값 (낮을수록 높은 우선순위)
+            - 0: 최우선 (일반카메라, NIR)
+            - 1: 고우선 (cam1, cam4)
+            - 3: 중우선 (cam2, cam3, cam5, cam6)
+            - +5: 보이지 않으면 패널티 추가
+        """
+        # 기본 우선순위 가져오기
+        base_priority = PRIORITY_MAP.get(image_type, 5)
+        
+        # 보이지 않으면 +5 패널티
+        if not is_visible:
+            return base_priority + 5
+        
+        return base_priority
+
     def _update_row_widget(self, row_widget, group, is_visible=True):
         # h_layout = row_widget.layout()
         camera_files = [v for k, v in group.get("카메라", {}).items() if isinstance(v, dict)]
 
-        # 우선순위 결정: 화면에 보이는 행은 0 (최고), 안 보이는 행은 5 (중간)
-        priority = 0 if is_visible else 5
+        # ✅ Task 2.3: 라인 정보 먼저 가져오기 (우선순위 계산에 필요)
+        line = group.get('line', 1)
 
         # 레이아웃 인덱스:
         # 0: 삭제 버튼, 1: NIR, 2~5: 카메라 이미지 위젯들
@@ -1738,15 +1799,17 @@ class MainWindow(QMainWindow):
             timestamp = group.get("카메라", {}).get("timestamp", "")
 
             # line에 따라 folder_key 결정 (1: "normal", 2: "normal2")
-            line = group.get('line', 1)
             folder_key = "normal" if line == 1 else "normal2"
+
+            # ✅ Task 2.3: 일반카메라 우선순위 계산 (priority=0, 최우선)
+            normal_priority = self._get_image_priority(folder_key, is_visible)
 
             # stitched_original.png 경로 가져오기
             thumbnail_path = get_normal_thumbnail_path(folder_key, folder_name, self.settings)
 
             if thumbnail_path:
                 # 썸네일 이미지 로딩 및 표시
-                pixmap = self.get_cached_pixmap(thumbnail_path, priority)
+                pixmap = self.get_cached_pixmap(thumbnail_path, normal_priority)
                 
                 # ✅ [Registry] 위젯 등록
                 self.image_registry.register_widget(cam_widget, thumbnail_path)
@@ -1772,7 +1835,7 @@ class MainWindow(QMainWindow):
                 f_info = camera_files[0]
                 path = f_info.get("absolute_path")
                 if path:
-                    pixmap = self.get_cached_pixmap(path, priority)
+                    pixmap = self.get_cached_pixmap(path, normal_priority)
                     
                     # ✅ [Registry] 위젯 등록
                     self.image_registry.register_widget(cam_widget, path)
@@ -1837,11 +1900,17 @@ class MainWindow(QMainWindow):
 
         # 라인에 따라 표시할 cam 키 결정
         # cam1_view, cam2_view, cam3_view를 양쪽 라인에서 재사용
-        line = group.get('line', 1)
         if line == 1:
             cam_keys = ['cam1', 'cam2', 'cam3']
         else:
             cam_keys = ['cam4', 'cam5', 'cam6']
+
+        # ✅ Task 2.3: 각 카메라별 우선순위 계산
+        # 라인1: cam1(priority=1), cam2(priority=3), cam3(priority=3)
+        # 라인2: cam4(priority=1), cam5(priority=3), cam6(priority=3)
+        cam1_priority = self._get_image_priority(cam_keys[0], is_visible)  # cam1 or cam4
+        cam2_priority = self._get_image_priority(cam_keys[1], is_visible)  # cam2 or cam5
+        cam3_priority = self._get_image_priority(cam_keys[2], is_visible)  # cam3 or cam6
 
         # 항상 cam1_view, cam2_view, cam3_view 사용 (동일한 위치에 표시)
         cam_views = [row_widget.cam1_view, row_widget.cam2_view, row_widget.cam3_view]
@@ -1849,7 +1918,7 @@ class MainWindow(QMainWindow):
         # 첫 번째 카메라 (라인1: cam1, 라인2: cam4)
         cam1_name, cam1_path = _first_name_and_path(group.get(cam_keys[0], {}))
         if cam1_path:
-            pix = self.get_cached_pixmap(cam1_path, priority)
+            pix = self.get_cached_pixmap(cam1_path, cam1_priority)
             # pixmap이 None이어도 경로를 저장
             self.image_registry.register_widget(cam_views[0], cam1_path)
             cam_views[0].set_image(pix, cam1_path)
@@ -1863,7 +1932,7 @@ class MainWindow(QMainWindow):
         # 두 번째 카메라 (라인1: cam2, 라인2: cam5)
         cam2_name, cam2_path = _first_name_and_path(group.get(cam_keys[1], {}))
         if cam2_path:
-            pix = self.get_cached_pixmap(cam2_path, priority)
+            pix = self.get_cached_pixmap(cam2_path, cam2_priority)
             # pixmap이 None이어도 경로를 저장
             self.image_registry.register_widget(cam_views[1], cam2_path)
             cam_views[1].set_image(pix, cam2_path)
@@ -1877,7 +1946,7 @@ class MainWindow(QMainWindow):
         # 세 번째 카메라 (라인1: cam3, 라인2: cam6)
         cam3_name, cam3_path = _first_name_and_path(group.get(cam_keys[2], {}))
         if cam3_path:
-            pix = self.get_cached_pixmap(cam3_path, priority)
+            pix = self.get_cached_pixmap(cam3_path, cam3_priority)
             # pixmap이 None이어도 경로를 저장
             self.image_registry.register_widget(cam_views[2], cam3_path)
             cam_views[2].set_image(pix, cam3_path)
@@ -1952,6 +2021,28 @@ class MainWindow(QMainWindow):
     def on_image_loaded(self, image_path: str, pixmap: QPixmap, request_id: str = ""):
         """이미지 로딩 완료 콜백 - ImageManager에 위임"""
         self.image_manager.on_image_loaded(image_path, pixmap, request_id)
+    
+    def on_image_load_error(self, image_path: str, error_message: str):
+        """
+        ✅ Task 1.3: 이미지 로딩 실패 시 처리
+        
+        Args:
+            image_path: 실패한 이미지 경로
+            error_message: 에러 메시지
+        """
+        # 1. 로그 출력
+        self.log_to_box(f"❌ {error_message}: {os.path.basename(image_path)}")
+        
+        # 2. 해당 위젯에 에러 표시
+        widgets = self.image_path_to_widgets.get(image_path, [])
+        for widget in widgets:
+            try:
+                if widget and not widget.isHidden():
+                    # "로딩 중..." → "로딩 실패" 또는 "❌"
+                    widget.show_error_state(error_message)
+            except RuntimeError:
+                # C++ 객체가 이미 삭제된 경우
+                pass
 
     def refresh_single_image(self, image_path: str, pixmap: QPixmap):
         """특정 이미지 즉시 업데이트 - ImageManager에 위임"""
@@ -2698,13 +2789,20 @@ class MainWindow(QMainWindow):
 
     def _on_loading_progress(self, loaded: int, total: int):
         """
-        이미지 로딩 진행률 업데이트 - GUI 위젯 사용
+        ✅ Task 5.2: 이미지 로딩 진행률 업데이트 - 로그 패널에 표시
         
         Args:
             loaded: 로딩 완료된 이미지 수
             total: 전체 이미지 수
         """
-        # ✅ Phase 3.3: GUI 위젯으로 진행률 표시
+        # ✅ Task 5.2: 로그 패널에 진행률 표시
+        # 10개마다 또는 완료 시에만 로그 출력 (너무 많은 로그 방지)
+        if loaded % 10 == 0 or loaded == total:
+            percentage = int((loaded / total) * 100) if total > 0 else 0
+            message = f"📊 이미지 로딩 중: {loaded}/{total} ({percentage}%)"
+            self.log_to_box(message)
+        
+        # ✅ GUI 위젯이 있으면 추가로 표시 (기존 코드 유지)
         if hasattr(self, 'progress_frame') and hasattr(self, 'progress_bar'):
             # 프레임 보이기
             self.progress_frame.setVisible(True)
@@ -2721,8 +2819,19 @@ class MainWindow(QMainWindow):
             self.progress_label.setText(message)
 
     def _on_all_images_loaded(self):
-        """모든 이미지 로딩 완료"""
-        self.log_to_box("✅ 이미지 불러오기 완료.")
+        """
+        ✅ Task 5.3: 모든 이미지 로딩 완료 시 처리
+        """
+        # ✅ Task 5.3: 완료 메시지 표시 (이미지 개수 포함)
+        total_count = self.image_loader.bulk_loading_total
+        if total_count > 0:
+            self.log_to_box(f"✅ 이미지 로딩 완료: {total_count}개")
+        else:
+            self.log_to_box("✅ 이미지 불러오기 완료.")
+        
+        # GUI 위젯이 있으면 숨기기
+        if hasattr(self, 'progress_frame'):
+            self.progress_frame.setVisible(False)
 
     def save_current_state(self):
         subject = self.subject_folder_edit.text().strip()

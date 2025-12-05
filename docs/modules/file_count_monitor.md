@@ -271,3 +271,4 @@ def count_files_in_folder(self, folder_path: str):
 **관련 Phase:** Phase 5 (독립 모니터 창 분리)
 
 
+

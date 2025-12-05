@@ -131,3 +131,4 @@ class NIRStatusWidget(QFrame):
             self.update_status()
 
 
+

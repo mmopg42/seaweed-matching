@@ -311,3 +311,4 @@ def update_status(self):
 **관련 Phase:** Phase 7~8 (NIR 상태 표시 기능 추가)
 
 
+

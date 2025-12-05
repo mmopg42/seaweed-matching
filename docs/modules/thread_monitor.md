@@ -298,3 +298,4 @@ class Worker(QThread):
 **관련 모듈:** `crash_logger.py`, `heartbeat.py`
 
 
+

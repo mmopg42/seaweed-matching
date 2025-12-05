@@ -270,3 +270,4 @@ class MainWindow(QMainWindow):
 **관련 모듈:** `heartbeat.py`, `crash_logger.py`
 
 
+

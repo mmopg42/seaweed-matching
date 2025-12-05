@@ -595,6 +595,20 @@ class ImageWidget(QWidget):
         self.text_label.setText(text)
         if not self.text_label.isVisible():
             self.text_label.show()
+    
+    def show_error_state(self, error_message: str = "로딩 실패"):
+        """
+        ✅ Task 1.4: 에러 상태 표시
+        
+        Args:
+            error_message: 에러 메시지
+        """
+        self.img_label.clear()
+        self.img_label.setText("❌")
+        self.img_label.setStyleSheet("background: #ffe0e0; color: #dc2626; border: 1px solid #dc2626;")
+        self.setToolTip(error_message)
+        self._current_pixmap = None
+        self._current_path = None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
