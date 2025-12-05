@@ -1,7 +1,10 @@
 # image_registry.py
 
 from collections import defaultdict
-from utils.utils import LruPixmapCache
+try:
+    from utils.utils import LruPixmapCache
+except ImportError:
+    from ..utils.utils import LruPixmapCache
 
 
 class ImageRegistry:

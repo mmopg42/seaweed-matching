@@ -7,10 +7,12 @@ Image 모듈
 from .image_loader import ImageLoaderWorker, prefetch_images
 from .image_manager import ImageManager
 from .image_registry import ImageRegistry
+from .performance_monitor import PerformanceMonitor
 
 __all__ = [
     'ImageLoaderWorker',
     'prefetch_images',
     'ImageManager',
     'ImageRegistry',
+    'PerformanceMonitor',
 ]

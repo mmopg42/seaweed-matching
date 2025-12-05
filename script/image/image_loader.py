@@ -25,6 +25,114 @@ except ImportError:
     PIL_AVAILABLE = False
     print("[WARN] Pillow가 설치되지 않았습니다. 썸네일 최적화가 비활성화됩니다.")
 
+# ✅ Task 11.1: PerformanceMonitor 임포트
+try:
+    from image.performance_monitor import PerformanceMonitor
+except ImportError:
+    from .performance_monitor import PerformanceMonitor
+
+
+class ImageRetryManager:
+    """
+    이미지 로딩 재시도 관리자
+    - 재시도 횟수 추적 (max_retries=3)
+    - 지수 백오프 계산 (backoff_factor=2.0)
+    - 영구 실패 상태 추적
+    """
+    
+    def __init__(self, max_retries: int = 3, backoff_factor: float = 2.0):
+        """
+        Args:
+            max_retries: 최대 재시도 횟수 (기본값: 3)
+            backoff_factor: 지수 백오프 계수 (기본값: 2.0)
+        """
+        self.max_retries = max_retries
+        self.backoff_factor = backoff_factor
+        self.retry_counts = {}  # path -> retry_count
+        self.failed_paths = set()  # 영구 실패한 경로들
+    
+    def should_retry(self, image_path: str) -> bool:
+        """
+        재시도 가능 여부 확인
+        
+        Args:
+            image_path: 이미지 파일 경로
+            
+        Returns:
+            bool: 재시도 가능하면 True, 아니면 False
+        """
+        # 영구 실패 상태면 재시도 불가
+        if image_path in self.failed_paths:
+            return False
+        
+        # 재시도 횟수 확인
+        retry_count = self.retry_counts.get(image_path, 0)
+        return retry_count < self.max_retries
+    
+    def get_retry_delay(self, image_path: str) -> float:
+        """
+        재시도 대기 시간 계산 (지수 백오프)
+        
+        Args:
+            image_path: 이미지 파일 경로
+            
+        Returns:
+            float: 대기 시간 (초)
+        """
+        retry_count = self.retry_counts.get(image_path, 0)
+        # 지수 백오프: 1초, 2초, 4초, 8초, ...
+        return self.backoff_factor ** retry_count
+    
+    def mark_success(self, image_path: str):
+        """
+        성공 시 재시도 카운트 초기화
+        
+        Args:
+            image_path: 이미지 파일 경로
+        """
+        self.retry_counts.pop(image_path, None)
+        self.failed_paths.discard(image_path)
+    
+    def mark_failure(self, image_path: str):
+        """
+        실패 시 재시도 카운트 증가
+        
+        Args:
+            image_path: 이미지 파일 경로
+        """
+        retry_count = self.retry_counts.get(image_path, 0)
+        retry_count += 1
+        self.retry_counts[image_path] = retry_count
+        
+        # 최대 재시도 횟수 초과 시 영구 실패로 표시
+        if retry_count >= self.max_retries:
+            self.failed_paths.add(image_path)
+            print(f"[IMAGE_LOADER] 영구 실패: {os.path.basename(image_path)} ({retry_count}회 재시도 실패)")
+    
+    def is_permanently_failed(self, image_path: str) -> bool:
+        """
+        영구 실패 상태 확인
+        
+        Args:
+            image_path: 이미지 파일 경로
+            
+        Returns:
+            bool: 영구 실패 상태면 True
+        """
+        return image_path in self.failed_paths
+    
+    def get_retry_count(self, image_path: str) -> int:
+        """
+        현재 재시도 횟수 반환
+        
+        Args:
+            image_path: 이미지 파일 경로
+            
+        Returns:
+            int: 재시도 횟수
+        """
+        return self.retry_counts.get(image_path, 0)
+
 
 class ThumbnailCache:
     """
@@ -202,6 +310,13 @@ class ImageLoaderWorker(QThread):
         # ✅ Task 6.2: 성능 추적 변수
         self.load_times = []  # 로딩 시간 기록 (ms)
         self.load_count = 0   # 로딩 횟수
+        
+        # ✅ Task 8.2: 재시도 관리자 초기화
+        self.retry_manager = ImageRetryManager(max_retries=3, backoff_factor=2.0)
+        self.retry_queue = []  # (retry_time, image_path, size, request_id, priority) 튜플 리스트
+        
+        # ✅ Task 11.1: 성능 모니터 초기화
+        self.performance_monitor = PerformanceMonitor(max_history=1000)
     
     def request_image(self, image_path: str, size: Tuple[int, int], request_id: str = "", priority: int = 5):
         """
@@ -283,9 +398,29 @@ class ImageLoaderWorker(QThread):
                     error_msg = f"타임아웃 ({self.timeout_sec}초 초과)"
                     # ✅ Task 3.3: 타임아웃 전용 시그널 발생
                     self.loading_timeout.emit(image_path)
-                    self.error_occurred.emit(image_path, error_msg)
+                    
+                    # ✅ Task 11.1: 타임아웃 기록
+                    self.performance_monitor.record_timeout()
+                    
+                    # ✅ Task 8.2: 타임아웃 시 재시도 큐에 추가
+                    self.retry_manager.mark_failure(image_path)
+                    if self.retry_manager.should_retry(image_path):
+                        # ✅ Task 11.1: 재시도 기록
+                        self.performance_monitor.record_retry()
+                        
+                        retry_delay = self.retry_manager.get_retry_delay(image_path)
+                        retry_time = time.time() + retry_delay
+                        # 재시도 큐에 추가 (원래 우선순위 유지)
+                        self.retry_queue.append((retry_time, image_path, (100, 100), request_id, 5))
+                        retry_count = self.retry_manager.get_retry_count(image_path)
+                        print(f"[IMAGE_LOADER] 타임아웃 재시도 예약: {os.path.basename(image_path)} ({retry_count}/{self.retry_manager.max_retries}회, {retry_delay:.1f}초 후)")
+                    else:
+                        # ✅ Task 8.3: 최대 재시도 초과 - 영구 실패
+                        # ✅ Task 11.1: 영구 실패 기록
+                        self.performance_monitor.record_permanent_failure()
+                        self.error_occurred.emit(image_path, "영구 실패 (타임아웃)")
+                    
                     self.pending_requests.discard(image_path)
-                    print(f"[IMAGE_LOADER] 타임아웃: {os.path.basename(image_path)} ({self.timeout_sec}초 초과)")
                 
                 # 완료된 작업 처리
                 done_futures = [f for f in futures if f.done()]
@@ -296,6 +431,14 @@ class ImageLoaderWorker(QThread):
                         
                         # ✅ Task 1.2: 실패 시에도 시그널 발생
                         if pixmap and not pixmap.isNull():
+                            # ✅ Task 8.2: 성공 시 재시도 카운트 초기화
+                            was_retry = self.retry_manager.get_retry_count(image_path) > 0
+                            self.retry_manager.mark_success(image_path)
+                            
+                            # ✅ Task 11.1: 재시도 성공 기록
+                            if was_retry:
+                                self.performance_monitor.record_retry_success()
+                            
                             self.image_ready.emit(image_path, pixmap, request_id)
                             
                             # ✅ Phase 2: 벌크 로딩 진행률 업데이트
@@ -312,16 +455,60 @@ class ImageLoaderWorker(QThread):
                                     self.all_images_loaded.emit()
                                     print(f"[IMAGE_LOADER] 벌크 로딩 완료: {self.bulk_loading_total}개")
                         else:
-                            # ✅ Task 1.2: pixmap이 None이거나 isNull()일 때 에러 시그널 발생
-                            self.error_occurred.emit(image_path, "이미지 로딩 실패")
+                            # ✅ Task 11.1: 에러 기록
+                            self.performance_monitor.record_error()
+                            
+                            # ✅ Task 8.2: 디코딩 실패 시 재시도 큐에 추가
+                            self.retry_manager.mark_failure(image_path)
+                            if self.retry_manager.should_retry(image_path):
+                                # ✅ Task 11.1: 재시도 기록
+                                self.performance_monitor.record_retry()
+                                
+                                retry_delay = self.retry_manager.get_retry_delay(image_path)
+                                retry_time = time.time() + retry_delay
+                                self.retry_queue.append((retry_time, image_path, (100, 100), request_id, 5))
+                                retry_count = self.retry_manager.get_retry_count(image_path)
+                                print(f"[IMAGE_LOADER] 디코딩 실패 재시도 예약: {os.path.basename(image_path)} ({retry_count}/{self.retry_manager.max_retries}회, {retry_delay:.1f}초 후)")
+                            else:
+                                # ✅ Task 8.3: 최대 재시도 초과 - 영구 실패
+                                # ✅ Task 11.1: 영구 실패 기록
+                                self.performance_monitor.record_permanent_failure()
+                                self.error_occurred.emit(image_path, "영구 실패 (디코딩 실패)")
                                     
                     except Exception as e:
                         error_msg = f"이미지 로딩 실패: {os.path.basename(image_path)} - {e}"
-                        # ✅ Task 1.2: 경로 정보 포함하여 시그널 발생
-                        self.error_occurred.emit(image_path, error_msg)
+                        # ✅ Task 11.1: 에러 기록
+                        self.performance_monitor.record_error()
+                        
+                        # ✅ Task 8.2: 예외 발생 시 재시도 큐에 추가
+                        self.retry_manager.mark_failure(image_path)
+                        if self.retry_manager.should_retry(image_path):
+                            # ✅ Task 11.1: 재시도 기록
+                            self.performance_monitor.record_retry()
+                            
+                            retry_delay = self.retry_manager.get_retry_delay(image_path)
+                            retry_time = time.time() + retry_delay
+                            self.retry_queue.append((retry_time, image_path, (100, 100), request_id, 5))
+                            retry_count = self.retry_manager.get_retry_count(image_path)
+                            print(f"[IMAGE_LOADER] 예외 발생 재시도 예약: {os.path.basename(image_path)} ({retry_count}/{self.retry_manager.max_retries}회, {retry_delay:.1f}초 후)")
+                        else:
+                            # ✅ Task 8.3: 최대 재시도 초과 - 영구 실패
+                            # ✅ Task 11.1: 영구 실패 기록
+                            self.performance_monitor.record_permanent_failure()
+                            self.error_occurred.emit(image_path, f"영구 실패 ({e})")
                     finally:
                         # ✅ Phase 1: 완료된 요청은 pending에서 제거
                         self.pending_requests.discard(image_path)
+                
+                # ✅ Task 8.2: 재시도 큐 처리 - 대기 시간이 지난 항목들을 다시 요청
+                current_time = time.time()
+                ready_retries = [item for item in self.retry_queue if item[0] <= current_time]
+                for retry_time, image_path, size, request_id, priority in ready_retries:
+                    self.retry_queue.remove((retry_time, image_path, size, request_id, priority))
+                    # 재시도 요청 (우선순위 0으로 높임)
+                    retry_count = self.retry_manager.get_retry_count(image_path)
+                    print(f"[IMAGE_LOADER] 재시도 실행: {os.path.basename(image_path)} ({retry_count}/{self.retry_manager.max_retries}회)")
+                    self.request_image(image_path, size, request_id, priority=0)
     
     def _load_image(self, image_path: str, size: Tuple[int, int], request_id: str) -> Optional[QPixmap]:
         """
@@ -338,6 +525,9 @@ class ImageLoaderWorker(QThread):
             if self.use_disk_cache:
                 cached_data = self.cache.get(image_path, size)
                 if cached_data:
+                    # ✅ Task 11.1: 캐시 히트 기록
+                    self.performance_monitor.record_cache_hit()
+                    
                     # 캐시된 JPEG 데이터를 QPixmap으로 변환
                     pixmap = QPixmap()
                     pixmap.loadFromData(QByteArray(cached_data), "JPEG")
@@ -346,8 +536,13 @@ class ImageLoaderWorker(QThread):
                         elapsed_ms = (time.time() - start_time) * 1000
                         # ✅ Task 6.2: 성능 추적 및 평균 계산
                         self._record_load_time(elapsed_ms)
+                        # ✅ Task 11.1: 로딩 시간 기록
+                        self.performance_monitor.record_load_time(elapsed_ms)
                         print(f"[IMAGE_LOADER] {os.path.basename(image_path)} 로딩 완료 (캐시): {elapsed_ms:.0f}ms")
                         return pixmap
+                else:
+                    # ✅ Task 11.1: 캐시 미스 기록
+                    self.performance_monitor.record_cache_miss()
 
             # 2. 캐시 없음 또는 디스크 캐시 미사용 - 이미지 디코딩
             if self.use_pil and PIL_AVAILABLE:
@@ -366,6 +561,8 @@ class ImageLoaderWorker(QThread):
             elapsed_ms = (time.time() - start_time) * 1000
             # ✅ Task 6.2: 성능 추적 및 평균 계산
             self._record_load_time(elapsed_ms)
+            # ✅ Task 11.1: 로딩 시간 기록
+            self.performance_monitor.record_load_time(elapsed_ms)
             print(f"[IMAGE_LOADER] {os.path.basename(image_path)} 로딩 완료: {elapsed_ms:.0f}ms")
             
             return pixmap
@@ -397,7 +594,7 @@ class ImageLoaderWorker(QThread):
     
     def get_performance_stats(self) -> dict:
         """
-        ✅ Task 6.2: 성능 통계 반환
+        ✅ Task 6.2: 성능 통계 반환 (레거시 호환)
         
         Returns:
             dict: 성능 통계 정보
@@ -416,6 +613,28 @@ class ImageLoaderWorker(QThread):
             "min_time_ms": min(self.load_times),
             "max_time_ms": max(self.load_times)
         }
+    
+    def get_detailed_performance_stats(self) -> dict:
+        """
+        ✅ Task 11.2: 상세 성능 통계 반환
+        
+        PerformanceMonitor를 통해 캐시 히트율, 에러율 등 상세 통계 반환
+        
+        Returns:
+            dict: 상세 성능 통계 정보
+        """
+        return self.performance_monitor.get_statistics()
+    
+    def get_performance_summary(self) -> str:
+        """
+        ✅ Task 11.3: 성능 요약 문자열 반환
+        
+        사용자에게 보여줄 간단한 요약 문자열 반환
+        
+        Returns:
+            str: 성능 요약 문자열
+        """
+        return self.performance_monitor.get_summary_string()
     
     def _load_with_pil(self, image_path: str, size: Tuple[int, int]) -> Optional[QPixmap]:
         """

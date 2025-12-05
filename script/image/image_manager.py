@@ -6,9 +6,17 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtCore import QByteArray
 from PySide6.QtWidgets import QApplication
 
-from image.image_registry import ImageRegistry
-from image.image_loader import ImageLoaderWorker
-from ui.dialogs.preview_dialog import PreviewDialog
+try:
+    from image.image_registry import ImageRegistry
+    from image.image_loader import ImageLoaderWorker
+except ImportError:
+    from .image_registry import ImageRegistry
+    from .image_loader import ImageLoaderWorker
+
+try:
+    from ui.dialogs.preview_dialog import PreviewDialog
+except ImportError:
+    from ..ui.dialogs.preview_dialog import PreviewDialog
 
 
 class ImageManager:

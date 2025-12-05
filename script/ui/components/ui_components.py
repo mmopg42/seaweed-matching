@@ -5,10 +5,11 @@ import platform
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLayout,
     QPushButton, QLabel, QDialog, QFileDialog, QLineEdit,
-    QDialogButtonBox, QSizePolicy, QSpacerItem, QCheckBox, QComboBox, QMessageBox
+    QDialogButtonBox, QSizePolicy, QSpacerItem, QCheckBox, QComboBox, QMessageBox,
+    QMenu
 )
 from PySide6.QtCore import Qt, Signal, QRect, QSize, QPoint
-from PySide6.QtGui import QIntValidator, QDoubleValidator, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QIntValidator, QDoubleValidator, QDragEnterEvent, QDropEvent, QAction
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -539,6 +540,7 @@ class SettingDialog(QDialog):
 # ──────────────────────────────────────────────────────────────────────────────
 class ImageWidget(QWidget):
     image_clicked = Signal(object, str)
+    reload_requested = Signal(str)  # ✅ Task 9.1: 재로드 요청 시그널 (image_path)
 
     def __init__(self, caption=None, show_caption=True, width=110, height=80):
         super().__init__()
@@ -553,11 +555,14 @@ class ImageWidget(QWidget):
 
         self._current_path = ""
         self._current_pixmap = None
+        self._is_error_state = False  # ✅ Task 9.1: 에러 상태 추적
 
         self.img_label = QLabel()
         self.img_label.setFixedSize(width, height)
         self.img_label.setStyleSheet("border: 1px solid #aaa; background: #eee;")
         self.img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.img_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # ✅ Task 9.1: 컨텍스트 메뉴 활성화
+        self.img_label.customContextMenuRequested.connect(self._show_context_menu)  # ✅ Task 9.1: 메뉴 연결
         layout.addWidget(self.img_label, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         self.text_label = QLabel(caption or "")
@@ -584,12 +589,17 @@ class ImageWidget(QWidget):
     def set_image(self, pixmap, path: str = ""):
         self._current_pixmap = pixmap
         self._current_path = path or ""
+        self._is_error_state = False  # ✅ Task 9.1: 정상 이미지 로드 시 에러 상태 해제
         if pixmap:
             self.img_label.setPixmap(pixmap)
+            self.img_label.setStyleSheet("border: 1px solid #aaa; background: #eee;")  # ✅ 스타일 복원
             self.img_label.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.setToolTip("")  # ✅ 툴팁 초기화
         else:
             self.img_label.clear()
+            self.img_label.setStyleSheet("border: 1px solid #aaa; background: #eee;")  # ✅ 스타일 복원
             self.img_label.setCursor(Qt.CursorShape.PointingHandCursor if self._current_path else Qt.CursorShape.ArrowCursor)
+            self.setToolTip("")  # ✅ 툴팁 초기화
 
     def set_caption(self, text: str):
         self.text_label.setText(text)
@@ -608,7 +618,44 @@ class ImageWidget(QWidget):
         self.img_label.setStyleSheet("background: #ffe0e0; color: #dc2626; border: 1px solid #dc2626;")
         self.setToolTip(error_message)
         self._current_pixmap = None
-        self._current_path = None
+        # ✅ Task 9.1: 에러 상태에서도 경로 유지 (재로드를 위해)
+        # self._current_path는 유지
+        self._is_error_state = True  # ✅ Task 9.1: 에러 상태 플래그 설정
+    
+    def _show_context_menu(self, pos: QPoint):
+        """
+        ✅ Task 9.1: 우클릭 컨텍스트 메뉴 표시
+        
+        Args:
+            pos: 메뉴 표시 위치
+        """
+        # 에러 상태이고 경로가 있을 때만 메뉴 표시
+        if not self._is_error_state or not self._current_path:
+            return
+        
+        menu = QMenu(self)
+        reload_action = QAction("다시 로드", self)
+        reload_action.triggered.connect(self._on_reload_requested)
+        menu.addAction(reload_action)
+        
+        # 전역 좌표로 변환하여 메뉴 표시
+        global_pos = self.img_label.mapToGlobal(pos)
+        menu.exec(global_pos)
+    
+    def _on_reload_requested(self):
+        """
+        ✅ Task 9.1: 재로드 요청 처리
+        """
+        if self._current_path:
+            # 재로드 중 상태로 변경
+            self.img_label.clear()
+            self.img_label.setText("재로드 중...")
+            self.img_label.setStyleSheet("background: #fef3c7; color: #92400e; border: 1px solid #f59e0b;")
+            self.setToolTip("이미지를 다시 로드하는 중...")
+            self._is_error_state = False
+            
+            # 재로드 시그널 발생
+            self.reload_requested.emit(self._current_path)
 
 
 # ──────────────────────────────────────────────────────────────────────────────

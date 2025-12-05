@@ -224,6 +224,8 @@ class MainWindow(QMainWindow):
         self.btn_setting = QPushButton("설정")
         self.btn_open_folder = QPushButton("설정폴더열기")
         self.btn_output_folder = QPushButton("이동대상폴더열기")
+        # ✅ Task 11.3: 성능 통계 버튼 추가
+        self.btn_performance_stats = QPushButton("📊 성능 통계")
 
         today = datetime.datetime.now()
         today_date = datetime.datetime.strftime(today, "%Y%m%d")
@@ -284,6 +286,8 @@ class MainWindow(QMainWindow):
         header_flow.addWidget(self.btn_setting)
         header_flow.addWidget(self.btn_open_folder)
         header_flow.addWidget(self.btn_output_folder)
+        # ✅ Task 11.3: 성능 통계 버튼 추가
+        header_flow.addWidget(self.btn_performance_stats)
         header_flow.addWidget(lbl_today)
         header_flow.addWidget(self.today_edit)
         header_flow.addWidget(self.btn_path_auto_setting)
@@ -541,6 +545,8 @@ class MainWindow(QMainWindow):
         self.btn_setting.clicked.connect(self.show_setting_dialog)
         self.btn_open_folder.clicked.connect(self.config_manager.open_appdir_folder)
         self.btn_output_folder.clicked.connect(self.open_output_folder_clicked)
+        # ✅ Task 11.3: 성능 통계 버튼 연결
+        self.btn_performance_stats.clicked.connect(self.show_performance_stats_dialog)
         self.today_edit.textChanged.connect(self.save_today_date)
         self.btn_path_auto_setting.clicked.connect(self.path_auto_setting_edit_config)
         self.subject_folder_edit.textChanged.connect(self.save_subject_folder)
@@ -1014,6 +1020,17 @@ class MainWindow(QMainWindow):
 
             # 변경된 설정으로 즉시 전체 재스캔
             self.process_updates(initial=True)
+    
+    def show_performance_stats_dialog(self):
+        """
+        ✅ Task 11.3: 성능 통계 다이얼로그 표시
+        
+        이미지 로딩 성능 통계를 표시하는 다이얼로그를 엽니다.
+        """
+        from ui.dialogs.performance_stats_dialog import PerformanceStatsDialog
+        
+        dlg = PerformanceStatsDialog(self.image_loader, self)
+        dlg.exec()
 
             # 감시가 원래 ON이었다면 새 경로로 감시 재시작
             if was_on:
@@ -1207,6 +1224,11 @@ class MainWindow(QMainWindow):
             row.cam1_view.image_clicked.connect(self.show_image_preview)
             row.cam2_view.image_clicked.connect(self.show_image_preview)
             row.cam3_view.image_clicked.connect(self.show_image_preview)
+            # ✅ Task 9.2: 재로드 시그널 연결
+            row.norm_view.reload_requested.connect(self.on_image_reload_requested)
+            row.cam1_view.reload_requested.connect(self.on_image_reload_requested)
+            row.cam2_view.reload_requested.connect(self.on_image_reload_requested)
+            row.cam3_view.reload_requested.connect(self.on_image_reload_requested)
             row.request_delete.connect(self.on_row_delete_requested)
             self.scroll_layout.addWidget(row)
 
@@ -1378,6 +1400,11 @@ class MainWindow(QMainWindow):
             row.cam1_view.image_clicked.connect(self.show_image_preview)
             row.cam2_view.image_clicked.connect(self.show_image_preview)
             row.cam3_view.image_clicked.connect(self.show_image_preview)
+            # ✅ Task 9.2: 재로드 시그널 연결
+            row.norm_view.reload_requested.connect(self.on_image_reload_requested)
+            row.cam1_view.reload_requested.connect(self.on_image_reload_requested)
+            row.cam2_view.reload_requested.connect(self.on_image_reload_requested)
+            row.cam3_view.reload_requested.connect(self.on_image_reload_requested)
             layout.addWidget(row)
             current_count += 1
 
@@ -1428,6 +1455,11 @@ class MainWindow(QMainWindow):
             row.cam1_view.image_clicked.connect(self.show_image_preview)
             row.cam2_view.image_clicked.connect(self.show_image_preview)
             row.cam3_view.image_clicked.connect(self.show_image_preview)
+            # ✅ Task 9.2: 재로드 시그널 연결
+            row.norm_view.reload_requested.connect(self.on_image_reload_requested)
+            row.cam1_view.reload_requested.connect(self.on_image_reload_requested)
+            row.cam2_view.reload_requested.connect(self.on_image_reload_requested)
+            row.cam3_view.reload_requested.connect(self.on_image_reload_requested)
             self.scroll_layout.addWidget(row)
             current_count += 1
 
@@ -2043,6 +2075,31 @@ class MainWindow(QMainWindow):
             except RuntimeError:
                 # C++ 객체가 이미 삭제된 경우
                 pass
+    
+    def on_image_reload_requested(self, image_path: str):
+        """
+        ✅ Task 9.2: 수동 재로드 요청 처리
+        
+        Args:
+            image_path: 재로드할 이미지 경로
+        """
+        if not image_path or not os.path.exists(image_path):
+            self.log_to_box(f"⚠️ 재로드 실패: 파일이 존재하지 않음 - {os.path.basename(image_path)}")
+            return
+        
+        # 1. pending_requests에서 제거 (중복 요청 방지 해제)
+        self.image_loader.pending_requests.discard(image_path)
+        
+        # 2. 로그 출력
+        self.log_to_box(f"🔄 이미지 재로드 중: {os.path.basename(image_path)}")
+        
+        # 3. 우선순위 0으로 재요청 (최우선 처리)
+        self.image_loader.request_image(
+            image_path=image_path,
+            size=(110, 80),  # 기본 썸네일 크기
+            request_id="manual_reload",
+            priority=0  # ✅ Task 9.2: 최우선 순위
+        )
 
     def refresh_single_image(self, image_path: str, pixmap: QPixmap):
         """특정 이미지 즉시 업데이트 - ImageManager에 위임"""
