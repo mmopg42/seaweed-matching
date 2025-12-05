@@ -58,6 +58,7 @@ class GroupManager:
 
         # --- 최종 정렬 + 이름 재부여 ---
         groups.sort(key=lambda x: datetime.datetime.fromisoformat(x["time"]))
+        
         for i, g in enumerate(groups, 1):
             g["name"] = f"group_{i:03d}"
 
@@ -220,6 +221,17 @@ class GroupManager:
     # Helpers
     # -----------------------
     def flatten_cam_files(self, cam_bucket):
+        """
+        cam 버킷의 파일들을 평탄화하여 정렬된 큐로 반환
+        
+        정렬 기준 (우선순위):
+        1. 파일명에서 추출한 타임스탬프 (촬영 시간)
+        2. '복사본' 아닌 것 먼저
+        3. 파일명 (알파벳순)
+        
+        Note: mtime(수정시간)이 아닌 파일명 타임스탬프 기준으로 정렬하여
+              파일 복사/이동 시에도 실제 촬영 순서가 유지됨
+        """
         out = []
         for _folder, data in (cam_bucket or {}).items():
             files = (data or {}).get('files', {})
@@ -227,18 +239,21 @@ class GroupManager:
                 abspath = (meta or {}).get('absolute_path')
                 if not abspath:
                     continue
-                try:
-                    st = Path(abspath).stat()
-                    mtime = st.st_mtime          # 수정 시간
-                    ctime = st.st_ctime          # (윈도우) 만든 시간
-                except Exception:
-                    mtime, ctime = 0, 0
+                
+                # 파일명에서 타임스탬프 추출
+                file_dt = extract_datetime_from_composite_cam(filename)
+                # datetime을 정렬 가능한 값으로 변환 (None이면 최대값으로 처리)
+                file_ts = file_dt.timestamp() if file_dt else float('inf')
+                
                 is_copy = ("복사본" in filename) or ("copy" in filename.lower())
-                out.append((filename, abspath, mtime, ctime, is_copy))
+                out.append((filename, abspath, file_ts, file_dt, is_copy))
 
-        # mtime 오름차순 → '복사본' 아닌 것 먼저 → ctime 오름차순 → 파일명
-        out.sort(key=lambda x: (x[2], x[4], x[3], x[0]))
-        return out
+        # 파일명 타임스탬프 오름차순 → '복사본' 아닌 것 먼저 → 파일명
+        out.sort(key=lambda x: (x[2], x[4], x[0]))
+        
+        # 반환 형식 유지: (filename, abspath, mtime, ctime, is_copy)
+        # 단, mtime/ctime 대신 file_ts/file_dt 사용
+        return [(fname, abspath, ts, dt, is_copy) for fname, abspath, ts, dt, is_copy in out]
 
     def pop_one(self, queue):
         return queue.pop(0) if queue else None

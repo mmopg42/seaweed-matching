@@ -913,6 +913,22 @@ class MainWindow(QMainWindow):
         except Exception as e:
             # 로그 저장 실패도 콘솔로 남김
             print(f"[ERROR] 로그 저장 실패: {e}")
+        
+        # ✅ 디버그 로그는 별도 파일에도 저장 (설정이 활성화되고 DEBUG 키워드 포함 시)
+        if "DEBUG" in message and self.settings.get("enable_debug_logging", False):
+            try:
+                debug_log_dir = os.path.join(self.config_manager.app_dir, "debug_logs")
+                os.makedirs(debug_log_dir, exist_ok=True)
+                
+                # 날짜별 디버그 로그 파일
+                today = datetime.datetime.now().strftime("%Y%m%d")
+                debug_log_path = os.path.join(debug_log_dir, f"debug_{today}.log")
+                
+                with open(debug_log_path, "a", encoding="utf-8") as f:
+                    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]  # 밀리초 포함
+                    f.write(f"[{ts}] {message}\n")
+            except Exception as e:
+                print(f"[ERROR] 디버그 로그 저장 실패: {e}")
 
     def open_output_folder_clicked(self):
         path = self.settings.get("output", "")
@@ -975,6 +991,9 @@ class MainWindow(QMainWindow):
             # 디스크 캐시 옵션 로드 (기본값: True)
             dlg.use_disk_cache.setChecked(self.settings.get("use_disk_cache", True))
 
+            # ✅ 디버그 로그 옵션 로드 (기본값: False)
+            dlg.enable_debug_logging.setChecked(self.settings.get("enable_debug_logging", False))
+
             # 복합카메라 시간 기반 매칭 옵션 로드 (기본값: True)
             dlg.use_cam_time_matching.setChecked(self.settings.get("use_cam_time_matching", True))
             dlg.cam_match_min_diff.setText(str(self.settings.get("cam_match_min_diff", 4.0)))
@@ -1035,8 +1054,11 @@ class MainWindow(QMainWindow):
         """
         from ui.dialogs.performance_stats_dialog import PerformanceStatsDialog
         
+        # ✅ FIX: 모달리스 다이얼로그로 변경하여 메인 윈도우와 상호작용 가능하도록 함
         dlg = PerformanceStatsDialog(self.image_loader, self)
-        dlg.exec()
+        dlg.setWindowModality(Qt.WindowModality.NonModal)  # 모달리스로 설정
+        dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)  # 닫힐 때 자동 삭제
+        dlg.show()  # exec() 대신 show() 사용
 
     def get_effective_normal_path(self, folder_key: str) -> str:
         """
@@ -1499,9 +1521,18 @@ class MainWindow(QMainWindow):
         self.completed_groups_count = len(display_items)
         self.display_items = display_items
 
+        # ✅ [DEBUG] 정렬 후 타임스탬프 순서 로그
+        self.log_to_box(f"[SORT-DEBUG] 정렬 후 전체 그룹 수: {len(display_items)}")
+        for i, g in enumerate(display_items[:10]):  # 처음 10개만 로그
+            camera_label = g.get("카메라", {}).get("folder_label", "cam-only/nir-only")
+            self.log_to_box(f"[SORT-DEBUG] idx={i}, time={g['time']}, camera={camera_label}, line={g.get('line')}")
+
         # ✅ 라인별로 데이터 분리
         line1_items = [g for g in display_items if g.get('line') == 1]
         line2_items = [g for g in display_items if g.get('line') == 2]
+        
+        # ✅ [DEBUG] 라인별 분리 후 로그
+        self.log_to_box(f"[SORT-DEBUG] 라인1 그룹 수: {len(line1_items)}, 라인2 그룹 수: {len(line2_items)}")
 
         # ✅ 통계 계산 (항상 수행)
         line_mode = self.settings.get("line_mode", "통합 (하나의 시료)")
@@ -1562,6 +1593,19 @@ class MainWindow(QMainWindow):
         scroll_bar = scroll_area.verticalScrollBar()
         is_at_bottom = scroll_bar.value() >= (scroll_bar.maximum() - 10)
 
+        # ✅ [DEBUG] 탭 뷰 업데이트 시작 로그
+        tab_name = "Unknown"
+        if scroll_layout == self.scroll_layout_line1:
+            tab_name = "라인1"
+        elif scroll_layout == self.scroll_layout_line2:
+            tab_name = "라인2"
+        elif scroll_layout == self.scroll_layout_combined_line1:
+            tab_name = "통합-라인1"
+        elif scroll_layout == self.scroll_layout_combined_line2:
+            tab_name = "통합-라인2"
+        
+        self.log_to_box(f"[UI-DEBUG] {tab_name} 탭 업데이트 시작, 그룹 수: {len(display_items)}")
+
         self.ensure_rows_for_layout(scroll_layout, len(display_items))
 
         updated_count = 0
@@ -1587,6 +1631,37 @@ class MainWindow(QMainWindow):
 
             # 그룹 데이터의 해시 계산
             current_hash = self.group_state_manager._calc_group_hash(group_data)
+            
+            # ✅ [DEBUG] 각 행의 업데이트 상태 로그 (처음 10개만)
+            if idx < 10:
+                camera_label = group_data.get("카메라", {}).get("folder_label", "cam-only/nir-only")
+                old_display_item = getattr(row_widget, 'display_item', None)
+                old_camera_label = ""
+                if old_display_item:
+                    old_camera_label = old_display_item.get("카메라", {}).get("folder_label", "cam-only/nir-only")
+                
+                # ✅ 복합카메라 정보 추가
+                line = group_data.get('line', 1)
+                cam_keys = ['cam1', 'cam2', 'cam3'] if line == 1 else ['cam4', 'cam5', 'cam6']
+                cam_files = []
+                for cam_key in cam_keys:
+                    cam_data = group_data.get(cam_key, {})
+                    if cam_data:
+                        # 첫 번째 파일명만 가져오기
+                        for filename in cam_data.keys():
+                            cam_files.append(f"{cam_key}:{filename}")
+                            break
+                cam_info = ", ".join(cam_files) if cam_files else "없음"
+                
+                will_skip = (row_widget.last_hash == current_hash)
+                self.log_to_box(
+                    f"[UI-DEBUG] {tab_name} idx={idx}, "
+                    f"time={group_data['time']}, camera={camera_label}, "
+                    f"cams=[{cam_info}], "
+                    f"old_camera={old_camera_label}, "
+                    f"hash_match={will_skip}, "
+                    f"action={'SKIP' if will_skip else 'UPDATE'}"
+                )
 
             # 변경되지 않았으면 스킵 (최적화!)
             if row_widget.last_hash == current_hash:
@@ -1615,7 +1690,7 @@ class MainWindow(QMainWindow):
 
         # 최적화 로그 (디버깅용)
         if skipped_count > 0:
-            self.log_to_box(f"⚡ UI 최적화: {skipped_count}개 행 업데이트 스킵, {updated_count}개만 갱신")
+            self.log_to_box(f"⚡ {tab_name} UI 최적화: {skipped_count}개 행 업데이트 스킵, {updated_count}개만 갱신")
 
         # ✅ 업데이트 완료 후 이벤트 처리
         QApplication.processEvents()

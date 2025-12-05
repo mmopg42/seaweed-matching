@@ -420,6 +420,17 @@ class SettingDialog(QDialog):
         self.use_disk_cache.setChecked(True)  # 기본값: 사용
         other_layout.addRow("", self.use_disk_cache)
 
+        # ✅ 디버그 로그 저장 설정
+        self.enable_debug_logging = QCheckBox("디버그 로그 파일 저장 (정렬/UI 업데이트 추적)")
+        self.enable_debug_logging.setToolTip(
+            "체크: 디버그 로그를 별도 파일로 저장 (debug_logs/debug_YYYYMMDD.log)\n"
+            "       → 그룹 정렬, UI 업데이트 과정을 상세히 기록\n"
+            "       → 문제 발생 시 원인 분석에 유용\n"
+            "미체크: 디버그 로그 저장 안 함 (일반 로그만 저장)"
+        )
+        self.enable_debug_logging.setChecked(False)  # 기본값: 비활성화
+        other_layout.addRow("", self.enable_debug_logging)
+
         # 복합카메라 시간 기반 매칭 설정
         self.use_cam_time_matching = QCheckBox("복합카메라 시간 기반 매칭 사용 (4-6초 범위)")
         self.use_cam_time_matching.setToolTip(
@@ -529,6 +540,7 @@ class SettingDialog(QDialog):
             "use_camera_subfolder_normal": self.use_camera_subfolder_normal.isChecked(),
             "use_camera_subfolder_normal2": self.use_camera_subfolder_normal2.isChecked(),
             "use_disk_cache": self.use_disk_cache.isChecked(),
+            "enable_debug_logging": self.enable_debug_logging.isChecked(),  # ✅ 디버그 로그 옵션
             "use_cam_time_matching": self.use_cam_time_matching.isChecked(),
             "cam_match_min_diff": float(self.cam_match_min_diff.text() or 4.0),
             "cam_match_max_diff": float(self.cam_match_max_diff.text() or 6.0),
