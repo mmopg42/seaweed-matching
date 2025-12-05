@@ -26,7 +26,7 @@ class ImageManager:
     MainWindow의 이미지 관련 책임을 분리한 매니저 클래스
     """
     
-    def __init__(self, settings, image_loader, max_cache_items=500):
+    def __init__(self, settings, image_loader, max_cache_items=500, log_callback=None, image_registry=None):
         """
         ImageManager 초기화
         
@@ -34,10 +34,19 @@ class ImageManager:
             settings: 애플리케이션 설정 딕셔너리
             image_loader: ImageLoaderWorker 인스턴스
             max_cache_items: 최대 캐시 항목 수
+            log_callback: 로그 메시지를 전달할 콜백 함수 (선택)
+            image_registry: 외부에서 주입받은 ImageRegistry 인스턴스 (선택)
         """
         self.settings = settings
         self.image_loader = image_loader
-        self.image_registry = ImageRegistry(max_cache_items=max_cache_items)
+        
+        # ✅ FIX: 외부에서 주입받은 image_registry 사용 (없으면 새로 생성)
+        if image_registry is not None:
+            self.image_registry = image_registry
+        else:
+            self.image_registry = ImageRegistry(max_cache_items=max_cache_items)
+        
+        self.log_callback = log_callback
         
         # 하위 호환성을 위한 속성
         self.image_path_to_widgets = self.image_registry.image_path_to_widgets
@@ -103,16 +112,35 @@ class ImageManager:
         이미지 로딩 완료 콜백
         - 메모리 캐시에 저장
         - 즉시 UI 갱신 (디바운싱 제거)
+        - ✅ Task 12.2: 메모리 사용량 확인 및 캐시 자동 조절
+        - ✅ Task 12.3: 메모리 경고 표시
         
         Args:
             image_path: 이미지 파일 경로
             pixmap: 로드된 QPixmap
             request_id: 요청 ID
         """
+        # ✅ Task 12.2, 12.3: 캐시 저장 전 메모리 확인 및 자동 조절
+        adjusted, memory_percent, warning_msg = self.image_registry.check_and_adjust_cache_size(
+            log_callback=self.log_callback
+        )
+        
+        # ✅ Task 12.3: 메모리 경고를 PerformanceMonitor에 기록
+        if adjusted and hasattr(self.image_loader, 'performance_monitor'):
+            self.image_loader.performance_monitor.record_memory_warning()
+        
         self.image_registry.set_pixmap(image_path, pixmap)
         
         # Registry를 통해 해당 경로를 보고 있는 위젯들만 즉시 조회 및 업데이트
         widgets = self.image_path_to_widgets.get(image_path, [])
+        
+        # ✅ [DEBUG] 레지스트리 조회 로그
+        print(f"[DEBUG] 레지스트리 조회: {os.path.basename(image_path)} → 위젯 {len(widgets)}개")
+        if len(widgets) == 0:
+            print(f"[WARN] 레지스트리에 위젯 없음! 전체 경로 수: {len(self.image_path_to_widgets)}")
+            # 샘플 경로 출력 (처음 3개)
+            sample_paths = list(self.image_path_to_widgets.keys())[:3]
+            print(f"[DEBUG] 샘플 경로: {[os.path.basename(p) for p in sample_paths]}")
         
         for widget in widgets:
             try:

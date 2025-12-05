@@ -247,6 +247,7 @@ class PerformanceMonitor:
     def get_summary_string(self) -> str:
         """
         ✅ Task 11.3: 성능 통계 표시용 문자열 생성
+        ✅ Task 12.1: 메모리 정보 포함
         
         사용자에게 보여줄 간단한 요약 문자열 반환
         
@@ -263,7 +264,9 @@ class PerformanceMonitor:
             f"총 로딩 횟수: {stats['total_loads']}",
             f"에러율: {stats['error_rate']*100:.1f}%",
             f"타임아웃: {stats['timeout_count']}회",
-            f"재시도 성공률: {stats['retry_success_rate']*100:.1f}%"
+            f"재시도 성공률: {stats['retry_success_rate']*100:.1f}%",
+            f"메모리 사용량: {stats['current_memory_mb']:.1f} MB (Peak: {stats['peak_memory_mb']:.1f} MB)",
+            f"시스템 메모리: {stats['system_memory_percent']:.1f}%"
         ]
         
         return "\n".join(summary_lines)

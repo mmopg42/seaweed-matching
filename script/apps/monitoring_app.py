@@ -109,7 +109,13 @@ class MainWindow(QMainWindow):
         self.image_path_to_widgets = self.image_registry.image_path_to_widgets
         self.widget_to_image_path = self.image_registry.widget_to_image_path
 
-        self.image_manager = ImageManager(self.settings, None, max_cache_items=500)
+        # ✅ FIX: ImageManager에 image_registry 주입하여 동일한 레지스트리 사용
+        self.image_manager = ImageManager(self.settings, None, max_cache_items=500, image_registry=self.image_registry)
+        
+        # ✅ [DEBUG] 레지스트리 공유 확인
+        print(f"[DEBUG] MainWindow image_registry: {id(self.image_registry)}")
+        print(f"[DEBUG] ImageManager image_registry: {id(self.image_manager.image_registry)}")
+        print(f"[DEBUG] 레지스트리 동일 여부: {self.image_registry is self.image_manager.image_registry}")
 
         # ✅ 비동기 이미지 로더 초기화
         thumbnail_cache_dir = os.path.join(self.config_manager.app_dir, "thumbnail_cache")
@@ -1032,13 +1038,6 @@ class MainWindow(QMainWindow):
         dlg = PerformanceStatsDialog(self.image_loader, self)
         dlg.exec()
 
-            # 감시가 원래 ON이었다면 새 경로로 감시 재시작
-            if was_on:
-                self.watchdog_manager.start_watchdog()
-                self.is_watching = True
-                self.btn_run.setEnabled(False)
-                self.btn_stop.setEnabled(True)
-
     def get_effective_normal_path(self, folder_key: str) -> str:
         """
         일반카메라의 실제 검색 경로 반환
@@ -1551,6 +1550,12 @@ class MainWindow(QMainWindow):
         
         # ✅ UI 업데이트 후 캐시된 이미지 갱신
         self.refresh_visible_images()
+        
+        # ✅ [DEBUG] UI 생성 완료 후 레지스트리 상태 로그
+        stats = self.image_registry.get_registry_stats()
+        print(f"[DEBUG] UI 생성 완료 - 레지스트리 상태: {stats['total_paths']}개 경로, {stats['total_widgets']}개 위젯")
+        if stats['sample_paths']:
+            print(f"[DEBUG] 샘플 경로: {[os.path.basename(p) for p in stats['sample_paths']]}")
 
     def _update_tab_view(self, scroll_area, scroll_layout, display_items):
         """개별 탭 뷰 업데이트"""
@@ -1845,6 +1850,7 @@ class MainWindow(QMainWindow):
                 
                 # ✅ [Registry] 위젯 등록
                 self.image_registry.register_widget(cam_widget, thumbnail_path)
+                print(f"[DEBUG] 위젯 등록: {os.path.basename(thumbnail_path)} → {cam_widget} (레지스트리 ID: {id(self.image_registry)})")
                 cam_widget.set_image(pixmap, thumbnail_path)
 
                 # ✅ Phase 5: 이상치 판정 (z-score 기반)
@@ -2052,6 +2058,8 @@ class MainWindow(QMainWindow):
     
     def on_image_loaded(self, image_path: str, pixmap: QPixmap, request_id: str = ""):
         """이미지 로딩 완료 콜백 - ImageManager에 위임"""
+        # ✅ [DEBUG] 슬롯 호출 로그
+        print(f"[DEBUG] 슬롯 호출: {os.path.basename(image_path)}, pixmap: {pixmap.width()}x{pixmap.height() if pixmap else 'None'}")
         self.image_manager.on_image_loaded(image_path, pixmap, request_id)
     
     def on_image_load_error(self, image_path: str, error_message: str):

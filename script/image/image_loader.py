@@ -439,6 +439,9 @@ class ImageLoaderWorker(QThread):
                             if was_retry:
                                 self.performance_monitor.record_retry_success()
                             
+                            # ✅ [DEBUG] 시그널 발생 로그
+                            print(f"[DEBUG] 시그널 발생: {os.path.basename(image_path)}, pixmap: {pixmap.width()}x{pixmap.height()}")
+                            
                             self.image_ready.emit(image_path, pixmap, request_id)
                             
                             # ✅ Phase 2: 벌크 로딩 진행률 업데이트
