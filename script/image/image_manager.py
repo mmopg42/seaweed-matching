@@ -134,14 +134,6 @@ class ImageManager:
         # Registry를 통해 해당 경로를 보고 있는 위젯들만 즉시 조회 및 업데이트
         widgets = self.image_path_to_widgets.get(image_path, [])
         
-        # ✅ [DEBUG] 레지스트리 조회 로그
-        print(f"[DEBUG] 레지스트리 조회: {os.path.basename(image_path)} → 위젯 {len(widgets)}개")
-        if len(widgets) == 0:
-            print(f"[WARN] 레지스트리에 위젯 없음! 전체 경로 수: {len(self.image_path_to_widgets)}")
-            # 샘플 경로 출력 (처음 3개)
-            sample_paths = list(self.image_path_to_widgets.keys())[:3]
-            print(f"[DEBUG] 샘플 경로: {[os.path.basename(p) for p in sample_paths]}")
-        
         for widget in widgets:
             try:
                 # 위젯이 삭제되었거나 유효하지 않을 수 있으므로 체크

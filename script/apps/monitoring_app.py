@@ -111,11 +111,6 @@ class MainWindow(QMainWindow):
 
         # ✅ FIX: ImageManager에 image_registry 주입하여 동일한 레지스트리 사용
         self.image_manager = ImageManager(self.settings, None, max_cache_items=500, image_registry=self.image_registry)
-        
-        # ✅ [DEBUG] 레지스트리 공유 확인
-        print(f"[DEBUG] MainWindow image_registry: {id(self.image_registry)}")
-        print(f"[DEBUG] ImageManager image_registry: {id(self.image_manager.image_registry)}")
-        print(f"[DEBUG] 레지스트리 동일 여부: {self.image_registry is self.image_manager.image_registry}")
 
         # ✅ 비동기 이미지 로더 초기화
         thumbnail_cache_dir = os.path.join(self.config_manager.app_dir, "thumbnail_cache")
@@ -611,9 +606,8 @@ class MainWindow(QMainWindow):
         Args:
             unmatched: scan_and_build_unmatched()의 결과
         """
-        # ✅ Stop 상태면 스캔 결과 무시
+        # Stop 상태면 스캔 결과 무시
         if not self.is_watching:
-            self.log_to_box("[DEBUG] Stop 상태이므로 스캔 결과를 무시합니다.")
             return
         
         try:
@@ -1367,8 +1361,6 @@ class MainWindow(QMainWindow):
         self.event_queue.clear()
         
         self.log_to_box("[INFO] 감시가 중지되었습니다.")
-        if cleared_count > 0:
-            self.log_to_box(f"[DEBUG] 처리되지 않은 이벤트 {cleared_count}개 제거됨")
 
     def toggle_watch(self):
         """하위 호환성을 위해 남겨둔 메서드 (내부에서 사용)"""
@@ -1521,18 +1513,9 @@ class MainWindow(QMainWindow):
         self.completed_groups_count = len(display_items)
         self.display_items = display_items
 
-        # ✅ [DEBUG] 정렬 후 타임스탬프 순서 로그
-        self.log_to_box(f"[SORT-DEBUG] 정렬 후 전체 그룹 수: {len(display_items)}")
-        for i, g in enumerate(display_items[:10]):  # 처음 10개만 로그
-            camera_label = g.get("카메라", {}).get("folder_label", "cam-only/nir-only")
-            self.log_to_box(f"[SORT-DEBUG] idx={i}, time={g['time']}, camera={camera_label}, line={g.get('line')}")
-
-        # ✅ 라인별로 데이터 분리
+        # 라인별로 데이터 분리
         line1_items = [g for g in display_items if g.get('line') == 1]
         line2_items = [g for g in display_items if g.get('line') == 2]
-        
-        # ✅ [DEBUG] 라인별 분리 후 로그
-        self.log_to_box(f"[SORT-DEBUG] 라인1 그룹 수: {len(line1_items)}, 라인2 그룹 수: {len(line2_items)}")
 
         # ✅ 통계 계산 (항상 수행)
         line_mode = self.settings.get("line_mode", "통합 (하나의 시료)")
@@ -1579,21 +1562,15 @@ class MainWindow(QMainWindow):
         self._update_tab_view(self.scroll_area_combined_line1, self.scroll_layout_combined_line1, line1_items)
         self._update_tab_view(self.scroll_area_combined_line2, self.scroll_layout_combined_line2, line2_items)
         
-        # ✅ UI 업데이트 후 캐시된 이미지 갱신
+        # UI 업데이트 후 캐시된 이미지 갱신
         self.refresh_visible_images()
-        
-        # ✅ [DEBUG] UI 생성 완료 후 레지스트리 상태 로그
-        stats = self.image_registry.get_registry_stats()
-        print(f"[DEBUG] UI 생성 완료 - 레지스트리 상태: {stats['total_paths']}개 경로, {stats['total_widgets']}개 위젯")
-        if stats['sample_paths']:
-            print(f"[DEBUG] 샘플 경로: {[os.path.basename(p) for p in stats['sample_paths']]}")
 
     def _update_tab_view(self, scroll_area, scroll_layout, display_items):
         """개별 탭 뷰 업데이트"""
         scroll_bar = scroll_area.verticalScrollBar()
         is_at_bottom = scroll_bar.value() >= (scroll_bar.maximum() - 10)
 
-        # ✅ [DEBUG] 탭 뷰 업데이트 시작 로그
+        # 탭 이름 결정 (로그용)
         tab_name = "Unknown"
         if scroll_layout == self.scroll_layout_line1:
             tab_name = "라인1"
@@ -1603,8 +1580,6 @@ class MainWindow(QMainWindow):
             tab_name = "통합-라인1"
         elif scroll_layout == self.scroll_layout_combined_line2:
             tab_name = "통합-라인2"
-        
-        self.log_to_box(f"[UI-DEBUG] {tab_name} 탭 업데이트 시작, 그룹 수: {len(display_items)}")
 
         self.ensure_rows_for_layout(scroll_layout, len(display_items))
 
@@ -1631,37 +1606,6 @@ class MainWindow(QMainWindow):
 
             # 그룹 데이터의 해시 계산
             current_hash = self.group_state_manager._calc_group_hash(group_data)
-            
-            # ✅ [DEBUG] 각 행의 업데이트 상태 로그 (처음 10개만)
-            if idx < 10:
-                camera_label = group_data.get("카메라", {}).get("folder_label", "cam-only/nir-only")
-                old_display_item = getattr(row_widget, 'display_item', None)
-                old_camera_label = ""
-                if old_display_item:
-                    old_camera_label = old_display_item.get("카메라", {}).get("folder_label", "cam-only/nir-only")
-                
-                # ✅ 복합카메라 정보 추가
-                line = group_data.get('line', 1)
-                cam_keys = ['cam1', 'cam2', 'cam3'] if line == 1 else ['cam4', 'cam5', 'cam6']
-                cam_files = []
-                for cam_key in cam_keys:
-                    cam_data = group_data.get(cam_key, {})
-                    if cam_data:
-                        # 첫 번째 파일명만 가져오기
-                        for filename in cam_data.keys():
-                            cam_files.append(f"{cam_key}:{filename}")
-                            break
-                cam_info = ", ".join(cam_files) if cam_files else "없음"
-                
-                will_skip = (row_widget.last_hash == current_hash)
-                self.log_to_box(
-                    f"[UI-DEBUG] {tab_name} idx={idx}, "
-                    f"time={group_data['time']}, camera={camera_label}, "
-                    f"cams=[{cam_info}], "
-                    f"old_camera={old_camera_label}, "
-                    f"hash_match={will_skip}, "
-                    f"action={'SKIP' if will_skip else 'UPDATE'}"
-                )
 
             # 변경되지 않았으면 스킵 (최적화!)
             if row_widget.last_hash == current_hash:
@@ -1923,9 +1867,8 @@ class MainWindow(QMainWindow):
                 # 썸네일 이미지 로딩 및 표시
                 pixmap = self.get_cached_pixmap(thumbnail_path, normal_priority)
                 
-                # ✅ [Registry] 위젯 등록
+                # [Registry] 위젯 등록
                 self.image_registry.register_widget(cam_widget, thumbnail_path)
-                print(f"[DEBUG] 위젯 등록: {os.path.basename(thumbnail_path)} → {cam_widget} (레지스트리 ID: {id(self.image_registry)})")
                 cam_widget.set_image(pixmap, thumbnail_path)
 
                 # ✅ Phase 5: 이상치 판정 (z-score 기반)
@@ -2133,8 +2076,6 @@ class MainWindow(QMainWindow):
     
     def on_image_loaded(self, image_path: str, pixmap: QPixmap, request_id: str = ""):
         """이미지 로딩 완료 콜백 - ImageManager에 위임"""
-        # ✅ [DEBUG] 슬롯 호출 로그
-        print(f"[DEBUG] 슬롯 호출: {os.path.basename(image_path)}, pixmap: {pixmap.width()}x{pixmap.height() if pixmap else 'None'}")
         self.image_manager.on_image_loaded(image_path, pixmap, request_id)
     
     def on_image_load_error(self, image_path: str, error_message: str):

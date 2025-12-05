@@ -599,10 +599,6 @@ class ImageWidget(QWidget):
         return super().eventFilter(obj, event)
 
     def set_image(self, pixmap, path: str = ""):
-        # ✅ [DEBUG] 위젯 업데이트 로그
-        import os
-        print(f"[DEBUG] 위젯 업데이트: {os.path.basename(path) if path else 'None'}, pixmap: {pixmap is not None}")
-        
         self._current_pixmap = pixmap
         self._current_path = path or ""
         self._is_error_state = False  # ✅ Task 9.1: 정상 이미지 로드 시 에러 상태 해제
