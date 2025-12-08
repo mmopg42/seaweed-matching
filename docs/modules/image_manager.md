@@ -4,10 +4,15 @@
 이미지 로딩, 캐싱, UI 업데이트 관리 클래스입니다. MainWindow의 이미지 관련 책임을 분리한 매니저 클래스입니다.
 
 **파일 경로**: `script/image/image_manager.py`  
-**파일 크기**: 234 라인  
+**파일 크기**: ~240 라인  
 **총 클래스**: 1개 (`ImageManager`)  
 **총 메서드**: 5개  
-**업데이트**: 2025-12-04
+**업데이트**: 2025-12-05
+
+### 최근 변경사항 (2025-12-05)
+- ✅ **ImageRegistry 주입 지원**: 외부에서 생성한 `ImageRegistry`를 주입받아 사용 가능
+- ✅ **레지스트리 공유 문제 해결**: `MainWindow`와 `ImageManager`가 동일한 레지스트리 사용
+- ✅ **위젯 등록 동기화**: 위젯 등록이 올바르게 동기화되어 이미지 업데이트 정상 작동
 
 ---
 
@@ -39,30 +44,58 @@
 #### 초기화
 
 ```python
-manager = ImageManager(settings, image_loader, max_cache_items=500)
+manager = ImageManager(settings, image_loader, max_cache_items=500, log_callback=None, image_registry=None)
 ```
 
 ##### 매개변수
 - `settings`: 애플리케이션 설정 딕셔너리
 - `image_loader`: ImageLoaderWorker 인스턴스 (Optional)
 - `max_cache_items`: 최대 캐시 항목 수 (기본 500)
+- `log_callback`: 로그 메시지를 전달할 콜백 함수 (Optional)
+- `image_registry`: 외부에서 주입받은 ImageRegistry 인스턴스 (Optional, **권장**)
 
 ##### 인스턴스 변수
 - `settings`: 설정 참조
 - `image_loader`: 백그라운드 로더
-- `image_registry`: ImageRegistry 인스턴스
+- `image_registry`: ImageRegistry 인스턴스 (주입받거나 새로 생성)
+- `log_callback`: 로그 콜백 함수
 
-#### 예시
+#### 중요: ImageRegistry 주입 (2025-12-05 업데이트)
+
+**문제**: 이전에는 `ImageManager`가 자체적으로 `ImageRegistry`를 생성하여, `MainWindow`의 레지스트리와 분리되어 위젯 등록이 동기화되지 않았습니다.
+
+**해결**: `MainWindow`에서 생성한 `ImageRegistry`를 `ImageManager`에 주입하여 동일한 레지스트리를 공유합니다.
+
+#### 예시 (권장 방법)
 ```python
 # MainWindow.__init__()
-self.image_manager = ImageManager(self.settings, None, max_cache_items=500)
+# 1. ImageRegistry 먼저 생성
+self.image_registry = ImageRegistry(pixmap_cache=self.pixmap_cache)
 
-# 이미지 로더 생성 후 연결
+# 2. ImageManager에 image_registry 주입
+self.image_manager = ImageManager(
+    self.settings, 
+    None, 
+    max_cache_items=500,
+    image_registry=self.image_registry  # ✅ 동일한 레지스트리 공유
+)
+
+# 3. 이미지 로더 생성 후 연결
 self.image_loader = ImageLoaderWorker(cache_dir=..., use_disk_cache=...)
 self.image_loader.image_ready.connect(self.on_image_loaded)
 self.image_loader.start()
 
 self.image_manager.image_loader = self.image_loader
+
+# 4. 레지스트리 공유 확인 (디버그)
+assert self.image_registry is self.image_manager.image_registry
+```
+
+#### 예시 (이전 방법 - 비권장)
+```python
+# ❌ 이전 방법: ImageManager가 자체 레지스트리 생성
+self.image_manager = ImageManager(self.settings, None, max_cache_items=500)
+# 문제: MainWindow의 image_registry와 ImageManager의 image_registry가 다름
 ```
 
 ---

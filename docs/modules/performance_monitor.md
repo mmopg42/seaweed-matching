@@ -10,6 +10,7 @@
 - 이미지 로딩 시간 기록 및 통계 계산
 - 에러 및 타임아웃 추적
 - 재시도 성공률 모니터링
+- **메모리 사용량 추적 및 모니터링** (Task 12.1)
 - 성능 통계 제공
 
 ## 주요 클래스
@@ -28,12 +29,16 @@
 - `record_permanent_failure()`: 영구 실패 기록
 - `record_retry()`: 재시도 시도 기록
 - `record_retry_success()`: 재시도 성공 기록
+- `record_memory_warning()`: 메모리 경고 기록 (Task 12.3)
 - `get_cache_hit_rate()`: 캐시 히트율 계산 (0.0 ~ 1.0)
 - `get_average_load_time()`: 평균 로딩 시간 계산 (ms)
 - `get_median_load_time()`: 중앙값 로딩 시간 계산 (ms)
 - `get_percentile_load_time(percentile)`: 백분위수 로딩 시간 계산 (ms)
 - `get_error_rate()`: 에러율 계산 (0.0 ~ 1.0)
 - `get_retry_success_rate()`: 재시도 성공률 계산 (0.0 ~ 1.0)
+- `get_current_memory_mb()`: 현재 프로세스 메모리 사용량 반환 (MB) (Task 12.1)
+- `get_system_memory_percent()`: 시스템 전체 메모리 사용률 반환 (%) (Task 12.1)
+- `get_cache_memory_estimate_mb(cache_size, avg_pixmap_size_kb)`: 캐시 메모리 사용량 추정 (MB) (Task 12.1)
 - `get_statistics()`: 모든 성능 메트릭을 포함하는 딕셔너리 반환
 - `get_summary_string()`: 사용자에게 보여줄 간단한 요약 문자열 반환
 - `reset()`: 모든 통계 초기화
@@ -68,10 +73,17 @@
 - uptime_seconds: 모니터 가동 시간 (초)
 - loads_per_second: 초당 로딩 횟수
 
+메모리 통계 (Task 12.1):
+- current_memory_mb: 현재 프로세스 메모리 사용량 (MB)
+- peak_memory_mb: 최대 메모리 사용량 (MB)
+- system_memory_percent: 시스템 전체 메모리 사용률 (%)
+- memory_warnings: 메모리 경고 발생 횟수
+
 ## 의존성
 
 **외부 라이브러리:**
 - collections.deque: 최근 N개 로딩 시간 기록 유지
+- psutil: 메모리 사용량 모니터링 (Task 12.1)
 
 **내부 모듈:**
 - 없음 (독립적인 모듈)
@@ -149,7 +161,9 @@ dlg.exec()
 
 ## 테스트
 
-테스트 파일: `tests/test_cache_hit_rate_tracking.py`
+테스트 파일: 
+- `tests/test_cache_hit_rate_tracking.py`: 캐시 히트율 추적 테스트
+- `tests/test_memory_monitoring.py`: 메모리 모니터링 테스트 (Task 12.4)
 
 **테스트 커버리지:**
 - PerformanceMonitor 초기화
@@ -162,6 +176,10 @@ dlg.exec()
 - ImageLoader 통합
 - 성능 요약 문자열 생성
 - 로딩 시간 기록 제한
+- **메모리 사용량 추적** (Task 12.1)
+- **시스템 메모리 사용률 확인** (Task 12.1)
+- **캐시 메모리 사용량 추정** (Task 12.1)
+- **메모리 경고 기록** (Task 12.3)
 
 ## 관련 문서
 
@@ -171,3 +189,4 @@ dlg.exec()
 ## 버전 히스토리
 
 - 2025-01-XX: 초기 구현 (Task 11.1 - 캐시 히트율 추적)
+- 2025-01-XX: 메모리 모니터링 추가 (Task 12.1, 12.3 - 메모리 사용량 추적 및 경고)

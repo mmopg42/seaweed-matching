@@ -4,11 +4,15 @@
 이미지-위젯 매핑 관리 (Registry Pattern)를 담당하는 모듈입니다. 특정 이미지가 변경되었을 때 해당 이미지를 표시하는 모든 위젯을 O(1) 시간에 찾아 업데이트할 수 있습니다.
 
 **파일 경로**: `script/image/image_registry.py`  
-**파일 크기**: 165 라인  
+**파일 크기**: ~180 라인  
 **총 클래스**: 1개 (`ImageRegistry`)  
-**총 메서드**: 10개  
+**총 메서드**: 11개 (+ `get_registry_stats`)  
 **성능**: O(N²) → O(1) 최적화 적용  
-**업데이트**: 2025-12-04
+**업데이트**: 2025-12-05
+
+### 최근 변경사항 (2025-12-05)
+- ✅ **get_registry_stats() 추가**: 레지스트리 상태 조회 메서드 추가 (디버깅용)
+- ✅ **레지스트리 공유 지원**: `MainWindow`와 `ImageManager`가 동일한 인스턴스 공유 가능
 
 ---
 
@@ -28,16 +32,19 @@
 
 ### 초기화
 
-#### `__init__(max_cache_items=300, pixmap_cache=None)`
+#### `__init__(max_cache_items=300, pixmap_cache=None, memory_threshold_percent=80.0)`
 - **설명**: 이미지 레지스트리 초기화
 - **매개변수**:
   - `max_cache_items`: QPixmap 메모리 캐시 최대 항목 수 (기본: 300)
   - `pixmap_cache`: 기존 LruPixmapCache 인스턴스 (재사용 가능)
+  - `memory_threshold_percent`: 메모리 임계값 (%, 기본: 80.0) (Task 12.2)
 - **초기화 항목**:
   - `image_path_to_widgets`: 이미지 경로 → 위젯 리스트 (defaultdict)
   - `widget_to_image_path`: 위젯 → 이미지 경로 (dict)
   - `pixmap_cache`: LRU 캐시 (주입 또는 생성)
   - `_placeholder_pixmap`: 플레이스홀더 캐시
+  - `memory_threshold_percent`: 메모리 임계값 (Task 12.2)
+  - `psutil`: 메모리 모니터링 라이브러리 (Task 12.1)
 
 ---
 
@@ -68,6 +75,20 @@
 - **매개변수**: `image_path` - 이미지 파일 경로
 - **반환값**: 해당 이미지를 표시하는 위젯 리스트
 - **시간 복잡도**: O(1)
+
+#### `get_registry_stats() -> dict` (2025-12-05 추가)
+- **설명**: 레지스트리 상태 반환 (디버깅용)
+- **반환값**: 딕셔너리
+  - `total_paths`: 등록된 이미지 경로 개수
+  - `total_widgets`: 등록된 위젯 총 개수
+  - `sample_paths`: 샘플 경로 리스트 (최대 5개)
+- **용도**: 레지스트리가 올바르게 동작하는지 확인
+- **예시**:
+  ```python
+  stats = self.image_registry.get_registry_stats()
+  print(f"레지스트리: {stats['total_paths']}개 경로, {stats['total_widgets']}개 위젯")
+  # 출력: 레지스트리: 380개 경로, 1900개 위젯
+  ```
 
 #### `refresh_single_image(image_path: str, pixmap)`
 - **설명**: 특정 이미지 경로만 찾아서 즉시 업데이트
@@ -123,7 +144,28 @@
 #### `has_pixmap(path: str) -> bool`
 - **설명**: 캐시에 해당 경로의 pixmap이 있는지 확인
 
+### 메모리 관리 (Task 12)
 
+#### `check_and_adjust_cache_size(log_callback=None) -> tuple`
+- **설명**: 메모리 사용량 확인 및 캐시 크기 자동 조절 (Task 12.2)
+- **매개변수**:
+  - `log_callback`: 로그 메시지를 전달할 콜백 함수 (선택)
+- **반환값**: `(조절 발생 여부, 메모리 사용률, 경고 메시지)` 튜플
+- **동작**:
+  1. 시스템 메모리 사용률 확인
+  2. 임계값(80%) 초과 시 캐시 크기를 50%로 축소
+  3. LRU 정책으로 오래된 항목 제거
+  4. 경고 메시지 생성 및 콜백 호출
+- **용도**: 이미지 로딩 완료 시 자동 호출
+
+#### `get_cache_size() -> int`
+- **설명**: 현재 캐시 크기 반환 (Task 12.1)
+- **반환값**: 캐시에 저장된 항목 수
+
+#### `get_memory_usage_mb() -> float`
+- **설명**: 캐시 메모리 사용량 추정 (Task 12.1)
+- **반환값**: 추정 메모리 사용량 (MB)
+- **계산**: 캐시 크기 × 평균 pixmap 크기 (50KB)
 
 ---
 
@@ -261,6 +303,7 @@ for widget in widgets:
 - `utils.LruPixmapCache`: LRU 캐시 구현
 - `PySide6.QtGui`: QPixmap, QPainter, QColor, QFont
 - `PySide6.QtCore`: Qt
+- `psutil`: 메모리 사용량 모니터링 (Task 12.1)
 
 ---
 
@@ -272,8 +315,26 @@ for widget in widgets:
 
 ---
 
+## 테스트
+
+테스트 파일: `tests/test_memory_monitoring.py`
+
+**테스트 커버리지:**
+- 캐시 크기 축소 동작 (Task 12.2)
+- 메모리 80% 초과 시 자동 조절 (Task 12.2)
+- 메모리 정상 범위일 때 조절 안 함 (Task 12.2)
+- LRU 정책으로 오래된 항목부터 제거 (Task 12.2)
+- 경고 메시지 형식 확인 (Task 12.3)
+- 로그 콜백 호출 확인 (Task 12.3)
+- 대량 로딩 중 캐시 자동 조절 (Task 12.4)
+
 ## 향후 개선 사항
 
 1. **자동 등록**: 위젯 생성 시 자동 등록 데코레이터
 2. **약한 참조**: WeakSet 사용하여 자동 가비지 컬렉션
 3. **이벤트 시스템**: 이미지 변경 시 자동 알림
+
+## 버전 히스토리
+
+- 2025-12-04: 초기 구현 (Registry Pattern)
+- 2025-01-XX: 메모리 자동 조절 추가 (Task 12.2, 12.3 - 메모리 임계값 초과 시 캐시 축소)

@@ -127,9 +127,10 @@
 
 ### 이미지 처리
 
-**[image_manager.md](image_manager.md)** - 이미지 로딩 조정 (234줄)
+**[image_manager.md](image_manager.md)** - 이미지 로딩 조정 (~240줄) ✅ 2025-12-05 업데이트
 - ImageLoader 제어
 - 가시성 기반 로딩
+- **ImageRegistry 주입 지원** (MainWindow와 레지스트리 공유)
 - 캐시 관리
 
 **[image_loader.md](image_loader.md)** - 백그라운드 이미지 로더
@@ -137,9 +138,10 @@
 - 디스크 캐시, 썸네일 최적화
 - Pillow 사용
 
-**[image_registry.md](image_registry.md)** - 이미지-위젯 매핑
+**[image_registry.md](image_registry.md)** - 이미지-위젯 매핑 (~180줄) ✅ 2025-12-05 업데이트
 - Registry Pattern, O(1) 조회
 - QPixmap 캐싱
+- **get_registry_stats() 추가** (디버깅용 상태 조회)
 
 ---
 
