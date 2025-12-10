@@ -1,0 +1,147 @@
+<Window x:Class="ChronoView.UI.Views.SettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:ChronoView.UI.ViewModels"
+        Title="Settings" Height="600" Width="800"
+        WindowStartupLocation="CenterOwner"
+        Background="#f0f0f0">
+    
+    <Window.Resources>
+        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Margin" Value="0,10,0,5"/>
+        </Style>
+        
+        <Style x:Key="LabelStyle" TargetType="Label">
+            <Setter Property="Width" Value="150"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+    
+    <DockPanel>
+        <!-- Button Panel -->
+        <Border DockPanel.Dock="Bottom" Background="#f5f5f5" BorderBrush="#d0d0d0" BorderThickness="0,1,0,0" Padding="10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="OK" Width="80" Height="30" Margin="0,0,10,0" Command="{Binding SaveCommand}" IsDefault="True"/>
+                <Button Content="Cancel" Width="80" Height="30" Click="Cancel_Click" IsCancel="True"/>
+            </StackPanel>
+        </Border>
+        
+        <!-- Main Content -->
+        <TabControl Margin="10">
+            <!-- Paths Tab -->
+            <TabItem Header="Paths">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="Folder Paths" Style="{StaticResource SectionHeaderStyle}"/>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="NIR Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding NirPath}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="Browse..." Width="80"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Normal Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding NormalPath}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="Browse..." Width="80"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Camera 1 Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding Camera1Path}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="Browse..." Width="80"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Camera 2 Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding Camera2Path}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="Browse..." Width="80"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Camera 3 Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding Camera3Path}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="Browse..." Width="80"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Output Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding OutputPath}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="Browse..." Width="80"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            
+            <!-- Advanced Tab -->
+            <TabItem Header="Advanced">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="Camera Subfolder Options" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="Use camera subfolder for Normal1" IsChecked="{Binding UseCameraSubfolderNormal}" Margin="0,5"/>
+                        <CheckBox Content="Use camera subfolder for Normal2" IsChecked="{Binding UseCameraSubfolderNormal2}" Margin="0,5"/>
+                        
+                        <TextBlock Text="Image Processing" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="Enable disk cache for thumbnails" IsChecked="{Binding UseDiskCache}" Margin="0,5"/>
+                        
+                        <TextBlock Text="Matching Options" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="Use time-based camera matching" IsChecked="{Binding UseCamTimeMatching}" Margin="0,5"/>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Camera match min diff (sec):" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding CamMatchMinDiff}" Width="100"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Camera match max diff (sec):" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding CamMatchMaxDiff}" Width="100"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="NIR match time diff (sec):" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding NirMatchTimeDiff}" Width="100"/>
+                        </StackPanel>
+                        
+                        <TextBlock Text="UI Options" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="Legacy UI mode" IsChecked="{Binding LegacyUiMode}" Margin="0,5"/>
+                        <CheckBox Content="Use folder suffix" IsChecked="{Binding UseFolderSuffix}" Margin="0,5"/>
+                        <CheckBox Content="Show tooltips" IsChecked="{Binding ShowTooltips}" Margin="0,5"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            
+            <!-- UI Options Tab -->
+            <TabItem Header="UI Options">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="Image Display Size" Style="{StaticResource SectionHeaderStyle}"/>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Image Width (px):" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding DisplayImageWidth}" Width="100"/>
+                            <TextBlock Text="(Default: 120)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Image Height (px):" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding DisplayImageHeight}" Width="100"/>
+                            <TextBlock Text="(Default: 90)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Row Height (px):" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding DataGridRowHeight}" Width="100"/>
+                            <TextBlock Text="(Default: 100)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
+                        
+                        <TextBlock Text="UI Display Options" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="Legacy UI mode" IsChecked="{Binding LegacyUiMode}" Margin="0,5"/>
+                        <CheckBox Content="Show tooltips" IsChecked="{Binding ShowTooltips}" Margin="0,5"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>
