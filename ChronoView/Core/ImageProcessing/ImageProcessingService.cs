@@ -64,12 +64,12 @@ public class ImageProcessingService : IImageProcessor
             // Use Task.Run for CPU-intensive image processing on background thread
             var thumbnail = await Task.Run(async () =>
             {
-                using var image = await Image.LoadAsync(imagePath, cancellationToken);
+                using var image = await SixLabors.ImageSharp.Image.LoadAsync(imagePath, cancellationToken);
                 
                 // Resize image maintaining aspect ratio
                 image.Mutate(x => x.Resize(new ResizeOptions
                 {
-                    Size = new Size(width, height),
+                    Size = new SixLabors.ImageSharp.Size(width, height),
                     Mode = ResizeMode.Max
                 }));
 
@@ -123,7 +123,7 @@ public class ImageProcessingService : IImageProcessor
             var metadata = await Task.Run(async () =>
             {
                 var fileInfo = new FileInfo(imagePath);
-                using var image = await Image.LoadAsync(imagePath, cancellationToken);
+                using var image = await SixLabors.ImageSharp.Image.LoadAsync(imagePath, cancellationToken);
 
                 return new ImageMetadata
                 {
@@ -171,9 +171,9 @@ public class ImageProcessingService : IImageProcessor
                 
                 // Draw an X using DrawLine (singular)
                 x.DrawLine(SixLabors.ImageSharp.Color.DarkGray, 2,
-                    new PointF(0, 0), new PointF(width, height));
+                    new SixLabors.ImageSharp.PointF(0, 0), new SixLabors.ImageSharp.PointF(width, height));
                 x.DrawLine(SixLabors.ImageSharp.Color.DarkGray, 2,
-                    new PointF(width, 0), new PointF(0, height));
+                    new SixLabors.ImageSharp.PointF(width, 0), new SixLabors.ImageSharp.PointF(0, height));
             });
 
             using var ms = new MemoryStream();

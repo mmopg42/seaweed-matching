@@ -57,8 +57,10 @@ namespace ChronoView.Core.FileWatching
                 // Configure the file group matcher with the new configuration
                 _fileGroupMatcher.Configuration = new MatchingConfiguration
                 {
-                    NirPath = config.MatchingSettings.NirPath,
-                    NormalPath = config.MatchingSettings.NormalPath,
+                    Nir1Path = config.MatchingSettings.Nir1Path,
+                    Normal1Path = config.MatchingSettings.Normal1Path,
+                    Nir2Path = config.MatchingSettings.Nir2Path,
+                    Normal2Path = config.MatchingSettings.Normal2Path,
                     Camera1Path = config.MatchingSettings.Camera1Path,
                     Camera2Path = config.MatchingSettings.Camera2Path,
                     Camera3Path = config.MatchingSettings.Camera3Path,
@@ -81,11 +83,18 @@ namespace ChronoView.Core.FileWatching
                 
                 // Collect paths to watch
                 var watchPaths = new List<string>();
-                if (!string.IsNullOrEmpty(config.MatchingSettings.NirPath) && Directory.Exists(config.MatchingSettings.NirPath))
-                    watchPaths.Add(config.MatchingSettings.NirPath);
                 
-                if (!string.IsNullOrEmpty(config.MatchingSettings.NormalPath) && Directory.Exists(config.MatchingSettings.NormalPath))
-                    watchPaths.Add(config.MatchingSettings.NormalPath);
+                // Add Line 1 paths
+                if (!string.IsNullOrEmpty(config.MatchingSettings.Nir1Path) && Directory.Exists(config.MatchingSettings.Nir1Path))
+                    watchPaths.Add(config.MatchingSettings.Nir1Path);
+                if (!string.IsNullOrEmpty(config.MatchingSettings.Normal1Path) && Directory.Exists(config.MatchingSettings.Normal1Path))
+                    watchPaths.Add(config.MatchingSettings.Normal1Path);
+                
+                // Add Line 2 paths
+                if (!string.IsNullOrEmpty(config.MatchingSettings.Nir2Path) && Directory.Exists(config.MatchingSettings.Nir2Path))
+                    watchPaths.Add(config.MatchingSettings.Nir2Path);
+                if (!string.IsNullOrEmpty(config.MatchingSettings.Normal2Path) && Directory.Exists(config.MatchingSettings.Normal2Path))
+                    watchPaths.Add(config.MatchingSettings.Normal2Path);
 
                 for (int i = 1; i <= 6; i++)
                 {
@@ -149,7 +158,7 @@ namespace ChronoView.Core.FileWatching
             }
         }
 
-        public async Task RefreshAsync()
+        public async Task RefreshAsync(CancellationToken cancellationToken = default)
         {
             if (!_isMonitoring)
             {
@@ -173,7 +182,7 @@ namespace ChronoView.Core.FileWatching
                 }
 
                 // Perform new scan
-                var result = await PerformInitialScanAsync();
+                var result = await PerformInitialScanAsync(cancellationToken);
                 
                 if (!result.Success)
                 {
@@ -190,7 +199,7 @@ namespace ChronoView.Core.FileWatching
             }
         }
 
-        public async Task<OrchestrationResult> PerformInitialScanAsync()
+        public async Task<OrchestrationResult> PerformInitialScanAsync(CancellationToken cancellationToken = default)
         {
             var stopwatch = Stopwatch.StartNew();
             var result = new OrchestrationResult { Success = true };
@@ -213,34 +222,68 @@ namespace ChronoView.Core.FileWatching
                     CameraFiles = new Dictionary<string, List<TimestampedFile>>()
                 };
 
-                // Scan NIR directories
-                if (!string.IsNullOrEmpty(matchingConfig.NirPath) && Directory.Exists(matchingConfig.NirPath))
+                // Scan NIR directories for Line 1
+                if (!string.IsNullOrEmpty(matchingConfig.Nir1Path) && Directory.Exists(matchingConfig.Nir1Path))
                 {
-                    var nirFiles = Directory.GetFiles(matchingConfig.NirPath, "*.*", SearchOption.AllDirectories);
+                    var nirFiles = Directory.GetFiles(matchingConfig.Nir1Path, "*.*", SearchOption.AllDirectories);
                     var nirDict = new Dictionary<string, string>();
                     foreach (var file in nirFiles)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         var key = Path.GetFileNameWithoutExtension(file);
                         nirDict[key] = file;
                         result.FilesScanned++;
                     }
-                    unmatchedFiles.NirFiles["nir"] = nirDict;
-                    _logger.LogInformation("Scanned {Count} NIR files", nirFiles.Length);
+                    unmatchedFiles.NirFiles["nir1"] = nirDict;
+                    _logger.LogInformation("Scanned {Count} NIR1 files", nirFiles.Length);
                 }
 
-                // Scan normal directories
-                if (!string.IsNullOrEmpty(matchingConfig.NormalPath) && Directory.Exists(matchingConfig.NormalPath))
+                // Scan NIR directories for Line 2
+                if (!string.IsNullOrEmpty(matchingConfig.Nir2Path) && Directory.Exists(matchingConfig.Nir2Path))
                 {
-                    var normalFolders = Directory.GetDirectories(matchingConfig.NormalPath);
+                    var nirFiles = Directory.GetFiles(matchingConfig.Nir2Path, "*.*", SearchOption.AllDirectories);
+                    var nirDict = new Dictionary<string, string>();
+                    foreach (var file in nirFiles)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var key = Path.GetFileNameWithoutExtension(file);
+                        nirDict[key] = file;
+                        result.FilesScanned++;
+                    }
+                    unmatchedFiles.NirFiles["nir2"] = nirDict;
+                    _logger.LogInformation("Scanned {Count} NIR2 files", nirFiles.Length);
+                }
+
+                // Scan normal directories for Line 1
+                if (!string.IsNullOrEmpty(matchingConfig.Normal1Path) && Directory.Exists(matchingConfig.Normal1Path))
+                {
+                    var normalFolders = Directory.GetDirectories(matchingConfig.Normal1Path);
                     var normalDict = new Dictionary<string, string>();
                     foreach (var folder in normalFolders)
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         var key = Path.GetFileName(folder);
                         normalDict[key] = folder;
                         result.FilesScanned++;
                     }
-                    unmatchedFiles.NormalFolders["normal"] = normalDict;
-                    _logger.LogInformation("Scanned {Count} normal folders", normalFolders.Length);
+                    unmatchedFiles.NormalFolders["normal1"] = normalDict;
+                    _logger.LogInformation("Scanned {Count} Normal1 folders", normalFolders.Length);
+                }
+
+                // Scan normal directories for Line 2
+                if (!string.IsNullOrEmpty(matchingConfig.Normal2Path) && Directory.Exists(matchingConfig.Normal2Path))
+                {
+                    var normalFolders = Directory.GetDirectories(matchingConfig.Normal2Path);
+                    var normalDict = new Dictionary<string, string>();
+                    foreach (var folder in normalFolders)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var key = Path.GetFileName(folder);
+                        normalDict[key] = folder;
+                        result.FilesScanned++;
+                    }
+                    unmatchedFiles.NormalFolders["normal2"] = normalDict;
+                    _logger.LogInformation("Scanned {Count} Normal2 folders", normalFolders.Length);
                 }
 
                 // Scan camera directories
@@ -254,6 +297,7 @@ namespace ChronoView.Core.FileWatching
 
                         foreach (var file in cameraFiles)
                         {
+                            cancellationToken.ThrowIfCancellationRequested();
                             try
                             {
                                 var fileInfo = new FileInfo(file);
@@ -274,7 +318,7 @@ namespace ChronoView.Core.FileWatching
 
                         if (timestampedFiles.Count > 0)
                         {
-                            unmatchedFiles.CameraFiles[$"Cam{i}"] = timestampedFiles;
+                            unmatchedFiles.CameraFiles[$"cam{i}"] = timestampedFiles;
                         }
                         _logger.LogInformation("Scanned {Count} files from Camera {CameraNumber}", cameraFiles.Length, i);
                     }

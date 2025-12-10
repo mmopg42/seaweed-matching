@@ -256,7 +256,7 @@ This plan essentially completes Task 10 by implementing all the functionality th
   - Test abnormal detection with test data (outlier timestamps, missing files)
   - _Requirements: 5.3, 5.7, 5.8_
 
-- [ ] 11. Implement Statistics Event Handlers
+- [x] 11. Implement Statistics Event Handlers
   - Implement OnFileCountsUpdated(object sender, FileCountStatistics stats)
   - Use Dispatcher.InvokeAsync to update count properties
   - Update NirCount, Nir2Count, NormalCount, Normal2Count, Cam1-6Count
@@ -271,7 +271,7 @@ This plan essentially completes Task 10 by implementing all the functionality th
   - **Property 7: Statistics Update Atomicity**
   - **Validates: Requirements 6.4, 7.4**
 
-- [ ] 12. Implement FileOperationService
+- [x] 12. Implement FileOperationService
   - Create FileOperationService class implementing IFileOperationService
   - Implement MoveFileGroupAsync(FileGroup, destinationPath, progress, cancellationToken)
   - Move all files in group to destination
@@ -290,7 +290,7 @@ This plan essentially completes Task 10 by implementing all the functionality th
   - **Property 8: File Operation Rollback**
   - **Validates: Requirements 8.4, 9.5**
 
-- [ ] 13. Implement Move Command with FileOperationService
+- [x] 13. Implement Move Command with FileOperationService
   - Modify ExecuteMove to be async (ExecuteMoveAsync)
   - Check if SelectedGroup is not null
   - Get destination path from configuration
@@ -311,7 +311,7 @@ This plan essentially completes Task 10 by implementing all the functionality th
   - Test cancellation support
   - _Requirements: 8.1, 8.2_
 
-- [ ] 14. Implement Delete Command with FileOperationService
+- [x] 14. Implement Delete Command with FileOperationService
   - Modify ExecuteDelete to be async (ExecuteDeleteAsync)
   - Check if SelectedGroup is not null
   - Display confirmation dialog
@@ -332,7 +332,7 @@ This plan essentially completes Task 10 by implementing all the functionality th
   - Test error handling on failure
   - _Requirements: 9.1, 9.2_
 
-- [ ] 15. Implement PathManagementService
+- [x] 15. Implement PathManagementService
   - Create PathManagementService class implementing IPathManagementService
   - Implement GeneratePathsFromDate(dateString, config)
   - Parse date string (YYYYMMDD format)
@@ -352,7 +352,7 @@ This plan essentially completes Task 10 by implementing all the functionality th
   - **Property 10: Path Auto-Config Determinism**
   - **Validates: Requirements 11.2**
 
-- [ ] 16. Implement Path Auto Config Command
+- [x] 16. Implement Path Auto Config Command
   - Modify ExecutePathAutoConfig to use PathManagementService
   - Get date input from DateInput property
   - Validate date format
@@ -370,7 +370,7 @@ This plan essentially completes Task 10 by implementing all the functionality th
   - Test error handling for invalid dates
   - _Requirements: 11.1, 11.2_
 
-- [ ] 17. Implement Create Sample Folder Command
+- [x] 17. Implement Create Sample Folder Command
   - Modify ExecuteCreateSampleFolder to be async (ExecuteCreateSampleFolderAsync)
   - Get sample folder name from SampleFolderName property
   - Validate folder name (no invalid characters)
@@ -387,7 +387,7 @@ This plan essentially completes Task 10 by implementing all the functionality th
   - Test error handling for creation failures
   - _Requirements: 12.1, 12.2_
 
-- [ ] 18. Implement Refresh Command
+- [x] 18. Implement Refresh Command
   - Modify ExecuteRefresh to be async (ExecuteRefreshAsync)
   - Display "Refreshing..." status message
   - Clear FileGroups, Line1Groups, Line2Groups collections

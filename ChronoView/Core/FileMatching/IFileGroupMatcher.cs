@@ -66,45 +66,67 @@ namespace ChronoView.Core.FileMatching
         /// </summary>
         public bool UseFolderSuffix { get; set; } = false;
 
-        /// <summary>
-        /// NIR path for monitoring
-        /// </summary>
-        public string NirPath { get; set; } = "";
+        // ============================================================
+        // Line 1 Paths
+        // ============================================================
 
         /// <summary>
-        /// Normal path for monitoring
+        /// NIR1 path for Line 1 monitoring.
         /// </summary>
-        public string NormalPath { get; set; } = "";
+        public string Nir1Path { get; set; } = "";
 
         /// <summary>
-        /// Camera 1 path
+        /// Normal1 path for Line 1 monitoring.
+        /// </summary>
+        public string Normal1Path { get; set; } = "";
+
+        /// <summary>
+        /// Camera 1 path (Line 1).
         /// </summary>
         public string Camera1Path { get; set; } = "";
 
         /// <summary>
-        /// Camera 2 path
+        /// Camera 2 path (Line 1).
         /// </summary>
         public string Camera2Path { get; set; } = "";
 
         /// <summary>
-        /// Camera 3 path
+        /// Camera 3 path (Line 1).
         /// </summary>
         public string Camera3Path { get; set; } = "";
 
+        // ============================================================
+        // Line 2 Paths
+        // ============================================================
+
         /// <summary>
-        /// Camera 4 path
+        /// NIR2 path for Line 2 monitoring.
+        /// </summary>
+        public string Nir2Path { get; set; } = "";
+
+        /// <summary>
+        /// Normal2 path for Line 2 monitoring.
+        /// </summary>
+        public string Normal2Path { get; set; } = "";
+
+        /// <summary>
+        /// Camera 4 path (Line 2).
         /// </summary>
         public string Camera4Path { get; set; } = "";
 
         /// <summary>
-        /// Camera 5 path
+        /// Camera 5 path (Line 2).
         /// </summary>
         public string Camera5Path { get; set; } = "";
 
         /// <summary>
-        /// Camera 6 path
+        /// Camera 6 path (Line 2).
         /// </summary>
         public string Camera6Path { get; set; } = "";
+
+        // ============================================================
+        // Helper Methods
+        // ============================================================
 
         /// <summary>
         /// Get camera path by number (1-6)

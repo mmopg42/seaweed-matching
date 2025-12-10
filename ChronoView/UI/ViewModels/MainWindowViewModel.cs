@@ -9,6 +9,8 @@ using ChronoView.Core.Configuration;
 using ChronoView.Core.FileOperations;
 using ChronoView.Core.ImageProcessing;
 using Microsoft.Extensions.Logging;
+using WpfApplication = System.Windows.Application;
+using WpfMessageBox = System.Windows.MessageBox;
 
 namespace ChronoView.UI.ViewModels;
 
@@ -23,9 +25,15 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IFileOperationService _fileOperationService;
     private readonly IPathManagementService _pathManagementService;
     private readonly IImageProcessor _imageProcessor;
+    private readonly IAbnormalDetector _abnormalDetector;
     private readonly ILogger<MainWindowViewModel> _logger;
 
-    private FileGroupViewModel? _selectedGroup;
+    // CancellationToken management
+    private CancellationTokenSource _windowCts = new();
+    private CancellationTokenSource? _operationCts;
+
+    private FileGroupViewModel? _selectedLine1Group;
+    private FileGroupViewModel? _selectedLine2Group;
     private bool _isMonitoring;
     private bool _isSeparatedMode;
     private int _totalGroups;
@@ -34,6 +42,11 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private string _statusMessage = "Ready";
     private string _nirConnectionStatus = "OK";
     private DateTime _currentTime = DateTime.Now;
+    
+    // Progress and operation state
+    private double _progressValue;
+    private bool _isOperationInProgress;
+    private int _activeTabIndex;
     
     // Toolbar input fields
     private string _dateInput = DateTime.Now.ToString("yyyyMMdd");
@@ -93,6 +106,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         IFileOperationService fileOperationService,
         IPathManagementService pathManagementService,
         IImageProcessor imageProcessor,
+        IAbnormalDetector abnormalDetector,
         ILogger<MainWindowViewModel> logger)
     {
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
@@ -101,6 +115,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _fileOperationService = fileOperationService ?? throw new ArgumentNullException(nameof(fileOperationService));
         _pathManagementService = pathManagementService ?? throw new ArgumentNullException(nameof(pathManagementService));
         _imageProcessor = imageProcessor ?? throw new ArgumentNullException(nameof(imageProcessor));
+        _abnormalDetector = abnormalDetector ?? throw new ArgumentNullException(nameof(abnormalDetector));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Initialize collections
@@ -114,7 +129,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         StopCommand = new RelayCommand(ExecuteStop, CanExecuteStop);
         MoveCommand = new RelayCommand(ExecuteMove, CanExecuteMove);
         DeleteCommand = new RelayCommand(ExecuteDelete, CanExecuteDelete);
-        RefreshCommand = new RelayCommand(ExecuteRefresh);
+        RefreshCommand = new RelayCommand(ExecuteRefresh, CanExecuteRefresh);
         PathAutoConfigCommand = new RelayCommand(ExecutePathAutoConfig);
         CreateSampleFolderCommand = new RelayCommand(ExecuteCreateSampleFolder);
         SetupCommand = new RelayCommand(ExecuteSetup);
@@ -156,20 +171,16 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     public ObservableCollection<LogMessage> LogMessages { get; }
 
     /// <summary>
-    /// Currently selected file group.
+    /// Currently selected file group (computed based on active tab).
+    /// For Combined tab (index 2), returns the first non-null selection from Line1 or Line2.
     /// </summary>
-    public FileGroupViewModel? SelectedGroup
+    public FileGroupViewModel? SelectedGroup => ActiveTabIndex switch
     {
-        get => _selectedGroup;
-        set
-        {
-            if (SetProperty(ref _selectedGroup, value))
-            {
-                ((RelayCommand)MoveCommand).RaiseCanExecuteChanged();
-                ((RelayCommand)DeleteCommand).RaiseCanExecuteChanged();
-            }
-        }
-    }
+        0 => SelectedLine1Group,
+        1 => SelectedLine2Group,
+        2 => SelectedLine1Group ?? SelectedLine2Group, // Combined: use either
+        _ => null
+    };
 
     /// <summary>
     /// Whether the system is currently monitoring.
@@ -539,6 +550,89 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     #endregion
 
+    #region Progress and Operation State Properties
+
+    /// <summary>
+    /// Progress value (0-100) for current operation.
+    /// </summary>
+    public double ProgressValue
+    {
+        get => _progressValue;
+        set => SetProperty(ref _progressValue, value);
+    }
+
+    /// <summary>
+    /// Whether an operation is currently in progress.
+    /// </summary>
+    public bool IsOperationInProgress
+    {
+        get => _isOperationInProgress;
+        set
+        {
+            if (SetProperty(ref _isOperationInProgress, value))
+            {
+                ((RelayCommand)StartCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)StopCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)MoveCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)DeleteCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)RefreshCommand).RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Index of the currently active tab (0=Line1, 1=Line2, 2=Combined).
+    /// </summary>
+    public int ActiveTabIndex
+    {
+        get => _activeTabIndex;
+        set
+        {
+            if (SetProperty(ref _activeTabIndex, value))
+            {
+                OnPropertyChanged(nameof(SelectedGroup));
+                ((RelayCommand)MoveCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)DeleteCommand).RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Selected group in Line 1 tab.
+    /// </summary>
+    public FileGroupViewModel? SelectedLine1Group
+    {
+        get => _selectedLine1Group;
+        set
+        {
+            if (SetProperty(ref _selectedLine1Group, value))
+            {
+                OnPropertyChanged(nameof(SelectedGroup));
+                ((RelayCommand)MoveCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)DeleteCommand).RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Selected group in Line 2 tab.
+    /// </summary>
+    public FileGroupViewModel? SelectedLine2Group
+    {
+        get => _selectedLine2Group;
+        set
+        {
+            if (SetProperty(ref _selectedLine2Group, value))
+            {
+                OnPropertyChanged(nameof(SelectedGroup));
+                ((RelayCommand)MoveCommand).RaiseCanExecuteChanged();
+                ((RelayCommand)DeleteCommand).RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    #endregion
+
     #region Commands
 
     public ICommand StartCommand { get; }
@@ -556,7 +650,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     private bool CanExecuteStart()
     {
-        return !IsMonitoring;
+        return !IsMonitoring && !IsOperationInProgress;
     }
 
     private void ExecuteStart()
@@ -588,10 +682,14 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
             // Validate configuration paths exist
             var missingPaths = new List<string>();
-            if (!string.IsNullOrEmpty(config.MatchingSettings.NirPath) && !Directory.Exists(config.MatchingSettings.NirPath))
-                missingPaths.Add($"NIR: {config.MatchingSettings.NirPath}");
-            if (!string.IsNullOrEmpty(config.MatchingSettings.NormalPath) && !Directory.Exists(config.MatchingSettings.NormalPath))
-                missingPaths.Add($"Normal: {config.MatchingSettings.NormalPath}");
+            if (!string.IsNullOrEmpty(config.MatchingSettings.Nir1Path) && !Directory.Exists(config.MatchingSettings.Nir1Path))
+                missingPaths.Add($"NIR1: {config.MatchingSettings.Nir1Path}");
+            if (!string.IsNullOrEmpty(config.MatchingSettings.Normal1Path) && !Directory.Exists(config.MatchingSettings.Normal1Path))
+                missingPaths.Add($"Normal1: {config.MatchingSettings.Normal1Path}");
+            if (!string.IsNullOrEmpty(config.MatchingSettings.Nir2Path) && !Directory.Exists(config.MatchingSettings.Nir2Path))
+                missingPaths.Add($"NIR2: {config.MatchingSettings.Nir2Path}");
+            if (!string.IsNullOrEmpty(config.MatchingSettings.Normal2Path) && !Directory.Exists(config.MatchingSettings.Normal2Path))
+                missingPaths.Add($"Normal2: {config.MatchingSettings.Normal2Path}");
 
             if (missingPaths.Count > 0)
             {
@@ -599,9 +697,9 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                 _logger.LogWarning("Cannot start monitoring - invalid paths: {Paths}", string.Join(", ", missingPaths));
                 AddLogMessage(LogSeverity.Warning, "System", errorMsg);
                 
-                await Application.Current.Dispatcher.InvokeAsync(() =>
+                await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    MessageBox.Show(errorMsg, "Configuration Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    WpfMessageBox.Show(errorMsg, "Configuration Required", MessageBoxButton.OK, MessageBoxImage.Warning);
                 });
                 
                 StatusMessage = "Configuration required";
@@ -633,9 +731,9 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             _logger.LogError(ex, "Failed to start monitoring");
             AddLogMessage(LogSeverity.Error, "System", $"Failed to start monitoring: {ex.Message}");
             
-            await Application.Current.Dispatcher.InvokeAsync(() =>
+            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
             {
-                MessageBox.Show($"Failed to start monitoring:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                WpfMessageBox.Show($"Failed to start monitoring:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             });
             
             // Ensure IsMonitoring remains false on error
@@ -646,7 +744,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     private bool CanExecuteStop()
     {
-        return IsMonitoring;
+        return IsMonitoring && !IsOperationInProgress;
     }
 
     private void ExecuteStop()
@@ -700,46 +798,613 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     private bool CanExecuteMove()
     {
-        return SelectedGroup != null;
+        var selectedGroups = GetSelectedGroups();
+        return selectedGroups.Count > 0 && !IsOperationInProgress;
     }
 
     private void ExecuteMove()
     {
-        if (SelectedGroup == null) return;
-        
-        AddLogMessage(LogSeverity.Info, "FileOperation", $"Moving group {SelectedGroup.GroupId}");
-        // TODO: Implement move operation
+        // Synchronous wrapper for async command
+        _ = ExecuteMoveAsync();
+    }
+
+    /// <summary>
+    /// Executes the Move command asynchronously.
+    /// Moves selected file groups to the output path.
+    /// </summary>
+    public async Task ExecuteMoveAsync()
+    {
+        var selectedGroups = GetSelectedGroups();
+        if (selectedGroups.Count == 0)
+        {
+            _logger.LogWarning("Move command called but no groups selected");
+            return;
+        }
+
+        if (IsOperationInProgress)
+        {
+            _logger.LogWarning("Move command called but another operation is in progress");
+            return;
+        }
+
+        try
+        {
+            // Load configuration to get output path
+            var config = await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
+            var outputPath = config.MatchingSettings.OutputPath;
+
+            // Validate output path
+            if (string.IsNullOrWhiteSpace(outputPath))
+            {
+                var errorMsg = "Output path is not configured. Please set it in Settings.";
+                _logger.LogWarning("Cannot move files - output path not configured");
+                AddLogMessage(LogSeverity.Warning, "FileOperation", errorMsg);
+
+                await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WpfMessageBox.Show(errorMsg, "Configuration Required", MessageBoxButton.OK, MessageBoxImage.Warning);
+                });
+                return;
+            }
+
+            if (!Directory.Exists(outputPath))
+            {
+                var errorMsg = $"Output path does not exist: {outputPath}";
+                _logger.LogWarning("Cannot move files - output path does not exist: {Path}", outputPath);
+                AddLogMessage(LogSeverity.Warning, "FileOperation", errorMsg);
+
+                await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WpfMessageBox.Show(errorMsg, "Configuration Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                });
+                return;
+            }
+
+            // Begin operation
+            var cancellationToken = BeginOperation();
+
+            _logger.LogInformation("Starting move operation for {Count} groups", selectedGroups.Count);
+            AddLogMessage(LogSeverity.Info, "FileOperation", $"Moving {selectedGroups.Count} group(s) to {outputPath}");
+
+            // Create progress reporter
+            var progress = CreateProgressReporter();
+
+            // Track successfully moved groups for removal
+            var movedGroups = new List<string>();
+            int successCount = 0;
+            int failedCount = 0;
+            int totalFilesFailed = 0;
+
+            // Move each selected group
+            foreach (var groupViewModel in selectedGroups)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                _logger.LogInformation("Moving group {GroupId}", groupViewModel.GroupId);
+                AddLogMessage(LogSeverity.Info, "FileOperation", $"Moving group {groupViewModel.GroupId}");
+
+                // Call MoveFileGroupAsync
+                var result = await _fileOperationService.MoveFileGroupAsync(
+                    groupViewModel.Model,
+                    outputPath,
+                    progress,
+                    onConflict: ResolveConflict,
+                    cancellationToken);
+
+                if (result.Success)
+                {
+                    successCount++;
+                    movedGroups.Add(groupViewModel.GroupId);
+                    _logger.LogInformation("Successfully moved group {GroupId} ({Processed}/{Total} files)",
+                        groupViewModel.GroupId, result.FilesProcessed, result.FilesProcessed + result.FilesFailed);
+                    AddLogMessage(LogSeverity.Info, "FileOperation",
+                        $"Successfully moved group {groupViewModel.GroupId} ({result.FilesProcessed} files)");
+                }
+                else
+                {
+                    failedCount++;
+                    totalFilesFailed += result.FilesFailed;
+                    _logger.LogError("Failed to move group {GroupId}: {Error} ({FilesFailed} files failed)",
+                        groupViewModel.GroupId, result.ErrorMessage, result.FilesFailed);
+                    AddLogMessage(LogSeverity.Error, "FileOperation",
+                        $"Failed to move group {groupViewModel.GroupId}: {result.ErrorMessage} ({result.FilesFailed} files failed)");
+                }
+            }
+
+            // Remove successfully moved groups from collections
+            foreach (var groupId in movedGroups)
+            {
+                RemoveFileGroup(groupId);
+            }
+
+            // Show summary
+            var summaryMsg = $"Move operation complete: {successCount} succeeded, {failedCount} failed";
+            if (totalFilesFailed > 0)
+            {
+                summaryMsg += $" (Total {totalFilesFailed} files failed)";
+            }
+            
+            _logger.LogInformation(summaryMsg);
+            AddLogMessage(failedCount > 0 || totalFilesFailed > 0 ? LogSeverity.Warning : LogSeverity.Info,
+                "FileOperation", summaryMsg);
+
+            if (failedCount > 0)
+            {
+                await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WpfMessageBox.Show(summaryMsg, "Move Complete", MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                });
+            }
+
+            StatusMessage = $"Moved {successCount} group(s)";
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Move operation cancelled by user");
+            AddLogMessage(LogSeverity.Warning, "FileOperation", "Move operation cancelled");
+            StatusMessage = "Move operation cancelled";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during move operation");
+            AddLogMessage(LogSeverity.Error, "FileOperation", $"Move operation error: {ex.Message}");
+
+            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+            {
+                WpfMessageBox.Show($"Error during move operation:\n{ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            });
+
+            StatusMessage = "Move operation failed";
+        }
+        finally
+        {
+            EndOperation();
+            ((RelayCommand)MoveCommand).RaiseCanExecuteChanged();
+        }
     }
 
     private bool CanExecuteDelete()
     {
-        return SelectedGroup != null;
+        var selectedGroups = GetSelectedGroups();
+        return selectedGroups.Count > 0 && !IsOperationInProgress;
     }
 
     private void ExecuteDelete()
     {
-        if (SelectedGroup == null) return;
-        
-        AddLogMessage(LogSeverity.Warning, "FileOperation", $"Deleting group {SelectedGroup.GroupId}");
-        // TODO: Implement delete operation
+        _ = ExecuteDeleteAsync();
     }
 
-    private void ExecuteRefresh()
+    /// <summary>
+    /// Executes the Delete command asynchronously.
+    /// Deletes selected file groups (soft delete to quarantine).
+    /// </summary>
+    public async Task ExecuteDeleteAsync()
     {
-        AddLogMessage(LogSeverity.Info, "System", "Refreshing data");
-        // TODO: Implement refresh logic
+        var selectedGroups = GetSelectedGroups();
+        if (selectedGroups.Count == 0) return;
+
+        if (IsOperationInProgress) return;
+
+        // Load configuration for quarantine path
+        var config = await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
+        var quarantinePath = config.WorkflowSettings.DeleteQuarantinePath;
+        if (string.IsNullOrWhiteSpace(quarantinePath))
+        {
+            // 기본: BasePath/Trash
+            var basePath = string.IsNullOrWhiteSpace(config.BasePath) ? "D:/Data" : config.BasePath;
+            quarantinePath = Path.Combine(basePath, "Trash");
+        }
+
+        // Confirmation dialog (soft delete notice)
+        var message = $"Are you sure you want to delete (move to quarantine) {selectedGroups.Count} selected group(s)?\n" +
+                      $"Quarantine folder: {quarantinePath}";
+        
+        var confirmResult = WpfMessageBox.Show(message, "Confirm Delete", 
+            MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+
+        if (confirmResult != MessageBoxResult.Yes) return;
+
+        // Begin operation
+        var cancellationToken = BeginOperation();
+
+        _logger.LogInformation("Starting delete operation for {Count} groups", selectedGroups.Count);
+        AddLogMessage(LogSeverity.Info, "FileOperation", $"Deleting {selectedGroups.Count} group(s)");
+
+        // Create progress reporter
+        var progress = CreateProgressReporter();
+
+        // Track successfully deleted groups for removal
+        var deletedGroups = new List<string>();
+        int successCount = 0;
+        int failedCount = 0;
+        int totalFilesFailed = 0;
+
+        try
+        {
+            foreach (var groupViewModel in selectedGroups)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                _logger.LogInformation("Deleting group {GroupId}", groupViewModel.GroupId);
+                AddLogMessage(LogSeverity.Info, "FileOperation", $"Deleting group {groupViewModel.GroupId}");
+
+                // Call DeleteFileGroupAsync
+                var result = await _fileOperationService.DeleteFileGroupAsync(
+                    groupViewModel.Model,
+                    quarantinePath,
+                    progress,
+                    onConflict: ResolveConflict,
+                    cancellationToken);
+
+                if (result.Success)
+                {
+                    successCount++;
+                    deletedGroups.Add(groupViewModel.GroupId);
+                    _logger.LogInformation("Successfully deleted group {GroupId}", groupViewModel.GroupId);
+                    AddLogMessage(LogSeverity.Info, "FileOperation", $"Successfully deleted group {groupViewModel.GroupId}");
+                }
+                else
+                {
+                    failedCount++;
+                    totalFilesFailed += result.FilesFailed;
+                    _logger.LogError("Failed to delete group {GroupId}: {Error} ({FilesFailed} files failed)",
+                        groupViewModel.GroupId, result.ErrorMessage, result.FilesFailed);
+                    AddLogMessage(LogSeverity.Error, "FileOperation",
+                        $"Failed to delete group {groupViewModel.GroupId}: {result.ErrorMessage} ({result.FilesFailed} files failed)");
+                }
+            }
+
+            // Remove successfully deleted groups from collections
+            foreach (var groupId in deletedGroups)
+            {
+                RemoveFileGroup(groupId);
+            }
+
+            // Show summary
+            var summaryMsg = $"Delete operation complete: {successCount} succeeded, {failedCount} failed";
+            if (totalFilesFailed > 0)
+            {
+                summaryMsg += $" (Total {totalFilesFailed} files failed)";
+            }
+            
+            _logger.LogInformation(summaryMsg);
+            AddLogMessage(failedCount > 0 || totalFilesFailed > 0 ? LogSeverity.Warning : LogSeverity.Info,
+                "FileOperation", summaryMsg);
+
+            if (failedCount > 0)
+            {
+                await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WpfMessageBox.Show(summaryMsg, "Delete Complete", MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                });
+            }
+
+            StatusMessage = $"Deleted {successCount} group(s)";
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Delete operation cancelled by user");
+            AddLogMessage(LogSeverity.Warning, "FileOperation", "Delete operation cancelled");
+            StatusMessage = "Delete operation cancelled";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during delete operation");
+            AddLogMessage(LogSeverity.Error, "FileOperation", $"Delete operation error: {ex.Message}");
+            
+            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+            {
+                WpfMessageBox.Show($"Error during delete operation:\n{ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            });
+            
+            StatusMessage = "Delete operation failed";
+        }
+        finally
+        {
+            EndOperation();
+            ((RelayCommand)DeleteCommand).RaiseCanExecuteChanged();
+        }
+    }
+
+    private bool CanExecuteRefresh()
+    {
+        return !IsOperationInProgress;
+    }
+
+    private async void ExecuteRefresh()
+    {
+        await ExecuteRefreshAsync();
+    }
+
+    private async Task ExecuteRefreshAsync()
+    {
+        if (IsOperationInProgress) return;
+
+        // Monitoring check: Prevent refresh if monitoring is not active
+        // This avoids clearing the UI when no data can be re-loaded
+        if (!IsMonitoring)
+        {
+            _logger.LogWarning("Refresh attempted but monitoring is not active");
+            AddLogMessage(LogSeverity.Warning, "System", "Cannot refresh - monitoring is not active");
+            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+            {
+                WpfMessageBox.Show("Cannot refresh file list because monitoring is not active.\nPlease start monitoring first.",
+                    "Refresh Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+            });
+            StatusMessage = "Refresh failed - Monitoring inactive";
+            return;
+        }
+
+        try
+        {
+            StatusMessage = "Refreshing...";
+            AddLogMessage(LogSeverity.Info, "System", "Refreshing data...");
+
+            // Begin operation (creates new cancellation token)
+            var cancellationToken = BeginOperation();
+
+            // Note: We do NOT explicitly clear file groups here.
+            // Orchestrator.RefreshAsync will trigger GroupRemoved events which will clear the UI.
+            // This prevents the UI from becoming empty if the refresh fails immediately.
+
+            // Request orchestrator refresh with token
+            await _orchestrator.RefreshAsync(cancellationToken);
+
+            StatusMessage = "Refresh complete";
+            AddLogMessage(LogSeverity.Info, "System", "Refresh completed successfully");
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Refresh cancelled";
+            AddLogMessage(LogSeverity.Info, "System", "Refresh cancelled by user");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during refresh");
+            StatusMessage = "Refresh failed";
+            AddLogMessage(LogSeverity.Error, "System", $"Refresh failed: {ex.Message}");
+        }
+        finally
+        {
+            EndOperation();
+        }
     }
 
     private void ExecutePathAutoConfig()
     {
-        AddLogMessage(LogSeverity.Info, "Configuration", "Auto-configuring paths");
-        // TODO: Implement path auto-configuration
+        _ = ExecutePathAutoConfigAsync();
+    }
+
+    /// <summary>
+    /// Executes the Path Auto Config command asynchronously.
+    /// Automatically generates and applies paths based on today's date.
+    /// </summary>
+    private async Task ExecutePathAutoConfigAsync()
+    {
+        if (IsOperationInProgress) return;
+
+        try
+        {
+            // Use today's date for path generation
+            var targetDate = DateTime.Today;
+            var dateString = targetDate.ToString("yyyyMMdd");
+
+            // Confirm with user
+            var confirmMessage = $"Auto-configure all paths for date: {targetDate:yyyy-MM-dd} ({dateString})?\n\n" +
+                                 "This will update NIR, Normal, and Camera paths in the configuration.";
+            
+            var confirmResult = await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                WpfMessageBox.Show(confirmMessage, "Confirm Path Auto-Configuration",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No));
+
+            if (confirmResult != MessageBoxResult.Yes) return;
+
+            StatusMessage = "Auto-configuring paths...";
+            AddLogMessage(LogSeverity.Info, "Configuration", $"Auto-configuring paths for date: {dateString}");
+
+            // Load current configuration
+            var config = await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
+
+            // Generate paths from date
+            var generatedPaths = _pathManagementService.GeneratePathsFromDate(dateString, config);
+
+            // Update configuration with generated paths
+            if (generatedPaths.TryGetValue("NIR1", out var nir1Path))
+                config.MatchingSettings.Nir1Path = nir1Path;
+            if (generatedPaths.TryGetValue("NIR2", out var nir2Path))
+                config.MatchingSettings.Nir2Path = nir2Path;
+            if (generatedPaths.TryGetValue("Normal1", out var normal1Path))
+                config.MatchingSettings.Normal1Path = normal1Path;
+            if (generatedPaths.TryGetValue("Normal2", out var normal2Path))
+                config.MatchingSettings.Normal2Path = normal2Path;
+            if (generatedPaths.TryGetValue("Output", out var outputPath))
+                config.MatchingSettings.OutputPath = outputPath;
+
+            // Update camera paths (cam1-cam6)
+            for (int i = 1; i <= 6; i++)
+            {
+                var cameraPathKey = $"Cam{i}";
+                if (generatedPaths.TryGetValue(cameraPathKey, out var cameraPath))
+                {
+                    switch (i)
+                    {
+                        case 1: config.MatchingSettings.Camera1Path = cameraPath; break;
+                        case 2: config.MatchingSettings.Camera2Path = cameraPath; break;
+                        case 3: config.MatchingSettings.Camera3Path = cameraPath; break;
+                        case 4: config.MatchingSettings.Camera4Path = cameraPath; break;
+                        case 5: config.MatchingSettings.Camera5Path = cameraPath; break;
+                        case 6: config.MatchingSettings.Camera6Path = cameraPath; break;
+                    }
+                }
+            }
+
+            // Save configuration
+            await _configManager.SaveConfigurationAsync(config);
+
+            var pathCount = generatedPaths.Count;
+            StatusMessage = $"Path auto-configuration complete ({pathCount} paths updated)";
+            AddLogMessage(LogSeverity.Info, "Configuration", 
+                $"Successfully updated {pathCount} paths from date pattern");
+
+            // Show success message
+            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+            {
+                WpfMessageBox.Show($"Path configuration updated successfully.\n\n" +
+                                  $"Date: {targetDate:yyyy-MM-dd}\n" +
+                                  $"Paths updated: {pathCount}\n\n" +
+                                  $"Please restart monitoring if it is currently active.",
+                    "Auto-Configuration Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during path auto-configuration");
+            AddLogMessage(LogSeverity.Error, "Configuration", $"Path auto-config failed: {ex.Message}");
+            
+            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+            {
+                WpfMessageBox.Show($"Failed to auto-configure paths:\n{ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            });
+            
+            StatusMessage = "Path auto-configuration failed";
+        }
     }
 
     private void ExecuteCreateSampleFolder()
     {
-        AddLogMessage(LogSeverity.Info, "FileOperation", "Creating sample folder");
-        // TODO: Implement sample folder creation
+        _ = ExecuteCreateSampleFolderAsync();
+    }
+
+    /// <summary>
+    /// Executes the Create Sample Folder command asynchronously.
+    /// Creates sample folders in all configured monitoring paths.
+    /// </summary>
+    private async Task ExecuteCreateSampleFolderAsync()
+    {
+        if (IsOperationInProgress) return;
+
+        try
+        {
+            // Generate sample folder name with timestamp
+            var sampleName = $"Sample_{DateTime.Now:yyyyMMdd_HHmmss}";
+
+            // Confirm with user
+            var confirmMessage = $"Create sample folder '{sampleName}' in all configured paths?\n\n" +
+                                 "This will create folders in NIR, Normal, and Camera paths.";
+            
+            var confirmResult = await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                WpfMessageBox.Show(confirmMessage, "Confirm Sample Folder Creation",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No));
+
+            if (confirmResult != MessageBoxResult.Yes) return;
+
+            StatusMessage = "Creating sample folders...";
+            AddLogMessage(LogSeverity.Info, "FileOperation", $"Creating sample folder: {sampleName}");
+
+            // Begin operation
+            var cancellationToken = BeginOperation();
+
+            // Load current configuration
+            var config = await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
+
+            // Create sample folders using PathManagementService
+            var result = await _pathManagementService.CreateSampleFoldersAsync(
+                sampleName, 
+                config, 
+                cancellationToken);
+
+            if (result)
+            {
+                StatusMessage = "Sample folders created successfully";
+                AddLogMessage(LogSeverity.Info, "FileOperation", 
+                    $"Successfully created sample folder: {sampleName}");
+
+                // Show success message
+                await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WpfMessageBox.Show($"Sample folders created successfully.\n\n" +
+                                      $"Folder name: {sampleName}\n\n" +
+                                      $"Created in all configured monitoring paths.",
+                        "Sample Creation Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                });
+            }
+            else
+            {
+                StatusMessage = "Sample folder creation failed";
+                AddLogMessage(LogSeverity.Warning, "FileOperation", 
+                    $"Failed to create some or all sample folders");
+
+                await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    WpfMessageBox.Show("Sample folder creation completed with warnings.\n" +
+                                      "Check logs for details.",
+                        "Sample Creation Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Sample folder creation cancelled by user");
+            AddLogMessage(LogSeverity.Warning, "FileOperation", "Sample folder creation cancelled");
+            StatusMessage = "Sample folder creation cancelled";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during sample folder creation");
+            AddLogMessage(LogSeverity.Error, "FileOperation", $"Sample folder creation error: {ex.Message}");
+            
+            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+            {
+                WpfMessageBox.Show($"Failed to create sample folders:\n{ex.Message}",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            });
+            
+            StatusMessage = "Sample folder creation failed";
+        }
+        finally
+        {
+            EndOperation();
+        }
+    }
+
+    /// <summary>
+    /// Callback for resolving file name conflicts during move operations.
+    /// Must be called from a background thread and marshals to UI thread.
+    /// </summary>
+    /// <param name="conflictPath">The full path of the implementation file that caused the conflict.</param>
+    /// <returns>Resolution strategy chosen by the user.</returns>
+    private ConflictResolution ResolveConflict(string conflictPath)
+    {
+        ConflictResolution resolution = ConflictResolution.Skip;
+        
+        WpfApplication.Current.Dispatcher.Invoke(() =>
+        {
+            var fileName = Path.GetFileName(conflictPath);
+            var message = $"File or folder already exists in destination:\n{fileName}\n\n" +
+                          "How do you want to handle this conflict?\n" +
+                          "Note: Your choice will be applied to ALL subsequent conflicts in this operation.\n\n" +
+                          "Yes: Overwrite (Apply to All)\n" +
+                          "No: Skip (Apply to All)\n" + 
+                          "Cancel: Abort Operation";
+            
+            var result = WpfMessageBox.Show(message, "Conflict Detected", 
+                MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+            
+            resolution = result switch
+            {
+                MessageBoxResult.Yes => ConflictResolution.Overwrite,
+                MessageBoxResult.No => ConflictResolution.Skip,
+                MessageBoxResult.Cancel => ConflictResolution.Abort,
+                _ => ConflictResolution.Skip
+            };
+        });
+        
+        return resolution;
     }
 
     private void ExecuteSetup()
@@ -757,7 +1422,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     /// </summary>
     public void AddFileGroup(FileGroup fileGroup)
     {
-        var viewModel = new FileGroupViewModel(fileGroup, _imageProcessor);
+        var viewModel = new FileGroupViewModel(fileGroup, _imageProcessor, _abnormalDetector);
         
         FileGroups.Add(viewModel);
         
@@ -913,6 +1578,74 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     #endregion
 
+    #region CancellationToken and Progress Helpers
+
+    /// <summary>
+    /// Begins a new operation and returns a CancellationToken linked to the window's lifetime.
+    /// This cancels any previous operation that was in progress.
+    /// </summary>
+    private CancellationToken BeginOperation()
+    {
+        _operationCts?.Cancel();
+        _operationCts?.Dispose();
+        _operationCts = CancellationTokenSource.CreateLinkedTokenSource(_windowCts.Token);
+        IsOperationInProgress = true;
+        ProgressValue = 0;
+        return _operationCts.Token;
+    }
+
+    /// <summary>
+    /// Ends the current operation and resets progress state.
+    /// </summary>
+    private void EndOperation()
+    {
+        IsOperationInProgress = false;
+        ProgressValue = 0;
+    }
+
+    /// <summary>
+    /// Cancels the current operation if one is in progress.
+    /// </summary>
+    public void CancelCurrentOperation()
+    {
+        _operationCts?.Cancel();
+        AddLogMessage(LogSeverity.Warning, "System", "Operation cancelled by user");
+    }
+
+    /// <summary>
+    /// Gets the list of selected file groups based on the active tab.
+    /// </summary>
+    /// <returns>A read-only list of selected FileGroupViewModels.</returns>
+    public IReadOnlyList<FileGroupViewModel> GetSelectedGroups()
+    {
+        var sourceCollection = ActiveTabIndex switch
+        {
+            0 => Line1Groups,
+            1 => Line2Groups,
+            2 => Line1Groups.Concat(Line2Groups), // Combined: both lines
+            _ => FileGroups
+        };
+        return sourceCollection.Where(g => g.IsSelected).ToList();
+    }
+
+    /// <summary>
+    /// Creates a progress reporter for file operations.
+    /// Reports progress to the UI thread.
+    /// </summary>
+    /// <returns>An IProgress instance for OperationProgress.</returns>
+    public IProgress<OperationProgress> CreateProgressReporter()
+    {
+        return new Progress<OperationProgress>(p =>
+        {
+            WpfApplication.Current?.Dispatcher.Invoke(() =>
+            {
+                ProgressValue = p.PercentComplete;
+                StatusMessage = $"{p.CurrentFile} ({p.ProcessedFiles}/{p.TotalFiles})";
+            });
+        });
+    }
+
+    #endregion
     #region Event Handlers
 
     /// <summary>
@@ -924,11 +1657,11 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _logger.LogDebug("GroupCreated event received for group {GroupId}", group.GroupId);
         
         // Marshal to UI thread for collection updates
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        WpfApplication.Current.Dispatcher.InvokeAsync(() =>
         {
             try
             {
-                var viewModel = new FileGroupViewModel(group, _imageProcessor);
+                var viewModel = new FileGroupViewModel(group, _imageProcessor, _abnormalDetector);
                 
                 FileGroups.Add(viewModel);
                 
@@ -965,7 +1698,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _logger.LogDebug("GroupRemoved event received for group {GroupId}", groupId);
         
         // Marshal to UI thread for collection updates
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        WpfApplication.Current.Dispatcher.InvokeAsync(() =>
         {
             try
             {
@@ -1001,7 +1734,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _logger.LogError("MonitoringError event received: {ErrorMessage}", errorMessage);
         
         // Marshal to UI thread for UI updates
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        WpfApplication.Current.Dispatcher.InvokeAsync(() =>
         {
             try
             {
@@ -1024,7 +1757,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _logger.LogDebug("FileCountsUpdated event received");
         
         // Marshal to UI thread for property updates
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        WpfApplication.Current.Dispatcher.InvokeAsync(() =>
         {
             try
             {
@@ -1057,7 +1790,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _logger.LogDebug("MatchingStatisticsUpdated event received");
         
         // Marshal to UI thread for property updates
-        Application.Current.Dispatcher.InvokeAsync(() =>
+        WpfApplication.Current.Dispatcher.InvokeAsync(() =>
         {
             try
             {
@@ -1124,6 +1857,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
         if (disposing)
         {
+            // Cancel all pending operations
+            _windowCts.Cancel();
+            _operationCts?.Cancel();
+
             // Unsubscribe from orchestrator events
             _orchestrator.GroupCreated -= OnGroupCreated;
             _orchestrator.GroupRemoved -= OnGroupRemoved;
@@ -1132,6 +1869,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             // Unsubscribe from statistics service events
             _statisticsService.FileCountsUpdated -= OnFileCountsUpdated;
             _statisticsService.MatchingStatisticsUpdated -= OnMatchingStatisticsUpdated;
+
+            // Dispose CancellationTokenSources
+            _windowCts.Dispose();
+            _operationCts?.Dispose();
 
             _logger.LogInformation("MainWindowViewModel disposed and all event subscriptions cleaned up");
         }

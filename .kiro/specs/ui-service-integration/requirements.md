@@ -110,6 +110,8 @@ This specification addresses the critical gap between the implemented UI (Task 1
 3. WHEN move operation starts THEN a progress indicator SHALL be displayed
 4. WHEN move operation completes THEN the file group SHALL be removed from the display
 5. WHEN move operation fails THEN an error message SHALL be displayed and files SHALL remain in original location
+6. WHEN the Cancel button is clicked during operation THEN the operation SHALL stop gracefully
+7. WHEN operation completes THEN a summary of processed and failed files SHALL be displayed
 
 ### Requirement 9
 
@@ -122,6 +124,8 @@ This specification addresses the critical gap between the implemented UI (Task 1
 3. WHEN deletion is confirmed THEN the FileOperationService SHALL delete all files in the selected group
 4. WHEN delete operation completes THEN the file group SHALL be removed from the display
 5. WHEN delete operation fails THEN an error message SHALL be displayed and files SHALL remain
+6. WHEN the Cancel button is clicked during operation THEN the operation SHALL stop gracefully
+7. WHEN operation completes THEN a summary of deleted and failed files SHALL be displayed
 
 ### Requirement 10
 
@@ -134,6 +138,8 @@ This specification addresses the critical gap between the implemented UI (Task 1
 3. WHEN validation passes THEN the ConfigurationManager SHALL save the configuration to disk
 4. WHEN configuration is saved THEN affected services SHALL be notified to reload settings
 5. WHEN validation fails THEN an error message SHALL be displayed and settings SHALL not be saved
+6. WHEN Browse button is clicked for a path field THEN a FolderBrowserDialog SHALL open
+7. WHEN an invalid path is entered THEN the dialog SHALL warn the user upon saving
 
 ### Requirement 11
 
@@ -170,6 +176,8 @@ This specification addresses the critical gap between the implemented UI (Task 1
 3. WHEN scan completes THEN new file groups SHALL be created from current files
 4. WHEN refresh is in progress THEN a progress indicator SHALL be displayed
 5. WHEN refresh completes THEN the UI SHALL display the updated file groups
+6. WHEN monitoring is not active THEN the Refresh button SHALL be disabled or show a warning if clicked
+7. WHEN Cancel is requested during refresh THEN the scan SHALL stop gracefully
 
 ### Requirement 14
 
@@ -206,3 +214,37 @@ This specification addresses the critical gap between the implemented UI (Task 1
 3. WHEN the application closes THEN the current window state SHALL be saved to configuration
 4. WHEN saved position is off-screen THEN the window SHALL open in a default visible location
 5. WHEN no saved state exists THEN the window SHALL open with default dimensions centered on screen
+
+### Requirement 17
+
+**User Story:** As a user, I want file operations to be robust and safe, so that I don't lose data during moves or deletes.
+
+#### Acceptance Criteria
+
+1. WHEN deleting files THEN they SHALL be moved to a configured Quarantine (Trash) folder instead of permanent deletion
+2. WHEN Quarantine path is not configured THEN a default folder SHALL be used
+3. WHEN moving Normal folders THEN the system SHALL use Copy-then-Delete strategy to ensure data integrity
+4. WHEN file conflicts occur THEN the system SHALL support Overwrite, Skip, and Abort options
+5. WHEN a conflict resolution is chosen THEN the user SHALL have the option to "Apply to All" for subsequent conflicts
+
+### Requirement 18
+
+**User Story:** As a user, I want to monitor two separate production lines, so that I can manage files from multiple sources independently.
+
+#### Acceptance Criteria
+
+1. WHEN in Separated Mode THEN the UI SHALL display distinct tabs for Line 1 and Line 2
+2. WHEN files are detected THEN they SHALL be assigned to Line 1 or Line 2 based on their source folder
+3. WHEN configuring settings THEN independent paths SHALL be available for Line 1 (NIR1/Normal1/Cam1-3) and Line 2 (NIR2/Normal2/Cam4-6)
+4. WHEN displaying the Combined tab THEN data from both lines SHALL be visible (Optional/Future)
+
+### Requirement 19
+
+**User Story:** As a user, I want to be notified of abnormal file groups, so that I can investigate incomplete or erroneous data.
+
+#### Acceptance Criteria
+
+1. WHEN a file group is formed THEN the AbnormalDetector SHALL check for missing files or valid criteria
+2. WHEN a group is abnormal THEN it SHALL be visually distinguished in the DataGrid (e.g., yellow background)
+3. WHEN a group is abnormal THEN the Status text SHALL indicate the reason
+4. WHEN statistics are updated THEN the count of abnormal groups SHALL be displayed in the statistics bar

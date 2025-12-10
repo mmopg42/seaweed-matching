@@ -6,6 +6,8 @@
         xmlns:local="clr-namespace:ChronoView"
         xmlns:vm="clr-namespace:ChronoView.UI.ViewModels"
         xmlns:controls="clr-namespace:ChronoView.UI.Controls"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:behaviors="clr-namespace:ChronoView.UI.Behaviors"
         mc:Ignorable="d"
         Title="ChronoView Pro - Desktop Application" 
         Height="900" Width="1400"
@@ -15,7 +17,9 @@
     
     <Window.Resources>
         <!-- Converters -->
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         <local:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         
         <!-- Color Resources -->
         <SolidColorBrush x:Key="BackgroundBrush" Color="#f0f0f0"/>
@@ -67,6 +71,7 @@
         
         <!-- DataGrid Row Style for Abnormal Highlighting -->
         <Style x:Key="FileGroupRowStyle" TargetType="DataGridRow">
+            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsAbnormal}" Value="True">
                     <Setter Property="Background" Value="#fff3cd"/>
@@ -232,6 +237,16 @@
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusMessage}"/>
             </StatusBarItem>
+            
+            <StatusBarItem>
+                <ProgressBar Value="{Binding ProgressValue}" 
+                             Maximum="100" 
+                             Height="12" 
+                             Width="120" 
+                             Margin="10,0"
+                             Visibility="{Binding IsOperationInProgress, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            </StatusBarItem>
+
             <Separator/>
             <StatusBarItem>
                 <StackPanel Orientation="Horizontal">
@@ -261,6 +276,17 @@
                 </StackPanel>
             </StatusBarItem>
             <Separator/>
+            <StatusBarItem HorizontalAlignment="Right" Margin="10,0,0,0">
+                <StackPanel Orientation="Horizontal" Width="200">
+                    <ProgressBar Width="150" Height="16"
+                                 Value="{Binding ProgressValue}"
+                                 Minimum="0" Maximum="100"
+                                 Visibility="{Binding IsOperationInProgress, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <TextBlock Text="{Binding ProgressValue, StringFormat={}{0:F0}%}"
+                               Margin="8,0,0,0" VerticalAlignment="Center"
+                               Visibility="{Binding IsOperationInProgress, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
+            </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
                 <TextBlock Text="{Binding CurrentTime, StringFormat={}{0:HH:mm:ss}}"/>
             </StatusBarItem>
@@ -334,12 +360,15 @@
                 </Grid.RowDefinitions>
                 
                 <!-- File Group Table with Tabs -->
-                <TabControl Grid.Row="0">
+                <TabControl Grid.Row="0" SelectedIndex="{Binding ActiveTabIndex}">
                     <TabItem Header="Line 1">
-                        <DataGrid ItemsSource="{Binding FileGroups}" 
-                                  SelectedItem="{Binding SelectedGroup}"
+                        <DataGrid ItemsSource="{Binding Line1Groups}"
+                                  SelectedItem="{Binding SelectedLine1Group}"
                                   Style="{StaticResource FileGroupDataGridStyle}"
                                   RowStyle="{StaticResource FileGroupRowStyle}">
+                            <i:Interaction.Behaviors>
+                                <behaviors:DragSelectBehavior/>
+                            </i:Interaction.Behaviors>
                             <DataGrid.Columns>
                                 <DataGridCheckBoxColumn Header="" Width="40" Binding="{Binding IsSelected}"/>
                                 <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}"/>
@@ -423,7 +452,94 @@
                         </DataGrid>
                     </TabItem>
                     <TabItem Header="Line 2">
-                        <TextBlock Text="Line 2 view (to be implemented)" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <DataGrid ItemsSource="{Binding Line2Groups}"
+                                  SelectedItem="{Binding SelectedLine2Group}"
+                                  Style="{StaticResource FileGroupDataGridStyle}"
+                                  RowStyle="{StaticResource FileGroupRowStyle}">
+                            <i:Interaction.Behaviors>
+                                <behaviors:DragSelectBehavior/>
+                            </i:Interaction.Behaviors>
+                            <DataGrid.Columns>
+                                <DataGridCheckBoxColumn Header="" Width="40" Binding="{Binding IsSelected}"/>
+                                <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}"/>
+                                <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}"/>
+                                <DataGridTemplateColumn Header="Main Img" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                    Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                    Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                <Grid>
+                                                    <Image Source="{Binding MainImageThumbnail}" Stretch="Uniform"/>
+                                                    <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                 Visibility="{Binding MainImageThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="NIR Img" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                    Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                    Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                <Grid>
+                                                    <Image Source="{Binding NirImageThumbnail}" Stretch="Uniform"/>
+                                                    <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                 Visibility="{Binding NirImageThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Cam 4" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                    Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                    Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                <Grid>
+                                                    <Image Source="{Binding Camera4Thumbnail}" Stretch="Uniform"/>
+                                                    <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                 Visibility="{Binding Camera4Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Cam 5" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                    Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                    Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                <Grid>
+                                                    <Image Source="{Binding Camera5Thumbnail}" Stretch="Uniform"/>
+                                                    <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                 Visibility="{Binding Camera5Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Cam 6" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                    Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                    Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                <Grid>
+                                                    <Image Source="{Binding Camera6Thumbnail}" Stretch="Uniform"/>
+                                                    <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                 Visibility="{Binding Camera6Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
                     </TabItem>
                     <TabItem Header="Combined">
                         <Grid>
@@ -432,9 +548,221 @@
                                 <ColumnDefinition Width="5"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Line 1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="{StaticResource BorderBrush}"/>
-                            <TextBlock Grid.Column="2" Text="Line 2" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            
+                            <!-- Line 1 DataGrid -->
+                            <Border Grid.Column="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Header -->
+                                    <Border Grid.Row="0" Background="{StaticResource PanelBackgroundBrush}" 
+                                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,4">
+                                        <TextBlock Text="Line 1" FontWeight="Bold" FontSize="12"/>
+                                    </Border>
+                                    
+                                    <!-- DataGrid -->
+                                    <DataGrid Grid.Row="1" ItemsSource="{Binding Line1Groups}"
+                                              SelectedItem="{Binding SelectedLine1Group}"
+                                              Style="{StaticResource FileGroupDataGridStyle}"
+                                              RowStyle="{StaticResource FileGroupRowStyle}">
+                                        <i:Interaction.Behaviors>
+                                            <behaviors:DragSelectBehavior/>
+                                        </i:Interaction.Behaviors>
+                                        <DataGrid.Columns>
+                                            <DataGridCheckBoxColumn Header="" Width="40" Binding="{Binding IsSelected}"/>
+                                            <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}"/>
+                                            <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}"/>
+                                            <DataGridTemplateColumn Header="Main Img" Width="*">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                                Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                            <Grid>
+                                                                <Image Source="{Binding MainImageThumbnail}" Stretch="Uniform"/>
+                                                                <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                             Visibility="{Binding MainImageThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="NIR Img" Width="*">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                                Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                            <Grid>
+                                                                <Image Source="{Binding NirImageThumbnail}" Stretch="Uniform"/>
+                                                                <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                             Visibility="{Binding NirImageThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="Cam 1" Width="*">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                                Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                            <Grid>
+                                                                <Image Source="{Binding Camera1Thumbnail}" Stretch="Uniform"/>
+                                                                <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                             Visibility="{Binding Camera1Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="Cam 2" Width="*">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                                Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                            <Grid>
+                                                                <Image Source="{Binding Camera2Thumbnail}" Stretch="Uniform"/>
+                                                                <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                             Visibility="{Binding Camera2Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="Cam 3" Width="*">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                                Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                            <Grid>
+                                                                <Image Source="{Binding Camera3Thumbnail}" Stretch="Uniform"/>
+                                                                <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                             Visibility="{Binding Camera3Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                            </Border>
+                            
+                            <!-- GridSplitter -->
+                            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{StaticResource BorderBrush}"/>
+                            
+                            <!-- Line 2 DataGrid -->
+                            <Border Grid.Column="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1,0,0,0">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    
+                                    <!-- Header -->
+                                    <Border Grid.Row="0" Background="{StaticResource PanelBackgroundBrush}" 
+                                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="8,4">
+                                        <TextBlock Text="Line 2" FontWeight="Bold" FontSize="12"/>
+                                    </Border>
+                                    
+                                    <!-- DataGrid -->
+                                    <DataGrid Grid.Row="1" ItemsSource="{Binding Line2Groups}"
+                                              SelectedItem="{Binding SelectedLine2Group}"
+                                              Style="{StaticResource FileGroupDataGridStyle}"
+                                              RowStyle="{StaticResource FileGroupRowStyle}">
+                                        <i:Interaction.Behaviors>
+                                            <behaviors:DragSelectBehavior/>
+                                        </i:Interaction.Behaviors>
+                                        <DataGrid.Columns>
+                                            <DataGridCheckBoxColumn Header="" Width="40" Binding="{Binding IsSelected}"/>
+                                            <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}"/>
+                                            <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}"/>
+                                            <DataGridTemplateColumn Header="Main Img" Width="*">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                                Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                            <Grid>
+                                                                <Image Source="{Binding MainImageThumbnail}" Stretch="Uniform"/>
+                                                                <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                             Visibility="{Binding MainImageThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="NIR Img" Width="*">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                                Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                            <Grid>
+                                                                <Image Source="{Binding NirImageThumbnail}" Stretch="Uniform"/>
+                                                                <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                             Visibility="{Binding NirImageThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="Cam 4" Width="*">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                                Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                            <Grid>
+                                                                <Image Source="{Binding Camera4Thumbnail}" Stretch="Uniform"/>
+                                                                <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                             Visibility="{Binding Camera4Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="Cam 5" Width="*">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                                Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                            <Grid>
+                                                                <Image Source="{Binding Camera5Thumbnail}" Stretch="Uniform"/>
+                                                                <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                             Visibility="{Binding Camera5Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTemplateColumn Header="Cam 6" Width="*">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
+                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                                Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
+                                                            <Grid>
+                                                                <Image Source="{Binding Camera6Thumbnail}" Stretch="Uniform"/>
+                                                                <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                                                             Visibility="{Binding Camera6Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </Grid>
+                            </Border>
                         </Grid>
                     </TabItem>
                 </TabControl>

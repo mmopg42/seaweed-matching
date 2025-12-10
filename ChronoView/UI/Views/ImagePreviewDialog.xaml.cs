@@ -1,7 +1,9 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 using System.Windows.Media.Imaging;
+using WpfMessageBox = System.Windows.MessageBox;
 
 namespace ChronoView.UI.Views;
 
@@ -30,7 +32,7 @@ public partial class ImagePreviewDialog : Window
     {
         if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
         {
-            MessageBox.Show("Image file not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            WpfMessageBox.Show("Image file not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
@@ -60,7 +62,7 @@ public partial class ImagePreviewDialog : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Failed to load image: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            WpfMessageBox.Show($"Failed to load image: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -141,7 +143,7 @@ public partial class ImagePreviewDialog : Window
         Close();
     }
 
-    private void Window_KeyDown(object sender, KeyEventArgs e)
+    private void Window_KeyDown(object sender, WpfKeyEventArgs e)
     {
         if (e.Key == Key.Escape)
         {

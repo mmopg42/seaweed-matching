@@ -251,6 +251,7 @@ public class ViewModelTests
         var mockFileOperationService = new Mock<ChronoView.Core.FileOperations.IFileOperationService>();
         var mockPathManagementService = new Mock<ChronoView.Core.FileOperations.IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
+        var mockAbnormalDetector = new Mock<ChronoView.Core.Analytics.IAbnormalDetector>();
         var mockLogger = new Mock<Microsoft.Extensions.Logging.ILogger<MainWindowViewModel>>();
 
         return new MainWindowViewModel(
@@ -260,6 +261,7 @@ public class ViewModelTests
             mockFileOperationService.Object,
             mockPathManagementService.Object,
             mockImageProcessor.Object,
+            mockAbnormalDetector.Object,
             mockLogger.Object);
     }
 
@@ -338,8 +340,8 @@ public class ViewModelTests
         Assert.False(viewModel.MoveCommand.CanExecute(null));
         Assert.False(viewModel.DeleteCommand.CanExecute(null));
 
-        // Select a group
-        viewModel.SelectedGroup = groupViewModel;
+        // Select a group (use SelectedLine1Group instead of SelectedGroup)
+        viewModel.SelectedLine1Group = groupViewModel;
         Assert.True(viewModel.MoveCommand.CanExecute(null));
         Assert.True(viewModel.DeleteCommand.CanExecute(null));
     }

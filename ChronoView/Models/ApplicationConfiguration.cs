@@ -6,6 +6,12 @@ namespace ChronoView.Models;
 public class ApplicationConfiguration
 {
     /// <summary>
+    /// Base path for automatic path generation (e.g., "D:/Data").
+    /// Used by PathManagementService.GeneratePathsFromDate().
+    /// </summary>
+    public string BasePath { get; set; } = "D:/Data";
+
+    /// <summary>
     /// Folder paths for monitoring and file operations.
     /// </summary>
     public Dictionary<string, string> FolderPaths { get; set; } = new();
@@ -107,45 +113,78 @@ public class MatchingSettings
     /// </summary>
     public string LineMode { get; set; } = "integrated";
 
-    /// <summary>
-    /// NIR path for monitoring.
-    /// </summary>
-    public string NirPath { get; set; } = "";
+    // ============================================================
+    // Line 1 Paths (NIR1, Normal1, Camera 1-3)
+    // ============================================================
 
     /// <summary>
-    /// Normal path for monitoring.
+    /// NIR1 path for Line 1 monitoring.
     /// </summary>
-    public string NormalPath { get; set; } = "";
+    public string Nir1Path { get; set; } = "";
 
     /// <summary>
-    /// Camera 1 path.
+    /// Normal1 path for Line 1 monitoring.
+    /// Contains folders with _0 suffix (e.g., 20251204_143052_0/).
+    /// </summary>
+    public string Normal1Path { get; set; } = "";
+
+    /// <summary>
+    /// Camera 1 path (Line 1).
     /// </summary>
     public string Camera1Path { get; set; } = "";
 
     /// <summary>
-    /// Camera 2 path.
+    /// Camera 2 path (Line 1).
     /// </summary>
     public string Camera2Path { get; set; } = "";
 
     /// <summary>
-    /// Camera 3 path.
+    /// Camera 3 path (Line 1).
     /// </summary>
     public string Camera3Path { get; set; } = "";
 
+    // ============================================================
+    // Line 2 Paths (NIR2, Normal2, Camera 4-6)
+    // ============================================================
+
     /// <summary>
-    /// Camera 4 path.
+    /// NIR2 path for Line 2 monitoring.
+    /// </summary>
+    public string Nir2Path { get; set; } = "";
+
+    /// <summary>
+    /// Normal2 path for Line 2 monitoring.
+    /// Contains folders with _1 suffix (e.g., 20251204_143052_1/).
+    /// </summary>
+    public string Normal2Path { get; set; } = "";
+
+    /// <summary>
+    /// Camera 4 path (Line 2).
     /// </summary>
     public string Camera4Path { get; set; } = "";
 
     /// <summary>
-    /// Camera 5 path.
+    /// Camera 5 path (Line 2).
     /// </summary>
     public string Camera5Path { get; set; } = "";
 
     /// <summary>
-    /// Camera 6 path.
+    /// Camera 6 path (Line 2).
     /// </summary>
     public string Camera6Path { get; set; } = "";
+
+    // ============================================================
+    // Common Paths
+    // ============================================================
+
+    /// <summary>
+    /// Output path for moved/processed files.
+    /// </summary>
+    public string OutputPath { get; set; } = "";
+
+    // ============================================================
+    // Helper Methods
+    // ============================================================
 
     /// <summary>
     /// Get camera path by number (1-6).
@@ -163,7 +202,49 @@ public class MatchingSettings
             _ => ""
         };
     }
+
+    /// <summary>
+    /// Get line number for a camera (1 or 2).
+    /// Cameras 1-3 are Line 1, Cameras 4-6 are Line 2.
+    /// </summary>
+    /// <param name="cameraNumber">Camera number (1-6).</param>
+    /// <returns>1 for cameras 1-3, 2 for cameras 4-6.</returns>
+    public int GetCameraLineNumber(int cameraNumber)
+    {
+        return cameraNumber <= 3 ? 1 : 2;
+    }
+
+    /// <summary>
+    /// Get NIR path by line number.
+    /// </summary>
+    /// <param name="lineNumber">Line number (1 or 2).</param>
+    /// <returns>NIR path for the specified line.</returns>
+    public string GetNirPathByLine(int lineNumber)
+    {
+        return lineNumber switch
+        {
+            1 => Nir1Path,
+            2 => Nir2Path,
+            _ => ""
+        };
+    }
+
+    /// <summary>
+    /// Get Normal path by line number.
+    /// </summary>
+    /// <param name="lineNumber">Line number (1 or 2).</param>
+    /// <returns>Normal path for the specified line.</returns>
+    public string GetNormalPathByLine(int lineNumber)
+    {
+        return lineNumber switch
+        {
+            1 => Normal1Path,
+            2 => Normal2Path,
+            _ => ""
+        };
+    }
 }
+
 
 /// <summary>
 /// Workflow configuration.
@@ -204,6 +285,12 @@ public class WorkflowSettings
     /// Polling interval in milliseconds for network drives.
     /// </summary>
     public int PollingIntervalMs { get; set; } = 5000;
+
+    /// <summary>
+    /// Quarantine (trash) folder path for soft delete operations.
+    /// If empty, a default path should be used by callers.
+    /// </summary>
+    public string DeleteQuarantinePath { get; set; } = "";
 }
 
 /// <summary>

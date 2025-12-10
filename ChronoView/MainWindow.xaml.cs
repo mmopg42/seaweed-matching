@@ -6,6 +6,7 @@ using ChronoView.UI.ViewModels;
 using ChronoView.UI.Views;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using WpfApplication = System.Windows.Application;
 
 namespace ChronoView;
 
@@ -65,7 +66,7 @@ public partial class MainWindow : Window
         _logger.LogInformation("Opening settings dialog");
         
         // Get SettingsDialog from DI container
-        var app = (App)Application.Current;
+        var app = (App)WpfApplication.Current;
         var settingsDialog = app.Services.GetRequiredService<SettingsDialog>();
         settingsDialog.Owner = this;
         

@@ -35,16 +35,16 @@ namespace ChronoView.Tests.Core.FileWatching
             {
                 MatchingSettings = new MatchingSettings
                 {
-                    NirPath = "C:/Test/NIR",
-                    NormalPath = "C:/Test/Normal",
+                    Nir1Path = "C:/Test/NIR",
+                    Normal1Path = "C:/Test/Normal",
                     Camera1Path = "C:/Test/Cam1"
                 }
             };
 
             _mockMatcher.Setup(m => m.Configuration).Returns(new MatchingConfiguration
             {
-                NirPath = _testConfig.MatchingSettings.NirPath,
-                NormalPath = _testConfig.MatchingSettings.NormalPath,
+                Nir1Path = _testConfig.MatchingSettings.Nir1Path,
+                Normal1Path = _testConfig.MatchingSettings.Normal1Path,
                 Camera1Path = _testConfig.MatchingSettings.Camera1Path
             });
         }

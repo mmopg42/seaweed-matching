@@ -1,18 +1,21 @@
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using Microsoft.Xaml.Behaviors;
+using WpfDataGrid = System.Windows.Controls.DataGrid;
+using WpfDataGridRow = System.Windows.Controls.DataGridRow;
+using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
+using WpfPoint = System.Windows.Point;
 
 namespace ChronoView.UI.Behaviors;
 
 /// <summary>
 /// Attached behavior that enables drag-to-select multiple rows in a DataGrid.
 /// </summary>
-public class DragSelectBehavior : Behavior<DataGrid>
+public class DragSelectBehavior : Behavior<WpfDataGrid>
 {
     private bool _isDragging;
-    private Point _startPoint;
+    private WpfPoint _startPoint;
 
     protected override void OnAttached()
     {
@@ -41,7 +44,7 @@ public class DragSelectBehavior : Behavior<DataGrid>
         }
     }
 
-    private void OnPreviewMouseMove(object sender, MouseEventArgs e)
+    private void OnPreviewMouseMove(object sender, WpfMouseEventArgs e)
     {
         if (_isDragging && e.LeftButton == MouseButtonState.Pressed)
         {
@@ -51,7 +54,7 @@ public class DragSelectBehavior : Behavior<DataGrid>
             var hitTestResult = VisualTreeHelper.HitTest(AssociatedObject, currentPoint);
             if (hitTestResult != null)
             {
-                var row = FindVisualParent<DataGridRow>(hitTestResult.VisualHit);
+                var row = FindVisualParent<WpfDataGridRow>(hitTestResult.VisualHit);
                 if (row != null && !AssociatedObject.SelectedItems.Contains(row.Item))
                 {
                     AssociatedObject.SelectedItems.Add(row.Item);

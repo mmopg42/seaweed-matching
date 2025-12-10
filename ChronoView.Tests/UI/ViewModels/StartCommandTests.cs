@@ -23,6 +23,7 @@ public class StartCommandTests
     private readonly Mock<IFileOperationService> _mockFileOperationService;
     private readonly Mock<IPathManagementService> _mockPathManagementService;
     private readonly Mock<IImageProcessor> _mockImageProcessor;
+    private readonly Mock<IAbnormalDetector> _mockAbnormalDetector;
     private readonly Mock<ILogger<MainWindowViewModel>> _mockLogger;
     private readonly ApplicationConfiguration _testConfig;
 
@@ -34,6 +35,7 @@ public class StartCommandTests
         _mockFileOperationService = new Mock<IFileOperationService>();
         _mockPathManagementService = new Mock<IPathManagementService>();
         _mockImageProcessor = new Mock<IImageProcessor>();
+        _mockAbnormalDetector = new Mock<IAbnormalDetector>();
         _mockLogger = new Mock<ILogger<MainWindowViewModel>>();
 
         _testConfig = new ApplicationConfiguration
@@ -45,8 +47,8 @@ public class StartCommandTests
             },
             MatchingSettings = new MatchingSettings
             {
-                NirPath = "C:\\Test\\NIR",
-                NormalPath = "C:\\Test\\Normal"
+                Nir1Path = "C:\\Test\\NIR",
+                Normal1Path = "C:\\Test\\Normal"
             }
         };
     }
@@ -60,6 +62,7 @@ public class StartCommandTests
             _mockFileOperationService.Object,
             _mockPathManagementService.Object,
             _mockImageProcessor.Object,
+            _mockAbnormalDetector.Object,
             _mockLogger.Object);
     }
 

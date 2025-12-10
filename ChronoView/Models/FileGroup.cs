@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text.Json.Serialization;
 
 namespace ChronoView.Models;
@@ -38,10 +39,12 @@ public class FileGroup : IEquatable<FileGroup>
     public Dictionary<string, string> CameraFiles { get; set; } = new();
 
     /// <summary>
-    /// Line number for multi-line monitoring scenarios.
+    /// Line number for multi-line monitoring scenarios (1 or 2).
+    /// Line 1 corresponds to NIR1/Normal1/Cam1-3.
+    /// Line 2 corresponds to NIR2/Normal2/Cam4-6.
     /// </summary>
     [JsonPropertyName("line_number")]
-    public int LineNumber { get; set; }
+    public int LineNumber { get; set; } = 1;
 
     /// <summary>
     /// Indicates whether this group has an associated NIR file.
@@ -61,6 +64,48 @@ public class FileGroup : IEquatable<FileGroup>
     [JsonPropertyName("status")]
     public GroupStatus Status { get; set; } = GroupStatus.Pending;
 
+    // ============================================================
+    // Static Helper Methods
+    // ============================================================
+
+    /// <summary>
+    /// Extracts line number from a normal folder name based on suffix.
+    /// </summary>
+    /// <param name="normalFolderName">
+    /// The normal folder name (e.g., "20251204_143052_0" or "20251204_143052_1").
+    /// Format: YYYYMMDD_HHMMSS_L where L is the line indicator (0 or 1).
+    /// </param>
+    /// <returns>
+    /// 1 for folders ending with "_0" (Line 1),
+    /// 2 for folders ending with "_1" (Line 2),
+    /// 1 as default if pattern doesn't match.
+    /// </returns>
+    public static int GetLineNumberFromNormalFolder(string normalFolderName)
+    {
+        if (string.IsNullOrEmpty(normalFolderName))
+            return 1;
+
+        // Extract just the folder name if a full path is provided
+        var folderName = Path.GetFileName(normalFolderName);
+        
+        if (folderName.EndsWith("_0"))
+            return 1;
+        if (folderName.EndsWith("_1"))
+            return 2;
+        
+        return 1; // Default to Line 1
+    }
+
+    // ============================================================
+    // Instance Methods
+    // ============================================================
+
+    /// <summary>
+    /// Path to the NIR file associated with this group.
+    /// </summary>
+    [JsonPropertyName("nir_file_path")]
+    public string NirFilePath { get; set; } = string.Empty;
+
     /// <summary>
     /// Validates the integrity of this file group.
     /// </summary>
@@ -70,13 +115,44 @@ public class FileGroup : IEquatable<FileGroup>
         if (string.IsNullOrWhiteSpace(GroupId))
             return false;
 
-        if (LineNumber < 0)
+        if (LineNumber < 1 || LineNumber > 2)
             return false;
 
-        if (HasNir && string.IsNullOrWhiteSpace(NirKey))
+        if (HasNir && (string.IsNullOrWhiteSpace(NirKey) || string.IsNullOrWhiteSpace(NirFilePath)))
             return false;
 
         return true;
+    }
+
+    /// <summary>
+    /// Gets all file paths associated with this group (MainImage, NIR, Cameras).
+    /// </summary>
+    public IEnumerable<string> GetAllFilePaths()
+    {
+        if (!string.IsNullOrEmpty(MainImagePath))
+            yield return MainImagePath;
+
+        if (HasNir && !string.IsNullOrEmpty(NirFilePath))
+            yield return NirFilePath;
+
+        foreach (var path in CameraFiles.Values)
+        {
+            if (!string.IsNullOrEmpty(path))
+                yield return path;
+        }
+    }
+
+    /// <summary>
+    /// Gets a safe filename with prefix to avoid collisions.
+    /// </summary>
+    public string GetSafeFileName(string originalPath)
+    {
+        if (string.IsNullOrEmpty(originalPath)) return string.Empty;
+
+        var fileName = Path.GetFileName(originalPath);
+        
+        // Return original name as default, prefixing will be handled by FileOperationService
+        return fileName;
     }
 
     #region Equality Implementation

@@ -13,7 +13,8 @@ This design establishes the service integration layer that connects the ChronoVi
 │                         WPF UI Layer                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
 │  │ MainWindow   │  │SettingsDialog│  │ Other Views  │      │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
+│  │  - TabControl│  │  - Tabs      │  └──────┬───────┘      │
+│  └──────┬───────┘  └──────┬───────┘         │              │
 │         │                  │                  │              │
 └─────────┼──────────────────┼──────────────────┼──────────────┘
           │                  │                  │
@@ -140,14 +141,34 @@ public class MainWindowViewModel : ViewModelBase
     private void OnFileCountsUpdated(object sender, FileCountStatistics stats);
     private void OnMatchingStatsUpdated(object sender, MatchingStatistics stats);
     
-    // Command Implementations
+    // Command Implementations (Async)
     private async Task ExecuteStartAsync();
     private async Task ExecuteStopAsync();
-    private async Task ExecuteMoveAsync();
-    private async Task ExecuteDeleteAsync();
-    private async Task ExecuteRefreshAsync();
+    private async Task ExecuteMoveAsync();   // Supports progress & cancellation
+    private async Task ExecuteDeleteAsync(); // Supports soft delete & confirmation
+    private async Task ExecuteRefreshAsync(); // With monitor-off guard
     private void ExecutePathAutoConfig();
     private async Task ExecuteCreateSampleFolderAsync();
+    
+    // Tab Management
+    public int ActiveTabIndex { get; set; }
+    public FileGroupViewModel SelectedGroup { get; } // Computed based on ActiveTabIndex
+}
+```
+
+### 1.1 FileGroupViewModel (Enhanced)
+
+**Purpose**: Wrap FileGroup with image loading and status capabilities.
+
+```csharp
+public class FileGroupViewModel : ViewModelBase
+{
+    private readonly FileGroup _fileGroup;
+    public bool IsAbnormal { get; }
+    public string AbnormalReason { get; }
+    public int LineNumber { get; } 
+    
+    // ... Existing image loading logic ...
 }
 ```
 
@@ -200,10 +221,17 @@ public interface IFileOperationService
         IProgress<OperationProgress> progress,
         CancellationToken cancellationToken);
     
+    Task<OperationResult> MoveFileGroupAsync(
+        FileGroup group, 
+        string destinationPath,
+        IProgress<OperationProgress> progress,
+        CancellationToken cancellationToken,
+        Func<string, Task<ConflictResolution>> onConflict); // Conflict callback
+    
     Task<OperationResult> DeleteFileGroupAsync(
         FileGroup group,
         IProgress<OperationProgress> progress,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken); // Soft delete via Quarantine
 }
 
 public class OperationResult
@@ -232,50 +260,22 @@ public interface IPathManagementService
 {
     Dictionary<string, string> GeneratePathsFromDate(string dateString, ApplicationConfiguration config);
     Task<bool> CreateSampleFoldersAsync(string sampleName, ApplicationConfiguration config);
+    Dictionary<string, string> GeneratePathsFromDate(string dateString, ApplicationConfiguration config); // Support Line 2
+    Task<bool> CreateSampleFoldersAsync(string sampleName, ApplicationConfiguration config);
     bool ValidatePaths(Dictionary<string, string> paths);
 }
 ```
 
-### 6. FileGroupViewModel (Enhanced)
+### 5.1 File Operation Strategies
+- **Move**: Uses "Copy-then-Delete" strategy for safety (especially for Normal folders).
+- **Delete**: Uses "Soft Delete" strategy moving files to configured Quarantine path.
+- **Conflict**: Supports Overwrite, Skip, Abort with "Apply to All" capability.
+```
 
-**Purpose**: Wrap FileGroup with image loading capabilities.
-
-```csharp
-public class FileGroupViewModel : ViewModelBase
-{
-    private readonly FileGroup _fileGroup;
-    private readonly IImageProcessor _imageProcessor;
-    private BitmapSource _mainImageThumbnail;
-    private BitmapSource _nirImageThumbnail;
-    
-    public FileGroupViewModel(FileGroup fileGroup, IImageProcessor imageProcessor)
-    {
-        _fileGroup = fileGroup;
-        _imageProcessor = imageProcessor;
-        LoadThumbnailsAsync();
-    }
-    
-    private async Task LoadThumbnailsAsync()
-    {
-        if (!string.IsNullOrEmpty(_fileGroup.MainImagePath))
-        {
-            var thumbnail = await _imageProcessor.GenerateThumbnailAsync(
-                _fileGroup.MainImagePath, 200, 150);
-            
-            await Application.Current.Dispatcher.InvokeAsync(() =>
-            {
-                MainImageThumbnail = thumbnail;
-            });
-        }
-    }
-    
-    public BitmapSource MainImageThumbnail
-    {
-        get => _mainImageThumbnail;
-        private set => SetProperty(ref _mainImageThumbnail, value);
-    }
 }
 ```
+
+*(See Section 1.1 for FileGroupViewModel details)*
 
 ## Data Models
 
@@ -301,6 +301,9 @@ public class FileCountStatistics
 ### MatchingStatistics
 
 ```csharp
+### MatchingStatistics
+
+```csharp
 public class MatchingStatistics
 {
     // Unified Mode
@@ -322,6 +325,38 @@ public class LineStatistics
     public int WithoutNir { get; set; }
     public int Failed { get; set; }
     public double MatchRate => TotalGroups > 0 ? (double)WithNir / TotalGroups * 100 : 0;
+}
+```
+
+### MatchingSettings
+
+```csharp
+public class MatchingSettings
+{
+    // Integrated / Separated
+    public string LineMode { get; set; }
+
+    // Line 1
+    public string Nir1Path { get; set; }
+    public string Normal1Path { get; set; }
+    public string Camera1Path { get; set; }
+    public string Camera2Path { get; set; }
+    public string Camera3Path { get; set; }
+
+    // Line 2
+    public string Nir2Path { get; set; }
+    public string Normal2Path { get; set; }
+    public string Camera4Path { get; set; }
+    public string Camera5Path { get; set; }
+    public string Camera6Path { get; set; }
+    
+    // ... Time windows ...
+}
+
+public class WorkflowSettings 
+{
+    // ... Existing settings ...
+    public string DeleteQuarantinePath { get; set; } // For soft delete
 }
 ```
 

@@ -13,25 +13,44 @@ public interface IFileOperationService
     /// <param name="group">The file group to move.</param>
     /// <param name="destinationPath">The destination directory path.</param>
     /// <param name="progress">Progress reporter for the operation.</param>
+    /// <param name="onConflict">Callback for resolving name conflicts.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result of the move operation.</returns>
     Task<OperationResult> MoveFileGroupAsync(
         FileGroup group,
         string destinationPath,
         IProgress<OperationProgress>? progress = null,
+        Func<string, ConflictResolution>? onConflict = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes all files in a file group.
     /// </summary>
     /// <param name="group">The file group to delete.</param>
+    /// <param name="quarantinePath">Destination quarantine (trash) path for soft delete.</param>
     /// <param name="progress">Progress reporter for the operation.</param>
+    /// <param name="onConflict">Callback for resolving name conflicts in quarantine.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Result of the delete operation.</returns>
     Task<OperationResult> DeleteFileGroupAsync(
         FileGroup group,
+        string quarantinePath,
         IProgress<OperationProgress>? progress = null,
+        Func<string, ConflictResolution>? onConflict = null,
         CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Resolution strategy for file conflicts.
+/// </summary>
+public enum ConflictResolution
+{
+    /// <summary>Overwrite the existing file.</summary>
+    Overwrite,
+    /// <summary>Skip the file (counts as processed).</summary>
+    Skip,
+    /// <summary>Abort the entire operation.</summary>
+    Abort
 }
 
 /// <summary>
@@ -43,6 +62,11 @@ public class OperationResult
     public string ErrorMessage { get; set; } = string.Empty;
     public int FilesProcessed { get; set; }
     public int FilesFailed { get; set; }
+    
+    /// <summary>
+    /// List of files that failed to process (due to errors, not skips).
+    /// </summary>
+    public List<string> FailedFiles { get; } = new();
 }
 
 /// <summary>
@@ -53,5 +77,6 @@ public class OperationProgress
     public int TotalFiles { get; set; }
     public int ProcessedFiles { get; set; }
     public string CurrentFile { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
     public double PercentComplete => TotalFiles > 0 ? (double)ProcessedFiles / TotalFiles * 100 : 0;
 }

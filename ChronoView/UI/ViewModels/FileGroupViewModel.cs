@@ -1,7 +1,10 @@
 using ChronoView.Models;
 using ChronoView.Core.ImageProcessing;
+using ChronoView.Core.Analytics;
+using System.IO;
 using System.Windows.Media.Imaging;
 using System.Windows;
+using WpfApplication = System.Windows.Application;
 
 namespace ChronoView.UI.ViewModels;
 
@@ -12,8 +15,12 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 {
     private readonly FileGroup _fileGroup;
     private readonly IImageProcessor _imageProcessor;
+    private readonly IAbnormalDetector? _abnormalDetector;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
+    
     private bool _isSelected;
+    private bool _isAbnormal;
+    private string? _abnormalReason;
     private string? _mainImagePath;
     private string? _nirImagePath;
     private Dictionary<string, string?> _cameraImagePaths = new();
@@ -30,11 +37,20 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Creates a new FileGroupViewModel wrapping a FileGroup model.
     /// </summary>
-    public FileGroupViewModel(FileGroup fileGroup, IImageProcessor imageProcessor)
+    /// <param name="fileGroup">The FileGroup model to wrap.</param>
+    /// <param name="imageProcessor">Image processor for thumbnail generation.</param>
+    /// <param name="abnormalDetector">Optional abnormal detector for z-score analysis.</param>
+    public FileGroupViewModel(
+        FileGroup fileGroup, 
+        IImageProcessor imageProcessor,
+        IAbnormalDetector? abnormalDetector = null)
     {
         _fileGroup = fileGroup ?? throw new ArgumentNullException(nameof(fileGroup));
         _imageProcessor = imageProcessor ?? throw new ArgumentNullException(nameof(imageProcessor));
+        _abnormalDetector = abnormalDetector;
+        
         InitializeImagePaths();
+        CheckAbnormalStatus();
     }
 
     /// <summary>
@@ -78,23 +94,57 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     public GroupStatus Status => _fileGroup.Status;
 
     /// <summary>
-    /// Status display text for UI.
+    /// Status display text for UI, including abnormal indicator.
     /// </summary>
-    public string StatusText => Status switch
+    public string StatusText
     {
-        GroupStatus.Complete => "✓ Complete",
-        GroupStatus.Pending => "⏳ Pending",
-        GroupStatus.Processing => "⚙ Processing",
-        GroupStatus.Moved => "📦 Moved",
-        GroupStatus.Error => "✗ Error",
-        GroupStatus.Abnormal => "⚠ Abnormal",
-        _ => Status.ToString()
-    };
+        get
+        {
+            var baseStatus = Status switch
+            {
+                GroupStatus.Complete => "✓ Complete",
+                GroupStatus.Pending => "⏳ Pending",
+                GroupStatus.Processing => "⚙ Processing",
+                GroupStatus.Moved => "📦 Moved",
+                GroupStatus.Error => "✗ Error",
+                GroupStatus.Abnormal => "⚠ Abnormal",
+                _ => Status.ToString()
+            };
+            
+            // Append abnormal indicator if detected by z-score analysis
+            if (IsAbnormal && Status != GroupStatus.Abnormal)
+            {
+                return $"{baseStatus} (⚠ Abnormal)";
+            }
+            
+            return baseStatus;
+        }
+    }
 
     /// <summary>
-    /// Indicates whether this group has abnormal characteristics.
+    /// Indicates whether this file group is detected as abnormal.
+    /// This can be set by either the model's Status or by the IAbnormalDetector.
     /// </summary>
-    public bool IsAbnormal => Status == GroupStatus.Abnormal;
+    public bool IsAbnormal
+    {
+        get => _isAbnormal || Status == GroupStatus.Abnormal;
+        private set
+        {
+            if (SetProperty(ref _isAbnormal, value))
+            {
+                OnPropertyChanged(nameof(StatusText));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reason for abnormal status (if applicable).
+    /// </summary>
+    public string? AbnormalReason
+    {
+        get => _abnormalReason;
+        private set => SetProperty(ref _abnormalReason, value);
+    }
 
     /// <summary>
     /// Whether this group is selected in the UI.
@@ -316,23 +366,91 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
         }
 
         // Set NIR image path if available
-        if (_fileGroup.HasNir && !string.IsNullOrEmpty(_fileGroup.NirKey))
+        if (_fileGroup.HasNir && !string.IsNullOrEmpty(_fileGroup.NirFilePath))
         {
-            _nirImagePath = _fileGroup.NirKey;
+            _nirImagePath = _fileGroup.NirFilePath;
         }
 
-        // Set main image path (prioritize explicitly set MainImagePath)
+        // Set main image path (only use Normal folder images, NOT camera images)
         if (!string.IsNullOrEmpty(_fileGroup.MainImagePath))
         {
             _mainImagePath = _fileGroup.MainImagePath;
         }
-        else if (_cameraImagePaths.Count > 0)
-        {
-            _mainImagePath = _cameraImagePaths.Values.FirstOrDefault(v => !string.IsNullOrEmpty(v));
-        }
         else if (!string.IsNullOrEmpty(_fileGroup.NormalFolder))
         {
-            _mainImagePath = _fileGroup.NormalFolder;
+            // Try to construct path to stitched_original.png from Normal folder
+            _mainImagePath = Path.Combine(_fileGroup.NormalFolder, "stitched_original.png");
+        }
+        // Do NOT fallback to camera images - they belong in their own columns
+    }
+
+    /// <summary>
+    /// Checks the abnormal status using the injected IAbnormalDetector.
+    /// Triggers PropertyChanged notifications for IsAbnormal and StatusText.
+    /// </summary>
+    private void CheckAbnormalStatus()
+    {
+        if (_abnormalDetector == null)
+        {
+            // No detector available, rely on model status only
+            _isAbnormal = false;
+            _abnormalReason = null;
+            return;
+        }
+
+        try
+        {
+            var isAbnormal = _abnormalDetector.IsGroupAbnormal(_fileGroup);
+            if (isAbnormal)
+            {
+                IsAbnormal = true;
+                AbnormalReason = "Detected by z-score analysis";
+            }
+            else
+            {
+                IsAbnormal = false;
+                AbnormalReason = null;
+            }
+        }
+        catch (Exception)
+        {
+            // If detection fails, don't mark as abnormal
+            IsAbnormal = false;
+            AbnormalReason = null;
+        }
+    }
+
+    /// <summary>
+    /// Checks the abnormal status without triggering PropertyChanged notifications.
+    /// Use this in Refresh() to avoid duplicate notifications.
+    /// </summary>
+    private void CheckAbnormalStatusWithoutNotification()
+    {
+        if (_abnormalDetector == null)
+        {
+            _isAbnormal = false;
+            _abnormalReason = null;
+            return;
+        }
+
+        try
+        {
+            var isAbnormal = _abnormalDetector.IsGroupAbnormal(_fileGroup);
+            if (isAbnormal)
+            {
+                _isAbnormal = true;
+                _abnormalReason = "Detected by z-score analysis";
+            }
+            else
+            {
+                _isAbnormal = false;
+                _abnormalReason = null;
+            }
+        }
+        catch (Exception)
+        {
+            _isAbnormal = false;
+            _abnormalReason = null;
         }
     }
 
@@ -341,6 +459,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     /// </summary>
     public void Refresh()
     {
+        // Notify basic property changes
         OnPropertyChanged(nameof(GroupId));
         OnPropertyChanged(nameof(NirKey));
         OnPropertyChanged(nameof(NormalFolder));
@@ -348,9 +467,18 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(HasNir));
         OnPropertyChanged(nameof(CreatedAt));
         OnPropertyChanged(nameof(Status));
+        
+        // Re-initialize paths and check abnormal status
+        InitializeImagePaths();
+        CheckAbnormalStatusWithoutNotification();
+        
+        // Notify status-related properties after abnormal check is complete
+        // This ensures StatusText is only notified once, after all calculations
+        OnPropertyChanged(nameof(IsAbnormal));
+        OnPropertyChanged(nameof(AbnormalReason));
         OnPropertyChanged(nameof(StatusText));
         
-        InitializeImagePaths();
+        // Notify image path changes
         OnPropertyChanged(nameof(MainImagePath));
         OnPropertyChanged(nameof(NirImagePath));
         OnPropertyChanged(nameof(Camera1ImagePath));
@@ -379,14 +507,14 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
             if (!string.IsNullOrEmpty(MainImagePath))
             {
                 var mainThumbnail = await LoadSingleThumbnailAsync(MainImagePath, thumbnailWidth, thumbnailHeight);
-                await Application.Current.Dispatcher.InvokeAsync(() => MainImageThumbnail = mainThumbnail);
+                await WpfApplication.Current.Dispatcher.InvokeAsync(() => MainImageThumbnail = mainThumbnail);
             }
 
             // Load NIR image thumbnail
             if (!string.IsNullOrEmpty(NirImagePath))
             {
                 var nirThumbnail = await LoadSingleThumbnailAsync(NirImagePath, thumbnailWidth, thumbnailHeight);
-                await Application.Current.Dispatcher.InvokeAsync(() => NirImageThumbnail = nirThumbnail);
+                await WpfApplication.Current.Dispatcher.InvokeAsync(() => NirImageThumbnail = nirThumbnail);
             }
 
             // Load camera thumbnails
@@ -459,7 +587,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 
         var thumbnail = await LoadSingleThumbnailAsync(imagePath, width, height);
         
-        await Application.Current.Dispatcher.InvokeAsync(() =>
+        await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
         {
             switch (cameraNumber)
             {

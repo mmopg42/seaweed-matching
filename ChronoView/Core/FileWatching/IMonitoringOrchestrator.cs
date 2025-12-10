@@ -24,12 +24,12 @@ namespace ChronoView.Core.FileWatching
         /// <summary>
         /// Refresh file groups by performing a full scan
         /// </summary>
-        Task RefreshAsync();
+        Task RefreshAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Perform initial scan of monitored directories
         /// </summary>
-        Task<OrchestrationResult> PerformInitialScanAsync();
+        Task<OrchestrationResult> PerformInitialScanAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Reset the orchestrator state

@@ -6,13 +6,16 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using ChronoView.UI.ViewModels;
 using Microsoft.Win32;
+using WpfUserControl = System.Windows.Controls.UserControl;
+using WpfMessageBox = System.Windows.MessageBox;
+using WpfSaveFileDialog = Microsoft.Win32.SaveFileDialog;
 
 namespace ChronoView.UI.Controls;
 
 /// <summary>
 /// Custom control for displaying and managing log messages with search, filtering, and export capabilities.
 /// </summary>
-public partial class LogPanel : UserControl
+public partial class LogPanel : WpfUserControl
 {
     private ObservableCollection<LogMessage> _allMessages = new();
     private ICollectionView? _filteredView;
@@ -114,7 +117,7 @@ public partial class LogPanel : UserControl
 
     private void Clear_Click(object sender, RoutedEventArgs e)
     {
-        var result = MessageBox.Show(
+        var result = WpfMessageBox.Show(
             "Are you sure you want to clear all log messages?",
             "Clear Log",
             MessageBoxButton.YesNo,
@@ -128,7 +131,7 @@ public partial class LogPanel : UserControl
 
     private void Export_Click(object sender, RoutedEventArgs e)
     {
-        var saveDialog = new SaveFileDialog
+        var saveDialog = new WpfSaveFileDialog
         {
             Filter = "Text Files (*.txt)|*.txt|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
             DefaultExt = ".txt",
@@ -140,7 +143,7 @@ public partial class LogPanel : UserControl
             try
             {
                 ExportToFile(saveDialog.FileName);
-                MessageBox.Show(
+                WpfMessageBox.Show(
                     $"Log exported successfully to:\n{saveDialog.FileName}",
                     "Export Complete",
                     MessageBoxButton.OK,
@@ -148,7 +151,7 @@ public partial class LogPanel : UserControl
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                WpfMessageBox.Show(
                     $"Failed to export log:\n{ex.Message}",
                     "Export Error",
                     MessageBoxButton.OK,

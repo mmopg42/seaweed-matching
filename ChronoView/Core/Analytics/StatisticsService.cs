@@ -155,16 +155,28 @@ public class StatisticsService : IStatisticsService, IDisposable
 
         try
         {
-            // Count NIR files
-            if (!string.IsNullOrEmpty(config.MatchingSettings.NirPath))
+            // Count NIR1 files (Line 1)
+            if (!string.IsNullOrEmpty(config.MatchingSettings.Nir1Path))
             {
-                stats.NirCount = await CountFilesInDirectoryAsync(config.MatchingSettings.NirPath);
+                stats.NirCount = await CountFilesInDirectoryAsync(config.MatchingSettings.Nir1Path);
             }
 
-            // Count normal camera files
-            if (!string.IsNullOrEmpty(config.MatchingSettings.NormalPath))
+            // Count NIR2 files (Line 2)
+            if (!string.IsNullOrEmpty(config.MatchingSettings.Nir2Path))
             {
-                stats.NormalCount = await CountFilesInDirectoryAsync(config.MatchingSettings.NormalPath);
+                stats.Nir2Count = await CountFilesInDirectoryAsync(config.MatchingSettings.Nir2Path);
+            }
+
+            // Count Normal1 folders (Line 1) - Normal paths contain directories, not files
+            if (!string.IsNullOrEmpty(config.MatchingSettings.Normal1Path))
+            {
+                stats.NormalCount = await CountDirectoriesInDirectoryAsync(config.MatchingSettings.Normal1Path);
+            }
+
+            // Count Normal2 folders (Line 2) - Normal paths contain directories, not files
+            if (!string.IsNullOrEmpty(config.MatchingSettings.Normal2Path))
+            {
+                stats.Normal2Count = await CountDirectoriesInDirectoryAsync(config.MatchingSettings.Normal2Path);
             }
 
             // Count individual camera files
@@ -373,6 +385,30 @@ public class StatisticsService : IStatisticsService, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error counting files in directory: {Path}", path);
+            return 0;
+        }
+    }
+
+    private async Task<int> CountDirectoriesInDirectoryAsync(string path)
+    {
+        if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+        {
+            return 0;
+        }
+
+        try
+        {
+            // Use EnumerateDirectories for efficient counting of subdirectories
+            return await Task.Run(() => Directory.EnumerateDirectories(path, "*", SearchOption.TopDirectoryOnly).Count());
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Access denied to directory: {Path}", path);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error counting directories in directory: {Path}", path);
             return 0;
         }
     }

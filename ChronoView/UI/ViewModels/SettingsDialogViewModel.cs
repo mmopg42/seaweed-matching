@@ -1,8 +1,11 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using WinForms = System.Windows.Forms;
 using ChronoView.Models;
 using ChronoView.Core.Configuration;
 using Microsoft.Extensions.Logging;
+using WpfMessageBox = System.Windows.MessageBox;
 
 namespace ChronoView.UI.ViewModels;
 
@@ -27,6 +30,7 @@ public class SettingsDialogViewModel : ViewModelBase
     private string _camera5Path = string.Empty;
     private string _camera6Path = string.Empty;
     private string _outputPath = string.Empty;
+    private string _deleteQuarantinePath = string.Empty;
 
     // Advanced options - Camera subfolder
     private bool _useCameraSubfolderNormal;
@@ -144,6 +148,12 @@ public class SettingsDialogViewModel : ViewModelBase
     {
         get => _outputPath;
         set => SetProperty(ref _outputPath, value);
+    }
+
+    public string DeleteQuarantinePath
+    {
+        get => _deleteQuarantinePath;
+        set => SetProperty(ref _deleteQuarantinePath, value);
     }
 
     #endregion
@@ -299,8 +309,67 @@ public class SettingsDialogViewModel : ViewModelBase
 
     private void ExecuteBrowsePath(string? pathType)
     {
-        // TODO: Implement folder browser dialog
-        // This will be implemented when the UI is created
+        if (string.IsNullOrWhiteSpace(pathType))
+            return;
+
+        using var dialog = new WinForms.FolderBrowserDialog
+        {
+            Description = "Select folder",
+            UseDescriptionForTitle = true,
+            ShowNewFolderButton = true
+        };
+
+        if (dialog.ShowDialog() != WinForms.DialogResult.OK)
+            return;
+
+        var selected = dialog.SelectedPath;
+
+        switch (pathType.ToLowerInvariant())
+        {
+            case "nir":
+            case "nir1":
+                NirPath = selected;
+                break;
+            case "nir2":
+                Nir2Path = selected;
+                break;
+            case "normal":
+            case "normal1":
+                NormalPath = selected;
+                break;
+            case "normal2":
+                Normal2Path = selected;
+                break;
+            case "cam1":
+                Camera1Path = selected;
+                break;
+            case "cam2":
+                Camera2Path = selected;
+                break;
+            case "cam3":
+                Camera3Path = selected;
+                break;
+            case "cam4":
+                Camera4Path = selected;
+                break;
+            case "cam5":
+                Camera5Path = selected;
+                break;
+            case "cam6":
+                Camera6Path = selected;
+                break;
+            case "output":
+                OutputPath = selected;
+                break;
+            case "quarantine":
+            case "deletequarantine":
+            case "deletequarantinepath":
+                DeleteQuarantinePath = selected;
+                break;
+            default:
+                // Unknown path type; ignore
+                break;
+        }
     }
 
     #endregion
@@ -312,16 +381,11 @@ public class SettingsDialogViewModel : ViewModelBase
     /// </summary>
     private void LoadFromConfiguration()
     {
-        // Load paths
-        _configuration.FolderPaths.TryGetValue("nir", out var nirPath);
-        _configuration.FolderPaths.TryGetValue("nir2", out var nir2Path);
-        _configuration.FolderPaths.TryGetValue("normal", out var normalPath);
-        _configuration.FolderPaths.TryGetValue("normal2", out var normal2Path);
-
-        NirPath = nirPath ?? string.Empty;
-        Nir2Path = nir2Path ?? string.Empty;
-        NormalPath = normalPath ?? string.Empty;
-        Normal2Path = normal2Path ?? string.Empty;
+        // Load paths from MatchingSettings (primary source)
+        NirPath = _configuration.MatchingSettings.Nir1Path;
+        Nir2Path = _configuration.MatchingSettings.Nir2Path;
+        NormalPath = _configuration.MatchingSettings.Normal1Path;
+        Normal2Path = _configuration.MatchingSettings.Normal2Path;
 
         Camera1Path = _configuration.MatchingSettings.Camera1Path;
         Camera2Path = _configuration.MatchingSettings.Camera2Path;
@@ -329,6 +393,14 @@ public class SettingsDialogViewModel : ViewModelBase
         Camera4Path = _configuration.MatchingSettings.Camera4Path;
         Camera5Path = _configuration.MatchingSettings.Camera5Path;
         Camera6Path = _configuration.MatchingSettings.Camera6Path;
+
+        // Quarantine path (soft delete)
+        DeleteQuarantinePath = _configuration.WorkflowSettings.DeleteQuarantinePath;
+        if (string.IsNullOrWhiteSpace(DeleteQuarantinePath))
+        {
+            var basePath = string.IsNullOrWhiteSpace(_configuration.BasePath) ? "D:/Data" : _configuration.BasePath;
+            DeleteQuarantinePath = Path.Combine(basePath, "Trash");
+        }
 
         // Load advanced options
         UseDiskCache = _configuration.ImageSettings.EnableCaching;
@@ -360,9 +432,16 @@ public class SettingsDialogViewModel : ViewModelBase
         _configuration.FolderPaths["normal"] = NormalPath;
         _configuration.FolderPaths["normal2"] = Normal2Path;
 
-        // ALSO save to MatchingSettings (this is what MonitoringOrchestrator reads)
-        _configuration.MatchingSettings.NirPath = NirPath;
-        _configuration.MatchingSettings.NormalPath = NormalPath;
+        // Save Line 1 paths to MatchingSettings
+        _configuration.MatchingSettings.Nir1Path = NirPath;
+        _configuration.MatchingSettings.Normal1Path = NormalPath;
+
+        // Save Line 2 paths to MatchingSettings
+        _configuration.MatchingSettings.Nir2Path = Nir2Path;
+        _configuration.MatchingSettings.Normal2Path = Normal2Path;
+
+        // Save output path
+        _configuration.MatchingSettings.OutputPath = OutputPath;
 
         _configuration.MatchingSettings.Camera1Path = Camera1Path;
         _configuration.MatchingSettings.Camera2Path = Camera2Path;
@@ -370,6 +449,9 @@ public class SettingsDialogViewModel : ViewModelBase
         _configuration.MatchingSettings.Camera4Path = Camera4Path;
         _configuration.MatchingSettings.Camera5Path = Camera5Path;
         _configuration.MatchingSettings.Camera6Path = Camera6Path;
+
+        // Save quarantine path (soft delete)
+        _configuration.WorkflowSettings.DeleteQuarantinePath = DeleteQuarantinePath;
 
         // Save advanced options
         _configuration.ImageSettings.EnableCaching = UseDiskCache;
@@ -397,7 +479,7 @@ public class SettingsDialogViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save configuration to disk");
-            MessageBox.Show($"Failed to save settings: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            WpfMessageBox.Show($"Failed to save settings: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

@@ -101,8 +101,8 @@ namespace ChronoView.Core.FileMatching
 
             if (lineNumber == 1)
             {
-                normalKey = "normal";
-                nirKey = "nir";
+                normalKey = "normal1";
+                nirKey = "nir1";
                 camKeys = new[] { "cam1", "cam2", "cam3" };
             }
             else // lineNumber == 2
@@ -223,14 +223,15 @@ namespace ChronoView.Core.FileMatching
                 {
                     if (groups[i].HasNir) continue; // Already has NIR
 
-                    var timeDiff = (groups[i].CreatedAt - nir.Timestamp!.Value).TotalSeconds;
+                    var timeDiff = (nir.Timestamp!.Value - groups[i].CreatedAt).TotalSeconds;
+                    var absDiff = Math.Abs(timeDiff);
 
-                    // Must be same or later time, within max diff
-                    if (timeDiff >= 0 && timeDiff <= Configuration.NirMatchTimeDiff)
+                    // Must be within configured time difference (allow 1s jitter)
+                    if (absDiff <= Configuration.NirMatchTimeDiff)
                     {
-                        if (!minDiff.HasValue || timeDiff < minDiff.Value)
+                        if (!minDiff.HasValue || absDiff < minDiff.Value)
                         {
-                            minDiff = timeDiff;
+                            minDiff = absDiff;
                             targetIdx = i;
                         }
                     }
@@ -240,6 +241,7 @@ namespace ChronoView.Core.FileMatching
                 {
                     // Attach to existing group
                     groups[targetIdx.Value].NirKey = nir.Key;
+                    groups[targetIdx.Value].NirFilePath = nir.Path; // Newly added property
                     groups[targetIdx.Value].HasNir = true;
                 }
                 else
@@ -249,6 +251,7 @@ namespace ChronoView.Core.FileMatching
                     {
                         GroupId = "",
                         NirKey = nir.Key,
+                        NirFilePath = nir.Path, // Newly added property
                         CreatedAt = nir.Timestamp!.Value,
                         Status = GroupStatus.Complete,
                         HasNir = true,

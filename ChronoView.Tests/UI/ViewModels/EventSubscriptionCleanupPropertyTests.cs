@@ -37,6 +37,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockFileOperationService = new Mock<IFileOperationService>();
         var mockPathManagementService = new Mock<IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
+        var mockAbnormalDetector = new Mock<IAbnormalDetector>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
 
         // Track event subscription counts
@@ -80,6 +81,7 @@ public class EventSubscriptionCleanupPropertyTests
             mockFileOperationService.Object,
             mockPathManagementService.Object,
             mockImageProcessor.Object,
+            mockAbnormalDetector.Object,
             mockLogger.Object);
 
         // Verify subscriptions were added
@@ -123,6 +125,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockFileOperationService = new Mock<IFileOperationService>();
         var mockPathManagementService = new Mock<IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
+        var mockAbnormalDetector = new Mock<IAbnormalDetector>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
 
         int unsubscribeCount = 0;
@@ -146,6 +149,7 @@ public class EventSubscriptionCleanupPropertyTests
             mockFileOperationService.Object,
             mockPathManagementService.Object,
             mockImageProcessor.Object,
+            mockAbnormalDetector.Object,
             mockLogger.Object);
 
         // Act - Dispose multiple times
@@ -172,6 +176,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockFileOperationService = new Mock<IFileOperationService>();
         var mockPathManagementService = new Mock<IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
+        var mockAbnormalDetector = new Mock<IAbnormalDetector>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
 
         // Store event handlers so we can raise them after disposal
@@ -199,6 +204,7 @@ public class EventSubscriptionCleanupPropertyTests
             mockFileOperationService.Object,
             mockPathManagementService.Object,
             mockImageProcessor.Object,
+            mockAbnormalDetector.Object,
             mockLogger.Object);
 
         // Act - Dispose ViewModel
@@ -253,6 +259,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockFileOperationService = new Mock<IFileOperationService>();
         var mockPathManagementService = new Mock<IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
+        var mockAbnormalDetector = new Mock<IAbnormalDetector>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
 
         int totalSubscriptions = 0;
@@ -289,6 +296,7 @@ public class EventSubscriptionCleanupPropertyTests
                 mockFileOperationService.Object,
                 mockPathManagementService.Object,
                 mockImageProcessor.Object,
+                mockAbnormalDetector.Object,
                 mockLogger.Object);
 
             // Verify subscriptions were added (5 events per ViewModel)

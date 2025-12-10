@@ -12,7 +12,41 @@
 
 ---
 
+### Task 2.1 Refactor: 파일 작업 견고성 강화 (2025-12-10 추가)
+
+기존 파일 이동/삭제 로직의 충돌 처리 및 에러 보고 기능 개선 요구사항입니다.
+
+### Task 2.1 Refactor: 파일 작업 견고성 강화 (2025-12-10 추가 및 수정)
+
+기존 파일 이동/삭제 로직의 충돌 처리 및 에러 보고 기능 개선 요구사항입니다.
+
+#### 1. 중복 파일명 충돌 처리 (Interactive Conflict Management)
+- **전략**: **Apply to All** (첫 충돌 시 결정된 정책을 이후 모든 충돌에 적용).
+- **ConflictResolution**: `Overwrite`, `Skip`, `Abort`.
+- **Skip 처리**: Skip은 "의도된 건너뛰기"이므로 **성공(Processed)**으로 간주.
+- `MoveFileGroupAsync`에 `onConflict` 콜백 주입.
+
+#### 2. Normal 폴더 처리 (Directory Level Move/Copy)
+- **정책 변경 (2025-12-10)**: Normal 폴더는 **복사 후 삭제**(Copy-then-Delete) 방식으로 안정성 강화.
+  - **Move 작업**: `Directory.Move` 대신 재귀 복사 → 검증 → 원본 삭제
+  - **Delete 작업**: 보관 폴더로 복사 → 검증 → 원본 삭제
+- **충돌 시**: 대상 경로에 폴더 존재 시 충돌 처리 로직 적용 (Overwrite 시 기존 폴더 제거 후 이동 주의).
+- `FileGroup.GetAllFilePaths()`는 개별 파일(NIR, Cam) 처리에 사용하고, Normal 폴더는 별도 로직으로 처리.
+
+#### 3. OperationResult 정보 보강
+- **FailedFiles**: 실제 예외/오류로 처리되지 못한 파일 목록 (Skip은 제외).
+- **통계**: 취소 시에도 처리된 파일 수는 유지. `FilesFailed = Total - Processed`.
+
+#### 4. Delete 소프트 삭제 정책 (Trash/Quarantine 이동)
+- **정책**: 물리 삭제 대신 **삭제 보관 폴더**(Trash/Quarantine)로 이동한다.
+- **경로 설정**: 설정(`WorkflowSettings.DeleteQuarantinePath`)에 보관 폴더 경로를 지정한다(예: `D:\Trash`). UI에서 사용자가 폴더를 선택/저장할 수 있어야 한다.
+- **충돌 처리**: 보관 폴더 내 동일 이름이 존재하면 Overwrite/Skip/Abort 정책을 동일하게 적용한다. Overwrite/Skip은 처리(Processed)로 집계하고 실패로 기록하지 않는다.
+- **집계**: Normal 폴더는 디렉터리 1건으로 집계하며, 보관 폴더로 이동이 성공하면 `FilesProcessed`에 포함한다. 실패 시 `FailedFiles`/`FilesFailed`에 기록한다.
+
+---
+
 ## 누락된 구현 항목
+
 
 ### 1. Command 구현 미완료 (Tasks 11~18 관련)
 
@@ -54,18 +88,12 @@ tasks.md에서 Task 10.1까지 완료로 표시되어 있으나, 다음 Command 
 
 #### 1.3 ExecuteRefresh (Refresh Command)
 - **파일**: `ChronoView/UI/ViewModels/MainWindowViewModel.cs` (Line 686-690)
-- **현재 상태**:
-  ```csharp
-  private void ExecuteRefresh()
-  {
-      AddLogMessage(LogSeverity.Info, "System", "Refreshing data");
-      // TODO: Implement refresh logic
-  }
-  ```
+- **현재 상태**: 모니터링 비활성 시 UI만 초기화되는 위험 존재, 취소 토큰 미전달
 - **필요 구현**:
-  - MonitoringOrchestrator.RefreshAsync() 호출
-  - FileGroups 컬렉션 초기화
-  - 전체 디렉토리 스캔 수행
+  - MonitoringOrchestrator.RefreshAsync(cancellationToken) 호출 (토큰 전파)
+  - 모니터링 비활성 시 경고 후 중단, UI 컬렉션 직접 Clear 금지(Orchestrator GroupRemoved/Created 이벤트에 의존)
+  - 전체 디렉토리 스캔 수행 중 취소 지원 (`PerformInitialScanAsync` 및 내부 루프까지 `ThrowIfCancellationRequested`)
+  - Move/Delete 등 장기 작업(IsOperationInProgress=true) 중에는 Start/Stop/Refresh 버튼 비활성화 (중복 실행 방지)
 
 #### 1.4 ExecutePathAutoConfig (Path Auto Config Command)
 - **파일**: `ChronoView/UI/ViewModels/MainWindowViewModel.cs` (Line 692-696)

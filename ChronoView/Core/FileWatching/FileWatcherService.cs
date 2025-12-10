@@ -7,6 +7,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
+
 namespace ChronoView.Core.FileWatching
 {
     /// <summary>
@@ -18,7 +19,7 @@ namespace ChronoView.Core.FileWatching
         private readonly List<FileSystemWatcher> _watchers = new();
         private readonly Channel<FileSystemEventArgs> _eventChannel;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
-        private readonly Timer _healthCheckTimer;
+        private readonly System.Threading.Timer _healthCheckTimer;
         private Task? _processingTask;
         private bool _isWatching;
         private WatcherHealthStatus _healthStatus = WatcherHealthStatus.Healthy;
@@ -86,7 +87,7 @@ namespace ChronoView.Core.FileWatching
             });
 
             // Set up health check timer (30 seconds)
-            _healthCheckTimer = new Timer(PerformHealthCheck, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+            _healthCheckTimer = new System.Threading.Timer(PerformHealthCheck, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
         }
 
         public async Task StartWatchingAsync(IEnumerable<string> paths)

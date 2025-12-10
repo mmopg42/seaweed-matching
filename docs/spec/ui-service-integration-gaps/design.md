@@ -205,6 +205,7 @@ public bool IsOperationInProgress
     get => _isOperationInProgress;
     set => SetProperty(ref _isOperationInProgress, value);
 }
+// 동시 실행 방지: Move/Delete 등 작업 중에는 Start/Stop/Refresh 버튼 비활성화 (CanExecute에서 IsOperationInProgress 사용)
 
 // Progress 생성 헬퍼
 private IProgress<OperationProgress> CreateProgressReporter()
@@ -522,24 +523,34 @@ private async Task ExecuteRefreshAsync()
     {
         StatusMessage = "Refreshing...";
         AddLogMessage(LogSeverity.Info, "System", "Refreshing data...");
-        
-        // 컬렉션 초기화
-        await Application.Current.Dispatcher.InvokeAsync(() =>
+
+        // 모니터링 비활성 시 즉시 중단 (UI 초기화 금지)
+        if (!IsMonitoring)
         {
-            ClearFileGroups();
-        });
-        
-        // Orchestrator를 통한 전체 스캔
-        await _orchestrator.RefreshAsync(_cancellationToken);
-        
-        // 새 그룹들은 GroupCreated 이벤트를 통해 자동 추가됨
-        
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                MessageBox.Show("Monitoring is not running. Start monitoring before refresh.",
+                    "Refresh unavailable", MessageBoxButton.OK, MessageBoxImage.Warning);
+            });
+            AddLogMessage(LogSeverity.Warning, "System", "Refresh skipped - monitoring is not active");
+            return;
+        }
+
+        // 취소 토큰 생성
+        var cancellationToken = BeginOperation();
+
+        // Orchestrator를 통한 전체 스캔 (토큰 전달)
+        await _orchestrator.RefreshAsync(cancellationToken);
+
+        // 새 그룹들은 GroupRemoved/GroupCreated 이벤트를 통해 자동 정리/추가됨
+
         StatusMessage = "Refresh complete";
         AddLogMessage(LogSeverity.Info, "System", "Refresh completed successfully");
     }
     catch (OperationCanceledException)
     {
         StatusMessage = "Refresh cancelled";
+        AddLogMessage(LogSeverity.Info, "System", "Refresh cancelled by user");
     }
     catch (Exception ex)
     {
@@ -547,8 +558,16 @@ private async Task ExecuteRefreshAsync()
         StatusMessage = "Refresh failed";
         AddLogMessage(LogSeverity.Error, "System", $"Refresh failed: {ex.Message}");
     }
+    finally
+    {
+        EndOperation();
+    }
 }
 ```
+
+#### Command Guard 업데이트
+- `IsOperationInProgress` 변경 시 `Start/Stop/Move/Delete/Refresh`의 `RaiseCanExecuteChanged()` 호출로 즉시 버튼 상태 갱신
+- `CanExecuteStart/Stop/Refresh`는 `!IsOperationInProgress` 조건을 추가해 장기 작업 중 중복 실행을 차단
 
 ---
 
@@ -1094,24 +1113,58 @@ WinForms FolderBrowserDialog 사용을 위해:
             </DataGrid.Columns>
         </DataGrid>
     </Grid>
-</TabItem>
+```
+}
 ```
 
 ---
 
-### 6.1 MoveFileGroupAsync 구현
+### 6.1 MoveFileGroupAsync 구현 (Refactored)
 
-#### 수정 파일: `ChronoView/Core/FileOperations/FileOperationService.cs`
+> **Refactor 요구사항 (2025-12-10):**
+> - **중복 파일명 처리**: 자동 이름 변경 대신 사용자 결정(Overwrite/Skip) 지원.
+> - **OperationResult**: 실패한 파일 목록(`FailedFiles`) 및 정확한 실패 카운트 제공.
+> - **Normal 폴더**: `FileGroup.GetAllFilePaths()`가 반환하는 개별 파일 단위 이동 유지.
 
-> **에지케이스 처리:**
-> - 중복 파일명: 소스 폴더명 prefix 추가 (예: `NIR_image.jpg`, `Cam1_image.jpg`)
-> - 롤백 실패: 로그 기록 + OperationResult에 실패 목록 포함
+#### 1. Data Structures
+
+```csharp
+public enum ConflictResolution
+{
+    Overwrite,
+    Skip,
+    Abort // 선택적
+}
+
+public class OperationResult
+{
+    public bool Success { get; set; }
+    public string ErrorMessage { get; set; } = string.Empty;
+    public int FilesProcessed { get; set; }
+    public int FilesFailed { get; set; }
+    public List<string> FailedFiles { get; } = new(); // 추가
+}
+```
+
+#### 2. Service Interface
+
+```csharp
+Task<OperationResult> MoveFileGroupAsync(
+    FileGroup group,
+    string destinationPath,
+    IProgress<OperationProgress>? progress = null,
+    Func<string, ConflictResolution>? onConflict = null, // 추가
+    CancellationToken cancellationToken = default);
+```
+
+#### 3. Implementation Logic
 
 ```csharp
 public async Task<OperationResult> MoveFileGroupAsync(
     FileGroup group,
     string destinationPath,
     IProgress<OperationProgress>? progress = null,
+    Func<string, ConflictResolution>? onConflict = null, // 추가
     CancellationToken cancellationToken = default)
 {
     _logger.LogInformation("Moving file group {GroupId} to {Destination}", 
@@ -1131,45 +1184,84 @@ public async Task<OperationResult> MoveFileGroupAsync(
     Directory.CreateDirectory(destinationPath);
     
     var movedFiles = new List<(string source, string dest)>();
-    var usedFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-    
-    try
-    {
-        for (int i = 0; i < allFiles.Count; i++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            
-            var sourcePath = allFiles[i];
-            var sourceFolder = Path.GetFileName(Path.GetDirectoryName(sourcePath)) ?? "";
-            var fileName = Path.GetFileName(sourcePath);
-            
-            // ====== 중복 파일명 처리 ======
-            var destFileName = GetUniqueDestFileName(fileName, sourceFolder, usedFileNames);
-            var destPath = Path.Combine(destinationPath, destFileName);
-            usedFileNames.Add(destFileName);
-            
-            progress?.Report(new OperationProgress
-            {
-                TotalFiles = allFiles.Count,
-                ProcessedFiles = i,
-                CurrentFile = destFileName
-            });
-            
-            // 파일 이동
-            await Task.Run(() => File.Move(sourcePath, destPath, overwrite: false), 
-                cancellationToken);
-            
-            movedFiles.Add((sourcePath, destPath));
-            result.FilesProcessed++;
+#### 3. Implementation Logic (Refined - Copy-then-Delete 방식)
+
+```csharp
+public async Task<OperationResult> MoveFileGroupAsync(...) {
+    // 1. Conflict State
+    ConflictResolution? stickyResolution = null; // Stores "Apply to All" decision
+
+    // 2. Normal Folder Handling (Copy-then-Delete for Stability)
+    if (!string.IsNullOrEmpty(group.NormalFolder) && Directory.Exists(group.NormalFolder)) {
+        string destNormalPath = Path.Combine(destinationPath, Path.GetFileName(group.NormalFolder));
+
+        if (Directory.Exists(destNormalPath)) {
+            // Conflict handling for directory
+            var resolution = stickyResolution ?? onConflict?.Invoke(destNormalPath) ?? ConflictResolution.Skip;
+            if (resolution == ConflictResolution.Overwrite) {
+                 // Delete existing and copy
+                 Directory.Delete(destNormalPath, recursive: true);
+            } else if (resolution == ConflictResolution.Skip) {
+                 // Skip directory copy
+                 goto SkipNormalFolder;
+            }
+            if (resolution != ConflictResolution.Abort && stickyResolution == null) stickyResolution = resolution;
         }
-        
-        result.Success = true;
+
+        // Copy directory recursively
+        await CopyDirectoryAsync(group.NormalFolder, destNormalPath, cancellationToken);
+
+        // Verify copy success
+        if (VerifyDirectoryCopy(group.NormalFolder, destNormalPath)) {
+            // Delete original after successful copy
+            Directory.Delete(group.NormalFolder, recursive: true);
+        } else {
+            throw new IOException("Directory copy verification failed");
+        }
     }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Error moving files, attempting rollback");
-        result.ErrorMessage = ex.Message;
-        result.FilesFailed = allFiles.Count - result.FilesProcessed;
+SkipNormalFolder:
+    ;
+    }
+
+    // 3. File Handling (Loop - Copy-then-Delete)
+    foreach (var file in files) {
+        // ...
+        if (File.Exists(destPath)) {
+            var resolution = stickyResolution ?? onConflict?.Invoke(destPath) ?? ConflictResolution.Skip;
+
+            // "Apply to All" logic: Store the resolution if it's the first conflict
+            if (stickyResolution == null) stickyResolution = resolution;
+
+            if (resolution == ConflictResolution.Skip) {
+                // Skips are counted as processed (success)
+                result.FilesProcessed++;
+                continue;
+            }
+            else if (resolution == ConflictResolution.Overwrite) {
+                // Proceed to overwrite (will be deleted before copy)
+                File.Delete(destPath);
+            }
+            // ...
+        }
+
+        // Copy file then delete original
+        File.Copy(file, destPath, overwrite: false); // Already handled above
+
+        // Verify copy
+        if (new FileInfo(file).Length == new FileInfo(destPath).Length) {
+            File.Delete(file); // Delete original after verification
+        } else {
+            throw new IOException($"File copy verification failed: {file}");
+        }
+    }
+}
+```
+
+> **Key Changes:**
+> - **Sticky Resolution**: 첫 번째 충돌 해결책을 저장하여 이후 충돌에 자동 적용.
+> - **Skip as Processed**: Skip된 파일도 처리된 것으로 집계.
+> - **Normal Folder**: 별도 처리 로직 추가 (Copy-then-Delete 방식으로 안정성 강화).
+> - **Copy-then-Delete**: 모든 파일/폴더 이동 시 복사 → 검증 → 삭제 순서로 안전하게 처리.
         
         // ====== 롤백 (개선: 실패해도 계속 시도) ======
         var rollbackFailed = new List<string>();
@@ -1179,15 +1271,20 @@ public async Task<OperationResult> MoveFileGroupAsync(
             {
                 if (File.Exists(dest) && !File.Exists(source))
                 {
-                    File.Move(dest, source, overwrite: false);
+                    File.Move(dest, source, overwrite: true); // Rollback should overwrite if original exists
                 }
             }
             catch (Exception rollbackEx)
             {
                 _logger.LogError(rollbackEx, "Rollback failed for {File}", dest);
                 rollbackFailed.Add(dest);
+                result.FailedFiles.Add(dest); // Add to failed files
             }
         }
+        
+        // Calculate FilesFailed more accurately after rollback attempts
+        result.FilesFailed += allFiles.Count - result.FilesProcessed - movedFiles.Count; // Files that failed before rollback
+        result.FilesFailed += rollbackFailed.Count; // Files that failed during rollback
         
         if (rollbackFailed.Any())
         {
@@ -1228,6 +1325,14 @@ private string GetUniqueDestFileName(string fileName, string sourceFolder, HashS
 ```
 
 ### 6.2 DeleteFileGroupAsync 구현
+
+> **소프트 삭제(Trash/Quarantine 이동) 정책**
+> - 물리 삭제 대신 설정된 보관 폴더(`DeleteQuarantinePath`)로 이동한다.
+> - 보관 폴더 경로는 설정 UI를 통해 사용자가 선택/저장할 수 있어야 하며, `WorkflowSettings.DeleteQuarantinePath`에 저장한다. 비어 있으면 기본값(BasePath/Trash 등)을 사용한다.
+> - Normal 폴더는 디렉터리 단위로 `Directory.Move(source, trashDestUnique)` 처리하고, 보관 폴더 내 충돌 시 Overwrite/Skip/Abort(Apply-to-All) 정책을 동일하게 적용한다.
+> - 개별 파일도 `File.Move(source, trashDestUnique, overwrite?)`로 이동하며, Overwrite/Skip은 처리로 집계하고 실패로 기록하지 않는다.
+> - 성공 시 `FilesProcessed`에 포함, 실패 시 `FailedFiles`/`FilesFailed`에 추가한다.
+> - 보관 폴더 경로는 설정(`MatchingSettings` 또는 `WorkflowSettings`)의 `DeleteQuarantinePath`에서 읽는다(없으면 기본값 사용).
 
 ```csharp
 public async Task<OperationResult> DeleteFileGroupAsync(

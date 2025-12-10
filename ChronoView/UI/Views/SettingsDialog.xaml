@@ -34,42 +34,88 @@
             <TabItem Header="Paths">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
-                        <TextBlock Text="Folder Paths" Style="{StaticResource SectionHeaderStyle}"/>
+                        <!-- Line 1 Paths -->
+                        <TextBlock Text="Line 1 Paths" Style="{StaticResource SectionHeaderStyle}"/>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="NIR Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="NIR 1 Path:" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding NirPath}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80"/>
+                            <Button Content="Browse..." Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="nir1"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Normal Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="Normal 1 Path:" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding NormalPath}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80"/>
+                            <Button Content="Browse..." Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="normal1"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
                             <Label Content="Camera 1 Path:" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Camera1Path}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80"/>
+                            <Button Content="Browse..." Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="cam1"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
                             <Label Content="Camera 2 Path:" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Camera2Path}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80"/>
+                            <Button Content="Browse..." Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="cam2"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
                             <Label Content="Camera 3 Path:" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Camera3Path}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80"/>
+                            <Button Content="Browse..." Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="cam3"/>
                         </StackPanel>
+                        
+                        <!-- Line 2 Paths -->
+                        <TextBlock Text="Line 2 Paths" Style="{StaticResource SectionHeaderStyle}"/>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="NIR 2 Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding Nir2Path}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="Browse..." Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="nir2"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Normal 2 Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding Normal2Path}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="Browse..." Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="normal2"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Camera 4 Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding Camera4Path}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="Browse..." Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="cam4"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Camera 5 Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding Camera5Path}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="Browse..." Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="cam5"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Camera 6 Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding Camera6Path}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="Browse..." Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="cam6"/>
+                        </StackPanel>
+                        
+                        <!-- Output Path -->
+                        <TextBlock Text="Output" Style="{StaticResource SectionHeaderStyle}"/>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
                             <Label Content="Output Path:" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding OutputPath}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80"/>
+                            <Button Content="Browse..." Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="output"/>
+                        </StackPanel>
+                        
+                        <!-- Quarantine Path -->
+                        <TextBlock Text="Quarantine (Trash)" Style="{StaticResource SectionHeaderStyle}"/>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Quarantine Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding DeleteQuarantinePath}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="Browse..." Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="quarantine"/>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
