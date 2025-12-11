@@ -25,6 +25,7 @@ public class StopCommandTests
     private readonly Mock<IImageProcessor> _mockImageProcessor;
     private readonly Mock<IAbnormalDetector> _mockAbnormalDetector;
     private readonly Mock<ILogger<MainWindowViewModel>> _mockLogger;
+    private readonly Mock<ILogger<FileGroupViewModel>> _mockFileGroupLogger;
     private readonly ApplicationConfiguration _testConfig;
 
     public StopCommandTests()
@@ -37,6 +38,7 @@ public class StopCommandTests
         _mockImageProcessor = new Mock<IImageProcessor>();
         _mockAbnormalDetector = new Mock<IAbnormalDetector>();
         _mockLogger = new Mock<ILogger<MainWindowViewModel>>();
+        _mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
         _testConfig = new ApplicationConfiguration
         {
@@ -63,7 +65,8 @@ public class StopCommandTests
             _mockPathManagementService.Object,
             _mockImageProcessor.Object,
             _mockAbnormalDetector.Object,
-            _mockLogger.Object);
+            _mockLogger.Object,
+            _mockFileGroupLogger.Object);
     }
 
     [Fact]

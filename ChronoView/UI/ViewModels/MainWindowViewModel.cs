@@ -27,6 +27,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IImageProcessor _imageProcessor;
     private readonly IAbnormalDetector _abnormalDetector;
     private readonly ILogger<MainWindowViewModel> _logger;
+    private readonly ILogger<FileGroupViewModel> _fileGroupLogger;
+    private readonly Action<LogSeverity, string, string> _uiLog;
 
     // CancellationToken management
     private CancellationTokenSource _windowCts = new();
@@ -98,6 +100,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private int _displayImageWidth = 120;
     private int _displayImageHeight = 90;
     private int _dataGridRowHeight = 100;
+    private int _nirDisplayWidth = 120;
+    private int _nirDisplayHeight = 90;
 
     public MainWindowViewModel(
         IMonitoringOrchestrator orchestrator,
@@ -107,7 +111,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         IPathManagementService pathManagementService,
         IImageProcessor imageProcessor,
         IAbnormalDetector abnormalDetector,
-        ILogger<MainWindowViewModel> logger)
+        ILogger<MainWindowViewModel> logger,
+        ILogger<FileGroupViewModel> fileGroupLogger)
     {
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
         _statisticsService = statisticsService ?? throw new ArgumentNullException(nameof(statisticsService));
@@ -117,6 +122,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _imageProcessor = imageProcessor ?? throw new ArgumentNullException(nameof(imageProcessor));
         _abnormalDetector = abnormalDetector ?? throw new ArgumentNullException(nameof(abnormalDetector));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _fileGroupLogger = fileGroupLogger ?? throw new ArgumentNullException(nameof(fileGroupLogger));
+        _uiLog = (severity, source, message) => AddLogMessage(severity, source, message);
 
         // Initialize collections
         FileGroups = new ObservableCollection<FileGroupViewModel>();
@@ -300,21 +307,37 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Move NIR configuration.
+    /// Move NIR configuration (UI binding).
+    /// Format: empty = all, "0" = skip NIR groups, "N" = max N NIR groups.
     /// </summary>
     public string MoveNir
     {
         get => _moveNir;
-        set => SetProperty(ref _moveNir, value);
+        set
+        {
+            if (SetProperty(ref _moveNir, value))
+            {
+                // Save to configuration on change
+                _ = SaveMoveNirCountAsync();
+            }
+        }
     }
 
     /// <summary>
-    /// Move all data configuration.
+    /// Move all data configuration (UI binding).
+    /// Format: empty = all, "0" = skip move, "N" = max N groups.
     /// </summary>
     public string MoveAllData
     {
         get => _moveAllData;
-        set => SetProperty(ref _moveAllData, value);
+        set
+        {
+            if (SetProperty(ref _moveAllData, value))
+            {
+                // Save to configuration on change
+                _ = SaveMoveAllDataCountAsync();
+            }
+        }
     }
 
     /// <summary>
@@ -558,6 +581,24 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         set => SetProperty(ref _dataGridRowHeight, value);
     }
 
+    /// <summary>
+    /// NIR graph display width in DataGrid cells (pixels).
+    /// </summary>
+    public int NirDisplayWidth
+    {
+        get => _nirDisplayWidth;
+        set => SetProperty(ref _nirDisplayWidth, value);
+    }
+
+    /// <summary>
+    /// NIR graph display height in DataGrid cells (pixels).
+    /// </summary>
+    public int NirDisplayHeight
+    {
+        get => _nirDisplayHeight;
+        set => SetProperty(ref _nirDisplayHeight, value);
+    }
+
     #endregion
 
     #region Progress and Operation State Properties
@@ -727,6 +768,25 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             DisplayImageWidth = config.UISettings.DisplayImageWidth;
             DisplayImageHeight = config.UISettings.DisplayImageHeight;
             DataGridRowHeight = config.UISettings.DataGridRowHeight;
+
+            // Load MoveNir and MoveAllData settings from configuration
+            if (config.MatchingSettings.MoveNir.HasValue)
+            {
+                MoveNir = config.MatchingSettings.MoveNir.Value.ToString();
+            }
+            else
+            {
+                MoveNir = ""; // Empty = all groups
+            }
+
+            if (config.MatchingSettings.MoveAllData.HasValue)
+            {
+                MoveAllData = config.MatchingSettings.MoveAllData.Value.ToString();
+            }
+            else
+            {
+                MoveAllData = ""; // Empty = all groups
+            }
 
             // Set IsMonitoring = true on success
             IsMonitoring = true;
@@ -1444,13 +1504,25 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
     /// <summary>
     /// Adds a file group to the appropriate collection(s).
+    /// Includes duplicate detection to prevent adding the same group twice.
     /// </summary>
     public void AddFileGroup(FileGroup fileGroup)
     {
-        var viewModel = new FileGroupViewModel(fileGroup, _imageProcessor, _abnormalDetector);
-        
+        // GUARD: Check for duplicate before creating ViewModel
+        var existingGroup = FileGroups.FirstOrDefault(g => g.GroupId == fileGroup.GroupId);
+        if (existingGroup != null)
+        {
+            _logger.LogWarning("Duplicate AddFileGroup call for {GroupId} - skipping", fileGroup.GroupId);
+            AddLogMessage(LogSeverity.Warning, "GroupManager", 
+                $"Duplicate group {fileGroup.GroupId} detected - skipped");
+            return;
+        }
+
+        var config = _configManager.LoadConfiguration<ApplicationConfiguration>();
+        var viewModel = new FileGroupViewModel(fileGroup, _imageProcessor, _abnormalDetector, config, _fileGroupLogger, _uiLog);
+
         FileGroups.Add(viewModel);
-        
+
         if (fileGroup.LineNumber == 1)
         {
             Line1Groups.Add(viewModel);
@@ -1465,6 +1537,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
         UpdateStatistics();
         AddLogMessage(LogSeverity.Info, "GroupManager", $"Added group {fileGroup.GroupId}");
+        _logger.LogInformation("Group {GroupId} added to UI collections", fileGroup.GroupId);
     }
 
     /// <summary>
@@ -1493,6 +1566,39 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         Line2Groups.Clear();
         UpdateStatistics();
         AddLogMessage(LogSeverity.Info, "GroupManager", "Cleared all groups");
+    }
+
+    /// <summary>
+    /// Reloads NIR graph thumbnails for all file groups with updated configuration.
+    /// Called when settings are applied to immediately reflect size changes.
+    /// </summary>
+    public void ReloadNirGraphThumbnails()
+    {
+        _logger.LogInformation("Reloading NIR graph thumbnails for all file groups");
+
+        var config = _configManager.LoadConfiguration<ApplicationConfiguration>();
+
+        // Reload for all file groups
+        foreach (var viewModel in FileGroups)
+        {
+            _ = ReloadSingleNirGraphAsync(viewModel, config);
+        }
+    }
+
+    /// <summary>
+    /// Reloads NIR graph thumbnail for a single FileGroupViewModel.
+    /// </summary>
+    private async Task ReloadSingleNirGraphAsync(FileGroupViewModel viewModel, ApplicationConfiguration config)
+    {
+        try
+        {
+            // Reload just the NIR graph portion with updated configuration
+            await viewModel.ReloadNirGraphAsync(config);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to reload NIR graph for group {GroupId}", viewModel.GroupId);
+        }
     }
 
     /// <summary>
@@ -1601,6 +1707,76 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             line2Total, line2WithNir, line2Total - line2WithNir - line2Failed, line2Failed);
     }
 
+    /// <summary>
+    /// Saves the MoveNir count limit to configuration.
+    /// Parses the UI string input and persists to config file.
+    /// </summary>
+    private async Task SaveMoveNirCountAsync()
+    {
+        try
+        {
+            var config = await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
+            
+            if (int.TryParse(MoveNir, out int count))
+            {
+                config.MatchingSettings.MoveNir = count;
+                _logger.LogDebug("MoveNir set to: {Count}", count);
+            }
+            else if (string.IsNullOrWhiteSpace(MoveNir))
+            {
+                config.MatchingSettings.MoveNir = null; // null = all
+                _logger.LogDebug("MoveNir set to null (all groups)");
+            }
+            else
+            {
+                // Invalid input - don't save
+                _logger.LogWarning("Invalid MoveNir input: {Input}. Must be a number or empty.", MoveNir);
+                return;
+            }
+            
+            await _configManager.SaveConfigurationAsync(config);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save MoveNir configuration");
+        }
+    }
+
+    /// <summary>
+    /// Saves the MoveAllData count limit to configuration.
+    /// Parses the UI string input and persists to config file.
+    /// </summary>
+    private async Task SaveMoveAllDataCountAsync()
+    {
+        try
+        {
+            var config = await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
+            
+            if (int.TryParse(MoveAllData, out int count))
+            {
+                config.MatchingSettings.MoveAllData = count;
+                _logger.LogDebug("MoveAllData set to: {Count}", count);
+            }
+            else if (string.IsNullOrWhiteSpace(MoveAllData))
+            {
+                config.MatchingSettings.MoveAllData = null; // null = all
+                _logger.LogDebug("MoveAllData set to null (all groups)");
+            }
+            else
+            {
+                // Invalid input - don't save
+                _logger.LogWarning("Invalid MoveAllData input: {Input}. Must be a number or empty.", MoveAllData);
+                return;
+            }
+            
+            await _configManager.SaveConfigurationAsync(config);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save MoveAllData configuration");
+        }
+    }
+
     #endregion
 
     #region CancellationToken and Progress Helpers
@@ -1686,10 +1862,21 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         {
             try
             {
-                var viewModel = new FileGroupViewModel(group, _imageProcessor, _abnormalDetector);
-                
+                // GUARD: Check for duplicate before creating ViewModel
+                var existingGroup = FileGroups.FirstOrDefault(g => g.GroupId == group.GroupId);
+                if (existingGroup != null)
+                {
+                    _logger.LogWarning("Duplicate GroupCreated event for {GroupId} - skipping", group.GroupId);
+                    AddLogMessage(LogSeverity.Warning, "GroupManager", 
+                        $"Duplicate group {group.GroupId} detected - skipped");
+                    return;
+                }
+
+                var config = _configManager.LoadConfiguration<ApplicationConfiguration>();
+                var viewModel = new FileGroupViewModel(group, _imageProcessor, _abnormalDetector, config, _fileGroupLogger, _uiLog);
+
                 FileGroups.Add(viewModel);
-                
+
                 if (group.LineNumber == 1)
                 {
                     Line1Groups.Add(viewModel);

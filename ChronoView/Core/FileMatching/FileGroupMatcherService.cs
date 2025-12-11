@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
 using ChronoView.Models;
+using Microsoft.Extensions.Logging;
 
 namespace ChronoView.Core.FileMatching
 {
@@ -13,16 +14,18 @@ namespace ChronoView.Core.FileMatching
     /// </summary>
     public class FileGroupMatcherService : IFileGroupMatcher
     {
-        private readonly HashSet<string> _consumedNirKeys;
-        private int _groupCounter;
+    private readonly HashSet<string> _consumedNirKeys;
+    private int _groupCounter;
+    private readonly ILogger<FileGroupMatcherService>? _logger;
 
         public MatchingConfiguration Configuration { get; set; }
 
-        public FileGroupMatcherService()
+        public FileGroupMatcherService(ILogger<FileGroupMatcherService>? logger = null)
         {
             _consumedNirKeys = new HashSet<string>();
             _groupCounter = 0;
             Configuration = new MatchingConfiguration();
+            _logger = logger;
         }
 
         public void ResetConsumedNirKeys()
@@ -67,6 +70,7 @@ namespace ChronoView.Core.FileMatching
             {
                 g.LineNumber = 1;
             }
+            _logger?.LogDebug("Built {Count} groups for Line1", groupsLine1.Count);
             groups.AddRange(groupsLine1);
 
             // Process Line 2
@@ -75,6 +79,7 @@ namespace ChronoView.Core.FileMatching
             {
                 g.LineNumber = 2;
             }
+            _logger?.LogDebug("Built {Count} groups for Line2", groupsLine2.Count);
             groups.AddRange(groupsLine2);
 
             // Final sort by time and assign names
@@ -133,17 +138,32 @@ namespace ChronoView.Core.FileMatching
                 ? unmatchedFiles.NirFiles[nirKey]
                 : new Dictionary<string, string>();
 
-            var availableNirs = nirFiles
-                .Where(kvp => !_consumedNirKeys.Contains(kvp.Key))
-                .Select(kvp => new
+            var availableNirs = new List<(string Key, string Path, DateTime? Timestamp)>();
+
+            foreach (var kvp in nirFiles)
+            {
+                if (_consumedNirKeys.Contains(kvp.Key)) continue;
+
+                var timestamp = ExtractTimestampFromNirKey(kvp.Key);
+                
+                // Fallback to LastWriteTime if name extraction fails (matching Python behavior)
+                if (!timestamp.HasValue && File.Exists(kvp.Value))
                 {
-                    Key = kvp.Key,
-                    Path = kvp.Value,
-                    Timestamp = ExtractTimestampFromNirKey(kvp.Key)
-                })
-                .Where(x => x.Timestamp.HasValue)
-                .OrderBy(x => x.Timestamp.GetValueOrDefault())
-                .ToList();
+                    try
+                    {
+                        timestamp = File.GetLastWriteTime(kvp.Value);
+                    }
+                    catch { /* Ignore error */ }
+                }
+
+                if (timestamp.HasValue)
+                {
+                    availableNirs.Add((kvp.Key, kvp.Value, timestamp));
+                }
+            }
+            
+            // Sort by timestamp
+            availableNirs.Sort((a, b) => a.Timestamp!.Value.CompareTo(b.Timestamp!.Value));
 
             // Flatten camera files into queues
             var camQueues = camKeys.Select(ck =>
@@ -166,6 +186,7 @@ namespace ChronoView.Core.FileMatching
                     LineNumber = lineNumber,
                     CameraFiles = new Dictionary<string, string>()
                 };
+                _logger?.LogDebug("Created normal-based group (Line {Line}) normal={Normal} ts={Ts}", lineNumber, normal.Key, normal.Timestamp);
 
                 // Attach camera files
                 DateTime? cam1Timestamp = null;
@@ -176,6 +197,7 @@ namespace ChronoView.Core.FileMatching
                 {
                     group.CameraFiles[camKeys[0]] = pickedCam1.Path;
                     cam1Timestamp = pickedCam1.Timestamp;
+                    _logger?.LogDebug("Matched {Cam} to normal {Normal} diff={Diff}s file={File}", camKeys[0], normal.Key, (cam1Timestamp.Value - normal.Timestamp!.Value).TotalSeconds, pickedCam1.Path);
                 }
 
                 // Cam2/3 (or Cam5/6) - match based on cam1 timestamp if available
@@ -188,6 +210,7 @@ namespace ChronoView.Core.FileMatching
                         if (pickedCam != null)
                         {
                             group.CameraFiles[camKeys[i]] = pickedCam.Path;
+                            _logger?.LogDebug("Matched {Cam} to cam1 ref {RefTs} diff={Diff}s file={File}", camKeys[i], cam1Timestamp.Value, (pickedCam.Timestamp - cam1Timestamp.Value).TotalSeconds, pickedCam.Path);
                         }
                     }
                 }
@@ -200,6 +223,7 @@ namespace ChronoView.Core.FileMatching
                         if (pickedCam != null)
                         {
                             group.CameraFiles[camKeys[i]] = pickedCam.Path;
+                            _logger?.LogDebug("Matched {Cam} to normal {Normal} diff={Diff}s file={File}", camKeys[i], normal.Key, (pickedCam.Timestamp - normal.Timestamp!.Value).TotalSeconds, pickedCam.Path);
                         }
                     }
                 }
@@ -243,6 +267,7 @@ namespace ChronoView.Core.FileMatching
                     groups[targetIdx.Value].NirKey = nir.Key;
                     groups[targetIdx.Value].NirFilePath = nir.Path; // Newly added property
                     groups[targetIdx.Value].HasNir = true;
+                    _logger?.LogDebug("Matched NIR {NirKey} to group idx={Idx} diff={Diff}s path={Path}", nir.Key, targetIdx.Value, minDiff, nir.Path);
                 }
                 else
                 {
@@ -259,6 +284,7 @@ namespace ChronoView.Core.FileMatching
                         CameraFiles = new Dictionary<string, string>()
                     };
                     groups.Add(nirOnlyGroup);
+                    _logger?.LogDebug("Created NIR-only group for {NirKey} ts={Ts} path={Path}", nir.Key, nir.Timestamp, nir.Path);
                 }
             }
 
@@ -267,6 +293,8 @@ namespace ChronoView.Core.FileMatching
 
             return groups;
         }
+
+        // ... FlattenCamFiles and other existing methods ...
 
         /// <summary>
         /// Flatten camera files into a sorted queue
@@ -395,62 +423,39 @@ namespace ChronoView.Core.FileMatching
             if (string.IsNullOrEmpty(folderName) || !folderName.StartsWith("C"))
                 return null;
 
-            try
+            // Pattern 1: C + 6 digits (date) + T + 6 digits (time)
+            // Example: C251204T111028
+            var match = System.Text.RegularExpressions.Regex.Match(folderName, @"C(\d{6}T\d{6})");
+            if (match.Success)
             {
-                // Format 1: C251204T111028_0 (New Format)
-                // C + YYMMDD + T + HHMMSS + _ + Index
-                if (folderName.Contains('T') && folderName.Contains('_'))
+                if (DateTime.TryParseExact(
+                    match.Groups[1].Value, 
+                    "yyMMddTHHmmss", 
+                    null, 
+                    System.Globalization.DateTimeStyles.None, 
+                    out var dt))
                 {
-                    // Remove 'C' prefix
-                    var namePart = folderName.Substring(1);
-                    var parts = namePart.Split('T'); // ["251204", "111028_0"]
-                    
-                    if (parts.Length >= 2)
-                    {
-                        var dateStr = parts[0];
-                        var timeStr = parts[1].Split('_')[0]; // "111028"
-
-                        if (dateStr.Length == 6 && timeStr.Length == 6)
-                        {
-                            int year = int.Parse("20" + dateStr.Substring(0, 2));
-                            int month = int.Parse(dateStr.Substring(2, 2));
-                            int day = int.Parse(dateStr.Substring(4, 2));
-                            int hour = int.Parse(timeStr.Substring(0, 2));
-                            int minute = int.Parse(timeStr.Substring(2, 2));
-                            int second = int.Parse(timeStr.Substring(4, 2));
-
-                            return new DateTime(year, month, day, hour, minute, second);
-                        }
-                    }
+                    return dt;
                 }
-
-                // Format 2: C20240115_143022 (Legacy Format)
-                var dateTimePart = folderName.Substring(1);
-                var legacyParts = dateTimePart.Split('_');
-                if (legacyParts.Length == 2)
-                {
-                    var datePart = legacyParts[0]; // 20240115
-                    var timePart = legacyParts[1]; // 143022
-
-                    if (datePart.Length == 8 && timePart.Length == 6)
-                    {
-                        int year = int.Parse(datePart.Substring(0, 4));
-                        int month = int.Parse(datePart.Substring(4, 2));
-                        int day = int.Parse(datePart.Substring(6, 2));
-                        int hour = int.Parse(timePart.Substring(0, 2));
-                        int minute = int.Parse(timePart.Substring(2, 2));
-                        int second = int.Parse(timePart.Substring(4, 2));
-
-                        return new DateTime(year, month, day, hour, minute, second);
-                    }
-                }
-
-                return null;
             }
-            catch
+
+            // Pattern 2: C + 8 digits (date) + _ + 6 digits (time)
+            // Example: C20240115_143022
+            match = System.Text.RegularExpressions.Regex.Match(folderName, @"C(\d{8}_\d{6})");
+            if (match.Success)
             {
-                return null;
+                if (DateTime.TryParseExact(
+                    match.Groups[1].Value, 
+                    "yyyyMMdd_HHmmss", 
+                    null, 
+                    System.Globalization.DateTimeStyles.None, 
+                    out var dt))
+                {
+                    return dt;
+                }
             }
+
+            return null;
         }
 
         /// <summary>
@@ -461,31 +466,26 @@ namespace ChronoView.Core.FileMatching
             if (string.IsNullOrEmpty(nirKey))
                 return null;
 
-            try
+            // Pattern: 8 digits (date) + T + 6 digits (time)
+            // Example: 20250926T103033
+            var match = System.Text.RegularExpressions.Regex.Match(nirKey, @"(\d{8}T\d{6})");
+            if (match.Success)
             {
-                // NIR keys typically have format like "20240115_143022"
-                var parts = nirKey.Split('_');
-                if (parts.Length < 2) return null;
-
-                var datePart = parts[0];
-                var timePart = parts[1];
-
-                if (datePart.Length != 8 || timePart.Length < 6)
-                    return null;
-
-                int year = int.Parse(datePart.Substring(0, 4));
-                int month = int.Parse(datePart.Substring(4, 2));
-                int day = int.Parse(datePart.Substring(6, 2));
-                int hour = int.Parse(timePart.Substring(0, 2));
-                int minute = int.Parse(timePart.Substring(2, 2));
-                int second = int.Parse(timePart.Substring(4, 2));
-
-                return new DateTime(year, month, day, hour, minute, second);
+                if (DateTime.TryParseExact(
+                    match.Groups[1].Value, 
+                    "yyyyMMddTHHmmss", 
+                    null, 
+                    System.Globalization.DateTimeStyles.None, 
+                    out var dt))
+                {
+                    return dt;
+                }
             }
-            catch
-            {
-                return null;
-            }
+            
+            // Legacy/Unusual fallback logic if needed can be added here
+            // But strict regex is safer for now based on python 'utils.py'
+            
+            return null;
         }
 
         /// <summary>

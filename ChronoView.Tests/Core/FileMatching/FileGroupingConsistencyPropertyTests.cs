@@ -22,7 +22,7 @@ namespace ChronoView.Tests.Core.FileMatching
         /// Property: Grouping the same unmatched files twice should produce identical results
         /// </summary>
         [Fact]
-        public void GroupingShouldBeConsistent()
+        public async Task GroupingShouldBeConsistent()
         {
             // Use a simple test case instead of property-based testing for now
             var unmatchedFiles = GenerateUnmatchedFilesWithCount(3);
@@ -32,8 +32,9 @@ namespace ChronoView.Tests.Core.FileMatching
             var matcher2 = new FileGroupMatcherService();
 
             // Act
-            var groups1 = matcher1.MatchFilesAsync(unmatchedFiles).Result.ToList();
-            var groups2 = matcher2.MatchFilesAsync(unmatchedFiles).Result.ToList();
+            // Act
+            var groups1 = (await matcher1.MatchFilesAsync(unmatchedFiles)).ToList();
+            var groups2 = (await matcher2.MatchFilesAsync(unmatchedFiles)).ToList();
 
             // Assert - same number of groups
             Assert.Equal(groups1.Count, groups2.Count);
@@ -50,7 +51,7 @@ namespace ChronoView.Tests.Core.FileMatching
         /// Property: All grouped files should have timestamps within configured time windows
         /// </summary>
         [Fact]
-        public void GroupedFilesShouldBeWithinTimeWindows()
+        public async Task GroupedFilesShouldBeWithinTimeWindows()
         {
             var unmatchedFiles = GenerateUnmatchedFilesWithCount(3);
             
@@ -59,7 +60,8 @@ namespace ChronoView.Tests.Core.FileMatching
             var config = matcher.Configuration;
 
             // Act
-            var groups = matcher.MatchFilesAsync(unmatchedFiles).Result.ToList();
+            // Act
+            var groups = (await matcher.MatchFilesAsync(unmatchedFiles)).ToList();
 
             // Assert - check time windows for each group
             foreach (var group in groups)
@@ -86,7 +88,7 @@ namespace ChronoView.Tests.Core.FileMatching
         /// Property: Groups should be sorted by timestamp
         /// </summary>
         [Fact]
-        public void GroupsShouldBeSortedByTimestamp()
+        public async Task GroupsShouldBeSortedByTimestamp()
         {
             var unmatchedFiles = GenerateUnmatchedFilesWithCount(5);
             
@@ -94,7 +96,8 @@ namespace ChronoView.Tests.Core.FileMatching
             var matcher = new FileGroupMatcherService();
 
             // Act
-            var groups = matcher.MatchFilesAsync(unmatchedFiles).Result.ToList();
+            // Act
+            var groups = (await matcher.MatchFilesAsync(unmatchedFiles)).ToList();
 
             // Assert - groups should be in ascending timestamp order
             for (int i = 1; i < groups.Count; i++)
@@ -108,7 +111,7 @@ namespace ChronoView.Tests.Core.FileMatching
         /// Property: Each NIR key should appear in at most one group
         /// </summary>
         [Fact]
-        public void EachNirKeyShouldAppearOnce()
+        public async Task EachNirKeyShouldAppearOnce()
         {
             var unmatchedFiles = GenerateUnmatchedFilesWithCount(4);
             
@@ -116,7 +119,8 @@ namespace ChronoView.Tests.Core.FileMatching
             var matcher = new FileGroupMatcherService();
 
             // Act
-            var groups = matcher.MatchFilesAsync(unmatchedFiles).Result.ToList();
+            // Act
+            var groups = (await matcher.MatchFilesAsync(unmatchedFiles)).ToList();
 
             // Assert - no duplicate NIR keys
             var nirKeys = groups
@@ -131,7 +135,7 @@ namespace ChronoView.Tests.Core.FileMatching
         /// Property: Line numbers should be consistent (1 or 2)
         /// </summary>
         [Fact]
-        public void LineNumbersShouldBeValid()
+        public async Task LineNumbersShouldBeValid()
         {
             var unmatchedFiles = GenerateUnmatchedFilesWithCount(3);
             
@@ -139,7 +143,8 @@ namespace ChronoView.Tests.Core.FileMatching
             var matcher = new FileGroupMatcherService();
 
             // Act
-            var groups = matcher.MatchFilesAsync(unmatchedFiles).Result.ToList();
+            // Act
+            var groups = (await matcher.MatchFilesAsync(unmatchedFiles)).ToList();
 
             // Assert - all line numbers should be 1 or 2
             Assert.All(groups, g => Assert.True(g.LineNumber == 1 || g.LineNumber == 2,

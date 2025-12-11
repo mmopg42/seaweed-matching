@@ -58,6 +58,11 @@ public class SettingsDialogViewModel : ViewModelBase
     private int _displayImageHeight = 90;
     private int _dataGridRowHeight = 100;
 
+    // NIR graph options
+    private bool _enableNirGraph = true;
+    private int _nirThumbnailWidth = 250;
+    private int _nirThumbnailHeight = 100;
+
     // Line mode
     private bool _isSeparatedMode;
 
@@ -74,6 +79,7 @@ public class SettingsDialogViewModel : ViewModelBase
         // Initialize commands
         SaveCommand = new RelayCommand(ExecuteSave);
         CancelCommand = new RelayCommand(ExecuteCancel);
+        ApplyCommand = new RelayCommand(ExecuteApply);
         BrowsePathCommand = new RelayCommand<string>(ExecuteBrowsePath);
 
         // Load configuration
@@ -272,6 +278,25 @@ public class SettingsDialogViewModel : ViewModelBase
         set => SetProperty(ref _dataGridRowHeight, value);
     }
 
+    // NIR graph options
+    public bool EnableNirGraph
+    {
+        get => _enableNirGraph;
+        set => SetProperty(ref _enableNirGraph, value);
+    }
+
+    public int NirThumbnailWidth
+    {
+        get => _nirThumbnailWidth;
+        set => SetProperty(ref _nirThumbnailWidth, value);
+    }
+
+    public int NirThumbnailHeight
+    {
+        get => _nirThumbnailHeight;
+        set => SetProperty(ref _nirThumbnailHeight, value);
+    }
+
     // Line mode
     public bool IsSeparatedMode
     {
@@ -285,12 +310,18 @@ public class SettingsDialogViewModel : ViewModelBase
 
     public ICommand SaveCommand { get; }
     public ICommand CancelCommand { get; }
+    public ICommand ApplyCommand { get; }
     public ICommand BrowsePathCommand { get; }
 
     /// <summary>
     /// Event raised when the dialog should be closed.
     /// </summary>
     public event EventHandler<bool>? CloseRequested;
+
+    /// <summary>
+    /// Event raised when settings are applied without closing.
+    /// </summary>
+    public event EventHandler? SettingsApplied;
 
     #endregion
 
@@ -305,6 +336,12 @@ public class SettingsDialogViewModel : ViewModelBase
     private void ExecuteCancel()
     {
         CloseRequested?.Invoke(this, false);
+    }
+
+    private void ExecuteApply()
+    {
+        SaveToConfiguration();
+        SettingsApplied?.Invoke(this, EventArgs.Empty);
     }
 
     private void ExecuteBrowsePath(string? pathType)
@@ -429,6 +466,11 @@ public class SettingsDialogViewModel : ViewModelBase
         DataGridRowHeight = _configuration.UISettings.DataGridRowHeight;
         LegacyUiMode = _configuration.UISettings.LegacyUiMode;
         ShowTooltips = _configuration.UISettings.ShowTooltips;
+
+        // Load NIR graph settings
+        EnableNirGraph = _configuration.MatchingSettings.EnableNirGraph;
+        NirThumbnailWidth = _configuration.UISettings.NirThumbnailWidth;
+        NirThumbnailHeight = _configuration.UISettings.NirThumbnailHeight;
     }
 
     /// <summary>
@@ -490,6 +532,11 @@ public class SettingsDialogViewModel : ViewModelBase
         _configuration.UISettings.DataGridRowHeight = DataGridRowHeight;
         _configuration.UISettings.LegacyUiMode = LegacyUiMode;
         _configuration.UISettings.ShowTooltips = ShowTooltips;
+
+        // Save NIR graph settings
+        _configuration.MatchingSettings.EnableNirGraph = EnableNirGraph;
+        _configuration.UISettings.NirThumbnailWidth = NirThumbnailWidth;
+        _configuration.UISettings.NirThumbnailHeight = NirThumbnailHeight;
 
         // Persist to disk
         try 

@@ -362,7 +362,8 @@
             <Grid Grid.Column="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="150"/>
+                    <RowDefinition Height="5"/>
+                    <RowDefinition Height="150" MinHeight="50"/>
                 </Grid.RowDefinitions>
                 
                 <!-- File Group Table with Tabs -->
@@ -370,6 +371,8 @@
                     <TabItem Header="Line 1">
                         <DataGrid ItemsSource="{Binding Line1Groups}"
                                   SelectionChanged="DataGrid_SelectionChanged"
+                                  SelectionMode="Extended"
+                                  SelectionUnit="FullRow"
                                   Style="{StaticResource FileGroupDataGridStyle}"
                                   RowStyle="{StaticResource FileGroupRowStyle}">
                             <i:Interaction.Behaviors>
@@ -401,16 +404,16 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="NIR Img" Width="*">
+                                <DataGridTemplateColumn Header="NIR Graph" Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
-                                                    Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                            <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}"
+                                                    Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}"
                                                     Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
                                                 <Grid>
-                                                    <Image Source="{Binding NirImageThumbnail}" Stretch="Uniform"/>
+                                                    <Image Source="{Binding NirGraphThumbnail}" Stretch="Uniform"/>
                                                     <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
-                                                                 Visibility="{Binding NirImageThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                                 Visibility="{Binding NirGraphThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
@@ -467,6 +470,8 @@
                     <TabItem Header="Line 2">
                         <DataGrid ItemsSource="{Binding Line2Groups}"
                                   SelectionChanged="DataGrid_SelectionChanged"
+                                  SelectionMode="Extended"
+                                  SelectionUnit="FullRow"
                                   Style="{StaticResource FileGroupDataGridStyle}"
                                   RowStyle="{StaticResource FileGroupRowStyle}">
                             <i:Interaction.Behaviors>
@@ -498,16 +503,16 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="NIR Img" Width="*">
+                                <DataGridTemplateColumn Header="NIR Graph" Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
-                                                    Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                            <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}"
+                                                    Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}"
                                                     Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
                                                 <Grid>
-                                                    <Image Source="{Binding NirImageThumbnail}" Stretch="Uniform"/>
+                                                    <Image Source="{Binding NirGraphThumbnail}" Stretch="Uniform"/>
                                                     <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
-                                                                 Visibility="{Binding NirImageThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                                 Visibility="{Binding NirGraphThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
@@ -586,6 +591,8 @@
                                     <!-- DataGrid -->
                                     <DataGrid Grid.Row="1" ItemsSource="{Binding Line1Groups}"
                                               SelectionChanged="DataGrid_SelectionChanged"
+                                              SelectionMode="Extended"
+                                              SelectionUnit="FullRow"
                                               Style="{StaticResource FileGroupDataGridStyle}"
                                               RowStyle="{StaticResource FileGroupRowStyle}">
                                         <i:Interaction.Behaviors>
@@ -617,16 +624,16 @@
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
-                                            <DataGridTemplateColumn Header="NIR Img" Width="*">
+                                            <DataGridTemplateColumn Header="NIR Graph" Width="*">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
-                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
-                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}"
+                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}"
                                                                 Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
                                                             <Grid>
-                                                                <Image Source="{Binding NirImageThumbnail}" Stretch="Uniform"/>
+                                                                <Image Source="{Binding NirGraphThumbnail}" Stretch="Uniform"/>
                                                                 <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
-                                                                             Visibility="{Binding NirImageThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                                             Visibility="{Binding NirGraphThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
                                                             </Grid>
                                                         </Border>
                                                     </DataTemplate>
@@ -702,6 +709,8 @@
                                     <!-- DataGrid -->
                                     <DataGrid Grid.Row="1" ItemsSource="{Binding Line2Groups}"
                                               SelectionChanged="DataGrid_SelectionChanged"
+                                              SelectionMode="Extended"
+                                              SelectionUnit="FullRow"
                                               Style="{StaticResource FileGroupDataGridStyle}"
                                               RowStyle="{StaticResource FileGroupRowStyle}">
                                         <i:Interaction.Behaviors>
@@ -733,16 +742,16 @@
                                                     </DataTemplate>
                                                 </DataGridTemplateColumn.CellTemplate>
                                             </DataGridTemplateColumn>
-                                            <DataGridTemplateColumn Header="NIR Img" Width="*">
+                                            <DataGridTemplateColumn Header="NIR Graph" Width="*">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
-                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
-                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+                                                        <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}"
+                                                                Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}"
                                                                 Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
                                                             <Grid>
-                                                                <Image Source="{Binding NirImageThumbnail}" Stretch="Uniform"/>
+                                                                <Image Source="{Binding NirGraphThumbnail}" Stretch="Uniform"/>
                                                                 <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
-                                                                             Visibility="{Binding NirImageThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
+                                                                             Visibility="{Binding NirGraphThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
                                                             </Grid>
                                                         </Border>
                                                     </DataTemplate>
@@ -801,8 +810,16 @@
                     </TabItem>
                 </TabControl>
                 
+                <!-- GridSplitter for resizable log panel -->
+                <GridSplitter Grid.Row="1" 
+                              HorizontalAlignment="Stretch" 
+                              VerticalAlignment="Stretch"
+                              Background="{StaticResource BorderBrush}"
+                              ShowsPreview="False"
+                              ResizeDirection="Rows"/>
+                
                 <!-- Message Log -->
-                <Border Grid.Row="1" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
+                <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
                     <controls:LogPanel LogMessages="{Binding LogMessages}"/>
                 </Border>
             </Grid>

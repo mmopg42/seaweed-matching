@@ -23,6 +23,7 @@
         <!-- Button Panel -->
         <Border DockPanel.Dock="Bottom" Background="#f5f5f5" BorderBrush="#d0d0d0" BorderThickness="0,1,0,0" Padding="10">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Apply" Width="80" Height="30" Margin="0,0,10,0" Command="{Binding ApplyCommand}"/>
                 <Button Content="OK" Width="80" Height="30" Margin="0,0,10,0" Command="{Binding SaveCommand}" IsDefault="True"/>
                 <Button Content="Cancel" Width="80" Height="30" Click="Cancel_Click" IsCancel="True"/>
             </StackPanel>
@@ -177,11 +178,26 @@
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="NIR Display Width (px):" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding NirDisplayWidth}" Width="100"/>
+                            <TextBlock Text="(Default: 120)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="NIR Display Height (px):" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding NirDisplayHeight}" Width="100"/>
+                            <TextBlock Text="(Default: 90)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
                             <Label Content="Row Height (px):" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding DataGridRowHeight}" Width="100"/>
                             <TextBlock Text="(Default: 100)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
                         </StackPanel>
-                        
+
+                        <TextBlock Text="NIR Graph Options" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="Enable NIR Graph" IsChecked="{Binding EnableNirGraph}" Margin="0,5"/>
+
                         <TextBlock Text="UI Display Options" Style="{StaticResource SectionHeaderStyle}"/>
                         <CheckBox Content="Legacy UI mode" IsChecked="{Binding LegacyUiMode}" Margin="0,5"/>
                         <CheckBox Content="Show tooltips" IsChecked="{Binding ShowTooltips}" Margin="0,5"/>

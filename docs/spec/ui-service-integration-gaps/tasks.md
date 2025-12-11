@@ -58,6 +58,7 @@
   - [x] Progress 리포팅
   - [x] 롤백 로직 (실패 추적 포함)
   - [x] **Copy-then-Delete 방식 적용** (안정성 강화, 2025-12-10 완료)
+  - [x] **Rollback Fix (Data Loss Prevention)**: Restore to source if source deleted (Verified, 2025-12-11)
 - [x] `DeleteFileGroupAsync` 구현
   - [x] Progress 리포팅
   - [x] 부분 실패 처리
@@ -184,7 +185,7 @@
 - [ ] `GetUniqueDestFileName()` 테스트
 
 ### Task 5.2: Integration Tests
-- [ ] ExecuteMove 파일 이동 및 롤백 테스트
+- [x] ExecuteMove 파일 이동 및 롤백 테스트 (Rollback Data Loss Fix Verified)
 - [ ] ExecuteDelete 파일 삭제 테스트
 - [ ] ExecuteRefresh 컬렉션 갱신 테스트
 - [ ] PathManagementService 경로 생성 테스트

@@ -35,7 +35,7 @@ namespace ChronoView.Tests.Core.FileWatching
         /// the system should detect and process the event within acceptable time limits
         /// </summary>
         [Property(MaxTest = 50)]
-        public void FileWatcher_DetectsFileCreation_WithinTimeLimit(int fileNumber)
+        public async Task FileWatcher_DetectsFileCreation_WithinTimeLimit(int fileNumber)
         {
             // Constrain to valid range
             fileNumber = Math.Abs(fileNumber % 1000);
@@ -59,7 +59,7 @@ namespace ChronoView.Tests.Core.FileWatching
             try
             {
                 // Act
-                watcher.StartWatchingAsync(new[] { testDir }).Wait();
+                await watcher.StartWatchingAsync(new[] { testDir });
                 
                 // Give watcher time to initialize
                 Thread.Sleep(200);
@@ -82,7 +82,7 @@ namespace ChronoView.Tests.Core.FileWatching
             finally
             {
                 // Cleanup
-                watcher.StopWatchingAsync().Wait();
+                await watcher.StopWatchingAsync();
                 watcher.Dispose();
             }
         }
@@ -92,7 +92,7 @@ namespace ChronoView.Tests.Core.FileWatching
         /// the system should detect the modification event
         /// </summary>
         [Property(MaxTest = 50)]
-        public void FileWatcher_DetectsFileModification(int fileNumber)
+        public async Task FileWatcher_DetectsFileModification(int fileNumber)
         {
             // Constrain to valid range
             fileNumber = Math.Abs(fileNumber % 1000);
@@ -124,7 +124,7 @@ namespace ChronoView.Tests.Core.FileWatching
             try
             {
                 // Act
-                watcher.StartWatchingAsync(new[] { testDir }).Wait();
+                await watcher.StartWatchingAsync(new[] { testDir });
                 Thread.Sleep(200);
 
                 // Modify the file
@@ -139,7 +139,7 @@ namespace ChronoView.Tests.Core.FileWatching
             finally
             {
                 // Cleanup
-                watcher.StopWatchingAsync().Wait();
+                await watcher.StopWatchingAsync();
                 watcher.Dispose();
             }
         }
@@ -149,7 +149,7 @@ namespace ChronoView.Tests.Core.FileWatching
         /// the system should detect the deletion event
         /// </summary>
         [Property(MaxTest = 50)]
-        public void FileWatcher_DetectsFileDeletion(int fileNumber)
+        public async Task FileWatcher_DetectsFileDeletion(int fileNumber)
         {
             // Constrain to valid range
             fileNumber = Math.Abs(fileNumber % 1000);
@@ -180,7 +180,7 @@ namespace ChronoView.Tests.Core.FileWatching
             try
             {
                 // Act
-                watcher.StartWatchingAsync(new[] { testDir }).Wait();
+                await watcher.StartWatchingAsync(new[] { testDir });
                 Thread.Sleep(200);
 
                 // Delete the file
@@ -195,7 +195,7 @@ namespace ChronoView.Tests.Core.FileWatching
             finally
             {
                 // Cleanup
-                watcher.StopWatchingAsync().Wait();
+                await watcher.StopWatchingAsync();
                 watcher.Dispose();
             }
         }
@@ -209,7 +209,7 @@ namespace ChronoView.Tests.Core.FileWatching
         [InlineData("file.tmp")]
         [InlineData("Thumbs.db")]
         [InlineData("desktop.ini")]
-        public void FileWatcher_FiltersTempFiles(string tempFileName)
+        public async Task FileWatcher_FiltersTempFiles(string tempFileName)
         {
             // Arrange
             var testDir = CreateTestDirectory();
@@ -228,7 +228,7 @@ namespace ChronoView.Tests.Core.FileWatching
             try
             {
                 // Act
-                watcher.StartWatchingAsync(new[] { testDir }).Wait();
+                await watcher.StartWatchingAsync(new[] { testDir });
                 Thread.Sleep(200);
 
                 var testFilePath = Path.Combine(testDir, tempFileName);
@@ -244,7 +244,7 @@ namespace ChronoView.Tests.Core.FileWatching
             finally
             {
                 // Cleanup
-                watcher.StopWatchingAsync().Wait();
+                await watcher.StopWatchingAsync();
                 watcher.Dispose();
             }
         }
@@ -253,7 +253,7 @@ namespace ChronoView.Tests.Core.FileWatching
         /// Property: The file watcher health status should be Healthy when all watchers are active
         /// </summary>
         [Property(MaxTest = 30)]
-        public void FileWatcher_HealthStatus_IsHealthyWhenActive(int dirCount)
+        public async Task FileWatcher_HealthStatus_IsHealthyWhenActive(int dirCount)
         {
             // Constrain to valid range (1-3 directories)
             dirCount = Math.Clamp(Math.Abs(dirCount % 10), 1, 3);
@@ -269,7 +269,7 @@ namespace ChronoView.Tests.Core.FileWatching
             try
             {
                 // Act
-                watcher.StartWatchingAsync(testDirs).Wait();
+                await watcher.StartWatchingAsync(testDirs);
                 Thread.Sleep(500); // Wait for health check
 
                 var healthStatus = watcher.HealthStatus;
@@ -282,7 +282,7 @@ namespace ChronoView.Tests.Core.FileWatching
             finally
             {
                 // Cleanup
-                watcher.StopWatchingAsync().Wait();
+                await watcher.StopWatchingAsync();
                 watcher.Dispose();
             }
         }
@@ -291,7 +291,7 @@ namespace ChronoView.Tests.Core.FileWatching
         /// Property: Starting and stopping the watcher should work correctly
         /// </summary>
         [Property(MaxTest = 30)]
-        public void FileWatcher_StartStop_WorksCorrectly(int iterations)
+        public async Task FileWatcher_StartStop_WorksCorrectly(int iterations)
         {
             // Constrain to valid range (1-3 iterations)
             iterations = Math.Clamp(Math.Abs(iterations % 10), 1, 3);
@@ -306,12 +306,12 @@ namespace ChronoView.Tests.Core.FileWatching
                 // Act & Assert
                 for (int i = 0; i < iterations; i++)
                 {
-                    watcher.StartWatchingAsync(new[] { testDir }).Wait();
+                    await watcher.StartWatchingAsync(new[] { testDir });
                     Assert.True(watcher.IsWatching, $"Watcher should be watching after start (iteration {i})");
                     
                     Thread.Sleep(100);
                     
-                    watcher.StopWatchingAsync().Wait();
+                    await watcher.StopWatchingAsync();
                     Assert.False(watcher.IsWatching, $"Watcher should not be watching after stop (iteration {i})");
                     
                     Thread.Sleep(100);
@@ -322,7 +322,7 @@ namespace ChronoView.Tests.Core.FileWatching
                 // Cleanup
                 if (watcher.IsWatching)
                 {
-                    watcher.StopWatchingAsync().Wait();
+                    await watcher.StopWatchingAsync();
                 }
                 watcher.Dispose();
             }

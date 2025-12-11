@@ -28,7 +28,7 @@ public partial class App : Application
     /// </summary>
     public IServiceProvider Services => _serviceProvider ?? throw new InvalidOperationException("Service provider not initialized");
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
@@ -53,18 +53,32 @@ public partial class App : Application
             args.SetObserved();
         };
 
-        // Configure dependency injection
-        var services = new ServiceCollection();
-        ConfigureServices(services);
-        _serviceProvider = services.BuildServiceProvider();
+        // 1. Show splash screen
+        var splash = new SplashWindow();
+        splash.Show();
 
-        // Get logger
-        var logger = _serviceProvider.GetRequiredService<ILogger<App>>();
-        logger.LogInformation("ChronoView application starting...");
+        // 2. Initialize services asynchronously
+        await System.Threading.Tasks.Task.Run(async () =>
+        {
+            // Configure dependency injection
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+            _serviceProvider = services.BuildServiceProvider();
 
-        // Show main window
-        var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+            // Get logger
+            var logger = _serviceProvider.GetRequiredService<ILogger<App>>();
+            logger.LogInformation("ChronoView application starting...");
+
+            // Ensure splash screen is visible for at least 2 seconds
+            await System.Threading.Tasks.Task.Delay(2000);
+        });
+
+        // 3. Show main window on UI thread
+        var mainWindow = _serviceProvider!.GetRequiredService<MainWindow>();
         mainWindow.Show();
+
+        // 4. Close splash screen
+        splash.Close();
     }
 
     private void LogAndShowError(Exception? ex, string source)
@@ -108,7 +122,9 @@ public partial class App : Application
         // Core Services (Singleton - maintain state across application lifetime)
         services.AddSingleton<IConfigurationManager, ConfigurationManager>();
         services.AddSingleton<IFileWatcher, FileWatcherService>();
-        services.AddSingleton<IFileGroupMatcher, FileGroupMatcherService>();
+        services.AddSingleton<IFileGroupMatcher>(sp =>
+            new FileGroupMatcherService(
+                sp.GetService<ILogger<FileGroupMatcherService>>()));
         services.AddSingleton<IImageProcessor, ImageProcessingService>();
         services.AddSingleton<IStatisticsService, StatisticsService>();
         services.AddSingleton<IMonitoringOrchestrator, MonitoringOrchestrator>();

@@ -64,14 +64,26 @@ public partial class MainWindow : Window
     public void OpenSettingsDialog()
     {
         _logger.LogInformation("Opening settings dialog");
-        
+
         // Get SettingsDialog from DI container
         var app = (App)WpfApplication.Current;
         var settingsDialog = app.Services.GetRequiredService<SettingsDialog>();
         settingsDialog.Owner = this;
-        
+
+        // Subscribe to SettingsApplied event
+        if (settingsDialog.DataContext is SettingsDialogViewModel settingsViewModel)
+        {
+            settingsViewModel.SettingsApplied += OnSettingsApplied;
+        }
+
         var result = settingsDialog.ShowDialog();
-        
+
+        // Unsubscribe from event
+        if (settingsDialog.DataContext is SettingsDialogViewModel vm)
+        {
+            vm.SettingsApplied -= OnSettingsApplied;
+        }
+
         if (result == true)
         {
             _logger.LogInformation("Settings saved");
@@ -80,6 +92,40 @@ public partial class MainWindow : Window
         else
         {
             _logger.LogInformation("Settings cancelled");
+        }
+    }
+
+    /// <summary>
+    /// Handles the SettingsApplied event to reload all settings and restart monitoring.
+    /// </summary>
+    private void OnSettingsApplied(object? sender, EventArgs e)
+    {
+        _logger.LogInformation("Settings applied, reloading all settings and restarting monitoring");
+        
+        // Reload UI display settings from configuration
+        var app = (App)WpfApplication.Current;
+        var configManager = app.Services.GetRequiredService<Core.Configuration.IConfigurationManager>();
+        var config = configManager.LoadConfiguration<ApplicationConfiguration>();
+        
+        _viewModel.DisplayImageWidth = config.UISettings.DisplayImageWidth;
+        _viewModel.DisplayImageHeight = config.UISettings.DisplayImageHeight;
+        _viewModel.DataGridRowHeight = config.UISettings.DataGridRowHeight;
+        _viewModel.NirDisplayWidth = config.UISettings.NirDisplayWidth;
+        _viewModel.NirDisplayHeight = config.UISettings.NirDisplayHeight;
+        
+        // Restart monitoring if currently running to apply new settings
+        if (_viewModel.IsMonitoring)
+        {
+            _viewModel.StopCommand.Execute(null);
+            System.Threading.Thread.Sleep(500); // Brief pause
+            _viewModel.StartCommand.Execute(null);
+            _viewModel.AddLogMessage(LogSeverity.Info, "System", "Settings applied and monitoring restarted");
+        }
+        else
+        {
+            // If not monitoring, just reload NIR graphs
+            _viewModel.ReloadNirGraphThumbnails();
+            _viewModel.AddLogMessage(LogSeverity.Info, "System", "Display settings applied");
         }
     }
 

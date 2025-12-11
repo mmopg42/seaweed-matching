@@ -253,6 +253,7 @@ public class ViewModelTests
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<ChronoView.Core.Analytics.IAbnormalDetector>();
         var mockLogger = new Mock<Microsoft.Extensions.Logging.ILogger<MainWindowViewModel>>();
+        var mockFileGroupLogger = new Mock<Microsoft.Extensions.Logging.ILogger<FileGroupViewModel>>();
 
         return new MainWindowViewModel(
             mockOrchestrator.Object,
@@ -262,7 +263,8 @@ public class ViewModelTests
             mockPathManagementService.Object,
             mockImageProcessor.Object,
             mockAbnormalDetector.Object,
-            mockLogger.Object);
+            mockLogger.Object,
+            mockFileGroupLogger.Object);
     }
 
     [Fact]
@@ -519,6 +521,81 @@ public class ViewModelTests
         Assert.Equal(2, viewModel.TotalGroups);
         Assert.Equal(50.0, viewModel.MatchRate); // 1 out of 2 has NIR = 50%
         Assert.Equal(0, viewModel.Failures);
+    }
+
+    #endregion
+
+    #region MainWindowViewModel - Duplicate Group Detection Tests
+
+    /// <summary>
+    /// Property 2: Event Handler Idempotence
+    /// Validates: Requirements 2.4, 4.1, 4.2
+    /// Test that calling AddFileGroup (which OnGroupCreated uses internally) twice with same GroupId only adds once
+    /// </summary>
+    [Fact]
+    public void MainWindowViewModel_AddFileGroup_SkipsDuplicateGroups()
+    {
+        // Arrange
+        var viewModel = CreateMainWindowViewModel();
+
+        var fileGroup = new FileGroup
+        {
+            GroupId = "group_028",
+            NirKey = "run_120251204T111140",
+            LineNumber = 1,
+            HasNir = true,
+            Status = GroupStatus.Complete
+        };
+
+        // Act - Add the same group twice
+        viewModel.AddFileGroup(fileGroup);
+        viewModel.AddFileGroup(fileGroup);
+
+        // Assert - Group should only be added once
+        Assert.Single(viewModel.FileGroups);
+        Assert.Single(viewModel.Line1Groups);
+        Assert.Equal("group_028", viewModel.FileGroups[0].GroupId);
+    }
+
+    /// <summary>
+    /// Property 2: Event Handler Idempotence - Multiple different groups
+    /// Validates: Requirements 2.4, 4.1, 4.2
+    /// Test that multiple different groups can be added, but duplicates are skipped
+    /// </summary>
+    [Fact]
+    public void MainWindowViewModel_AddFileGroup_AllowsMultipleDifferentGroups()
+    {
+        // Arrange
+        var viewModel = CreateMainWindowViewModel();
+
+        var group1 = new FileGroup
+        {
+            GroupId = "group_028",
+            NirKey = "run_120251204T111140",
+            LineNumber = 1,
+            HasNir = true,
+            Status = GroupStatus.Complete
+        };
+
+        var group2 = new FileGroup
+        {
+            GroupId = "group_029",
+            NirKey = "run_120251204T111140A",
+            LineNumber = 1,
+            HasNir = true,
+            Status = GroupStatus.Complete
+        };
+
+        // Act - Add two different groups, then try to add group1 again
+        viewModel.AddFileGroup(group1);
+        viewModel.AddFileGroup(group2);
+        viewModel.AddFileGroup(group1); // Try to add duplicate
+
+        // Assert - Should have exactly 2 groups (group1 and group2)
+        Assert.Equal(2, viewModel.FileGroups.Count);
+        Assert.Equal(2, viewModel.Line1Groups.Count);
+        Assert.Contains(viewModel.FileGroups, g => g.GroupId == "group_028");
+        Assert.Contains(viewModel.FileGroups, g => g.GroupId == "group_029");
     }
 
     #endregion

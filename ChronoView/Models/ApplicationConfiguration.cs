@@ -137,9 +137,26 @@ public class MatchingSettings
     /// \u003c/summary\u003e
     public double NirMatchTimeDiff { get; set; } = 1.0;
 
-    /// \u003csummary\u003e
+    /// <summary>
+    /// Enable NIR graph visualization.
+    /// </summary>
+    public bool EnableNirGraph { get; set; } = true;
+
+    /// <summary>
+    /// Maximum number of NIR-containing groups to move.
+    /// null = move all, 0 = exclude NIR groups, N = move max N NIR groups.
+    /// </summary>
+    public int? MoveNir { get; set; } = null;
+
+    /// <summary>
+    /// Maximum number of total groups to move.
+    /// null = move all, 0 = skip move operation, N = move max N groups.
+    /// </summary>
+    public int? MoveAllData { get; set; } = null;
+
+    /// <summary>
     /// Use camera subfolder for Normal1 path.
-    /// \u003c/summary\u003e
+    /// </summary>
     public bool UseCameraSubfolderNormal { get; set; } = false;
 
     /// \u003csummary\u003e
@@ -397,4 +414,26 @@ public class UISettings
     /// Show tooltips on hover.
     /// </summary>
     public bool ShowTooltips { get; set; } = true;
+
+    /// <summary>
+    /// NIR graph thumbnail width (pixels).
+    /// </summary>
+    public int NirThumbnailWidth { get; set; } = 250;
+
+    /// <summary>
+    /// NIR graph thumbnail height (pixels).
+    /// </summary>
+    public int NirThumbnailHeight{ get; set; } = 100;
+
+    /// <summary>
+    /// NIR graph display width in DataGrid (pixels).
+    /// Separate from DisplayImageWidth to allow independent sizing.
+    /// </summary>
+    public int NirDisplayWidth { get; set; } = 120;
+
+    /// <summary>
+    /// NIR graph display height in DataGrid (pixels).
+    /// Separate from DisplayImageHeight to allow independent sizing.
+    /// </summary>
+    public int NirDisplayHeight { get; set; } = 90;
 }

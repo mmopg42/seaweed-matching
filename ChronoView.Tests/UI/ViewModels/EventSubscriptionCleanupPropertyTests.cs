@@ -39,6 +39,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<IAbnormalDetector>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
+        var mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
         // Track event subscription counts
         int groupCreatedSubscriptions = 0;
@@ -82,7 +83,8 @@ public class EventSubscriptionCleanupPropertyTests
             mockPathManagementService.Object,
             mockImageProcessor.Object,
             mockAbnormalDetector.Object,
-            mockLogger.Object);
+            mockLogger.Object,
+            mockFileGroupLogger.Object);
 
         // Verify subscriptions were added
         Assert.Equal(1, groupCreatedSubscriptions);
@@ -127,6 +129,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<IAbnormalDetector>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
+        var mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
         int unsubscribeCount = 0;
 
@@ -150,7 +153,8 @@ public class EventSubscriptionCleanupPropertyTests
             mockPathManagementService.Object,
             mockImageProcessor.Object,
             mockAbnormalDetector.Object,
-            mockLogger.Object);
+            mockLogger.Object,
+            mockFileGroupLogger.Object);
 
         // Act - Dispose multiple times
         for (int i = 0; i < disposeCount; i++)
@@ -178,6 +182,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<IAbnormalDetector>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
+        var mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
         // Store event handlers so we can raise them after disposal
         EventHandler<FileGroup>? groupCreatedHandler = null;
@@ -205,7 +210,8 @@ public class EventSubscriptionCleanupPropertyTests
             mockPathManagementService.Object,
             mockImageProcessor.Object,
             mockAbnormalDetector.Object,
-            mockLogger.Object);
+            mockLogger.Object,
+            mockFileGroupLogger.Object);
 
         // Act - Dispose ViewModel
         viewModel.Dispose();
@@ -261,6 +267,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<IAbnormalDetector>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
+        var mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
         int totalSubscriptions = 0;
 
@@ -297,7 +304,8 @@ public class EventSubscriptionCleanupPropertyTests
                 mockPathManagementService.Object,
                 mockImageProcessor.Object,
                 mockAbnormalDetector.Object,
-                mockLogger.Object);
+                mockLogger.Object,
+                mockFileGroupLogger.Object);
 
             // Verify subscriptions were added (5 events per ViewModel)
             Assert.Equal(5, totalSubscriptions);

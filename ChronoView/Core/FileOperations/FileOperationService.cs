@@ -351,33 +351,63 @@ public class FileOperationService : IFileOperationService
             try
             {
                 // In Copy-then-Delete pattern:
-                // - If we're rolling back, it means the copy succeeded but something failed later
-                // - Source may still exist (if delete hadn't happened yet) or may be deleted
-                // - We need to clean up the destination and restore source if needed
+                // - If we're rolling back, it means the operation failed/cancelled.
+                // - Source may still exist (if delete hadn't happened yet).
+                // - Or Source may be gone (if delete succeeded).
+                //
+                // RESTORE LOGIC:
+                // 1. If Source is MISSING -> Move Dest back to Source (Restore).
+                // 2. If Source EXISTS -> Delete Dest (Cleanup copy).
 
                 if (isDirectory)
                 {
-                    // Clean up destination directory
-                    if (Directory.Exists(dest))
+                    if (!Directory.Exists(source))
                     {
-                        _logger.LogInformation("Cleaning up destination directory: {Path}", dest);
-                        await Task.Run(() => Directory.Delete(dest, recursive: true));
+                        if (Directory.Exists(dest))
+                        {
+                            _logger.LogInformation("Restoring directory: {Dest} -> {Source}", dest, source);
+                            await Task.Run(() => Directory.Move(dest, source));
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Cannot restore directory: Destination {Dest} is also missing", dest);
+                            result.FailedFiles.Add(dest); // Mark as failed (lost)
+                        }
                     }
-
-                    // Source should still exist unless delete succeeded
-                    // If source was deleted, we can't restore it from dest in this simple rollback
-                    // This is acceptable since Copy-then-Delete ensures data is not lost at dest
+                    else
+                    {
+                        // Source exists, so just clean up the copy at dest
+                        if (Directory.Exists(dest))
+                        {
+                            _logger.LogInformation("Cleaning up destination directory: {Path}", dest);
+                            await Task.Run(() => Directory.Delete(dest, recursive: true));
+                        }
+                    }
                 }
                 else
                 {
-                    // Clean up destination file
-                    if (File.Exists(dest))
+                    if (!File.Exists(source))
                     {
-                        _logger.LogInformation("Cleaning up destination file: {Path}", dest);
-                        await Task.Run(() => File.Delete(dest));
+                        if (File.Exists(dest))
+                        {
+                            _logger.LogInformation("Restoring file: {Dest} -> {Source}", dest, source);
+                            await Task.Run(() => File.Move(dest, source));
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Cannot restore file: Destination {Dest} is also missing", dest);
+                            result.FailedFiles.Add(dest); // Mark as failed (lost)
+                        }
                     }
-
-                    // Source should still exist unless delete succeeded
+                    else
+                    {
+                        // Source exists, so just clean up the copy at dest
+                        if (File.Exists(dest))
+                        {
+                            _logger.LogInformation("Cleaning up destination file: {Path}", dest);
+                            await Task.Run(() => File.Delete(dest));
+                        }
+                    }
                 }
             }
             catch (Exception ex)

@@ -20,7 +20,7 @@ namespace ChronoView.Tests.Core.FileMatching
         /// Property: Line 1 and Line 2 data should be processed independently
         /// </summary>
         [Fact]
-        public void Line1AndLine2ShouldBeProcessedIndependently()
+        public async Task Line1AndLine2ShouldBeProcessedIndependently()
         {
             // Arrange
             var baseTime = DateTime.Now.AddHours(-1);
@@ -67,7 +67,8 @@ namespace ChronoView.Tests.Core.FileMatching
             var matcher = new FileGroupMatcherService();
 
             // Act
-            var groups = matcher.MatchFilesAsync(unmatchedFiles).Result.ToList();
+            // Act
+            var groups = (await matcher.MatchFilesAsync(unmatchedFiles)).ToList();
 
             // Assert - should have groups from both lines
             var line1Groups = groups.Where(g => g.LineNumber == 1).ToList();
@@ -93,7 +94,7 @@ namespace ChronoView.Tests.Core.FileMatching
         /// Property: Groups should be correctly assigned to their respective lines
         /// </summary>
         [Fact]
-        public void GroupsShouldBeCorrectlyAssignedToLines()
+        public async Task GroupsShouldBeCorrectlyAssignedToLines()
         {
             // Arrange
             var baseTime = DateTime.Now.AddHours(-1);
@@ -123,7 +124,8 @@ namespace ChronoView.Tests.Core.FileMatching
             var matcher = new FileGroupMatcherService();
 
             // Act
-            var groups = matcher.MatchFilesAsync(unmatchedFiles).Result.ToList();
+            // Act
+            var groups = (await matcher.MatchFilesAsync(unmatchedFiles)).ToList();
 
             // Assert - all groups should have valid line numbers
             Assert.All(groups, g => Assert.True(g.LineNumber == 1 || g.LineNumber == 2,
@@ -138,7 +140,7 @@ namespace ChronoView.Tests.Core.FileMatching
         /// Property: Camera files should be matched to correct line
         /// </summary>
         [Fact]
-        public void CameraFilesShouldBeMatchedToCorrectLine()
+        public async Task CameraFilesShouldBeMatchedToCorrectLine()
         {
             // Arrange
             var baseTime = DateTime.Now.AddHours(-1);
@@ -180,7 +182,8 @@ namespace ChronoView.Tests.Core.FileMatching
             var matcher = new FileGroupMatcherService();
 
             // Act
-            var groups = matcher.MatchFilesAsync(unmatchedFiles).Result.ToList();
+            // Act
+            var groups = (await matcher.MatchFilesAsync(unmatchedFiles)).ToList();
 
             // Assert - Line 1 groups should have cam1-3 keys, not cam4-6
             var line1Groups = groups.Where(g => g.LineNumber == 1).ToList();
@@ -211,7 +214,7 @@ namespace ChronoView.Tests.Core.FileMatching
         /// Property: NIR files should be matched to correct line
         /// </summary>
         [Fact]
-        public void NirFilesShouldBeMatchedToCorrectLine()
+        public async Task NirFilesShouldBeMatchedToCorrectLine()
         {
             // Arrange
             var baseTime = DateTime.Now.AddHours(-1);
@@ -241,7 +244,8 @@ namespace ChronoView.Tests.Core.FileMatching
             var matcher = new FileGroupMatcherService();
 
             // Act
-            var groups = matcher.MatchFilesAsync(unmatchedFiles).Result.ToList();
+            // Act
+            var groups = (await matcher.MatchFilesAsync(unmatchedFiles)).ToList();
 
             // Assert - NIR keys should be matched to correct line
             var line1Groups = groups.Where(g => g.LineNumber == 1 && g.HasNir).ToList();
@@ -259,7 +263,7 @@ namespace ChronoView.Tests.Core.FileMatching
         /// Property: Empty line data should not cause errors
         /// </summary>
         [Fact]
-        public void EmptyLineDataShouldNotCauseErrors()
+        public async Task EmptyLineDataShouldNotCauseErrors()
         {
             // Arrange
             var baseTime = DateTime.Now.AddHours(-1);
@@ -282,7 +286,8 @@ namespace ChronoView.Tests.Core.FileMatching
             var matcher = new FileGroupMatcherService();
 
             // Act
-            var groups = matcher.MatchFilesAsync(unmatchedFiles).Result.ToList();
+            // Act
+            var groups = (await matcher.MatchFilesAsync(unmatchedFiles)).ToList();
 
             // Assert - should only have Line 1 groups
             Assert.All(groups, g => Assert.Equal(1, g.LineNumber));
@@ -293,7 +298,7 @@ namespace ChronoView.Tests.Core.FileMatching
         /// Property: Groups from different lines should maintain temporal ordering
         /// </summary>
         [Fact]
-        public void GroupsFromDifferentLinesShouldMaintainTemporalOrdering()
+        public async Task GroupsFromDifferentLinesShouldMaintainTemporalOrdering()
         {
             // Arrange
             var baseTime = DateTime.Now.AddHours(-1);
@@ -315,7 +320,8 @@ namespace ChronoView.Tests.Core.FileMatching
             var matcher = new FileGroupMatcherService();
 
             // Act
-            var groups = matcher.MatchFilesAsync(unmatchedFiles).Result.ToList();
+            // Act
+            var groups = (await matcher.MatchFilesAsync(unmatchedFiles)).ToList();
 
             // Assert - groups should be sorted by time regardless of line
             for (int i = 1; i < groups.Count; i++)

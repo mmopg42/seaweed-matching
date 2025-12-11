@@ -235,10 +235,11 @@ namespace ChronoView.Core.FileWatching
                     CameraFiles = new Dictionary<string, List<TimestampedFile>>()
                 };
 
-                // Scan NIR directories for Line 1
+                // Scan NIR directories for Line 1 (only .spc files)
                 if (!string.IsNullOrEmpty(matchingConfig.Nir1Path) && Directory.Exists(matchingConfig.Nir1Path))
                 {
-                    var nirFiles = Directory.GetFiles(matchingConfig.Nir1Path, "*.*", SearchOption.AllDirectories);
+                    // Only scan .spc files to avoid duplicate groups (.txt files are associated with .spc)
+                    var nirFiles = Directory.GetFiles(matchingConfig.Nir1Path, "*.spc", SearchOption.AllDirectories);
                     var nirDict = new Dictionary<string, string>();
                     foreach (var file in nirFiles)
                     {
@@ -248,13 +249,14 @@ namespace ChronoView.Core.FileWatching
                         result.FilesScanned++;
                     }
                     unmatchedFiles.NirFiles["nir1"] = nirDict;
-                    _logger.LogInformation("Scanned {Count} NIR1 files", nirFiles.Length);
+                    _logger.LogInformation("Scanned {Count} NIR1 .spc files", nirFiles.Length);
                 }
 
-                // Scan NIR directories for Line 2
+                // Scan NIR directories for Line 2 (only .spc files)
                 if (!string.IsNullOrEmpty(matchingConfig.Nir2Path) && Directory.Exists(matchingConfig.Nir2Path))
                 {
-                    var nirFiles = Directory.GetFiles(matchingConfig.Nir2Path, "*.*", SearchOption.AllDirectories);
+                    // Only scan .spc files to avoid duplicate groups (.txt files are associated with .spc)
+                    var nirFiles = Directory.GetFiles(matchingConfig.Nir2Path, "*.spc", SearchOption.AllDirectories);
                     var nirDict = new Dictionary<string, string>();
                     foreach (var file in nirFiles)
                     {
@@ -264,7 +266,7 @@ namespace ChronoView.Core.FileWatching
                         result.FilesScanned++;
                     }
                     unmatchedFiles.NirFiles["nir2"] = nirDict;
-                    _logger.LogInformation("Scanned {Count} NIR2 files", nirFiles.Length);
+                    _logger.LogInformation("Scanned {Count} NIR2 .spc files", nirFiles.Length);
                 }
 
                 // Scan normal directories for Line 1
@@ -314,12 +316,31 @@ namespace ChronoView.Core.FileWatching
                             try
                             {
                                 var fileInfo = new FileInfo(file);
-                                timestampedFiles.Add(new TimestampedFile
-                                {
-                                    FileName = Path.GetFileName(file),
-                                    AbsolutePath = file,
-                                    Timestamp = fileInfo.LastWriteTime
-                                });
+                    var fileName = Path.GetFileName(file);
+                    var timestamp = fileInfo.LastWriteTime;
+
+                    // Try to extract timestamp from filename (YYYYMMDD_HHMMSS)
+                    // Example: 20250120_143052_001.jpg -> 2025-01-20 14:30:52
+                    var match = System.Text.RegularExpressions.Regex.Match(fileName, @"(\d{8})_(\d{6})");
+                    if (match.Success)
+                    {
+                        if (DateTime.TryParseExact(
+                            $"{match.Groups[1].Value}_{match.Groups[2].Value}", 
+                            "yyyyMMdd_HHmmss", 
+                            null, 
+                            System.Globalization.DateTimeStyles.None, 
+                            out var dt))
+                        {
+                            timestamp = dt;
+                        }
+                    }
+
+                    timestampedFiles.Add(new TimestampedFile
+                    {
+                        FileName = fileName,
+                        AbsolutePath = file,
+                        Timestamp = timestamp
+                    });
                                 result.FilesScanned++;
                             }
                             catch (Exception ex)
@@ -350,6 +371,14 @@ namespace ChronoView.Core.FileWatching
                 {
                     foreach (var group in groupList)
                     {
+                        // Check if group already exists to prevent duplicate events
+                        if (_activeGroups.ContainsKey(group.GroupId))
+                        {
+                            _logger.LogDebug("Group {GroupId} already exists in active groups - skipping event", 
+                                group.GroupId);
+                            continue;
+                        }
+                        
                         _activeGroups[group.GroupId] = group;
                         OnGroupCreated(group);
                     }

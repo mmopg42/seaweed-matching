@@ -1,9 +1,12 @@
 using ChronoView.Models;
 using ChronoView.Core.ImageProcessing;
 using ChronoView.Core.Analytics;
+using ChronoView.Core.Nir;
+using ChronoView.Helpers;
 using System.IO;
 using System.Windows.Media.Imaging;
 using System.Windows;
+using Microsoft.Extensions.Logging;
 using WpfApplication = System.Windows.Application;
 
 namespace ChronoView.UI.ViewModels;
@@ -16,6 +19,11 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     private readonly FileGroup _fileGroup;
     private readonly IImageProcessor _imageProcessor;
     private readonly IAbnormalDetector? _abnormalDetector;
+    private readonly ApplicationConfiguration? _configuration;
+    private readonly ILogger<FileGroupViewModel>? _logger;
+    private readonly Action<LogSeverity, string, string>? _uiLog;
+    private static readonly HashSet<string> _imageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp" };
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     
     private bool _isSelected;
@@ -26,6 +34,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     private Dictionary<string, string?> _cameraImagePaths = new();
     private BitmapSource? _mainImageThumbnail;
     private BitmapSource? _nirImageThumbnail;
+    private BitmapSource? _nirGraphThumbnail;
     private BitmapSource? _camera1Thumbnail;
     private BitmapSource? _camera2Thumbnail;
     private BitmapSource? _camera3Thumbnail;
@@ -40,17 +49,30 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     /// <param name="fileGroup">The FileGroup model to wrap.</param>
     /// <param name="imageProcessor">Image processor for thumbnail generation.</param>
     /// <param name="abnormalDetector">Optional abnormal detector for z-score analysis.</param>
+    /// <param name="configuration">Optional application configuration for NIR graph settings.</param>
+    /// <param name="logger">Optional logger for diagnostics.</param>
+    /// <param name="uiLog">Optional UI log sink (Severity, Source, Message).</param>
     public FileGroupViewModel(
-        FileGroup fileGroup, 
+        FileGroup fileGroup,
         IImageProcessor imageProcessor,
-        IAbnormalDetector? abnormalDetector = null)
+        IAbnormalDetector? abnormalDetector = null,
+        ApplicationConfiguration? configuration = null,
+        ILogger<FileGroupViewModel>? logger = null,
+        Action<LogSeverity, string, string>? uiLog = null)
     {
         _fileGroup = fileGroup ?? throw new ArgumentNullException(nameof(fileGroup));
         _imageProcessor = imageProcessor ?? throw new ArgumentNullException(nameof(imageProcessor));
         _abnormalDetector = abnormalDetector;
-        
+        _configuration = configuration;
+        _logger = logger;
+        _uiLog = uiLog;
+
         InitializeImagePaths();
         CheckAbnormalStatus();
+
+        _logger?.LogInformation("FileGroupViewModel created for {GroupId} | HasNir={HasNir} NirPath={NirPath} NormalFolder={Normal} MainImage={MainImage} Cameras={CamCount}",
+            GroupId, _fileGroup.HasNir, _fileGroup.NirFilePath, _fileGroup.NormalFolder, _fileGroup.MainImagePath, _fileGroup.CameraFiles?.Count ?? 0);
+        _uiLog?.Invoke(LogSeverity.Debug, "Group", $"VM created {GroupId} HasNir={_fileGroup.HasNir} Normal={_fileGroup.NormalFolder} Main={_fileGroup.MainImagePath} CamCount={_fileGroup.CameraFiles?.Count ?? 0}");
     }
 
     /// <summary>
@@ -298,6 +320,15 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// NIR graph thumbnail for display in DataGrid.
+    /// </summary>
+    public BitmapSource? NirGraphThumbnail
+    {
+        get => _nirGraphThumbnail;
+        private set => SetProperty(ref _nirGraphThumbnail, value);
+    }
+
+    /// <summary>
     /// Camera 1 thumbnail for display in DataGrid.
     /// </summary>
     public BitmapSource? Camera1Thumbnail
@@ -503,6 +534,11 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 
         try
         {
+            _logger?.LogDebug("Begin thumbnail load for {GroupId} | HasNir={HasNir} Normal={NormalFolder} Main={MainImagePath} CamCount={CamCount} NirGraphEnabled={NirGraphEnabled}",
+                GroupId, HasNir, _fileGroup.NormalFolder, MainImagePath, _fileGroup.CameraFiles?.Count ?? 0,
+                _configuration?.MatchingSettings.EnableNirGraph);
+            _uiLog?.Invoke(LogSeverity.Debug, "Thumb", $"Start load {GroupId} HasNir={HasNir} Normal={_fileGroup.NormalFolder} Main={MainImagePath} CamCount={_fileGroup.CameraFiles?.Count ?? 0} NirGraph={_configuration?.MatchingSettings.EnableNirGraph}");
+
             // Load main image thumbnail
             if (!string.IsNullOrEmpty(MainImagePath))
             {
@@ -513,8 +549,34 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
             // Load NIR image thumbnail
             if (!string.IsNullOrEmpty(NirImagePath))
             {
-                var nirThumbnail = await LoadSingleThumbnailAsync(NirImagePath, thumbnailWidth, thumbnailHeight);
-                await WpfApplication.Current.Dispatcher.InvokeAsync(() => NirImageThumbnail = nirThumbnail);
+            var ext = Path.GetExtension(NirImagePath);
+            // Skip non-image files (spc/txt 등)
+            if (!_imageExtensions.Contains(ext))
+                {
+                _logger?.LogDebug("Skipping NIR image thumbnail for non-image {GroupId}: {Path}", GroupId, NirImagePath);
+                _uiLog?.Invoke(LogSeverity.Debug, "Thumb", $"Skip NIR non-image thumbnail {GroupId}: {NirImagePath}");
+                }
+                else
+                {
+                    var nirThumbnail = await LoadSingleThumbnailAsync(NirImagePath, thumbnailWidth, thumbnailHeight);
+                    await WpfApplication.Current.Dispatcher.InvokeAsync(() => NirImageThumbnail = nirThumbnail);
+                }
+            }
+
+            // Load NIR graph thumbnail (if enabled in configuration)
+            if (HasNir)
+            {
+                if (_configuration?.MatchingSettings.EnableNirGraph == true)
+                {
+                    var nirGraphThumbnail = await LoadNirGraphThumbnailAsync(_configuration);
+                    await WpfApplication.Current.Dispatcher.InvokeAsync(() => NirGraphThumbnail = nirGraphThumbnail);
+                }
+                else
+                {
+                    // Show placeholder when NIR graph is disabled
+                    await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                        NirGraphThumbnail = ResourceHelper.GetNirPlaceholder());
+                }
             }
 
             // Load camera thumbnails
@@ -524,6 +586,22 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
             await LoadCameraThumbnailAsync(4, thumbnailWidth, thumbnailHeight);
             await LoadCameraThumbnailAsync(5, thumbnailWidth, thumbnailHeight);
             await LoadCameraThumbnailAsync(6, thumbnailWidth, thumbnailHeight);
+
+            // If everything is null, log warning for empty row visibility
+            if (MainImageThumbnail == null &&
+                NirImageThumbnail == null &&
+                NirGraphThumbnail == null &&
+                Camera1Thumbnail == null &&
+                Camera2Thumbnail == null &&
+                Camera3Thumbnail == null &&
+                Camera4Thumbnail == null &&
+                Camera5Thumbnail == null &&
+                Camera6Thumbnail == null)
+            {
+                _logger?.LogWarning("All thumbnails are null for {GroupId}. Paths -> Main:{Main} Nir:{Nir} NirTxt:{NirTxtCandidate} Cams:{CamCount}",
+                    GroupId, MainImagePath, NirImagePath, _fileGroup.NirFilePath, _fileGroup.CameraFiles?.Count ?? 0);
+                _uiLog?.Invoke(LogSeverity.Error, "Thumb", $"All thumbnails null for {GroupId} Main={MainImagePath} Nir={NirImagePath} NirSrc={_fileGroup.NirFilePath} CamCount={_fileGroup.CameraFiles?.Count ?? 0}");
+            }
         }
         catch (OperationCanceledException)
         {
@@ -532,7 +610,8 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
         catch (Exception ex)
         {
             // Log error but don't throw - thumbnails are non-critical
-            System.Diagnostics.Debug.WriteLine($"Error loading thumbnails for group {GroupId}: {ex.Message}");
+            _logger?.LogError(ex, "Error loading thumbnails for group {GroupId}", GroupId);
+            _uiLog?.Invoke(LogSeverity.Error, "Thumb", $"Error loading thumbnails for {GroupId}: {ex.Message}");
         }
     }
 
@@ -546,11 +625,30 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 
         try
         {
+            var ext = Path.GetExtension(imagePath);
+            if (!_imageExtensions.Contains(ext))
+            {
+                _logger?.LogDebug("Skipping thumbnail generation for non-image {GroupId}: {Path}", GroupId, imagePath);
+                _uiLog?.Invoke(LogSeverity.Debug, "Thumb", $"Skip non-image thumbnail {GroupId}: {imagePath}");
+                return null;
+            }
+
+            if (!File.Exists(imagePath))
+            {
+                _logger?.LogWarning("Thumbnail source missing for {GroupId}: {Path}", GroupId, imagePath);
+                _uiLog?.Invoke(LogSeverity.Warning, "Thumb", $"Missing file for {GroupId}: {imagePath}");
+                return null;
+            }
+
             var thumbnailBytes = await _imageProcessor.GenerateThumbnailAsync(
                 imagePath, width, height, _cancellationTokenSource.Token);
 
             if (thumbnailBytes == null || thumbnailBytes.Length == 0)
+            {
+                _logger?.LogWarning("Thumbnail generation returned empty for {GroupId}: {Path}", GroupId, imagePath);
+                _uiLog?.Invoke(LogSeverity.Warning, "Thumb", $"Thumbnail empty for {GroupId}: {imagePath}");
                 return null;
+            }
 
             // Convert byte array to BitmapSource
             using var ms = new System.IO.MemoryStream(thumbnailBytes);
@@ -583,10 +681,14 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 
         var imagePath = GetCameraImagePath(cameraNumber);
         if (string.IsNullOrEmpty(imagePath))
+        {
+            _logger?.LogDebug("Camera{Cam} path missing for {GroupId}", cameraNumber, GroupId);
+            _uiLog?.Invoke(LogSeverity.Debug, "Thumb", $"Cam{cameraNumber} path missing for {GroupId}");
             return;
+        }
 
         var thumbnail = await LoadSingleThumbnailAsync(imagePath, width, height);
-        
+
         await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
         {
             switch (cameraNumber)
@@ -599,6 +701,142 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
                 case 6: Camera6Thumbnail = thumbnail; break;
             }
         });
+    }
+
+    /// <summary>
+    /// Reloads only the NIR graph thumbnail with updated configuration.
+    /// Called when settings are applied to reflect size changes immediately.
+    /// </summary>
+    public async Task ReloadNirGraphAsync(ApplicationConfiguration? configuration = null)
+    {
+        if (_disposed)
+            return;
+
+        // Use provided configuration or the instance configuration
+        var config = configuration ?? _configuration;
+
+        if (HasNir)
+        {
+            if (config?.MatchingSettings.EnableNirGraph == true)
+            {
+                var nirGraphThumbnail = await LoadNirGraphThumbnailAsync(config);
+                await WpfApplication.Current.Dispatcher.InvokeAsync(() => NirGraphThumbnail = nirGraphThumbnail);
+            }
+            else
+            {
+                // Show placeholder when NIR graph is disabled
+                await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                    NirGraphThumbnail = ResourceHelper.GetNirPlaceholder());
+            }
+        }
+        else
+        {
+            // Clear the thumbnail if no NIR file
+            await WpfApplication.Current.Dispatcher.InvokeAsync(() => NirGraphThumbnail = null);
+        }
+    }
+
+    /// <summary>
+    /// Loads NIR graph thumbnail by parsing NIR .txt file and generating a graph.
+    /// Implements file resolution priority: .spc->A.txt suffix, then .txt fallback.
+    /// </summary>
+    private async Task<BitmapSource?> LoadNirGraphThumbnailAsync(ApplicationConfiguration? config = null)
+    {
+        if (_disposed || !HasNir || string.IsNullOrEmpty(_fileGroup.NirFilePath))
+            return null;
+
+        try
+        {
+            // Use provided config or instance config
+            var cfg = config ?? _configuration;
+
+            // Get configured dimensions or use defaults
+            int width = cfg?.UISettings.NirThumbnailWidth ?? 250;
+            int height = cfg?.UISettings.NirThumbnailHeight ?? 100;
+
+            // Determine NIR .txt file path
+            string? nirTxtPath = null;
+            var nirSpcPath = _fileGroup.NirFilePath;
+
+            // Priority 0: If NirFilePath is already a .txt file, use it directly
+            if (nirSpcPath.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+            {
+                if (File.Exists(nirSpcPath))
+                {
+                    nirTxtPath = nirSpcPath;
+                    _logger?.LogDebug("NIR .txt file used directly for {GroupId}: {TxtPath}", GroupId, nirSpcPath);
+                    _uiLog?.Invoke(LogSeverity.Debug, "NIR", $".txt used directly for {GroupId}: {nirSpcPath}");
+                }
+            }
+            // Priority 1: Try .spc -> A.txt suffix (e.g., run_120251204T111028.spc -> run_120251204T111028A.txt)
+            else if (nirSpcPath.EndsWith(".spc", StringComparison.OrdinalIgnoreCase))
+            {
+                var basePath = Path.GetDirectoryName(nirSpcPath);
+                var fileNameWithoutExt = Path.GetFileNameWithoutExtension(nirSpcPath);
+                var candidatePath = Path.Combine(basePath ?? "", $"{fileNameWithoutExt}A.txt");
+
+                if (File.Exists(candidatePath))
+                {
+                    nirTxtPath = candidatePath;
+                }
+                else
+                {
+                    // Priority 2: Fallback to exact match .txt (e.g., run_120251204T111028.spc -> run_120251204T111028.txt)
+                    candidatePath = Path.Combine(basePath ?? "", $"{fileNameWithoutExt}.txt");
+                    if (File.Exists(candidatePath))
+                    {
+                        nirTxtPath = candidatePath;
+                    }
+                }
+            }
+
+            // If no .txt file found, return null
+            if (nirTxtPath == null)
+            {
+                _logger?.LogWarning("NIR graph source .txt not found for {GroupId}. spc={SpcPath}", GroupId, nirSpcPath);
+                _uiLog?.Invoke(LogSeverity.Warning, "NIR", $"Graph source .txt not found for {GroupId} spc={nirSpcPath}");
+                return null;
+            }
+
+
+            // Generate graph on calling thread (already on UI thread via Dispatcher)
+            // ScottPlot requires UI thread access for internal ObservableCollection updates
+            try
+            {
+                // Parse NIR spectrum from .txt file
+                var spectrum = NirSpectrumParser.Parse(nirTxtPath);
+                if (spectrum == null)
+                {
+                    _logger?.LogWarning("NIR spectrum parsing returned null for {GroupId}: {NirTxtPath}", GroupId, nirTxtPath);
+                    return null;
+                }
+
+                // Generate graph bitmap (must run on UI thread for ScottPlot)
+                var graph = NirGraphGenerator.GenerateGraph(spectrum, width, height);
+                if (graph != null)
+                {
+                    _logger?.LogDebug("NIR graph generated for {GroupId} using {NirTxtPath}", GroupId, nirTxtPath);
+                    _uiLog?.Invoke(LogSeverity.Debug, "NIR", $"Graph generated for {GroupId} txt={nirTxtPath}");
+                }
+                return graph;
+            }
+            catch (Exception ex)
+            {
+                // Return null on any error - log exception details for debugging
+                _logger?.LogError(ex, "NIR graph generation failed for {GroupId} using {NirTxtPath}. Error: {ErrorMessage}", 
+                    GroupId, nirTxtPath, ex.Message);
+                _uiLog?.Invoke(LogSeverity.Error, "NIR", 
+                    $"Graph generation failed for {GroupId} txt={nirTxtPath} Error: {ex.Message}");
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Return null for failed loads - log exception details
+            _logger?.LogError(ex, "NIR graph load failed for {GroupId}. Error: {ErrorMessage}", GroupId, ex.Message);
+            _uiLog?.Invoke(LogSeverity.Error, "NIR", $"Graph load failed for {GroupId} Error: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>
