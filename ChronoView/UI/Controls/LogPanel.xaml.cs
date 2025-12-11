@@ -162,6 +162,8 @@ public partial class LogPanel : WpfUserControl
 
     private void ExportToFile(string filePath)
     {
+        if (_filteredView == null) return;
+
         var extension = Path.GetExtension(filePath).ToLower();
         
         using var writer = new StreamWriter(filePath);

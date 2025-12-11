@@ -11,9 +11,16 @@ public class NullToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        // If value is null, show the loading indicator (Visible)
-        // If value is not null, hide the loading indicator (Collapsed)
-        return value == null ? Visibility.Visible : Visibility.Collapsed;
+        // Default: If value is null, return Visible (e.g. for placeholders/loading)
+        bool isVisible = value == null;
+
+        // If parameter is "Inverse", flip the logic: If value is null, return Collapsed (e.g. for actual content)
+        if (parameter is string paramStr && paramStr.Equals("Inverse", StringComparison.OrdinalIgnoreCase))
+        {
+            isVisible = !isVisible;
+        }
+
+        return isVisible ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

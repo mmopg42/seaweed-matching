@@ -82,4 +82,29 @@ public partial class MainWindow : Window
             _logger.LogInformation("Settings cancelled");
         }
     }
+
+    private void FileGroupRow_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is System.Windows.Controls.DataGridRow row)
+        {
+            _logger.LogInformation("Row DoubleClick detected. DataContext type: {Type}", row.DataContext?.GetType().Name ?? "null");
+            
+            if (row.DataContext is FileGroupViewModel group && _viewModel != null)
+            {
+                _logger.LogInformation("Executing OpenDetailViewCommand for group: {GroupId}", group.GroupId);
+                _viewModel.OpenDetailViewCommand.Execute(group);
+                e.Handled = true;
+            }
+            else
+            {
+                 _logger.LogWarning("Row DataContext is not FileGroupViewModel or ViewModel is null");
+            }
+        }
+    }
+    
+    private void DataGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        // Force command re-evaluation for CanExecute
+        System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+    }
 }

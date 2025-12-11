@@ -55,6 +55,12 @@
         
         <!-- DataGrid Style -->
         <Style x:Key="FileGroupDataGridStyle" TargetType="DataGrid">
+            <Style.Resources>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="Transparent"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="Black"/>
+            </Style.Resources>
             <Setter Property="Background" Value="White"/>
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
@@ -63,7 +69,7 @@
             <Setter Property="AutoGenerateColumns" Value="False"/>
             <Setter Property="CanUserAddRows" Value="False"/>
             <Setter Property="CanUserDeleteRows" Value="False"/>
-            <Setter Property="SelectionMode" Value="Single"/>
+            <Setter Property="SelectionMode" Value="Extended"/>
             <Setter Property="SelectionUnit" Value="FullRow"/>
             <Setter Property="RowHeight" Value="{Binding DataContext.DataGridRowHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=100}"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
@@ -363,16 +369,23 @@
                 <TabControl Grid.Row="0" SelectedIndex="{Binding ActiveTabIndex}">
                     <TabItem Header="Line 1">
                         <DataGrid ItemsSource="{Binding Line1Groups}"
-                                  SelectedItem="{Binding SelectedLine1Group}"
+                                  SelectionChanged="DataGrid_SelectionChanged"
                                   Style="{StaticResource FileGroupDataGridStyle}"
                                   RowStyle="{StaticResource FileGroupRowStyle}">
                             <i:Interaction.Behaviors>
                                 <behaviors:DragSelectBehavior/>
                             </i:Interaction.Behaviors>
                             <DataGrid.Columns>
-                                <DataGridCheckBoxColumn Header="" Width="40" Binding="{Binding IsSelected}"/>
-                                <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}"/>
-                                <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}"/>
+                                <DataGridTemplateColumn Header="" Width="40">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}" IsReadOnly="True"/>
                                 <DataGridTemplateColumn Header="Main Img" Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -453,16 +466,23 @@
                     </TabItem>
                     <TabItem Header="Line 2">
                         <DataGrid ItemsSource="{Binding Line2Groups}"
-                                  SelectedItem="{Binding SelectedLine2Group}"
+                                  SelectionChanged="DataGrid_SelectionChanged"
                                   Style="{StaticResource FileGroupDataGridStyle}"
                                   RowStyle="{StaticResource FileGroupRowStyle}">
                             <i:Interaction.Behaviors>
                                 <behaviors:DragSelectBehavior/>
                             </i:Interaction.Behaviors>
                             <DataGrid.Columns>
-                                <DataGridCheckBoxColumn Header="" Width="40" Binding="{Binding IsSelected}"/>
-                                <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}"/>
-                                <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}"/>
+                                <DataGridTemplateColumn Header="" Width="40">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}" IsReadOnly="True"/>
                                 <DataGridTemplateColumn Header="Main Img" Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
@@ -565,16 +585,23 @@
                                     
                                     <!-- DataGrid -->
                                     <DataGrid Grid.Row="1" ItemsSource="{Binding Line1Groups}"
-                                              SelectedItem="{Binding SelectedLine1Group}"
+                                              SelectionChanged="DataGrid_SelectionChanged"
                                               Style="{StaticResource FileGroupDataGridStyle}"
                                               RowStyle="{StaticResource FileGroupRowStyle}">
                                         <i:Interaction.Behaviors>
                                             <behaviors:DragSelectBehavior/>
                                         </i:Interaction.Behaviors>
                                         <DataGrid.Columns>
-                                            <DataGridCheckBoxColumn Header="" Width="40" Binding="{Binding IsSelected}"/>
-                                            <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}"/>
-                                            <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}"/>
+                                            <DataGridTemplateColumn Header="" Width="40">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}" IsReadOnly="True"/>
+                                            <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}" IsReadOnly="True"/>
                                             <DataGridTemplateColumn Header="Main Img" Width="*">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>
@@ -674,16 +701,23 @@
                                     
                                     <!-- DataGrid -->
                                     <DataGrid Grid.Row="1" ItemsSource="{Binding Line2Groups}"
-                                              SelectedItem="{Binding SelectedLine2Group}"
+                                              SelectionChanged="DataGrid_SelectionChanged"
                                               Style="{StaticResource FileGroupDataGridStyle}"
                                               RowStyle="{StaticResource FileGroupRowStyle}">
                                         <i:Interaction.Behaviors>
                                             <behaviors:DragSelectBehavior/>
                                         </i:Interaction.Behaviors>
                                         <DataGrid.Columns>
-                                            <DataGridCheckBoxColumn Header="" Width="40" Binding="{Binding IsSelected}"/>
-                                            <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}"/>
-                                            <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}"/>
+                                            <DataGridTemplateColumn Header="" Width="40">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
+                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}" IsReadOnly="True"/>
+                                            <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}" IsReadOnly="True"/>
                                             <DataGridTemplateColumn Header="Main Img" Width="*">
                                                 <DataGridTemplateColumn.CellTemplate>
                                                     <DataTemplate>

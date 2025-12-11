@@ -125,7 +125,7 @@ namespace ChronoView.Core.FileMatching
                     Timestamp = ExtractTimestampFromFolderName(kvp.Key)
                 })
                 .Where(x => x.Timestamp.HasValue)
-                .OrderBy(x => x.Timestamp.Value)
+                .OrderBy(x => x.Timestamp.GetValueOrDefault())
                 .ToList();
 
             // Get and sort NIR files
@@ -142,7 +142,7 @@ namespace ChronoView.Core.FileMatching
                     Timestamp = ExtractTimestampFromNirKey(kvp.Key)
                 })
                 .Where(x => x.Timestamp.HasValue)
-                .OrderBy(x => x.Timestamp.Value)
+                .OrderBy(x => x.Timestamp.GetValueOrDefault())
                 .ToList();
 
             // Flatten camera files into queues
@@ -160,7 +160,7 @@ namespace ChronoView.Core.FileMatching
                     GroupId = "", // Will be assigned later
                     NormalFolder = normal.Key,
                     MainImagePath = Path.Combine(normal.Path, "stitched_original.png"),
-                    CreatedAt = normal.Timestamp.Value,
+                    CreatedAt = normal.Timestamp.GetValueOrDefault(),
                     Status = GroupStatus.Complete,
                     HasNir = false,
                     LineNumber = lineNumber,

@@ -66,7 +66,20 @@ namespace ChronoView.Core.FileWatching
                     Camera3Path = config.MatchingSettings.Camera3Path,
                     Camera4Path = config.MatchingSettings.Camera4Path,
                     Camera5Path = config.MatchingSettings.Camera5Path,
-                    Camera6Path = config.MatchingSettings.Camera6Path
+                    Camera6Path = config.MatchingSettings.Camera6Path,
+
+                    // Matching Algorithm Options
+                    UseCamTimeMatching = config.MatchingSettings.UseCamTimeMatching,
+                    CamMatchMinDiff = config.MatchingSettings.CamMatchMinDiff,
+                    CamMatchMaxDiff = config.MatchingSettings.CamMatchMaxDiff,
+                    NirMatchTimeDiff = config.MatchingSettings.NirMatchTimeDiff,
+                    NirTimeWindowSeconds = config.MatchingSettings.NirTimeWindowSeconds,
+                    CameraTimeWindowSeconds = config.MatchingSettings.CameraTimeWindowSeconds,
+
+                    // Camera Subfolder Options
+                    UseCameraSubfolderNormal = config.MatchingSettings.UseCameraSubfolderNormal,
+                    UseCameraSubfolderNormal2 = config.MatchingSettings.UseCameraSubfolderNormal2,
+                    UseFolderSuffix = config.MatchingSettings.UseFolderSuffix
                 };
 
                 // Perform initial scan

@@ -132,7 +132,9 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         RefreshCommand = new RelayCommand(ExecuteRefresh, CanExecuteRefresh);
         PathAutoConfigCommand = new RelayCommand(ExecutePathAutoConfig);
         CreateSampleFolderCommand = new RelayCommand(ExecuteCreateSampleFolder);
+        CreateSampleFolderCommand = new RelayCommand(ExecuteCreateSampleFolder);
         SetupCommand = new RelayCommand(ExecuteSetup);
+        OpenDetailViewCommand = new RelayCommand<FileGroupViewModel>(ExecuteOpenDetailView);
 
         // Subscribe to orchestrator events
         _orchestrator.GroupCreated += OnGroupCreated;
@@ -145,10 +147,18 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
         // Add initial log message
         AddLogMessage(LogSeverity.Info, "System", "Application started");
+        // Initialize child ViewModels
+        DetailPreviewVM = new DetailPreviewViewModel();
+
         _logger.LogInformation("MainWindowViewModel initialized with all service dependencies and event subscriptions");
     }
 
     #region Properties
+
+    /// <summary>
+    /// ViewModel for the Detail Preview pane.
+    /// </summary>
+    public DetailPreviewViewModel DetailPreviewVM { get; }
 
     /// <summary>
     /// All file groups (unified view).
@@ -643,6 +653,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     public ICommand PathAutoConfigCommand { get; }
     public ICommand CreateSampleFolderCommand { get; }
     public ICommand SetupCommand { get; }
+    public ICommand OpenDetailViewCommand { get; }
 
     #endregion
 
@@ -1411,6 +1422,20 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     {
         AddLogMessage(LogSeverity.Info, "System", "Opening settings dialog");
         // TODO: Open settings dialog
+    }
+
+    private void ExecuteOpenDetailView(FileGroupViewModel? group)
+    {
+        _logger.LogInformation("ExecuteOpenDetailView called for group: {GroupId}", group?.GroupId ?? "null");
+        if (group != null)
+        {
+            DetailPreviewVM.UpdateGroup(group);
+            _logger.LogInformation("Detail view updated/opened for group {GroupId}", group.GroupId);
+        }
+        else 
+        {
+             _logger.LogWarning("ExecuteOpenDetailView called with null group");
+        }
     }
 
     #endregion

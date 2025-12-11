@@ -66,6 +66,26 @@ namespace ChronoView.Core.FileMatching
         /// </summary>
         public bool UseFolderSuffix { get; set; } = false;
 
+        /// <summary>
+        /// Time window for NIR file matching in seconds
+        /// </summary>
+        public int NirTimeWindowSeconds { get; set; } = 300;
+
+        /// <summary>
+        /// Time window for camera file matching in seconds
+        /// </summary>
+        public int CameraTimeWindowSeconds { get; set; } = 60;
+
+        /// <summary>
+        /// Use camera subfolder for Normal1 path
+        /// </summary>
+        public bool UseCameraSubfolderNormal { get; set; } = false;
+
+        /// <summary>
+        /// Use camera subfolder for Normal2 path
+        /// </summary>
+        public bool UseCameraSubfolderNormal2 { get; set; } = false;
+
         // ============================================================
         // Line 1 Paths
         // ============================================================

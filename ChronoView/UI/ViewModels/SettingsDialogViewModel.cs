@@ -408,8 +408,18 @@ public class SettingsDialogViewModel : ViewModelBase
         ThumbnailHeight = _configuration.ImageSettings.ThumbnailHeight;
         ThumbnailQuality = _configuration.ImageSettings.ThumbnailQuality;
 
+        // Load matching options
+        UseCamTimeMatching = _configuration.MatchingSettings.UseCamTimeMatching;
+        CamMatchMinDiff = _configuration.MatchingSettings.CamMatchMinDiff;
+        CamMatchMaxDiff = _configuration.MatchingSettings.CamMatchMaxDiff;
+        NirMatchTimeDiff = _configuration.MatchingSettings.NirMatchTimeDiff;
         NirTimeWindowSeconds = _configuration.MatchingSettings.NirTimeWindowSeconds;
         CameraTimeWindowSeconds = _configuration.MatchingSettings.CameraTimeWindowSeconds;
+
+        // Load camera subfolder options
+        UseCameraSubfolderNormal = _configuration.MatchingSettings.UseCameraSubfolderNormal;
+        UseCameraSubfolderNormal2 = _configuration.MatchingSettings.UseCameraSubfolderNormal2;
+        UseFolderSuffix = _configuration.MatchingSettings.UseFolderSuffix;
 
         IsSeparatedMode = _configuration.MatchingSettings.LineMode == "separated";
 
@@ -459,8 +469,18 @@ public class SettingsDialogViewModel : ViewModelBase
         _configuration.ImageSettings.ThumbnailHeight = ThumbnailHeight;
         _configuration.ImageSettings.ThumbnailQuality = ThumbnailQuality;
 
+        // Save matching options
+        _configuration.MatchingSettings.UseCamTimeMatching = UseCamTimeMatching;
+        _configuration.MatchingSettings.CamMatchMinDiff = CamMatchMinDiff;
+        _configuration.MatchingSettings.CamMatchMaxDiff = CamMatchMaxDiff;
+        _configuration.MatchingSettings.NirMatchTimeDiff = NirMatchTimeDiff;
         _configuration.MatchingSettings.NirTimeWindowSeconds = NirTimeWindowSeconds;
         _configuration.MatchingSettings.CameraTimeWindowSeconds = CameraTimeWindowSeconds;
+
+        // Save camera subfolder options
+        _configuration.MatchingSettings.UseCameraSubfolderNormal = UseCameraSubfolderNormal;
+        _configuration.MatchingSettings.UseCameraSubfolderNormal2 = UseCameraSubfolderNormal2;
+        _configuration.MatchingSettings.UseFolderSuffix = UseFolderSuffix;
 
         _configuration.MatchingSettings.LineMode = IsSeparatedMode ? "separated" : "integrated";
 

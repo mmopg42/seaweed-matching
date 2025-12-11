@@ -56,7 +56,7 @@ public class ImageProcessingService : IImageProcessor
         if (_settings.EnableCaching && _thumbnailCache.TryGet(cacheKey, out var cachedThumbnail))
         {
             _logger.LogDebug("Thumbnail cache hit for: {ImagePath}", imagePath);
-            return cachedThumbnail;
+            return cachedThumbnail ?? GetPlaceholderImage(width, height);
         }
 
         try
@@ -114,7 +114,7 @@ public class ImageProcessingService : IImageProcessor
         if (_settings.EnableCaching && _metadataCache.TryGet(imagePath, out var cachedMetadata))
         {
             _logger.LogDebug("Metadata cache hit for: {ImagePath}", imagePath);
-            return cachedMetadata;
+            return cachedMetadata ?? CreateErrorMetadata(imagePath);
         }
 
         try

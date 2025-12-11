@@ -114,6 +114,45 @@ public class MatchingSettings
     public string LineMode { get; set; } = "integrated";
 
     // ============================================================
+    // Matching Algorithm Options
+    // ============================================================
+
+    /// \u003csummary\u003e
+    /// Enable time-based camera matching.
+    /// \u003c/summary\u003e
+    public bool UseCamTimeMatching { get; set; } = true;
+
+    /// \u003csummary\u003e
+    /// Minimum time difference for camera matching in seconds.
+    /// \u003c/summary\u003e
+    public double CamMatchMinDiff { get; set; } = 4.0;
+
+    /// \u003csummary\u003e
+    /// Maximum time difference for camera matching in seconds.
+    /// \u003c/summary\u003e
+    public double CamMatchMaxDiff { get; set; } = 6.0;
+
+    /// \u003csummary\u003e
+    /// NIR matching time difference in seconds.
+    /// \u003c/summary\u003e
+    public double NirMatchTimeDiff { get; set; } = 1.0;
+
+    /// \u003csummary\u003e
+    /// Use camera subfolder for Normal1 path.
+    /// \u003c/summary\u003e
+    public bool UseCameraSubfolderNormal { get; set; } = false;
+
+    /// \u003csummary\u003e
+    /// Use camera subfolder for Normal2 path.
+    /// \u003c/summary\u003e
+    public bool UseCameraSubfolderNormal2 { get; set; } = false;
+
+    /// \u003csummary\u003e
+    /// Use folder suffix in matching.
+    /// \u003c/summary\u003e
+    public bool UseFolderSuffix { get; set; } = false;
+
+    // ============================================================
     // Line 1 Paths (NIR1, Normal1, Camera 1-3)
     // ============================================================
 
