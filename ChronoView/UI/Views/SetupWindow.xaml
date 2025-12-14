@@ -1,0 +1,391 @@
+<Window x:Class="ChronoView.UI.Views.SetupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Setup - ChronoView Pro"
+        Height="640" Width="1100"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen">
+
+    <Border CornerRadius="0">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Custom Title Bar -->
+            <Border Grid.Row="0" 
+                    Background="#EB1E24" 
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid>
+                    <TextBlock Text="시스템 설정 - System Setup"
+                               FontFamily="Segoe UI"
+                               FontSize="14"
+                               Foreground="White"
+                               VerticalAlignment="Center"
+                               Margin="15,0,0,0"/>
+                    
+                    <!-- Window Control Buttons -->
+                    <StackPanel Orientation="Horizontal" 
+                                HorizontalAlignment="Right">
+                        <!-- Minimize Button -->
+                        <Button Width="40" Height="40"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Click="MinimizeButton_Click"
+                                Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}">
+                                                    <TextBlock Text="─" 
+                                                               FontSize="16" 
+                                                               Foreground="White"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               Margin="0,0,0,8"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#D41C24"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Close Button -->
+                        <Button Width="40" Height="40"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Click="CloseButton_Click"
+                                Cursor="Hand">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}">
+                                                    <TextBlock Text="✕" 
+                                                               FontSize="16" 
+                                                               Foreground="White"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#C0392B"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Main Content -->
+            <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="357"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Panel - PRISCHE Branding -->
+            <Border Grid.Column="0" Background="#EB1E24">
+                <Grid>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <!-- PRISCHE Logo -->
+                        <Border BorderBrush="White" BorderThickness="4" Padding="40,20" HorizontalAlignment="Center">
+                            <TextBlock Text="PRISCHE"
+                                       FontFamily="Segoe UI"
+                                       FontWeight="Bold"
+                                       FontSize="48"
+                                       Foreground="White"/>
+                        </Border>
+
+                        <!-- System Setup Title -->
+                        <TextBlock Text="시스템 설정"
+                                   FontFamily="Segoe UI"
+                                   FontSize="28"
+                                   FontWeight="Normal"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,80,0,0"/>
+                        
+                        <TextBlock Text="System Setup"
+                                   FontFamily="Segoe UI"
+                                   FontSize="16"
+                                   FontWeight="Light"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,8,0,0"/>
+
+                        <!-- Bottom Message -->
+                        <TextBlock Text="모니터링을 시작하기 전에"
+                                   FontFamily="Segoe UI"
+                                   FontSize="14"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,80,0,0"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"/>
+                        <TextBlock Text="필수 프로그램을 실행해주세요"
+                                   FontFamily="Segoe UI"
+                                   FontSize="14"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,5,0,0"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Right Panel - Program Execution -->
+            <Border Grid.Column="1" Background="#F5F5F5">
+                <Grid Margin="50,40,50,40">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Title -->
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="필수 프로그램 실행"
+                                   FontFamily="Segoe UI"
+                                   FontWeight="SemiBold"
+                                   FontSize="24"
+                                   Foreground="#333333"/>
+                        <TextBlock Text="Required Program Execution"
+                                   FontFamily="Segoe UI"
+                                   FontWeight="Light"
+                                   FontSize="14"
+                                   Foreground="#666666"
+                                   Margin="0,5,0,0"/>
+                    </StackPanel>
+
+                    <!-- Program Cards -->
+                    <Grid Grid.Row="1" Margin="0,30,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- General Camera Card -->
+                        <Border Grid.Column="0"
+                                Background="White"
+                                CornerRadius="8"
+                                Padding="25"
+                                BorderBrush="#E0E0E0"
+                                BorderThickness="1">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="일반 카메라 프로그램"
+                                           FontFamily="Segoe UI"
+                                           FontWeight="SemiBold"
+                                           FontSize="17"
+                                           Foreground="#333333"
+                                           TextAlignment="Center"/>
+                                <TextBlock Text="Main Camera Program"
+                                           FontFamily="Segoe UI"
+                                           FontWeight="Light"
+                                           FontSize="12"
+                                           Foreground="#666666"
+                                           TextAlignment="Center"
+                                           Margin="0,5,0,0"/>
+
+                                <Button Command="{Binding LaunchGeneralCameraCommand}"
+                                        Margin="0,25,0,0"
+                                        Height="48"
+                                        Background="#EB1E24"
+                                        Foreground="White"
+                                        BorderThickness="0"
+                                        FontSize="15"
+                                        FontWeight="Medium"
+                                        Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    CornerRadius="6"
+                                                    Padding="20,0">
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <TextBlock Text="▶" FontSize="13" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                                    <TextBlock Text="실행" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#D41C24"/>
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Setter Property="Background" Value="#B01A20"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- NIR Camera Card -->
+                        <Border Grid.Column="2"
+                                Background="White"
+                                CornerRadius="8"
+                                Padding="25"
+                                BorderBrush="#E0E0E0"
+                                BorderThickness="1">
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="NIR 프로그램"
+                                           FontFamily="Segoe UI"
+                                           FontWeight="SemiBold"
+                                           FontSize="17"
+                                           Foreground="#333333"
+                                           TextAlignment="Center"/>
+                                <TextBlock Text="NIR Camera Program"
+                                           FontFamily="Segoe UI"
+                                           FontWeight="Light"
+                                           FontSize="12"
+                                           Foreground="#666666"
+                                           TextAlignment="Center"
+                                           Margin="0,5,0,0"/>
+
+                                <!-- NIR Button 1 -->
+                                <Button Command="{Binding LaunchNir1CameraCommand}"
+                                        Margin="0,25,0,0"
+                                        Height="48"
+                                        Background="#EB1E24"
+                                        Foreground="White"
+                                        BorderThickness="0"
+                                        FontSize="15"
+                                        FontWeight="Medium"
+                                        Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    CornerRadius="6"
+                                                    Padding="20,0">
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <TextBlock Text="▶" FontSize="13" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                                    <TextBlock Text="실행 1" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#D41C24"/>
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Setter Property="Background" Value="#B01A20"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <!-- NIR Button 2 -->
+                                <Button Command="{Binding LaunchNir2CameraCommand}"
+                                        Margin="0,12,0,0"
+                                        Height="48"
+                                        Background="#EB1E24"
+                                        Foreground="White"
+                                        BorderThickness="0"
+                                        FontSize="15"
+                                        FontWeight="Medium"
+                                        Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    CornerRadius="6"
+                                                    Padding="20,0">
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <TextBlock Text="▶" FontSize="13" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                                                    <TextBlock Text="실행 2" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#D41C24"/>
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Setter Property="Background" Value="#B01A20"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Bottom Status and Start Button -->
+                    <StackPanel Grid.Row="2" Margin="0,25,0,0">
+                        <!-- Status Message (visible only when needed) -->
+                        <Border Background="#FFFEF0"
+                                BorderBrush="#FFA500"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12,8"
+                                Margin="0,0,0,12"
+                                Visibility="{Binding StatusVisibility}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="ℹ" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding StatusMessage}"
+                                           FontFamily="Segoe UI"
+                                           FontSize="13"
+                                           Foreground="#333333"
+                                           TextWrapping="Wrap"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Start Button -->
+                        <Button Command="{Binding StartCommand}"
+                                Height="55"
+                                Background="#28A745"
+                                Foreground="White"
+                                BorderThickness="0"
+                                FontSize="16"
+                                FontWeight="SemiBold"
+                                Cursor="Hand"
+                                IsDefault="True">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="7">
+                                        <TextBlock Text="프로그램을 모두 실행해주세요"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{TemplateBinding Foreground}"
+                                                   FontSize="{TemplateBinding FontSize}"
+                                                   FontWeight="{TemplateBinding FontWeight}"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#218838"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter Property="Background" Value="#1E7E34"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+        </Grid>
+    </Border>
+</Window>

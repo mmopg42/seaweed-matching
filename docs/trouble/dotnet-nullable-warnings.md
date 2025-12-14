@@ -47,3 +47,4 @@
 - `DateTime?` 처리부: `Timestamp is DateTime ts` 패턴 매칭으로 안전하게 언랩하거나, `Timestamp!.Value` 대신 조건 분기/early-continue 사용.
 
 
+

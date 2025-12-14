@@ -145,6 +145,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
         // Subscribe to orchestrator events
         _orchestrator.GroupCreated += OnGroupCreated;
+        _orchestrator.GroupUpdated += OnGroupUpdated;
         _orchestrator.GroupRemoved += OnGroupRemoved;
         _orchestrator.MonitoringError += OnMonitoringError;
 
@@ -768,6 +769,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             DisplayImageWidth = config.UISettings.DisplayImageWidth;
             DisplayImageHeight = config.UISettings.DisplayImageHeight;
             DataGridRowHeight = config.UISettings.DataGridRowHeight;
+            NirDisplayWidth = config.UISettings.NirDisplayWidth;
+            NirDisplayHeight = config.UISettings.NirDisplayHeight;
 
             // Load MoveNir and MoveAllData settings from configuration
             if (config.MatchingSettings.MoveNir.HasValue)
@@ -904,6 +907,27 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             var config = await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
             var outputPath = config.MatchingSettings.OutputPath;
 
+            // Apply NIR and Data count limits
+            var filteredGroups = ApplyFilters(selectedGroups, config);
+            
+            if (filteredGroups.Count == 0 && selectedGroups.Count > 0)
+            {
+                // If we had groups selected but filters removed all of them (or MoveAllData=0)
+                // We should check if it was specifically MoveAllData=0 which logs its own message, 
+                // or if filters just reduced it to zero.
+                
+                // If MoveAllData was 0, we already logged and we should return.
+                if (config.MatchingSettings.MoveAllData == 0) return;
+
+                // Otherwise just log that nothing to move
+                _logger.LogInformation("No groups to move after applying limits");
+                 AddLogMessage(LogSeverity.Info, "FileOperation", "No groups to move after applying limits");
+                return;
+            }
+            
+            // Use the filtered list for the operation
+            selectedGroups = filteredGroups;
+
             // Validate output path
             if (string.IsNullOrWhiteSpace(outputPath))
             {
@@ -1034,6 +1058,78 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             EndOperation();
             ((RelayCommand)MoveCommand).RaiseCanExecuteChanged();
         }
+    }
+
+    /// <summary>
+    /// Applies configured limits to the list of groups to move.
+    /// </summary>
+    private IReadOnlyList<FileGroupViewModel> ApplyFilters(
+        IReadOnlyList<FileGroupViewModel> groups, 
+        ApplicationConfiguration config)
+    {
+        IEnumerable<FileGroupViewModel> result = groups;
+
+        // 1. NIR Count Limit
+        int? moveNirLimit = config.MatchingSettings.MoveNir;
+        if (moveNirLimit.HasValue)
+        {
+            if (moveNirLimit.Value == 0)
+            {
+                // Exclude all NIR groups
+                result = result.Where(g => !g.Model.HasNir);
+                AddLogMessage(LogSeverity.Info, "FileOperation", "Limit: Excluded NIR groups (Count=0)");
+            }
+            else if (moveNirLimit.Value > 0)
+            {
+                // Apply NIR count limit helper
+                result = ApplyNirCountLimit(result, moveNirLimit.Value);
+                AddLogMessage(LogSeverity.Info, "FileOperation", $"Limit: Top {moveNirLimit.Value} NIR groups");
+            }
+            // If null, do nothing (keep all)
+        }
+
+        // 2. Data Count Limit
+        int? moveAllDataLimit = config.MatchingSettings.MoveAllData;
+        if (moveAllDataLimit.HasValue)
+        {
+            if (moveAllDataLimit.Value == 0)
+            {
+                // Skip move entirely
+                _logger.LogInformation("Move All Data is 0, skipping move operation.");
+                AddLogMessage(LogSeverity.Info, "FileOperation", "Limit: Move All Data is 0 (Skip)");
+                return new List<FileGroupViewModel>();
+            }
+            else if (moveAllDataLimit.Value > 0)
+            {
+                // Take top N groups (sorted by filename)
+                result = result
+                    .OrderBy(g => g.Model.NirKey ?? g.Model.GroupId)
+                    .Take(moveAllDataLimit.Value);
+                AddLogMessage(LogSeverity.Info, "FileOperation", $"Limit: Top {moveAllDataLimit.Value} total groups");
+            }
+            // If null, do nothing (keep all)
+        }
+
+        return result.ToList();
+    }
+
+    /// <summary>
+    /// Helper to limit the number of NIR groups while keeping all non-NIR groups.
+    /// </summary>
+    private IEnumerable<FileGroupViewModel> ApplyNirCountLimit(
+        IEnumerable<FileGroupViewModel> groups, 
+        int limit)
+    {
+        var withNir = groups.Where(g => g.Model.HasNir);
+        var withoutNir = groups.Where(g => !g.Model.HasNir);
+
+        // Sort NIR groups by filename (NirKey) and take top 'limit'
+        var selectedWithNir = withNir
+            .OrderBy(g => g.Model.NirKey ?? g.Model.GroupId)
+            .Take(limit);
+
+        // Combine with non-NIR groups
+        return selectedWithNir.Concat(withoutNir);
     }
 
     private bool CanExecuteDelete()
@@ -1897,6 +1993,43 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             {
                 _logger.LogError(ex, "Error handling GroupCreated event for group {GroupId}", group.GroupId);
                 AddLogMessage(LogSeverity.Error, "GroupManager", $"Error adding group {group.GroupId}: {ex.Message}");
+            }
+        });
+    }
+
+    /// <summary>
+    /// Handles the GroupUpdated event from MonitoringOrchestrator.
+    /// Marshals to UI thread to refresh the group and reload thumbnails.
+    /// </summary>
+    private void OnGroupUpdated(object? sender, FileGroup group)
+    {
+        _logger.LogDebug("GroupUpdated event received for group {GroupId}", group.GroupId);
+        
+        // Marshal to UI thread for collection updates
+        WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+        {
+            try
+            {
+                var viewModel = FileGroups.FirstOrDefault(g => g.GroupId == group.GroupId);
+                if (viewModel == null)
+                {
+                    _logger.LogWarning("Group {GroupId} not found in collections for update", group.GroupId);
+                    return;
+                }
+
+                // Refresh paths from model
+                viewModel.Refresh();
+                
+                // Reload thumbnails for newly added files (fire and forget)
+                _ = viewModel.LoadThumbnailsAsync();
+                
+                UpdateStatistics();
+                _logger.LogDebug("Group {GroupId} updated and thumbnails reloaded", group.GroupId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling GroupUpdated event for group {GroupId}", group.GroupId);
+                AddLogMessage(LogSeverity.Error, "GroupManager", $"Error updating group {group.GroupId}: {ex.Message}");
             }
         });
     }

@@ -3,6 +3,7 @@ import re
 import shutil
 import time
 import threading
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 import tkinter as tk
@@ -11,10 +12,42 @@ from tkinter import ttk, filedialog, scrolledtext, messagebox
 
 class DataSimulator:
     def __init__(self):
+        self.config_dir = r"C:\workspace\seaweed\gui_kiro\task_helper\data_test"
+        self.config_file = os.path.join(self.config_dir, "simulator_config.json")
+
+        # Default values
         self.source_base = r"Z:\윤태경\seaweed\program\data\2025_A046"
         self.target_base = ""
         self.is_running = False
         self.simulation_thread = None
+        self.moved_items = []  # Track moved items for reset (target → source mapping)
+
+        # Load saved configuration
+        self.load_config()
+
+    def load_config(self):
+        """Load configuration from JSON file"""
+        try:
+            if os.path.exists(self.config_file):
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    self.source_base = config.get('source_base', self.source_base)
+                    self.target_base = config.get('target_base', self.target_base)
+        except Exception as e:
+            print(f"Failed to load config: {e}")
+
+    def save_config(self):
+        """Save configuration to JSON file"""
+        try:
+            os.makedirs(self.config_dir, exist_ok=True)
+            config = {
+                'source_base': self.source_base,
+                'target_base': self.target_base
+            }
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"Failed to save config: {e}")
 
     def extract_timestamp_nir(self, filename):
         """Extract timestamp from NIR files: run_120251201T140542.spc -> 140542"""
@@ -108,50 +141,39 @@ class DataSimulator:
         return items
 
     def copy_item(self, item):
-        """Copy file or folder to target location using hardlinks for speed"""
-        target_path = os.path.join(self.target_base, item['relative_path'])
+        """Copy file or folder to target location.
+
+        For network drive compatibility, uses actual file copy instead of links.
+        """
+        # Normalize paths to use Windows backslashes
+        target_path = os.path.normpath(os.path.join(self.target_base, item['relative_path']))
+        source_path = os.path.normpath(item['source'])
+
+        # Remove existing item if present
+        if os.path.exists(target_path):
+            if os.path.isdir(target_path):
+                shutil.rmtree(target_path)
+            else:
+                os.remove(target_path)
+
+        # Create parent directory if needed
+        parent_dir = os.path.dirname(target_path)
+        if parent_dir:
+            os.makedirs(parent_dir, exist_ok=True)
 
         if item['type'] == 'normal_folder':
-            # Copy folder structure with hardlinks for files (much faster)
-            if os.path.exists(target_path):
-                shutil.rmtree(target_path)
-
-            # Create directory structure and hardlink all files
-            os.makedirs(target_path, exist_ok=True)
-            for root, dirs, files in os.walk(item['source']):
-                # Calculate relative path from source
-                rel_path = os.path.relpath(root, item['source'])
-                target_dir = os.path.join(target_path, rel_path) if rel_path != '.' else target_path
-
-                # Create subdirectories
-                for dir_name in dirs:
-                    os.makedirs(os.path.join(target_dir, dir_name), exist_ok=True)
-
-                # Hardlink files
-                for file_name in files:
-                    src_file = os.path.join(root, file_name)
-                    dst_file = os.path.join(target_dir, file_name)
-                    try:
-                        # Use hardlink (instant, no disk space)
-                        os.link(src_file, dst_file)
-                    except:
-                        # Fallback to copy if hardlink fails
-                        shutil.copy2(src_file, dst_file)
+            # For folders, copy entire directory tree
+            shutil.copytree(source_path, target_path)
         else:
-            # Hardlink single file (instant)
-            os.makedirs(os.path.dirname(target_path), exist_ok=True)
-            try:
-                if os.path.exists(target_path):
-                    os.remove(target_path)
-                os.link(item['source'], target_path)
-            except:
-                # Fallback to copy if hardlink fails
-                shutil.copy2(item['source'], target_path)
+            # For files, copy with metadata preservation
+            shutil.copy2(source_path, target_path)
 
     def run_simulation(self, log_callback, progress_callback, complete_callback):
-        """Run the simulation in a separate thread"""
-        copy_threads = []
+        """Run the simulation by moving files at exact timestamps.
 
+        Strategy: Move files from source to target at scheduled times (same drive = instant rename).
+        Files can be moved back to original location for reset.
+        """
         try:
             if not self.target_base:
                 log_callback("ERROR: Target folder not set!")
@@ -166,25 +188,20 @@ class DataSimulator:
                 complete_callback()
                 return
 
-            log_callback(f"Found {len(items)} items to copy")
+            log_callback(f"Found {len(items)} items to move")
 
             # Get the first timestamp as reference (t0)
             t0 = items[0]['timestamp']
             log_callback(f"Reference time (t0): {t0}")
 
-            # Wait 5 seconds before starting
-            log_callback("Waiting 5 seconds before starting...")
-            for i in range(5, 0, -1):
-                if not self.is_running:
-                    log_callback("Simulation cancelled")
-                    complete_callback()
-                    return
-                log_callback(f"Starting in {i}...")
-                time.sleep(1)
+            # Clear previous moved items tracking
+            self.moved_items = []
 
+            # Start simulation immediately
             start_real_time = time.time()
-            log_callback("Starting simulation...")
+            log_callback("Starting scheduled file appearance simulation...")
 
+            # Move files at exact timestamps
             for idx, item in enumerate(items):
                 if not self.is_running:
                     log_callback("Simulation stopped by user")
@@ -212,34 +229,41 @@ class DataSimulator:
                         log_callback("Simulation stopped by user")
                         break
 
-                # Start copy in background thread (non-blocking)
-                actual_start = time.time()
-                elapsed = actual_start - start_real_time
-                log_callback(f"[T+{elapsed:.1f}s] Starting copy: {item['name']}")
+                # Move file/folder to target (instant rename on same drive)
+                try:
+                    source_path = os.path.normpath(item['source'])
+                    target_path = os.path.normpath(os.path.join(self.target_base, item['relative_path']))
 
-                def copy_worker(item_data, idx_val):
-                    try:
-                        self.copy_item(item_data)
-                        copy_time = time.time() - actual_start
-                        log_callback(f"✓ Copied in {copy_time:.2f}s: {item_data['relative_path']}")
-                    except Exception as e:
-                        log_callback(f"✗ Error copying {item_data['name']}: {str(e)}")
+                    # Create parent directory if needed
+                    parent_dir = os.path.dirname(target_path)
+                    if parent_dir:
+                        os.makedirs(parent_dir, exist_ok=True)
 
-                    # Update progress
-                    progress = (idx_val + 1) / len(items) * 100
+                    # Move using os.rename (fastest on same drive)
+                    actual_time = time.time()
+                    os.rename(source_path, target_path)
+                    move_time = time.time() - actual_time
+
+                    # Track for reset
+                    self.moved_items.append({
+                        'target': target_path,
+                        'source': source_path
+                    })
+
+                    elapsed = actual_time - start_real_time
+                    log_callback(f"✓ [T+{elapsed:.1f}s] Moved in {move_time:.4f}s: {item['name']}")
+
+                except Exception as e:
+                    log_callback(f"✗ Error moving {item['name']}: {str(e)}")
+
+                # Update progress
+                if self.is_running:
+                    progress = (idx + 1) / len(items) * 100
                     progress_callback(progress)
 
-                thread = threading.Thread(target=copy_worker, args=(item, idx), daemon=True)
-                thread.start()
-                copy_threads.append(thread)
-
-            # Wait for all copy operations to complete
-            log_callback("Waiting for all copy operations to complete...")
-            for thread in copy_threads:
-                thread.join()
-
             if self.is_running:
-                log_callback("Simulation completed successfully!")
+                log_callback(f"Simulation completed! {len(self.moved_items)} items moved.")
+                log_callback("Use 'Reset' to move files back to original location.")
 
         except Exception as e:
             log_callback(f"ERROR: {str(e)}")
@@ -278,6 +302,7 @@ class SimulatorGUI:
         # Target folder
         ttk.Label(main_frame, text="Target Folder:").grid(row=1, column=0, sticky=tk.W, pady=5)
         self.target_entry = ttk.Entry(main_frame, width=60)
+        self.target_entry.insert(0, self.simulator.target_base)
         self.target_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=5, padx=5)
         ttk.Button(main_frame, text="Browse", command=self.browse_target).grid(row=1, column=2, pady=5)
 
@@ -310,6 +335,7 @@ class SimulatorGUI:
             self.source_entry.delete(0, tk.END)
             self.source_entry.insert(0, folder)
             self.simulator.source_base = folder
+            self.simulator.save_config()
 
     def browse_target(self):
         folder = filedialog.askdirectory(initialdir=self.target_entry.get() or os.getcwd())
@@ -317,6 +343,7 @@ class SimulatorGUI:
             self.target_entry.delete(0, tk.END)
             self.target_entry.insert(0, folder)
             self.simulator.target_base = folder
+            self.simulator.save_config()
 
     def log(self, message):
         """Thread-safe logging"""
@@ -372,41 +399,55 @@ class SimulatorGUI:
         self.reset_button.configure(state=tk.NORMAL)
 
     def reset_target(self):
-        if not self.target_entry.get():
-            messagebox.showinfo("Info", "No target folder set")
+        if not self.simulator.moved_items:
+            messagebox.showinfo("Info", "No files to reset. Run a simulation first.")
             return
 
         result = messagebox.askyesno(
             "Confirm Reset",
-            f"Delete all files (keeping folder structure) in:\n{self.target_entry.get()}\n\nAre you sure?"
+            f"Move {len(self.simulator.moved_items)} items back to original location?\n\nThis will restore the source folder."
         )
 
         if result:
+            # Reset progress bar
+            self.progress['value'] = 0
             try:
-                target = self.target_entry.get()
-                if os.path.exists(target):
-                    file_count = 0
-                    folder_count = 0
+                moved_back = 0
+                failed = 0
 
-                    # Walk through all directories and delete only files
-                    for root, dirs, files in os.walk(target, topdown=False):
-                        # Delete all files
-                        for file_name in files:
-                            file_path = os.path.join(root, file_name)
-                            try:
-                                os.remove(file_path)
-                                file_count += 1
-                            except Exception as e:
-                                self.log(f"Failed to delete {file_path}: {str(e)}")
+                # Move files back to original location in reverse order
+                for item in reversed(self.simulator.moved_items):
+                    try:
+                        target_path = item['target']
+                        source_path = item['source']
 
-                        # Count folders (but don't delete them)
-                        folder_count += len(dirs)
+                        # Only move if file exists at target
+                        if os.path.exists(target_path):
+                            # Ensure source parent directory exists
+                            source_parent = os.path.dirname(source_path)
+                            if source_parent:
+                                os.makedirs(source_parent, exist_ok=True)
 
-                    self.log(f"Deleted {file_count} files, kept {folder_count} folders")
-                    messagebox.showinfo("Success", f"Deleted {file_count} files\nKept folder structure ({folder_count} folders)")
+                            # Move back using os.rename (instant)
+                            os.rename(target_path, source_path)
+                            moved_back += 1
+                            self.log(f"✓ Restored: {os.path.basename(source_path)}")
+                        else:
+                            self.log(f"⊘ Skip (not found): {os.path.basename(target_path)}")
+
+                    except Exception as e:
+                        failed += 1
+                        self.log(f"✗ Error restoring {os.path.basename(source_path)}: {str(e)}")
+
+                # Clear moved items list
+                self.simulator.moved_items = []
+
+                self.log(f"Reset complete: {moved_back} items restored, {failed} failed")
+                messagebox.showinfo("Reset Complete", f"Moved {moved_back} items back to original location\nFailed: {failed}")
+
             except Exception as e:
-                self.log(f"Error clearing target folder: {str(e)}")
-                messagebox.showerror("Error", f"Failed to clear folder:\n{str(e)}")
+                self.log(f"Error during reset: {str(e)}")
+                messagebox.showerror("Error", f"Failed to reset:\n{str(e)}")
 
 
 if __name__ == "__main__":

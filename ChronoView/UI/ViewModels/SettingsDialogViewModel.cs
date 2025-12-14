@@ -60,8 +60,10 @@ public class SettingsDialogViewModel : ViewModelBase
 
     // NIR graph options
     private bool _enableNirGraph = true;
-    private int _nirThumbnailWidth = 250;
-    private int _nirThumbnailHeight = 100;
+    private int _nirThumbnailWidth = 10;
+    private int _nirThumbnailHeight = 150;
+    private int _nirDisplayWidth = 120;
+    private int _nirDisplayHeight = 90;
 
     // Line mode
     private bool _isSeparatedMode;
@@ -297,6 +299,18 @@ public class SettingsDialogViewModel : ViewModelBase
         set => SetProperty(ref _nirThumbnailHeight, value);
     }
 
+    public int NirDisplayWidth
+    {
+        get => _nirDisplayWidth;
+        set => SetProperty(ref _nirDisplayWidth, value);
+    }
+
+    public int NirDisplayHeight
+    {
+        get => _nirDisplayHeight;
+        set => SetProperty(ref _nirDisplayHeight, value);
+    }
+
     // Line mode
     public bool IsSeparatedMode
     {
@@ -471,6 +485,8 @@ public class SettingsDialogViewModel : ViewModelBase
         EnableNirGraph = _configuration.MatchingSettings.EnableNirGraph;
         NirThumbnailWidth = _configuration.UISettings.NirThumbnailWidth;
         NirThumbnailHeight = _configuration.UISettings.NirThumbnailHeight;
+        NirDisplayWidth = _configuration.UISettings.NirDisplayWidth;
+        NirDisplayHeight = _configuration.UISettings.NirDisplayHeight;
     }
 
     /// <summary>
@@ -537,6 +553,8 @@ public class SettingsDialogViewModel : ViewModelBase
         _configuration.MatchingSettings.EnableNirGraph = EnableNirGraph;
         _configuration.UISettings.NirThumbnailWidth = NirThumbnailWidth;
         _configuration.UISettings.NirThumbnailHeight = NirThumbnailHeight;
+        _configuration.UISettings.NirDisplayWidth = NirDisplayWidth;
+        _configuration.UISettings.NirDisplayHeight = NirDisplayHeight;
 
         // Persist to disk
         try 

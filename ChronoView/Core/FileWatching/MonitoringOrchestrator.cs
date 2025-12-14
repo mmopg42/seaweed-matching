@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using ChronoView.Core.FileMatching;
 using ChronoView.Models;
 using Microsoft.Extensions.Logging;
+using ChronoView.Helpers;
 
 namespace ChronoView.Core.FileWatching
 {
@@ -417,6 +418,404 @@ namespace ChronoView.Core.FileWatching
             }
         }
 
+        #region Task 1.2: CreateOrUpdateGroupAsync Implementation
+
+        /// <summary>
+        /// Create new group or update existing group based on file type and timestamp matching
+        /// </summary>
+        private async Task<FileGroup?> CreateOrUpdateGroupAsync(string filePath, FileType fileType)
+        {
+            try
+            {
+                // 1. Extract timestamp from file
+                var timestamp = ExtractTimestamp(filePath, fileType);
+                if (timestamp == null)
+                {
+                    _logger.LogWarning("Could not extract timestamp from {FileType} file: {Path}", fileType, filePath);
+                    return null;
+                }
+
+                // 2. Find existing group with matching timestamp
+                FileGroup? existingGroup = null;
+                lock (_lockObject)
+                {
+                    existingGroup = _activeGroups.Values
+                        .FirstOrDefault(g => IsMatchingTimestamp(g, timestamp.Value, fileType));
+                }
+
+                // 3-A. Update existing group
+                if (existingGroup != null)
+                {
+                    _logger.LogInformation("Updating existing group {GroupId} with {FileType} file",
+                        existingGroup.GroupId, fileType);
+                    
+                    UpdateGroupWithFile(existingGroup, filePath, fileType);
+                    OnGroupUpdated(existingGroup);
+                    return existingGroup;
+                }
+
+                // 3-B. Create new group
+                _logger.LogInformation("Creating new group for {FileType} file: {Path}", fileType, filePath);
+                
+                var newGroup = await CreateNewGroupAsync(filePath, fileType, timestamp.Value);
+                if (newGroup != null)
+                {
+                    // Add group to active groups immediately (< 200ms target)
+                    lock (_lockObject)
+                    {
+                        _activeGroups[newGroup.GroupId] = newGroup;
+                    }
+                    OnGroupCreated(newGroup);
+                    
+                    _logger.LogInformation("New group {GroupId} created and added to GUI", newGroup.GroupId);
+                    return newGroup;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating/updating group for {FileType} file: {Path}", 
+                    fileType, filePath);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Extract timestamp based on file type
+        /// </summary>
+        private DateTime? ExtractTimestamp(string filePath, FileType fileType)
+        {
+            return fileType switch
+            {
+                FileType.Nir => ExtractTimestampFromNirFile(filePath),
+                FileType.Normal => ExtractTimestampFromFolderName(Path.GetDirectoryName(filePath)),
+                FileType.Camera => ExtractTimestampFromCameraFile(filePath),
+                _ => null
+            };
+        }
+
+        /// <summary>
+        /// Extract timestamp from NIR file (from filename in path)
+        /// </summary>
+        private DateTime? ExtractTimestampFromNirFile(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                return null;
+
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+            
+            // Pattern: 8 digits (date) + T + 6 digits (time)
+            // Example: 20250926T103033
+            var match = System.Text.RegularExpressions.Regex.Match(fileName, @"(\d{8}T\d{6})");
+            if (match.Success)
+            {
+                if (DateTime.TryParseExact(
+                    match.Groups[1].Value,
+                    "yyyyMMddTHHmmss",
+                    null,
+                    System.Globalization.DateTimeStyles.None,
+                    out var dt))
+                {
+                    return dt;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Extract timestamp from folder name
+        /// </summary>
+        private DateTime? ExtractTimestampFromFolderName(string? folderPath)
+        {
+            if (string.IsNullOrEmpty(folderPath))
+                return null;
+
+            var folderName = Path.GetFileName(folderPath);
+            if (string.IsNullOrEmpty(folderName) || !folderName.StartsWith("C"))
+                return null;
+
+            // Pattern 1: C + 6 digits (date) + T + 6 digits (time)
+            // Example: C251204T111028
+            var match = System.Text.RegularExpressions.Regex.Match(folderName, @"C(\d{6}T\d{6})");
+            if (match.Success)
+            {
+                if (DateTime.TryParseExact(
+                    match.Groups[1].Value,
+                    "yyMMddTHHmmss",
+                    null,
+                    System.Globalization.DateTimeStyles.None,
+                    out var dt))
+                {
+                    return dt;
+                }
+            }
+
+            // Pattern 2: C + 8 digits (date) + _ + 6 digits (time)
+            // Example: C20240115_143022
+            match = System.Text.RegularExpressions.Regex.Match(folderName, @"C(\d{8}_\d{6})");
+            if (match.Success)
+            {
+                if (DateTime.TryParseExact(
+                    match.Groups[1].Value,
+                    "yyyyMMdd_HHmmss",
+                    null,
+                    System.Globalization.DateTimeStyles.None,
+                    out var dt))
+                {
+                    return dt;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Extract timestamp from camera file (from filename)
+        /// </summary>
+        private DateTime? ExtractTimestampFromCameraFile(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+                return null;
+
+            var fileName = Path.GetFileNameWithoutExtension(filePath);
+            
+            // Pattern: YYYYMMDD_HHMMSS
+            // Example: 20241211_143022
+            var match = System.Text.RegularExpressions.Regex.Match(fileName, @"(\d{8}_\d{6})");
+            if (match.Success)
+            {
+                if (DateTime.TryParseExact(
+                    match.Groups[1].Value,
+                    "yyyyMMdd_HHmmss",
+                    null,
+                    System.Globalization.DateTimeStyles.None,
+                    out var dt))
+                {
+                    return dt;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Check if group timestamp matches within tolerance window
+        /// </summary>
+        private bool IsMatchingTimestamp(FileGroup group, DateTime timestamp, FileType fileType)
+        {
+            var tolerance = fileType == FileType.Nir
+                ? TimeSpan.FromSeconds(_currentConfig?.MatchingSettings.NirTimeWindowSeconds ?? 300)
+                : TimeSpan.FromSeconds(_currentConfig?.MatchingSettings.CameraTimeWindowSeconds ?? 60);
+
+            return Math.Abs((group.Timestamp - timestamp).TotalSeconds) < tolerance.TotalSeconds;
+        }
+
+        /// <summary>
+        /// Update group with new file based on file type
+        /// </summary>
+        private void UpdateGroupWithFile(FileGroup group, string filePath, FileType fileType)
+        {
+            switch (fileType)
+            {
+                case FileType.Nir:
+                    group.NirFilePath = filePath;
+                    group.HasNir = true;
+                    break;
+                
+                case FileType.Normal:
+                    group.MainImagePath = filePath;
+                    break;
+                
+                case FileType.Camera:
+                    AddCameraFileToGroup(group, filePath);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Add camera file to group (determine which camera based on path)
+        /// </summary>
+        private void AddCameraFileToGroup(FileGroup group, string filePath)
+        {
+            var directory = Path.GetDirectoryName(filePath)?.ToLowerInvariant() ?? "";
+            
+            // Determine camera number from directory
+            for (int i = 1; i <= 6; i++)
+            {
+                if (directory.Contains($"cam{i}") || directory.Contains($"camera{i}"))
+                {
+                    // Add to CameraFiles dictionary
+                    var cameraKey = $"cam{i}";
+                    group.CameraFiles[cameraKey] = filePath;
+                    _logger.LogInformation("Added Camera{CamNum} file to group {GroupId}", i, group.GroupId);
+                    return;
+                }
+            }
+            
+            _logger.LogWarning("Could not determine camera number from path: {Path}", filePath);
+        }
+
+        /// <summary>
+        /// Create new group using FileGroupMatcher
+        /// </summary>
+        private async Task<FileGroup?> CreateNewGroupAsync(string filePath, FileType fileType, DateTime timestamp)
+        {
+            // Create UnmatchedFiles with single file
+            var unmatchedFiles = new UnmatchedFiles();
+
+            // Determine line number based on path
+            int lineNumber = 1; // Default
+            if (_currentConfig != null)
+            {
+                if ((!string.IsNullOrEmpty(_currentConfig.MatchingSettings.Nir2Path) && filePath.StartsWith(_currentConfig.MatchingSettings.Nir2Path, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrEmpty(_currentConfig.MatchingSettings.Normal2Path) && filePath.StartsWith(_currentConfig.MatchingSettings.Normal2Path, StringComparison.OrdinalIgnoreCase)))
+                {
+                    lineNumber = 2;
+                }
+                else
+                {
+                    // Check camera paths for line 2 cams (4, 5, 6)
+                    for (int i = 4; i <= 6; i++)
+                    {
+                        var camPath = _currentConfig.MatchingSettings.GetCameraPath(i);
+                        if (!string.IsNullOrEmpty(camPath) && filePath.StartsWith(camPath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            lineNumber = 2;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            switch (fileType)
+            {
+                case FileType.Nir:
+                    // NIR files are stored in nested dictionary: line -> nirKey -> path
+                    var nirKey = Path.GetFileNameWithoutExtension(filePath);
+                    var nirLine = lineNumber == 2 ? "nir2" : "nir1";
+                    
+                    if (!unmatchedFiles.NirFiles.ContainsKey(nirLine))
+                    {
+                        unmatchedFiles.NirFiles[nirLine] = new Dictionary<string, string>();
+                    }
+                    unmatchedFiles.NirFiles[nirLine][nirKey] = filePath;
+                    break;
+
+                case FileType.Normal:
+                    // Normal folders are stored in nested dictionary: line -> folderKey -> path
+                    var folderPath = Path.GetDirectoryName(filePath);
+                    if (!string.IsNullOrEmpty(folderPath))
+                    {
+                        var folderKey = Path.GetFileName(folderPath);
+                        var normalLine = lineNumber == 2 ? "normal2" : "normal1";
+                        
+                        if (!unmatchedFiles.NormalFolders.ContainsKey(normalLine))
+                        {
+                            unmatchedFiles.NormalFolders[normalLine] = new Dictionary<string, string>();
+                        }
+                        unmatchedFiles.NormalFolders[normalLine][folderKey] = folderPath;
+                    }
+                    break;
+
+                case FileType.Camera:
+                    // Camera files usually attach to existing groups
+                    // Create a minimal group for orphaned camera files
+                    var cameraGroup = new FileGroup
+                    {
+                        GroupId = timestamp.ToString("yyyyMMddTHHmmss"),
+                        Timestamp = timestamp,
+                        LineNumber = lineNumber
+                    };
+                    AddCameraFileToGroup(cameraGroup, filePath);
+                    return cameraGroup;
+            }
+
+            // Use FileGroupMatcher to create group
+            var groups = await _fileGroupMatcher.MatchFilesAsync(unmatchedFiles);
+            return groups.FirstOrDefault();
+        }
+
+        #endregion
+
+        #region Task 1.3: RemoveFromGroupAsync Implementation
+
+        /// <summary>
+        /// Remove file from group or delete group if empty
+        /// </summary>
+        private async Task RemoveFromGroupAsync(string filePath)
+        {
+            lock (_lockObject)
+            {
+                var affectedGroups = _activeGroups.Values
+                    .Where(g => ContainsFile(g, filePath))
+                    .ToList();
+
+                foreach (var group in affectedGroups)
+                {
+                    _logger.LogInformation("Removing file from group {GroupId}: {Path}", 
+                        group.GroupId, filePath);
+                    
+                    // Remove file from group
+                    RemoveFileFromGroup(group, filePath);
+
+                    // Check if group is now empty
+                    if (IsGroupEmpty(group))
+                    {
+                        _activeGroups.Remove(group.GroupId);
+                        OnGroupRemoved(group.GroupId);
+                        _logger.LogInformation("Group {GroupId} removed (empty)", group.GroupId);
+                    }
+                    else
+                    {
+                        OnGroupUpdated(group);
+                        _logger.LogInformation("Group {GroupId} updated after file removal", group.GroupId);
+                    }
+                }
+            }
+
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Remove specific file from group
+        /// </summary>
+        private void RemoveFileFromGroup(FileGroup group, string filePath)
+        {
+            if (group.NirFilePath == filePath)
+            {
+                group.NirFilePath = null;
+                group.HasNir = false;
+            }
+            else if (group.MainImagePath == filePath)
+            {
+                group.MainImagePath = null;
+            }
+            else
+            {
+                // Check if it's a camera file
+                var cameraKey = group.CameraFiles.FirstOrDefault(kvp => kvp.Value == filePath).Key;
+                if (!string.IsNullOrEmpty(cameraKey))
+                {
+                    group.CameraFiles.Remove(cameraKey);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Check if group has no files
+        /// </summary>
+        private bool IsGroupEmpty(FileGroup group)
+        {
+            return string.IsNullOrEmpty(group.NirFilePath)
+                && string.IsNullOrEmpty(group.MainImagePath)
+                && (group.CameraFiles == null || group.CameraFiles.Count == 0);
+        }
+
+        #endregion
+
+
         public async Task<List<FileGroup>> ProcessFileEventsAsync(List<FileSystemEventArgs> events)
         {
             if (events == null || events.Count == 0)
@@ -424,7 +823,7 @@ namespace ChronoView.Core.FileWatching
                 return new List<FileGroup>();
             }
 
-            _logger.LogDebug("Processing {Count} file system events", events.Count);
+            _logger.LogInformation("Processing {Count} file system events", events.Count);
 
             var updatedGroups = new List<FileGroup>();
 
@@ -454,29 +853,25 @@ namespace ChronoView.Core.FileWatching
                         continue;
                     }
 
-                    _logger.LogDebug("Processing {ChangeType} event for {FileType}: {Path}",
+                    _logger.LogInformation("Processing {ChangeType} event for {FileType}: {Path}",
                         eventArgs.ChangeType, fileType, eventArgs.FullPath);
 
-                    // Handle file deletion
-                    if (eventArgs.ChangeType == WatcherChangeTypes.Deleted)
+                    // Handle different event types
+                    switch (eventArgs.ChangeType)
                     {
-                        // Find groups that contain this file and update them
-                        lock (_lockObject)
-                        {
-                            var affectedGroups = _activeGroups.Values
-                                .Where(g => ContainsFile(g, eventArgs.FullPath))
-                                .ToList();
-
-                            foreach (var group in affectedGroups)
+                        case WatcherChangeTypes.Created:
+                        case WatcherChangeTypes.Changed:
+                            var group = await CreateOrUpdateGroupAsync(eventArgs.FullPath, fileType);
+                            if (group != null)
                             {
-                                _activeGroups.Remove(group.GroupId);
-                                OnGroupRemoved(group.GroupId);
+                                updatedGroups.Add(group);
                             }
-                        }
+                            break;
+
+                        case WatcherChangeTypes.Deleted:
+                            await RemoveFromGroupAsync(eventArgs.FullPath);
+                            break;
                     }
-                    // For now, trigger a re-scan to update groups for other events
-                    // In a more sophisticated implementation, we would update specific groups
-                    // based on the file path and type
                 }
 
                 // Raise event for updated groups
@@ -679,3 +1074,5 @@ namespace ChronoView.Core.FileWatching
         Camera
     }
 }
+
+

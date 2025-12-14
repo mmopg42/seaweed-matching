@@ -73,12 +73,70 @@ public partial class App : Application
             await System.Threading.Tasks.Task.Delay(2000);
         });
 
-        // 3. Show main window on UI thread
-        var mainWindow = _serviceProvider!.GetRequiredService<MainWindow>();
-        mainWindow.Show();
+        // CRITICAL: Set ShutdownMode to prevent auto-shutdown when MainWindow closes
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-        // 4. Close splash screen
-        splash.Close();
+        var logger2 = _serviceProvider!.GetRequiredService<ILogger<App>>();
+        logger2.LogInformation("Showing Setup Window");
+
+        try
+        {
+            logger2.LogInformation("Creating SetupWindow from DI container...");
+            var setupWindow = _serviceProvider.GetRequiredService<SetupWindow>();
+            logger2.LogInformation("SetupWindow created successfully");
+
+            // Get ViewModel to access StartClicked property
+            var viewModel = (SetupWindowViewModel)setupWindow.DataContext;
+
+            // Handle window closing
+            setupWindow.Closed += (s, e) =>
+            {
+                logger2.LogInformation("SetupWindow closed event fired. StartClicked: {StartClicked}", viewModel.StartClicked);
+                
+                if (viewModel.StartClicked)
+                {
+                    logger2.LogInformation("Setup completed. Showing Main Window");
+                    try
+                    {
+                        var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                        MainWindow = mainWindow;
+                        mainWindow.Show();
+                        logger2.LogInformation("MainWindow shown successfully");
+                        
+                        // Now switch shutdown mode back
+                        ShutdownMode = ShutdownMode.OnMainWindowClose;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger2.LogError(ex, "Failed to show MainWindow");
+                        Shutdown();
+                    }
+                }
+                else
+                {
+                    logger2.LogInformation("Setup cancelled. Shutting down application");
+                    Shutdown();
+                }
+            };
+
+            // CRITICAL: Set as MainWindow before showing
+            MainWindow = setupWindow;
+            logger2.LogInformation("SetupWindow set as Application.MainWindow");
+
+            // Close splash now that we have a main window
+            splash.Close();
+            logger2.LogInformation("Splash closed");
+
+            logger2.LogInformation("Showing SetupWindow...");
+            setupWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            logger2.LogCritical(ex, "CRITICAL: Exception while showing SetupWindow");
+            splash.Close();
+            LogAndShowError(ex, "Setup Window Error");
+            Shutdown();
+        }
     }
 
     private void LogAndShowError(Exception? ex, string source)
@@ -137,10 +195,12 @@ public partial class App : Application
         // ViewModels (Transient - new instance per view)
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<SettingsDialogViewModel>();
+        services.AddTransient<SetupWindowViewModel>();
 
         // Views (Transient - new instance per dialog/window)
         services.AddTransient<MainWindow>();
         services.AddTransient<SettingsDialog>();
+        services.AddTransient<SetupWindow>();
     }
 
     protected override void OnExit(ExitEventArgs e)

@@ -86,7 +86,7 @@ public class MatchingSettings
     /// <summary>
     /// Time window for camera file matching in seconds.
     /// </summary>
-    public int CameraTimeWindowSeconds { get; set; } = 60;
+    public int CameraTimeWindowSeconds { get; set; } = 2;
 
     /// <summary>
     /// Time window for normal folder matching in seconds.
@@ -418,12 +418,12 @@ public class UISettings
     /// <summary>
     /// NIR graph thumbnail width (pixels).
     /// </summary>
-    public int NirThumbnailWidth { get; set; } = 250;
+    public int NirThumbnailWidth { get; set; } = 200;
 
     /// <summary>
     /// NIR graph thumbnail height (pixels).
     /// </summary>
-    public int NirThumbnailHeight{ get; set; } = 100;
+    public int NirThumbnailHeight{ get; set; } = 150;
 
     /// <summary>
     /// NIR graph display width in DataGrid (pixels).

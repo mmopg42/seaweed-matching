@@ -53,6 +53,12 @@ public class FileGroup : IEquatable<FileGroup>
     public bool HasNir { get; set; }
 
     /// <summary>
+    /// Timestamp extracted from files for matching purposes.
+    /// </summary>
+    [JsonPropertyName("timestamp")]
+    public DateTime Timestamp { get; set; } = DateTime.MinValue;
+
+    /// <summary>
     /// Timestamp when this group was created.
     /// </summary>
     [JsonPropertyName("created_at")]
@@ -63,6 +69,32 @@ public class FileGroup : IEquatable<FileGroup>
     /// </summary>
     [JsonPropertyName("status")]
     public GroupStatus Status { get; set; } = GroupStatus.Pending;
+
+    // ============================================================
+    // Thumbnail Properties (Progressive Loading - Phase 2)
+    // ============================================================
+
+    /// <summary>
+    /// Thumbnail for main image (stitched_original.png) for UI display.
+    /// Not serialized to JSON.
+    /// </summary>
+    [JsonIgnore]
+    public System.Windows.Media.Imaging.BitmapSource? MainImageThumbnail { get; set; }
+
+    /// <summary>
+    /// Thumbnail for NIR graph visualization for UI display.
+    /// Not serialized to JSON.
+    /// </summary>
+    [JsonIgnore]
+    public System.Windows.Media.Imaging.BitmapSource? NirGraphThumbnail { get; set; }
+
+    /// <summary>
+    /// Thumbnails for camera images (cam1-cam6) for UI display.
+    /// Key: "cam1", "cam2", etc.
+    /// Not serialized to JSON.
+    /// </summary>
+    [JsonIgnore]
+    public Dictionary<string, System.Windows.Media.Imaging.BitmapSource?> CameraThumbnails { get; set; } = new();
 
     // ============================================================
     // Static Helper Methods

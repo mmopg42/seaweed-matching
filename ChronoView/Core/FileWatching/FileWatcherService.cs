@@ -18,7 +18,7 @@ namespace ChronoView.Core.FileWatching
         private readonly ILogger<FileWatcherService> _logger;
         private readonly List<FileSystemWatcher> _watchers = new();
         private readonly Channel<FileSystemEventArgs> _eventChannel;
-        private readonly CancellationTokenSource _cancellationTokenSource = new();
+        private CancellationTokenSource? _cancellationTokenSource;
         private readonly System.Threading.Timer _healthCheckTimer;
         private Task? _processingTask;
         private bool _isWatching;
@@ -102,6 +102,10 @@ namespace ChronoView.Core.FileWatching
 
             try
             {
+                // Create a new cancellation token source for this start cycle
+                _cancellationTokenSource?.Dispose();
+                _cancellationTokenSource = new CancellationTokenSource();
+
                 foreach (var path in paths)
                 {
                     if (!Directory.Exists(path))
@@ -159,8 +163,8 @@ namespace ChronoView.Core.FileWatching
                 _watchers.Clear();
 
                 // Signal cancellation and wait for processing to complete
-                _cancellationTokenSource.Cancel();
-                _eventChannel.Writer.Complete();
+                // The channel will complete naturally when the reader finishes
+                _cancellationTokenSource?.Cancel();
 
                 if (_processingTask != null)
                 {

@@ -19,7 +19,9 @@ public class ImageProcessingService : IImageProcessor
     private readonly ImageSettings _settings;
     private readonly LruCache<string, byte[]> _thumbnailCache;
     private readonly LruCache<string, ImageMetadata> _metadataCache;
-    private readonly SemaphoreSlim _processingLock = new(1, 1);
+    // Limit concurrent processing to prevent thread pool starvation
+    // Use ProcessorCount * 2 as a reasonable baseline for mixed I/O and CPU work
+    private readonly SemaphoreSlim _processingSemaphore = new(Math.Max(4, Environment.ProcessorCount * 2));
 
     public ImageProcessingService(ILogger<ImageProcessingService> logger, ApplicationConfiguration configuration)
     {
@@ -31,7 +33,8 @@ public class ImageProcessingService : IImageProcessor
         _thumbnailCache = new LruCache<string, byte[]>(maxCacheSize);
         _metadataCache = new LruCache<string, ImageMetadata>(maxCacheSize / 10); // Metadata is much smaller
 
-        _logger.LogInformation("ImageProcessingService initialized with cache size: {CacheSizeMB}MB", _settings.MaxCacheSizeMB);
+        _logger.LogInformation("ImageProcessingService initialized with cache size: {CacheSizeMB}MB, Concurrency: {Limit}", 
+            _settings.MaxCacheSizeMB, _processingSemaphore.CurrentCount);
     }
 
     /// <summary>
@@ -61,33 +64,43 @@ public class ImageProcessingService : IImageProcessor
 
         try
         {
-            // Use Task.Run for CPU-intensive image processing on background thread
-            var thumbnail = await Task.Run(async () =>
+            // Throttle concurrent processing
+            await _processingSemaphore.WaitAsync(cancellationToken);
+
+            try
             {
-                using var image = await SixLabors.ImageSharp.Image.LoadAsync(imagePath, cancellationToken);
-                
-                // Resize image maintaining aspect ratio
-                image.Mutate(x => x.Resize(new ResizeOptions
+                // Use Task.Run for CPU-intensive image processing on background thread
+                var thumbnail = await Task.Run(async () =>
                 {
-                    Size = new SixLabors.ImageSharp.Size(width, height),
-                    Mode = ResizeMode.Max
-                }));
+                    using var image = await SixLabors.ImageSharp.Image.LoadAsync(imagePath, cancellationToken);
+                    
+                    // Resize image maintaining aspect ratio
+                    image.Mutate(x => x.Resize(new ResizeOptions
+                    {
+                        Size = new SixLabors.ImageSharp.Size(width, height),
+                        Mode = ResizeMode.Max
+                    }));
 
-                // Encode to JPEG with configured quality
-                using var ms = new MemoryStream();
-                var encoder = new JpegEncoder { Quality = _settings.ThumbnailQuality };
-                await image.SaveAsync(ms, encoder, cancellationToken);
-                return ms.ToArray();
-            }, cancellationToken);
+                    // Encode to JPEG with configured quality
+                    using var ms = new MemoryStream();
+                    var encoder = new JpegEncoder { Quality = _settings.ThumbnailQuality };
+                    await image.SaveAsync(ms, encoder, cancellationToken);
+                    return ms.ToArray();
+                }, cancellationToken);
 
-            // Cache the result
-            if (_settings.EnableCaching)
-            {
-                _thumbnailCache.Add(cacheKey, thumbnail);
+                // Cache the result
+                if (_settings.EnableCaching)
+                {
+                    _thumbnailCache.Add(cacheKey, thumbnail);
+                }
+
+                _logger.LogDebug("Generated thumbnail for: {ImagePath} ({Size} bytes)", imagePath, thumbnail.Length);
+                return thumbnail;
             }
-
-            _logger.LogDebug("Generated thumbnail for: {ImagePath} ({Size} bytes)", imagePath, thumbnail.Length);
-            return thumbnail;
+            finally
+            {
+                _processingSemaphore.Release();
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -119,34 +132,44 @@ public class ImageProcessingService : IImageProcessor
 
         try
         {
-            // Use Task.Run for file I/O and image processing on background thread
-            var metadata = await Task.Run(async () =>
-            {
-                var fileInfo = new FileInfo(imagePath);
-                using var image = await SixLabors.ImageSharp.Image.LoadAsync(imagePath, cancellationToken);
+            // Throttle concurrent processing
+            await _processingSemaphore.WaitAsync(cancellationToken);
 
-                return new ImageMetadata
+            try
+            {
+                // Use Task.Run for file I/O and image processing on background thread
+                var metadata = await Task.Run(async () =>
                 {
-                    Width = image.Width,
-                    Height = image.Height,
-                    CreatedAt = fileInfo.CreationTime,
-                    FileSize = fileInfo.Length,
-                    Format = image.Metadata.DecodedImageFormat?.Name ?? "Unknown",
-                    FilePath = imagePath,
-                    IsAbnormal = false,
-                    ZScoreWidth = 0,
-                    ZScoreHeight = 0
-                };
-            }, cancellationToken);
+                    var fileInfo = new FileInfo(imagePath);
+                    using var image = await SixLabors.ImageSharp.Image.LoadAsync(imagePath, cancellationToken);
 
-            // Cache the result
-            if (_settings.EnableCaching)
-            {
-                _metadataCache.Add(imagePath, metadata);
+                    return new ImageMetadata
+                    {
+                        Width = image.Width,
+                        Height = image.Height,
+                        CreatedAt = fileInfo.CreationTime,
+                        FileSize = fileInfo.Length,
+                        Format = image.Metadata.DecodedImageFormat?.Name ?? "Unknown",
+                        FilePath = imagePath,
+                        IsAbnormal = false,
+                        ZScoreWidth = 0,
+                        ZScoreHeight = 0
+                    };
+                }, cancellationToken);
+
+                // Cache the result
+                if (_settings.EnableCaching)
+                {
+                    _metadataCache.Add(imagePath, metadata);
+                }
+
+                _logger.LogDebug("Extracted metadata for: {ImagePath} ({Width}x{Height})", imagePath, metadata.Width, metadata.Height);
+                return metadata;
             }
-
-            _logger.LogDebug("Extracted metadata for: {ImagePath} ({Width}x{Height})", imagePath, metadata.Width, metadata.Height);
-            return metadata;
+            finally
+            {
+                _processingSemaphore.Release();
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

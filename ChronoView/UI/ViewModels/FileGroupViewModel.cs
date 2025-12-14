@@ -682,8 +682,15 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
         var imagePath = GetCameraImagePath(cameraNumber);
         if (string.IsNullOrEmpty(imagePath))
         {
-            _logger?.LogDebug("Camera{Cam} path missing for {GroupId}", cameraNumber, GroupId);
-            _uiLog?.Invoke(LogSeverity.Debug, "Thumb", $"Cam{cameraNumber} path missing for {GroupId}");
+            // Only log if this camera should exist for this group's line
+            // Cam 1-3 are for Line 1, Cam 4-6 are for Line 2
+            bool shouldHaveCamera = (LineNumber == 1 && cameraNumber <= 3) || (LineNumber == 2 && cameraNumber >= 4);
+            
+            if (shouldHaveCamera)
+            {
+                _logger?.LogDebug("Camera{Cam} path missing for {GroupId}", cameraNumber, GroupId);
+                _uiLog?.Invoke(LogSeverity.Debug, "Thumb", $"Cam{cameraNumber} path missing for {GroupId}");
+            }
             return;
         }
 
@@ -753,6 +760,8 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
             // Get configured dimensions or use defaults
             int width = cfg?.UISettings.NirThumbnailWidth ?? 250;
             int height = cfg?.UISettings.NirThumbnailHeight ?? 100;
+            
+            _logger?.LogInformation("Generating NIR graph for {GroupId}: Width={Width}, Height={Height}", GroupId, width, height);
 
             // Determine NIR .txt file path
             string? nirTxtPath = null;
@@ -790,6 +799,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
                 }
             }
 
+
             // If no .txt file found, return null
             if (nirTxtPath == null)
             {
@@ -799,34 +809,57 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
             }
 
 
-            // Generate graph on calling thread (already on UI thread via Dispatcher)
-            // ScottPlot requires UI thread access for internal ObservableCollection updates
+            // Generate graph on background thread to prevent UI freezes
+            // ScottPlot SavePng is synchronous I/O-heavy operation
             try
             {
-                // Parse NIR spectrum from .txt file
-                var spectrum = NirSpectrumParser.Parse(nirTxtPath);
-                if (spectrum == null)
+                var graph = await Task.Run(() =>
                 {
-                    _logger?.LogWarning("NIR spectrum parsing returned null for {GroupId}: {NirTxtPath}", GroupId, nirTxtPath);
-                    return null;
-                }
+                    try
+                    {
+                        // Parse NIR spectrum from .txt file
+                        var spectrum = NirSpectrumParser.Parse(nirTxtPath);
+                        if (spectrum == null)
+                        {
+                            _logger?.LogWarning("NIR spectrum parsing returned null for {GroupId}: {NirTxtPath}", GroupId, nirTxtPath);
+                            return null;
+                        }
 
-                // Generate graph bitmap (must run on UI thread for ScottPlot)
-                var graph = NirGraphGenerator.GenerateGraph(spectrum, width, height);
+                        // Generate graph bitmap
+                        var graphBitmap = NirGraphGenerator.GenerateGraph(spectrum, width, height);
+                        return graphBitmap;
+                    }
+                    catch (Exception ex)
+                    {
+                        // Return null on any error - log exception details for debugging
+                        _logger?.LogError(ex, "NIR graph generation failed for {GroupId} using {NirTxtPath}. Error: {ErrorMessage}", 
+                            GroupId, nirTxtPath, ex.Message);
+                        return null;
+                    }
+                }, _cancellationTokenSource.Token);
+
                 if (graph != null)
                 {
                     _logger?.LogDebug("NIR graph generated for {GroupId} using {NirTxtPath}", GroupId, nirTxtPath);
                     _uiLog?.Invoke(LogSeverity.Debug, "NIR", $"Graph generated for {GroupId} txt={nirTxtPath}");
                 }
+                else
+                {
+                    _uiLog?.Invoke(LogSeverity.Error, "NIR", $"Graph generation returned null for {GroupId} txt={nirTxtPath}");
+                }
+                
                 return graph;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected during disposal
+                return null;
             }
             catch (Exception ex)
             {
-                // Return null on any error - log exception details for debugging
-                _logger?.LogError(ex, "NIR graph generation failed for {GroupId} using {NirTxtPath}. Error: {ErrorMessage}", 
-                    GroupId, nirTxtPath, ex.Message);
-                _uiLog?.Invoke(LogSeverity.Error, "NIR", 
-                    $"Graph generation failed for {GroupId} txt={nirTxtPath} Error: {ex.Message}");
+                // Return null for failed loads - log exception details
+                _logger?.LogError(ex, "NIR graph load failed for {GroupId}. Error: {ErrorMessage}", GroupId, ex.Message);
+                _uiLog?.Invoke(LogSeverity.Error, "NIR", $"Graph load failed for {GroupId} Error: {ex.Message}");
                 return null;
             }
         }
