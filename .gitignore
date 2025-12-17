@@ -29,6 +29,12 @@
 !ChronoView/**/*.csproj
 !ChronoView/**/*.json
 
+# ChronoView 리소스 파일 (실행에 필수)
+!ChronoView/**/*.png
+!ChronoView/**/*.jpg
+!ChronoView/**/*.ico
+!ChronoView/**/*.bmp
+
 # ChronoView.Tests 테스트 프로젝트
 !ChronoView.Tests/**/*.cs
 !ChronoView.Tests/**/*.csproj
