@@ -369,7 +369,8 @@
                 <!-- File Group Table with Tabs -->
                 <TabControl Grid.Row="0" SelectedIndex="{Binding ActiveTabIndex}">
                     <TabItem Header="Line 1">
-                        <DataGrid ItemsSource="{Binding Line1Groups}"
+                        <DataGrid x:Name="Line1DataGrid"
+                                  ItemsSource="{Binding Line1Groups}"
                                   SelectionChanged="DataGrid_SelectionChanged"
                                   SelectionMode="Extended"
                                   SelectionUnit="FullRow"
@@ -474,7 +475,8 @@
                         </DataGrid>
                     </TabItem>
                     <TabItem Header="Line 2">
-                        <DataGrid ItemsSource="{Binding Line2Groups}"
+                        <DataGrid x:Name="Line2DataGrid"
+                                  ItemsSource="{Binding Line2Groups}"
                                   SelectionChanged="DataGrid_SelectionChanged"
                                   SelectionMode="Extended"
                                   SelectionUnit="FullRow"

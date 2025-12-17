@@ -23,8 +23,10 @@ namespace ChronoView.Core.FileWatching
         /// <summary>
         /// Start monitoring the specified paths
         /// </summary>
-        Task StartWatchingAsync(IEnumerable<string> paths);
-
+        /// <summary>
+        /// Start monitoring the specified paths with options
+        /// </summary>
+        Task StartWatchingAsync(IEnumerable<string> paths, FileWatcherOptions? options = null);
         /// <summary>
         /// Stop monitoring all paths
         /// </summary>
@@ -39,6 +41,22 @@ namespace ChronoView.Core.FileWatching
         /// Gets the current health status of the watcher
         /// </summary>
         WatcherHealthStatus HealthStatus { get; }
+    }
+
+    /// <summary>
+    /// Options for file watcher behavior
+    /// </summary>
+    public class FileWatcherOptions
+    {
+        /// <summary>
+        /// Enable periodic polling for network drives
+        /// </summary>
+        public bool EnablePolling { get; set; } = false;
+
+        /// <summary>
+        /// Polling interval in milliseconds
+        /// </summary>
+        public int PollingIntervalMs { get; set; } = 5000;
     }
 
     /// <summary>

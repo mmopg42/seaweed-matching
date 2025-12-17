@@ -70,9 +70,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
         InitializeImagePaths();
         CheckAbnormalStatus();
 
-        _logger?.LogInformation("FileGroupViewModel created for {GroupId} | HasNir={HasNir} NirPath={NirPath} NormalFolder={Normal} MainImage={MainImage} Cameras={CamCount}",
-            GroupId, _fileGroup.HasNir, _fileGroup.NirFilePath, _fileGroup.NormalFolder, _fileGroup.MainImagePath, _fileGroup.CameraFiles?.Count ?? 0);
-        _uiLog?.Invoke(LogSeverity.Debug, "Group", $"VM created {GroupId} HasNir={_fileGroup.HasNir} Normal={_fileGroup.NormalFolder} Main={_fileGroup.MainImagePath} CamCount={_fileGroup.CameraFiles?.Count ?? 0}");
+        // Removed duplicate VM creation logs - matching details are logged in FileMatchingEngine
     }
 
     /// <summary>
@@ -534,27 +532,23 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 
         try
         {
-            _logger?.LogDebug("Begin thumbnail load for {GroupId} | HasNir={HasNir} Normal={NormalFolder} Main={MainImagePath} CamCount={CamCount} NirGraphEnabled={NirGraphEnabled}",
-                GroupId, HasNir, _fileGroup.NormalFolder, MainImagePath, _fileGroup.CameraFiles?.Count ?? 0,
-                _configuration?.MatchingSettings.EnableNirGraph);
-            _uiLog?.Invoke(LogSeverity.Debug, "Thumb", $"Start load {GroupId} HasNir={HasNir} Normal={_fileGroup.NormalFolder} Main={MainImagePath} CamCount={_fileGroup.CameraFiles?.Count ?? 0} NirGraph={_configuration?.MatchingSettings.EnableNirGraph}");
+            // Thumbnail loading - only log errors, not every load attempt
 
-            // Load main image thumbnail
-            if (!string.IsNullOrEmpty(MainImagePath))
+            // Load main image thumbnail (only if not already loaded)
+            if (!string.IsNullOrEmpty(MainImagePath) && MainImageThumbnail == null)
             {
                 var mainThumbnail = await LoadSingleThumbnailAsync(MainImagePath, thumbnailWidth, thumbnailHeight);
                 await WpfApplication.Current.Dispatcher.InvokeAsync(() => MainImageThumbnail = mainThumbnail);
             }
 
-            // Load NIR image thumbnail
-            if (!string.IsNullOrEmpty(NirImagePath))
+            // Load NIR image thumbnail (only if not already loaded)
+            if (!string.IsNullOrEmpty(NirImagePath) && NirImageThumbnail == null)
             {
             var ext = Path.GetExtension(NirImagePath);
             // Skip non-image files (spc/txt 등)
             if (!_imageExtensions.Contains(ext))
                 {
-                _logger?.LogDebug("Skipping NIR image thumbnail for non-image {GroupId}: {Path}", GroupId, NirImagePath);
-                _uiLog?.Invoke(LogSeverity.Debug, "Thumb", $"Skip NIR non-image thumbnail {GroupId}: {NirImagePath}");
+                // Skip non-image NIR files silently
                 }
                 else
                 {
@@ -563,8 +557,8 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
                 }
             }
 
-            // Load NIR graph thumbnail (if enabled in configuration)
-            if (HasNir)
+            // Load NIR graph thumbnail (only if not already loaded)
+            if (HasNir && NirGraphThumbnail == null)
             {
                 if (_configuration?.MatchingSettings.EnableNirGraph == true)
                 {
@@ -579,13 +573,13 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
                 }
             }
 
-            // Load camera thumbnails
-            await LoadCameraThumbnailAsync(1, thumbnailWidth, thumbnailHeight);
-            await LoadCameraThumbnailAsync(2, thumbnailWidth, thumbnailHeight);
-            await LoadCameraThumbnailAsync(3, thumbnailWidth, thumbnailHeight);
-            await LoadCameraThumbnailAsync(4, thumbnailWidth, thumbnailHeight);
-            await LoadCameraThumbnailAsync(5, thumbnailWidth, thumbnailHeight);
-            await LoadCameraThumbnailAsync(6, thumbnailWidth, thumbnailHeight);
+            // Load camera thumbnails (only if not already loaded)
+            if (Camera1Thumbnail == null) await LoadCameraThumbnailAsync(1, thumbnailWidth, thumbnailHeight);
+            if (Camera2Thumbnail == null) await LoadCameraThumbnailAsync(2, thumbnailWidth, thumbnailHeight);
+            if (Camera3Thumbnail == null) await LoadCameraThumbnailAsync(3, thumbnailWidth, thumbnailHeight);
+            if (Camera4Thumbnail == null) await LoadCameraThumbnailAsync(4, thumbnailWidth, thumbnailHeight);
+            if (Camera5Thumbnail == null) await LoadCameraThumbnailAsync(5, thumbnailWidth, thumbnailHeight);
+            if (Camera6Thumbnail == null) await LoadCameraThumbnailAsync(6, thumbnailWidth, thumbnailHeight);
 
             // If everything is null, log warning for empty row visibility
             if (MainImageThumbnail == null &&
@@ -628,15 +622,13 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
             var ext = Path.GetExtension(imagePath);
             if (!_imageExtensions.Contains(ext))
             {
-                _logger?.LogDebug("Skipping thumbnail generation for non-image {GroupId}: {Path}", GroupId, imagePath);
-                _uiLog?.Invoke(LogSeverity.Debug, "Thumb", $"Skip non-image thumbnail {GroupId}: {imagePath}");
+                // Skip non-image files silently
                 return null;
             }
 
             if (!File.Exists(imagePath))
             {
-                _logger?.LogWarning("Thumbnail source missing for {GroupId}: {Path}", GroupId, imagePath);
-                _uiLog?.Invoke(LogSeverity.Warning, "Thumb", $"Missing file for {GroupId}: {imagePath}");
+                // File missing - silently return null
                 return null;
             }
 
@@ -645,8 +637,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 
             if (thumbnailBytes == null || thumbnailBytes.Length == 0)
             {
-                _logger?.LogWarning("Thumbnail generation returned empty for {GroupId}: {Path}", GroupId, imagePath);
-                _uiLog?.Invoke(LogSeverity.Warning, "Thumb", $"Thumbnail empty for {GroupId}: {imagePath}");
+                // Empty thumbnail - silently return null
                 return null;
             }
 
@@ -688,8 +679,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
             
             if (shouldHaveCamera)
             {
-                _logger?.LogDebug("Camera{Cam} path missing for {GroupId}", cameraNumber, GroupId);
-                _uiLog?.Invoke(LogSeverity.Debug, "Thumb", $"Cam{cameraNumber} path missing for {GroupId}");
+                // Camera path missing - expected for some line/camera combinations
             }
             return;
         }
@@ -773,8 +763,6 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
                 if (File.Exists(nirSpcPath))
                 {
                     nirTxtPath = nirSpcPath;
-                    _logger?.LogDebug("NIR .txt file used directly for {GroupId}: {TxtPath}", GroupId, nirSpcPath);
-                    _uiLog?.Invoke(LogSeverity.Debug, "NIR", $".txt used directly for {GroupId}: {nirSpcPath}");
                 }
             }
             // Priority 1: Try .spc -> A.txt suffix (e.g., run_120251204T111028.spc -> run_120251204T111028A.txt)
@@ -840,8 +828,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 
                 if (graph != null)
                 {
-                    _logger?.LogDebug("NIR graph generated for {GroupId} using {NirTxtPath}", GroupId, nirTxtPath);
-                    _uiLog?.Invoke(LogSeverity.Debug, "NIR", $"Graph generated for {GroupId} txt={nirTxtPath}");
+                    // Graph generated successfully - no logging needed
                 }
                 else
                 {

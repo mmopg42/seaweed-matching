@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using ChronoView.Models;
+using ChronoView.UI.ViewModels;
 
 namespace ChronoView.Core.FileWatching
 {
@@ -40,6 +41,12 @@ namespace ChronoView.Core.FileWatching
         /// Process file system events and update groups
         /// </summary>
         Task<List<FileGroup>> ProcessFileEventsAsync(List<FileSystemEventArgs> events);
+
+        /// <summary>
+        /// Sets the UI log callback for sending matching logs to the GUI.
+        /// </summary>
+        /// <param name="uiLog">UI log callback (severity, source, message)</param>
+        void SetUILog(Action<LogSeverity, string, string>? uiLog);
 
         /// <summary>
         /// Event raised when a new file group is created

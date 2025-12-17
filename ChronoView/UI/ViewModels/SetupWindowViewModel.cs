@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using ChronoView.Models;
+using ChronoView.Core.Configuration;
 
 namespace ChronoView.UI.ViewModels;
 
@@ -18,6 +20,7 @@ public class SetupWindowViewModel : ViewModelBase
 {
     private readonly ILogger<SetupWindowViewModel>? _logger;
     private readonly ApplicationConfiguration? _config;
+    private readonly IServiceProvider? _serviceProvider;
     
     private string _statusMessage = string.Empty;
     private Visibility _statusVisibility = Visibility.Collapsed;
@@ -29,12 +32,14 @@ public class SetupWindowViewModel : ViewModelBase
         LaunchNir1CameraCommand = new RelayCommand(async () => await LaunchProgramAsync("NIR Camera 1", GetNir1ProgramPath()));
         LaunchNir2CameraCommand = new RelayCommand(async () => await LaunchProgramAsync("NIR Camera 2", GetNir2ProgramPath()));
         StartCommand = new RelayCommand(OnStart);
+        OpenSettingsCommand = new RelayCommand(OnOpenSettings);
     }
 
-    public SetupWindowViewModel(ILogger<SetupWindowViewModel> logger, ApplicationConfiguration config)
+    public SetupWindowViewModel(ILogger<SetupWindowViewModel> logger, ApplicationConfiguration config, IServiceProvider serviceProvider)
     {
         _logger = logger;
         _config = config;
+        _serviceProvider = serviceProvider;
 
         _logger.LogInformation("SetupWindowViewModel constructor called");
 
@@ -42,6 +47,7 @@ public class SetupWindowViewModel : ViewModelBase
         LaunchNir1CameraCommand = new RelayCommand(async () => await LaunchProgramAsync("NIR Camera 1", GetNir1ProgramPath()));
         LaunchNir2CameraCommand = new RelayCommand(async () => await LaunchProgramAsync("NIR Camera 2", GetNir2ProgramPath()));
         StartCommand = new RelayCommand(OnStart);
+        OpenSettingsCommand = new RelayCommand(OnOpenSettings);
 
         _logger.LogInformation("SetupWindowViewModel initialized successfully");
     }
@@ -50,6 +56,7 @@ public class SetupWindowViewModel : ViewModelBase
     public ICommand LaunchNir1CameraCommand { get; }
     public ICommand LaunchNir2CameraCommand { get; }
     public ICommand StartCommand { get; }
+    public ICommand OpenSettingsCommand { get; }
 
     public bool StartClicked { get; private set; }
 
@@ -67,23 +74,17 @@ public class SetupWindowViewModel : ViewModelBase
 
     private string GetGeneralCameraPath()
     {
-        // TODO: Add GeneralCameraProgramPath to ApplicationConfiguration
-        // For now, return empty string
-        return string.Empty;
+        return _config?.ExternalProgramSettings?.GeneralCameraProgramPath ?? string.Empty;
     }
 
     private string GetNir1ProgramPath()
     {
-        // TODO: Add Nir1ProgramPath to ApplicationConfiguration
-        // For now, return empty string
-        return string.Empty;
+        return _config?.ExternalProgramSettings?.Nir1ProgramPath ?? string.Empty;
     }
 
     private string GetNir2ProgramPath()
     {
-        // TODO: Add Nir2ProgramPath to ApplicationConfiguration
-        // For now, return empty string
-        return string.Empty;
+        return _config?.ExternalProgramSettings?.Nir2ProgramPath ?? string.Empty;
     }
 
     private async Task LaunchProgramAsync(string programName, string programPath)
@@ -159,6 +160,37 @@ public class SetupWindowViewModel : ViewModelBase
         if (window != null)
         {
             window.Close();
+        }
+    }
+
+    private void OnOpenSettings()
+    {
+        try
+        {
+            _logger?.LogInformation("Opening settings dialog from Setup window");
+
+            if (_serviceProvider == null)
+            {
+                _logger?.LogWarning("ServiceProvider is null, cannot open settings dialog");
+                return;
+            }
+
+            // Create SettingsDialogViewModel using DI
+            var configManager = _serviceProvider.GetRequiredService<IConfigurationManager>();
+            var settingsLogger = _serviceProvider.GetRequiredService<ILogger<SettingsDialogViewModel>>();
+            var viewModel = new SettingsDialogViewModel(configManager, settingsLogger);
+
+            var settingsDialog = new Views.SettingsDialog(viewModel);
+            settingsDialog.Owner = System.Windows.Application.Current.Windows.OfType<Window>()
+                .FirstOrDefault(w => w.DataContext == this);
+            settingsDialog.ShowDialog();
+
+            _logger?.LogInformation("Settings dialog closed");
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to open settings dialog");
+            ShowStatus($"Error opening settings: {ex.Message}");
         }
     }
 }

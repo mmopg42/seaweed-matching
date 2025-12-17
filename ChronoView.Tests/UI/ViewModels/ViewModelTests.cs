@@ -252,6 +252,7 @@ public class ViewModelTests
         var mockPathManagementService = new Mock<ChronoView.Core.FileOperations.IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<ChronoView.Core.Analytics.IAbnormalDetector>();
+        var mockFileGroupMatcher = new Mock<ChronoView.Core.FileMatching.IFileGroupMatcher>();
         var mockLogger = new Mock<Microsoft.Extensions.Logging.ILogger<MainWindowViewModel>>();
         var mockFileGroupLogger = new Mock<Microsoft.Extensions.Logging.ILogger<FileGroupViewModel>>();
 
@@ -263,6 +264,7 @@ public class ViewModelTests
             mockPathManagementService.Object,
             mockImageProcessor.Object,
             mockAbnormalDetector.Object,
+            mockFileGroupMatcher.Object,
             mockLogger.Object,
             mockFileGroupLogger.Object);
     }
@@ -640,7 +642,7 @@ public class ViewModelTests
         Assert.Equal("/path/to/nir", viewModel.NirPath);
         Assert.Equal("/path/to/normal", viewModel.NormalPath);
         Assert.Equal("/path/to/cam1", viewModel.Camera1Path);
-        Assert.Equal(300, viewModel.NirTimeWindowSeconds);
+        // NirTimeWindowSeconds is deprecated - now using DataSequenceSettings
         Assert.True(viewModel.IsSeparatedMode);
         Assert.Equal(200, viewModel.ThumbnailWidth);
         Assert.Equal(150, viewModel.ThumbnailHeight);

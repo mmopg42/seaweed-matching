@@ -69,13 +69,14 @@ namespace ChronoView.Tests.Core.FileMatching
                 // If group has NIR, check NIR time window
                 if (group.HasNir && !string.IsNullOrEmpty(group.NirKey))
                 {
-                    // NIR should be within NirMatchTimeDiff of group time
+                    // NIR should be within configured time window of group time
                     var nirTimestamp = ExtractTimestampFromNirKey(group.NirKey);
-                    if (nirTimestamp.HasValue)
+                    if (nirTimestamp.HasValue && config.DataSequenceSettings != null)
                     {
+                        var nirMaxDiff = config.DataSequenceSettings.GetMaxDelay(DataType.NIR);
                         var timeDiff = Math.Abs((group.CreatedAt - nirTimestamp.Value).TotalSeconds);
-                        Assert.True(timeDiff <= config.NirMatchTimeDiff,
-                            $"NIR time difference {timeDiff}s exceeds configured limit {config.NirMatchTimeDiff}s");
+                        Assert.True(timeDiff <= nirMaxDiff,
+                            $"NIR time difference {timeDiff}s exceeds configured limit {nirMaxDiff}s");
                     }
                 }
 

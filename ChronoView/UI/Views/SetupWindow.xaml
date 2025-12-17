@@ -31,6 +31,36 @@
                     <!-- Window Control Buttons -->
                     <StackPanel Orientation="Horizontal" 
                                 HorizontalAlignment="Right">
+                        <!-- Settings Button (Gear Icon) -->
+                        <Button Width="40" Height="40"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Command="{Binding OpenSettingsCommand}"
+                                Cursor="Hand"
+                                ToolTip="설정 (Settings)">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}">
+                                                    <TextBlock Text="⚙" 
+                                                               FontSize="18" 
+                                                               Foreground="White"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#D41C24"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
                         <!-- Minimize Button -->
                         <Button Width="40" Height="40"
                                 Background="Transparent"

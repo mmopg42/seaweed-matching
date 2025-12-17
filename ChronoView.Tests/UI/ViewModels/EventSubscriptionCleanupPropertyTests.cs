@@ -38,6 +38,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockPathManagementService = new Mock<IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<IAbnormalDetector>();
+        var mockFileGroupMatcher = new Mock<ChronoView.Core.FileMatching.IFileGroupMatcher>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
         var mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
@@ -83,6 +84,7 @@ public class EventSubscriptionCleanupPropertyTests
             mockPathManagementService.Object,
             mockImageProcessor.Object,
             mockAbnormalDetector.Object,
+            mockFileGroupMatcher.Object,
             mockLogger.Object,
             mockFileGroupLogger.Object);
 
@@ -128,6 +130,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockPathManagementService = new Mock<IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<IAbnormalDetector>();
+        var mockFileGroupMatcher = new Mock<ChronoView.Core.FileMatching.IFileGroupMatcher>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
         var mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
@@ -153,6 +156,7 @@ public class EventSubscriptionCleanupPropertyTests
             mockPathManagementService.Object,
             mockImageProcessor.Object,
             mockAbnormalDetector.Object,
+            mockFileGroupMatcher.Object,
             mockLogger.Object,
             mockFileGroupLogger.Object);
 
@@ -181,6 +185,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockPathManagementService = new Mock<IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<IAbnormalDetector>();
+        var mockFileGroupMatcher = new Mock<ChronoView.Core.FileMatching.IFileGroupMatcher>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
         var mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
@@ -210,6 +215,7 @@ public class EventSubscriptionCleanupPropertyTests
             mockPathManagementService.Object,
             mockImageProcessor.Object,
             mockAbnormalDetector.Object,
+            mockFileGroupMatcher.Object,
             mockLogger.Object,
             mockFileGroupLogger.Object);
 
@@ -266,6 +272,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockPathManagementService = new Mock<IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<IAbnormalDetector>();
+        var mockFileGroupMatcher = new Mock<ChronoView.Core.FileMatching.IFileGroupMatcher>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
         var mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
@@ -304,6 +311,7 @@ public class EventSubscriptionCleanupPropertyTests
                 mockPathManagementService.Object,
                 mockImageProcessor.Object,
                 mockAbnormalDetector.Object,
+                mockFileGroupMatcher.Object,
                 mockLogger.Object,
                 mockFileGroupLogger.Object);
 

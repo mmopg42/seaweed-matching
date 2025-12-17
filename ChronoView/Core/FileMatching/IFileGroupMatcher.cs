@@ -31,6 +31,12 @@ namespace ChronoView.Core.FileMatching
         void ResetConsumedNirKeys();
 
         /// <summary>
+        /// Reset all state including group counter and consumed NIR keys
+        /// Call this before performing a fresh scan (e.g., during refresh)
+        /// </summary>
+        void ResetState();
+
+        /// <summary>
         /// Add a NIR key to the consumed set
         /// </summary>
         void AddConsumedNirKey(string nirKey);
@@ -42,39 +48,15 @@ namespace ChronoView.Core.FileMatching
     public class MatchingConfiguration
     {
         /// <summary>
-        /// Maximum time difference in seconds for NIR matching
+        /// Data sequence settings for time-based matching
+        /// Replaces deprecated NirMatchTimeDiff, CamMatchMinDiff, CamMatchMaxDiff
         /// </summary>
-        public double NirMatchTimeDiff { get; set; } = 1.0;
-
-        /// <summary>
-        /// Use time-based matching for composite cameras
-        /// </summary>
-        public bool UseCamTimeMatching { get; set; } = true;
-
-        /// <summary>
-        /// Minimum time difference in seconds for camera matching
-        /// </summary>
-        public double CamMatchMinDiff { get; set; } = 4.0;
-
-        /// <summary>
-        /// Maximum time difference in seconds for camera matching
-        /// </summary>
-        public double CamMatchMaxDiff { get; set; } = 6.0;
+        public DataSequenceSettings? DataSequenceSettings { get; set; }
 
         /// <summary>
         /// Use folder suffix for line separation (_0 for line 1, _1 for line 2)
         /// </summary>
         public bool UseFolderSuffix { get; set; } = false;
-
-        /// <summary>
-        /// Time window for NIR file matching in seconds
-        /// </summary>
-        public int NirTimeWindowSeconds { get; set; } = 300;
-
-        /// <summary>
-        /// Time window for camera file matching in seconds
-        /// </summary>
-        public int CameraTimeWindowSeconds { get; set; } = 60;
 
         /// <summary>
         /// Use camera subfolder for Normal1 path

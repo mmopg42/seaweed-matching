@@ -219,12 +219,10 @@ public class CoreServicesIntegrationTests : IDisposable
         // Verify configuration can be used by services
         fileGroupMatcher.Configuration = new MatchingConfiguration
         {
-            NirMatchTimeDiff = loadedConfig.MatchingSettings.NirTimeWindowSeconds,
-            CamMatchMinDiff = 4.0,
-            CamMatchMaxDiff = 6.0
+            DataSequenceSettings = loadedConfig.DataSequenceSettings
         };
 
-        Assert.Equal(10, fileGroupMatcher.Configuration.NirMatchTimeDiff);
+        Assert.NotNull(fileGroupMatcher.Configuration.DataSequenceSettings);
     }
 
     [Fact]

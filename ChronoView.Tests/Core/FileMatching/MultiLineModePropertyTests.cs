@@ -34,7 +34,7 @@ namespace ChronoView.Tests.Core.FileMatching
                 var key = $"{timestamp:yyyyMMdd_HHmmss}";
                 nirFiles1[key] = $@"C:\test\nir\{key}.spc";
             }
-            unmatchedFiles.NirFiles["nir"] = nirFiles1;
+            unmatchedFiles.NirFiles["nir1"] = nirFiles1;
 
             var normalFolders1 = new Dictionary<string, string>();
             for (int i = 0; i < 3; i++)
@@ -43,7 +43,7 @@ namespace ChronoView.Tests.Core.FileMatching
                 var key = $"C{timestamp:yyyyMMdd_HHmmss}";
                 normalFolders1[key] = $@"C:\test\normal\{key}";
             }
-            unmatchedFiles.NormalFolders["normal"] = normalFolders1;
+            unmatchedFiles.NormalFolders["normal1"] = normalFolders1;
 
             // Line 2 data
             var nirFiles2 = new Dictionary<string, string>();
@@ -101,11 +101,11 @@ namespace ChronoView.Tests.Core.FileMatching
             var unmatchedFiles = new UnmatchedFiles();
 
             // Line 1 data
-            unmatchedFiles.NirFiles["nir"] = new Dictionary<string, string>
+            unmatchedFiles.NirFiles["nir1"] = new Dictionary<string, string>
             {
                 { $"{baseTime:yyyyMMdd_HHmmss}", $@"C:\test\nir\{baseTime:yyyyMMdd_HHmmss}.spc" }
             };
-            unmatchedFiles.NormalFolders["normal"] = new Dictionary<string, string>
+            unmatchedFiles.NormalFolders["normal1"] = new Dictionary<string, string>
             {
                 { $"C{baseTime.AddSeconds(5):yyyyMMdd_HHmmss}", $@"C:\test\normal\C{baseTime.AddSeconds(5):yyyyMMdd_HHmmss}" }
             };
@@ -221,11 +221,11 @@ namespace ChronoView.Tests.Core.FileMatching
             var unmatchedFiles = new UnmatchedFiles();
 
             // Line 1 NIR
-            unmatchedFiles.NirFiles["nir"] = new Dictionary<string, string>
+            unmatchedFiles.NirFiles["nir1"] = new Dictionary<string, string>
             {
-                { $"{baseTime:yyyyMMdd_HHmmss}", $@"C:\test\nir\{baseTime:yyyyMMdd_HHmmss}.spc" }
+                { $"{baseTime:yyyyMMddTHHmmss}", $@"C:\test\nir\{baseTime:yyyyMMddTHHmmss}.spc" }
             };
-            unmatchedFiles.NormalFolders["normal"] = new Dictionary<string, string>
+            unmatchedFiles.NormalFolders["normal1"] = new Dictionary<string, string>
             {
                 { $"C{baseTime:yyyyMMdd_HHmmss}", $@"C:\test\normal\C{baseTime:yyyyMMdd_HHmmss}" }
             };
@@ -234,7 +234,7 @@ namespace ChronoView.Tests.Core.FileMatching
             var line2Time = baseTime.AddMinutes(10);
             unmatchedFiles.NirFiles["nir2"] = new Dictionary<string, string>
             {
-                { $"{line2Time:yyyyMMdd_HHmmss}", $@"C:\test\nir2\{line2Time:yyyyMMdd_HHmmss}.spc" }
+                { $"{line2Time:yyyyMMddTHHmmss}", $@"C:\test\nir2\{line2Time:yyyyMMddTHHmmss}.spc" }
             };
             unmatchedFiles.NormalFolders["normal2"] = new Dictionary<string, string>
             {
@@ -270,11 +270,11 @@ namespace ChronoView.Tests.Core.FileMatching
             var unmatchedFiles = new UnmatchedFiles();
 
             // Only Line 1 data, Line 2 is empty
-            unmatchedFiles.NirFiles["nir"] = new Dictionary<string, string>
+            unmatchedFiles.NirFiles["nir1"] = new Dictionary<string, string>
             {
                 { $"{baseTime:yyyyMMdd_HHmmss}", $@"C:\test\nir\{baseTime:yyyyMMdd_HHmmss}.spc" }
             };
-            unmatchedFiles.NormalFolders["normal"] = new Dictionary<string, string>
+            unmatchedFiles.NormalFolders["normal1"] = new Dictionary<string, string>
             {
                 { $"C{baseTime:yyyyMMdd_HHmmss}", $@"C:\test\normal\C{baseTime:yyyyMMdd_HHmmss}" }
             };

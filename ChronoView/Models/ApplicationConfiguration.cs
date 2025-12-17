@@ -40,6 +40,16 @@ public class ApplicationConfiguration
     /// UI display settings.
     /// </summary>
     public UISettings UISettings { get; set; } = new();
+
+    /// <summary>
+    /// Data sequence configuration for file arrival order and matching.
+    /// </summary>
+    public DataSequenceSettings DataSequenceSettings { get; set; } = DataSequencePresets.NormalFirst();
+
+    /// <summary>
+    /// External program settings.
+    /// </summary>
+    public ExternalProgramSettings ExternalProgramSettings { get; set; } = new();
 }
 
 /// <summary>
@@ -80,17 +90,23 @@ public class MatchingSettings
 {
     /// <summary>
     /// Time window for NIR file matching in seconds.
+    /// DEPRECATED: Use DataSequenceSettings.GetMaxDelay(DataType.NIR) instead.
     /// </summary>
+    [Obsolete("Use DataSequenceSettings.GetMaxDelay(DataType.NIR) instead")]
     public int NirTimeWindowSeconds { get; set; } = 300;
 
     /// <summary>
     /// Time window for camera file matching in seconds.
+    /// DEPRECATED: Use DataSequenceSettings.GetMaxDelay(DataType.Cam1) instead.
     /// </summary>
+    [Obsolete("Use DataSequenceSettings.GetMaxDelay(DataType.Cam1) instead")]
     public int CameraTimeWindowSeconds { get; set; } = 2;
 
     /// <summary>
     /// Time window for normal folder matching in seconds.
+    /// DEPRECATED: Use DataSequenceSettings.GetMaxDelay(DataType.Normal) instead.
     /// </summary>
+    [Obsolete("Use DataSequenceSettings.GetMaxDelay(DataType.Normal) instead")]
     public int NormalFolderTimeWindowSeconds { get; set; } = 120;
 
     /// <summary>
@@ -114,28 +130,9 @@ public class MatchingSettings
     public string LineMode { get; set; } = "integrated";
 
     // ============================================================
-    // Matching Algorithm Options
+    // Matching Algorithm Options (DEPRECATED - Use DataSequenceSettings)
     // ============================================================
-
-    /// \u003csummary\u003e
-    /// Enable time-based camera matching.
-    /// \u003c/summary\u003e
-    public bool UseCamTimeMatching { get; set; } = true;
-
-    /// \u003csummary\u003e
-    /// Minimum time difference for camera matching in seconds.
-    /// \u003c/summary\u003e
-    public double CamMatchMinDiff { get; set; } = 4.0;
-
-    /// \u003csummary\u003e
-    /// Maximum time difference for camera matching in seconds.
-    /// \u003c/summary\u003e
-    public double CamMatchMaxDiff { get; set; } = 6.0;
-
-    /// \u003csummary\u003e
-    /// NIR matching time difference in seconds.
-    /// \u003c/summary\u003e
-    public double NirMatchTimeDiff { get; set; } = 1.0;
+    // All time-based matching is now controlled by DataSequenceSettings
 
     /// <summary>
     /// Enable NIR graph visualization.
@@ -340,7 +337,7 @@ public class WorkflowSettings
     /// <summary>
     /// Polling interval in milliseconds for network drives.
     /// </summary>
-    public int PollingIntervalMs { get; set; } = 5000;
+    public int PollingIntervalMs { get; set; } = 1000;  // 1 second for faster detection
 
     /// <summary>
     /// Quarantine (trash) folder path for soft delete operations.
@@ -436,4 +433,25 @@ public class UISettings
     /// Separate from DisplayImageHeight to allow independent sizing.
     /// </summary>
     public int NirDisplayHeight { get; set; } = 90;
+}
+
+/// <summary>
+/// External program configuration for Setup window.
+/// </summary>
+public class ExternalProgramSettings
+{
+    /// <summary>
+    /// Path to General Camera program executable.
+    /// </summary>
+    public string GeneralCameraProgramPath { get; set; } = "";
+
+    /// <summary>
+    /// Path to NIR Program 1 executable.
+    /// </summary>
+    public string Nir1ProgramPath { get; set; } = "";
+
+    /// <summary>
+    /// Path to NIR Program 2 executable.
+    /// </summary>
+    public string Nir2ProgramPath { get; set; } = "";
 }

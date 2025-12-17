@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ChronoView.Core.FileMatching;
 using ChronoView.Core.FileWatching;
+using ChronoView.Core.NIR;
 using ChronoView.Models;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -23,13 +24,15 @@ namespace ChronoView.Tests.Core.FileWatching
         private readonly Mock<ILogger<MonitoringOrchestrator>> _mockLogger;
         private readonly MonitoringOrchestrator _orchestrator;
         private readonly ApplicationConfiguration _testConfig;
+        private readonly Mock<INirFileResolver> _mockNirResolver;
 
         public MonitoringOrchestratorEventTests()
         {
             _mockMatcher = new Mock<IFileGroupMatcher>();
             _mockWatcher = new Mock<IFileWatcher>();
             _mockLogger = new Mock<ILogger<MonitoringOrchestrator>>();
-            _orchestrator = new MonitoringOrchestrator(_mockMatcher.Object, _mockWatcher.Object, _mockLogger.Object);
+            _mockNirResolver = new Mock<INirFileResolver>();
+            _orchestrator = new MonitoringOrchestrator(_mockMatcher.Object, _mockWatcher.Object, _mockLogger.Object, _mockNirResolver.Object);
 
             _testConfig = new ApplicationConfiguration
             {

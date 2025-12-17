@@ -225,12 +225,18 @@ public class ConfigurationManager : IConfigurationManager
 
         if (config.MatchingSettings != null)
         {
-            if (config.MatchingSettings.NirTimeWindowSeconds < 0)
-                throw new ConfigurationValidationException("NirTimeWindowSeconds cannot be negative");
-            if (config.MatchingSettings.CameraTimeWindowSeconds < 0)
-                throw new ConfigurationValidationException("CameraTimeWindowSeconds cannot be negative");
             if (config.MatchingSettings.ZScoreThreshold <= 0)
                 throw new ConfigurationValidationException("ZScoreThreshold must be positive");
+        }
+
+        // Validate DataSequenceSettings if present
+        if (config.DataSequenceSettings != null)
+        {
+            if (!config.DataSequenceSettings.Validate(out var errors))
+            {
+                var errorMessage = string.Join("; ", errors);
+                throw new ConfigurationValidationException($"DataSequenceSettings validation failed: {errorMessage}");
+            }
         }
 
         if (config.WorkflowSettings != null)

@@ -165,7 +165,32 @@ public class FileGroup : IEquatable<FileGroup>
             yield return MainImagePath;
 
         if (HasNir && !string.IsNullOrEmpty(NirFilePath))
+        {
+            // Primary NIR file (.spc typically)
             yield return NirFilePath;
+            
+            //. txt file in the NIR file set (NirKey + A.txt pattern)
+            var nirDirectory = Path.GetDirectoryName(NirFilePath);
+            if (!string.IsNullOrEmpty(nirDirectory))
+            {
+                var nirKey = Path.GetFileNameWithoutExtension(NirFilePath);
+                var txtPathA = Path.Combine(nirDirectory, nirKey + "A.txt");
+                
+                if (File.Exists(txtPathA))
+                {
+                    yield return txtPathA;
+                }
+                else
+                {
+                    // Fallback: try plain .txt
+                    var txtPath = Path.Combine(nirDirectory, nirKey + ".txt");
+                    if (File.Exists(txtPath))
+                    {
+                        yield return txtPath;
+                    }
+                }
+            }
+        }
 
         foreach (var path in CameraFiles.Values)
         {

@@ -22,7 +22,7 @@ namespace ChronoView.Tests.Core.FileMatching
             var folderName = "C251204T111028_0"; 
             var folderPath = @"C:\test\normal\" + folderName;
             
-            unmatchedFiles.NormalFolders["normal"] = new Dictionary<string, string>
+            unmatchedFiles.NormalFolders["normal1"] = new Dictionary<string, string>
             {
                 { folderName, folderPath }
             };
@@ -55,7 +55,7 @@ namespace ChronoView.Tests.Core.FileMatching
             var folderName = "C20240115_143022";
             var folderPath = @"C:\test\normal\" + folderName;
             
-            unmatchedFiles.NormalFolders["normal"] = new Dictionary<string, string>
+            unmatchedFiles.NormalFolders["normal1"] = new Dictionary<string, string>
             {
                 { folderName, folderPath }
             };

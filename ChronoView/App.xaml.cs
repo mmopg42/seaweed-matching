@@ -7,6 +7,7 @@ using ChronoView.Core.FileWatching;
 using ChronoView.Core.FileMatching;
 using ChronoView.Core.ImageProcessing;
 using ChronoView.Core.Analytics;
+using ChronoView.Core.NIR;
 using Application = System.Windows.Application;
 using WpfMessageBox = System.Windows.MessageBox;
 using ChronoView.Core.FileOperations;
@@ -164,14 +165,14 @@ public partial class App : Application
         {
             configure.AddConsole();
             configure.AddDebug();
-            configure.SetMinimumLevel(LogLevel.Information);
+            configure.SetMinimumLevel(LogLevel.Debug);  // Changed from Information to Debug for detailed logging
         });
 
         // Register WPF Dispatcher (Singleton - UI thread dispatcher)
         services.AddSingleton(System.Windows.Threading.Dispatcher.CurrentDispatcher);
 
         // Configuration (Singleton - loaded once and shared)
-        services.AddSingleton(sp =>
+        services.AddSingleton<ApplicationConfiguration>(sp =>
         {
             var configManager = sp.GetRequiredService<IConfigurationManager>();
             return configManager.LoadConfiguration<ApplicationConfiguration>();
@@ -183,6 +184,7 @@ public partial class App : Application
         services.AddSingleton<IFileGroupMatcher>(sp =>
             new FileGroupMatcherService(
                 sp.GetService<ILogger<FileGroupMatcherService>>()));
+        services.AddSingleton<INirFileResolver, SpcTxtNirFileResolver>();
         services.AddSingleton<IImageProcessor, ImageProcessingService>();
         services.AddSingleton<IStatisticsService, StatisticsService>();
         services.AddSingleton<IMonitoringOrchestrator, MonitoringOrchestrator>();

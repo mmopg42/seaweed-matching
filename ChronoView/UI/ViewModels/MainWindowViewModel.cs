@@ -8,6 +8,7 @@ using ChronoView.Core.Analytics;
 using ChronoView.Core.Configuration;
 using ChronoView.Core.FileOperations;
 using ChronoView.Core.ImageProcessing;
+using ChronoView.Core.FileMatching;
 using Microsoft.Extensions.Logging;
 using WpfApplication = System.Windows.Application;
 using WpfMessageBox = System.Windows.MessageBox;
@@ -111,6 +112,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         IPathManagementService pathManagementService,
         IImageProcessor imageProcessor,
         IAbnormalDetector abnormalDetector,
+        IFileGroupMatcher fileGroupMatcher,
         ILogger<MainWindowViewModel> logger,
         ILogger<FileGroupViewModel> fileGroupLogger)
     {
@@ -123,13 +125,37 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _abnormalDetector = abnormalDetector ?? throw new ArgumentNullException(nameof(abnormalDetector));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _fileGroupLogger = fileGroupLogger ?? throw new ArgumentNullException(nameof(fileGroupLogger));
-        _uiLog = (severity, source, message) => AddLogMessage(severity, source, message);
 
-        // Initialize collections
+        // Initialize collections FIRST before any AddLogMessage calls
         FileGroups = new ObservableCollection<FileGroupViewModel>();
         Line1Groups = new ObservableCollection<FileGroupViewModel>();
         Line2Groups = new ObservableCollection<FileGroupViewModel>();
         LogMessages = new ObservableCollection<LogMessage>();
+
+        // NOW we can safely use AddLogMessage
+        _uiLog = (severity, source, message) =>
+        {
+            // Marshal to UI thread since this can be called from background threads (FileWatcher)
+            WpfApplication.Current.Dispatcher.BeginInvoke(() =>
+            {
+                AddLogMessage(severity, source, message);
+            });
+        };
+
+        // Setup UI log for FileGroupMatcherService
+        if (fileGroupMatcher is FileGroupMatcherService matcherService)
+        {
+            matcherService.SetUILog(_uiLog);
+            AddLogMessage(LogSeverity.Info, "System", "UI log connected to FileGroupMatcherService");
+        }
+        else
+        {
+            AddLogMessage(LogSeverity.Warning, "System", $"FileGroupMatcher is not FileGroupMatcherService: {fileGroupMatcher?.GetType().Name ?? "null"}");
+        }
+
+        // Setup UI log for MonitoringOrchestrator
+        _orchestrator.SetUILog(_uiLog);
+        AddLogMessage(LogSeverity.Info, "System", "UI log connected to MonitoringOrchestrator");
 
         // Initialize commands
         StartCommand = new RelayCommand(ExecuteStart, CanExecuteStart);
@@ -794,6 +820,24 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             // Set IsMonitoring = true on success
             IsMonitoring = true;
 
+            // Add diagnostic information after initial scan
+            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+            {
+                var totalGroups = FileGroups.Count;
+                var line1Count = Line1Groups.Count;
+                var line2Count = Line2Groups.Count;
+                
+                var normalOnlyCount = FileGroups.Count(g => !string.IsNullOrEmpty(g.NormalFolder) && g.Model.CameraFiles.Count == 0);
+                var normalWithCamCount = FileGroups.Count(g => !string.IsNullOrEmpty(g.NormalFolder) && g.Model.CameraFiles.Count > 0);
+                var camOnlyCount = FileGroups.Count(g => string.IsNullOrEmpty(g.NormalFolder) && g.Model.CameraFiles.Count > 0);
+                var nirOnlyCount = FileGroups.Count(g => string.IsNullOrEmpty(g.NormalFolder) && g.Model.CameraFiles.Count == 0 && g.HasNir);
+                
+                AddLogMessage(LogSeverity.Info, "Diagnostic", 
+                    $"[DIAGNOSTIC] Final group count: Line1={line1Count}, Line2={line2Count}, Total={totalGroups}");
+                AddLogMessage(LogSeverity.Info, "Diagnostic", 
+                    $"[DIAGNOSTIC] Group composition: NormalOnly={normalOnlyCount}, NormalWithCam={normalWithCamCount}, CamOnly={camOnlyCount}, NirOnly={nirOnlyCount}");
+            });
+
             // Log success
             _logger.LogInformation("Monitoring started successfully");
             AddLogMessage(LogSeverity.Info, "System", "Monitoring started successfully");
@@ -1291,21 +1335,6 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     {
         if (IsOperationInProgress) return;
 
-        // Monitoring check: Prevent refresh if monitoring is not active
-        // This avoids clearing the UI when no data can be re-loaded
-        if (!IsMonitoring)
-        {
-            _logger.LogWarning("Refresh attempted but monitoring is not active");
-            AddLogMessage(LogSeverity.Warning, "System", "Cannot refresh - monitoring is not active");
-            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
-            {
-                WpfMessageBox.Show("Cannot refresh file list because monitoring is not active.\nPlease start monitoring first.",
-                    "Refresh Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
-            });
-            StatusMessage = "Refresh failed - Monitoring inactive";
-            return;
-        }
-
         try
         {
             StatusMessage = "Refreshing...";
@@ -1314,12 +1343,39 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             // Begin operation (creates new cancellation token)
             var cancellationToken = BeginOperation();
 
-            // Note: We do NOT explicitly clear file groups here.
-            // Orchestrator.RefreshAsync will trigger GroupRemoved events which will clear the UI.
-            // This prevents the UI from becoming empty if the refresh fails immediately.
+            // CRITICAL FIX: Clear ALL UI groups BEFORE refresh
+            // This prevents orphan groups when backend doesn't know about some groups
+            // (e.g., when files deleted externally without triggering proper removal events)
+            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+            {
+                _logger.LogInformation("Clearing all UI groups before refresh");
+                FileGroups.Clear();
+                Line1Groups.Clear();
+                Line2Groups.Clear();
+                UpdateStatistics();
+            });
 
             // Request orchestrator refresh with token
+            // This will trigger GroupCreated events to repopulate UI with only existing files
             await _orchestrator.RefreshAsync(cancellationToken);
+
+            // Add diagnostic information after refresh
+            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+            {
+                var totalGroups = FileGroups.Count;
+                var line1Count = Line1Groups.Count;
+                var line2Count = Line2Groups.Count;
+                
+                var normalOnlyCount = FileGroups.Count(g => !string.IsNullOrEmpty(g.NormalFolder) && g.Model.CameraFiles.Count == 0);
+                var normalWithCamCount = FileGroups.Count(g => !string.IsNullOrEmpty(g.NormalFolder) && g.Model.CameraFiles.Count > 0);
+                var camOnlyCount = FileGroups.Count(g => string.IsNullOrEmpty(g.NormalFolder) && g.Model.CameraFiles.Count > 0);
+                var nirOnlyCount = FileGroups.Count(g => string.IsNullOrEmpty(g.NormalFolder) && g.Model.CameraFiles.Count == 0 && g.HasNir);
+                
+                AddLogMessage(LogSeverity.Info, "Diagnostic", 
+                    $"[DIAGNOSTIC] Final group count: Line1={line1Count}, Line2={line2Count}, Total={totalGroups}");
+                AddLogMessage(LogSeverity.Info, "Diagnostic", 
+                    $"[DIAGNOSTIC] Group composition: NormalOnly={normalOnlyCount}, NormalWithCam={normalWithCamCount}, CamOnly={camOnlyCount}, NirOnly={nirOnlyCount}");
+            });
 
             StatusMessage = "Refresh complete";
             AddLogMessage(LogSeverity.Info, "System", "Refresh completed successfully");

@@ -1,11 +1,17 @@
+"""
+Data Simulator - Timestamp-based File Move Tool
+
+Simulates real-time data generation by moving files from source to target
+at precise timestamp intervals for ChronoView testing.
+"""
+
 import os
 import re
-import shutil
 import time
-import threading
 import json
-from datetime import datetime, timedelta
-from pathlib import Path
+import threading
+import subprocess
+from datetime import datetime
 import tkinter as tk
 from tkinter import ttk, filedialog, scrolledtext, messagebox
 
@@ -49,90 +55,121 @@ class DataSimulator:
         except Exception as e:
             print(f"Failed to save config: {e}")
 
-    def extract_timestamp_nir(self, filename):
-        """Extract timestamp from NIR files: run_120251201T140542.spc -> 140542"""
-        match = re.search(r'T(\d{6})', filename)
-        if match:
-            time_str = match.group(1)
-            hours = int(time_str[0:2])
-            minutes = int(time_str[2:4])
-            seconds = int(time_str[4:6])
-            return timedelta(hours=hours, minutes=minutes, seconds=seconds)
-        return None
+    def extract_timestamp(self, name, data_type):
+        """Extract timestamp from filename"""
+        try:
+            if data_type == 'nir':
+                # Try YYYYMMDD format first (e.g., run_120251201T140542)
+                # Matches 4-digit year, 2-digit month, 2-digit day followed by T and 6-digit time
+                match = re.search(r'(\d{4})(\d{2})(\d{2})T(\d{6})', name)
+                if match:
+                    try:
+                        year = int(match.group(1))
+                        month = int(match.group(2))
+                        day = int(match.group(3))
+                        time_part = match.group(4)
+                        hour = int(time_part[0:2])
+                        minute = int(time_part[2:4])
+                        second = int(time_part[4:6])
+                        return datetime(year, month, day, hour, minute, second)
+                    except ValueError:
+                        pass  # Invalid date, try next format
 
-    def extract_timestamp_normal(self, foldername):
-        """Extract timestamp from normal folders: C251201T140543_0 -> 140543"""
-        match = re.search(r'T(\d{6})', foldername)
-        if match:
-            time_str = match.group(1)
-            hours = int(time_str[0:2])
-            minutes = int(time_str[2:4])
-            seconds = int(time_str[4:6])
-            return timedelta(hours=hours, minutes=minutes, seconds=seconds)
-        return None
+                # NIR: Old format (YY prefix + MMDD??)
+                match = re.search(r'(\d{2})(\d{6})T(\d{6})', name)
+                if match:
+                    year = int('20' + match.group(1))
+                    date_part = match.group(2)
+                    time_part = match.group(3)
+                    month = int(date_part[0:2])
+                    day = int(date_part[2:4])
+                    hour = int(time_part[0:2])
+                    minute = int(time_part[2:4])
+                    second = int(time_part[4:6])
+                    return datetime(year, month, day, hour, minute, second)
 
-    def extract_timestamp_camera(self, filename):
-        """Extract timestamp from camera files: 20251201_140548_897.bmp -> 140548"""
-        match = re.search(r'^\d+_(\d{6})_', filename)
-        if match:
-            time_str = match.group(1)
-            hours = int(time_str[0:2])
-            minutes = int(time_str[2:4])
-            seconds = int(time_str[4:6])
-            return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+            elif data_type == 'normal':
+                # Normal folder: C251201T140543_0 → YYMMDD + HHMMSS
+                match = re.search(r'C(\d{6})T(\d{6})', name)
+                if match:
+                    date_part = match.group(1)
+                    time_part = match.group(2)
+                    year = int('20' + date_part[0:2])
+                    month = int(date_part[2:4])
+                    day = int(date_part[4:6])
+                    hour = int(time_part[0:2])
+                    minute = int(time_part[2:4])
+                    second = int(time_part[4:6])
+                    return datetime(year, month, day, hour, minute, second)
+
+            elif data_type == 'cam':
+                # Camera: 20251201_140548_897.bmp → YYYYMMDD_HHMMSS_MS
+                match = re.search(r'(\d{8})_(\d{6})_(\d{3})', name)
+                if match:
+                    date_part = match.group(1)
+                    time_part = match.group(2)
+                    year = int(date_part[0:4])
+                    month = int(date_part[4:6])
+                    day = int(date_part[6:8])
+                    hour = int(time_part[0:2])
+                    minute = int(time_part[2:4])
+                    second = int(time_part[4:6])
+                    ms = int(match.group(3))
+                    return datetime(year, month, day, hour, minute, second, ms * 1000)
+
+        except Exception as e:
+            print(f"Error parsing timestamp from {name}: {e}")
         return None
 
     def scan_all_data(self):
-        """Scan all source folders and collect file/folder information with timestamps"""
+        """Scan all data folders and extract items with timestamps"""
         items = []
 
         # Scan NIR folder
-        nir_path = os.path.join(self.source_base, "nir")
+        nir_path = os.path.join(self.source_base, 'nir')
         if os.path.exists(nir_path):
-            for filename in os.listdir(nir_path):
-                filepath = os.path.join(nir_path, filename)
-                if os.path.isfile(filepath):
-                    timestamp = self.extract_timestamp_nir(filename)
+            for file_name in os.listdir(nir_path):
+                if file_name.endswith('.spc') or file_name.endswith('.txt'):
+                    timestamp = self.extract_timestamp(file_name, 'nir')
                     if timestamp:
                         items.append({
-                            'type': 'nir_file',
-                            'source': filepath,
-                            'relative_path': os.path.join('nir', filename),
+                            'name': file_name,
+                            'source': os.path.join(nir_path, file_name),
+                            'relative_path': os.path.join('nir', file_name),
                             'timestamp': timestamp,
-                            'name': filename
+                            'type': 'nir_file'
                         })
 
-        # Scan Normal folder
-        normal_path = os.path.join(self.source_base, "normal")
+        # Scan normal folder
+        normal_path = os.path.join(self.source_base, 'normal')
         if os.path.exists(normal_path):
-            for foldername in os.listdir(normal_path):
-                folderpath = os.path.join(normal_path, foldername)
-                if os.path.isdir(folderpath):
-                    timestamp = self.extract_timestamp_normal(foldername)
+            for folder_name in os.listdir(normal_path):
+                folder_path = os.path.join(normal_path, folder_name)
+                if os.path.isdir(folder_path):
+                    timestamp = self.extract_timestamp(folder_name, 'normal')
                     if timestamp:
                         items.append({
-                            'type': 'normal_folder',
-                            'source': folderpath,
-                            'relative_path': os.path.join('normal', foldername),
+                            'name': folder_name,
+                            'source': folder_path,
+                            'relative_path': os.path.join('normal', folder_name),
                             'timestamp': timestamp,
-                            'name': foldername
+                            'type': 'normal_folder'
                         })
 
-        # Scan Camera folders (cam1, cam2, cam3)
-        for cam_num in [1, 2, 3]:
-            cam_path = os.path.join(self.source_base, f"cam{cam_num}")
+        # Scan camera folders
+        for cam_idx in range(1, 7):
+            cam_path = os.path.join(self.source_base, f'cam{cam_idx}')
             if os.path.exists(cam_path):
-                for filename in os.listdir(cam_path):
-                    filepath = os.path.join(cam_path, filename)
-                    if os.path.isfile(filepath):
-                        timestamp = self.extract_timestamp_camera(filename)
+                for file_name in os.listdir(cam_path):
+                    if file_name.endswith('.bmp'):
+                        timestamp = self.extract_timestamp(file_name, 'cam')
                         if timestamp:
                             items.append({
-                                'type': f'cam{cam_num}_file',
-                                'source': filepath,
-                                'relative_path': os.path.join(f'cam{cam_num}', filename),
+                                'name': file_name,
+                                'source': os.path.join(cam_path, file_name),
+                                'relative_path': os.path.join(f'cam{cam_idx}', file_name),
                                 'timestamp': timestamp,
-                                'name': filename
+                                'type': 'cam_file'
                             })
 
         # Sort by timestamp
@@ -140,40 +177,8 @@ class DataSimulator:
 
         return items
 
-    def copy_item(self, item):
-        """Copy file or folder to target location.
-
-        For network drive compatibility, uses actual file copy instead of links.
-        """
-        # Normalize paths to use Windows backslashes
-        target_path = os.path.normpath(os.path.join(self.target_base, item['relative_path']))
-        source_path = os.path.normpath(item['source'])
-
-        # Remove existing item if present
-        if os.path.exists(target_path):
-            if os.path.isdir(target_path):
-                shutil.rmtree(target_path)
-            else:
-                os.remove(target_path)
-
-        # Create parent directory if needed
-        parent_dir = os.path.dirname(target_path)
-        if parent_dir:
-            os.makedirs(parent_dir, exist_ok=True)
-
-        if item['type'] == 'normal_folder':
-            # For folders, copy entire directory tree
-            shutil.copytree(source_path, target_path)
-        else:
-            # For files, copy with metadata preservation
-            shutil.copy2(source_path, target_path)
-
     def run_simulation(self, log_callback, progress_callback, complete_callback):
-        """Run the simulation by moving files at exact timestamps.
-
-        Strategy: Move files from source to target at scheduled times (same drive = instant rename).
-        Files can be moved back to original location for reset.
-        """
+        """Run the simulation by moving files at exact timestamps"""
         try:
             if not self.target_base:
                 log_callback("ERROR: Target folder not set!")
@@ -192,14 +197,14 @@ class DataSimulator:
 
             # Get the first timestamp as reference (t0)
             t0 = items[0]['timestamp']
-            log_callback(f"Reference time (t0): {t0}")
+            log_callback(f"Reference time (t0): {t0.strftime('%Y-%m-%d %H:%M:%S')}")
 
             # Clear previous moved items tracking
             self.moved_items = []
 
             # Start simulation immediately
             start_real_time = time.time()
-            log_callback("Starting scheduled file appearance simulation...")
+            log_callback("Starting simulation...")
 
             # Move files at exact timestamps
             for idx, item in enumerate(items):
@@ -271,15 +276,32 @@ class DataSimulator:
             self.is_running = False
             complete_callback()
 
+    def start(self, log_callback, progress_callback, complete_callback):
+        """Start simulation in a separate thread"""
+        if self.is_running:
+            log_callback("Simulation already running!")
+            return
+
+        self.is_running = True
+        self.simulation_thread = threading.Thread(
+            target=self.run_simulation,
+            args=(log_callback, progress_callback, complete_callback),
+            daemon=True
+        )
+        self.simulation_thread.start()
+
+    def stop(self):
+        """Stop the running simulation"""
+        self.is_running = False
+
 
 class SimulatorGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Data Simulator - Timestamp-based Copy")
-        self.root.geometry("800x600")
+        self.root.title("Data Simulator - Timestamp-based Move")
+        self.root.geometry("900x700")
 
         self.simulator = DataSimulator()
-
         self.setup_ui()
 
     def setup_ui(self):
@@ -290,7 +312,7 @@ class SimulatorGUI:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(4, weight=1)
+        main_frame.rowconfigure(2, weight=1)
 
         # Source folder
         ttk.Label(main_frame, text="Source Folder:").grid(row=0, column=0, sticky=tk.W, pady=5)
@@ -298,6 +320,7 @@ class SimulatorGUI:
         self.source_entry.insert(0, self.simulator.source_base)
         self.source_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=5, padx=5)
         ttk.Button(main_frame, text="Browse", command=self.browse_source).grid(row=0, column=2, pady=5)
+        ttk.Button(main_frame, text="Open", command=self.open_source_folder).grid(row=0, column=3, pady=5, padx=(5, 0))
 
         # Target folder
         ttk.Label(main_frame, text="Target Folder:").grid(row=1, column=0, sticky=tk.W, pady=5)
@@ -305,29 +328,30 @@ class SimulatorGUI:
         self.target_entry.insert(0, self.simulator.target_base)
         self.target_entry.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=5, padx=5)
         ttk.Button(main_frame, text="Browse", command=self.browse_target).grid(row=1, column=2, pady=5)
+        ttk.Button(main_frame, text="Open", command=self.open_target_folder).grid(row=1, column=3, pady=5, padx=(5, 0))
+
+        # Log area
+        ttk.Label(main_frame, text="Log:").grid(row=2, column=0, sticky=(tk.W, tk.N), pady=5)
+        self.log_text = scrolledtext.ScrolledText(main_frame, width=80, height=25, wrap=tk.WORD)
+        self.log_text.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5)
 
         # Progress bar
-        ttk.Label(main_frame, text="Progress:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        ttk.Label(main_frame, text="Progress:").grid(row=3, column=0, sticky=tk.W, pady=5)
         self.progress = ttk.Progressbar(main_frame, length=400, mode='determinate')
-        self.progress.grid(row=2, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=5, padx=5)
+        self.progress.grid(row=3, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=5)
 
         # Control buttons
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=3, column=0, columnspan=3, pady=10)
+        button_frame.grid(row=4, column=0, columnspan=3, pady=10)
 
-        self.start_button = ttk.Button(button_frame, text="Start Simulation", command=self.start_simulation, width=20)
+        self.start_button = ttk.Button(button_frame, text="Start Simulation", command=self.start_simulation)
         self.start_button.pack(side=tk.LEFT, padx=5)
 
-        self.stop_button = ttk.Button(button_frame, text="Stop", command=self.stop_simulation, width=20, state=tk.DISABLED)
+        self.stop_button = ttk.Button(button_frame, text="Stop", command=self.stop_simulation, state=tk.DISABLED)
         self.stop_button.pack(side=tk.LEFT, padx=5)
 
-        self.reset_button = ttk.Button(button_frame, text="Reset Target Folder", command=self.reset_target, width=20)
+        self.reset_button = ttk.Button(button_frame, text="Reset (Move Back)", command=self.reset_target)
         self.reset_button.pack(side=tk.LEFT, padx=5)
-
-        # Log area
-        ttk.Label(main_frame, text="Log:").grid(row=4, column=0, sticky=(tk.W, tk.N), pady=5)
-        self.log_text = scrolledtext.ScrolledText(main_frame, height=20, width=80, wrap=tk.WORD)
-        self.log_text.grid(row=4, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5, padx=5)
 
     def browse_source(self):
         folder = filedialog.askdirectory(initialdir=self.source_entry.get())
@@ -345,58 +369,79 @@ class SimulatorGUI:
             self.simulator.target_base = folder
             self.simulator.save_config()
 
-    def log(self, message):
-        """Thread-safe logging"""
-        self.root.after(0, lambda: self._log_internal(message))
+    def open_source_folder(self):
+        """Open source folder in Windows Explorer"""
+        folder_path = self.source_entry.get()
+        if folder_path and os.path.exists(folder_path):
+            try:
+                # Windows: explorer 명령어로 폴더 열기
+                subprocess.Popen(['explorer', os.path.normpath(folder_path)])
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to open folder:\n{str(e)}")
+        else:
+            messagebox.showwarning("Warning", "Source folder does not exist or is not set.")
 
-    def _log_internal(self, message):
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        self.log_text.insert(tk.END, f"[{timestamp}] {message}\n")
-        self.log_text.see(tk.END)
+    def open_target_folder(self):
+        """Open target folder in Windows Explorer"""
+        folder_path = self.target_entry.get()
+        if folder_path and os.path.exists(folder_path):
+            try:
+                # Windows: explorer 명령어로 폴더 열기
+                subprocess.Popen(['explorer', os.path.normpath(folder_path)])
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to open folder:\n{str(e)}")
+        else:
+            messagebox.showwarning("Warning", "Target folder does not exist or is not set.")
+
+    def log(self, message):
+        """Add message to log (thread-safe)"""
+        def append():
+            self.log_text.insert(tk.END, message + "\n")
+            self.log_text.see(tk.END)
+        self.root.after(0, append)
 
     def update_progress(self, value):
-        """Thread-safe progress update"""
-        self.root.after(0, lambda: self.progress.configure(value=value))
+        """Update progress bar (thread-safe)"""
+        def update():
+            self.progress['value'] = value
+        self.root.after(0, update)
 
     def start_simulation(self):
-        # Validate inputs
-        if not self.target_entry.get():
-            messagebox.showerror("Error", "Please select a target folder!")
-            return
-
+        # Update paths from entry fields
         self.simulator.source_base = self.source_entry.get()
         self.simulator.target_base = self.target_entry.get()
 
-        # Update UI state
-        self.start_button.configure(state=tk.DISABLED)
-        self.stop_button.configure(state=tk.NORMAL)
-        self.reset_button.configure(state=tk.DISABLED)
-        self.progress['value'] = 0
+        if not self.simulator.target_base:
+            messagebox.showerror("Error", "Please set target folder!")
+            return
 
         # Clear log
         self.log_text.delete(1.0, tk.END)
+        self.progress['value'] = 0
 
-        # Start simulation in thread
-        self.simulator.is_running = True
-        self.simulator.simulation_thread = threading.Thread(
-            target=self.simulator.run_simulation,
-            args=(self.log, self.update_progress, self.on_simulation_complete),
-            daemon=True
+        # Update buttons
+        self.start_button.configure(state=tk.DISABLED)
+        self.stop_button.configure(state=tk.NORMAL)
+        self.reset_button.configure(state=tk.DISABLED)
+
+        # Start simulation
+        self.simulator.start(
+            log_callback=self.log,
+            progress_callback=self.update_progress,
+            complete_callback=self.simulation_complete
         )
-        self.simulator.simulation_thread.start()
 
     def stop_simulation(self):
         self.log("Stopping simulation...")
-        self.simulator.is_running = False
+        self.simulator.stop()
 
-    def on_simulation_complete(self):
-        """Called when simulation completes or is stopped"""
-        self.root.after(0, self._update_ui_after_simulation)
-
-    def _update_ui_after_simulation(self):
-        self.start_button.configure(state=tk.NORMAL)
-        self.stop_button.configure(state=tk.DISABLED)
-        self.reset_button.configure(state=tk.NORMAL)
+    def simulation_complete(self):
+        """Called when simulation completes or stops"""
+        def update_ui():
+            self.start_button.configure(state=tk.NORMAL)
+            self.stop_button.configure(state=tk.DISABLED)
+            self.reset_button.configure(state=tk.NORMAL)
+        self.root.after(0, update_ui)
 
     def reset_target(self):
         if not self.simulator.moved_items:
@@ -405,12 +450,14 @@ class SimulatorGUI:
 
         result = messagebox.askyesno(
             "Confirm Reset",
-            f"Move {len(self.simulator.moved_items)} items back to original location?\n\nThis will restore the source folder."
+            f"Move {len(self.simulator.moved_items)} items back to original location?\n\n"
+            "This will restore the source folder."
         )
 
         if result:
             # Reset progress bar
             self.progress['value'] = 0
+
             try:
                 moved_back = 0
                 failed = 0
@@ -443,7 +490,8 @@ class SimulatorGUI:
                 self.simulator.moved_items = []
 
                 self.log(f"Reset complete: {moved_back} items restored, {failed} failed")
-                messagebox.showinfo("Reset Complete", f"Moved {moved_back} items back to original location\nFailed: {failed}")
+                messagebox.showinfo("Reset Complete",
+                                  f"Moved {moved_back} items back to original location\nFailed: {failed}")
 
             except Exception as e:
                 self.log(f"Error during reset: {str(e)}")

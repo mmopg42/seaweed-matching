@@ -1,6 +1,8 @@
 using System.IO;
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
+using System.Linq;
 using WinForms = System.Windows.Forms;
 using ChronoView.Models;
 using ChronoView.Core.Configuration;
@@ -42,13 +44,8 @@ public class SettingsDialogViewModel : ViewModelBase
     private int _thumbnailHeight = 150;
     private int _thumbnailQuality = 85;
 
-    // Advanced options - Matching
-    private bool _useCamTimeMatching = true;
-    private double _camMatchMinDiff = 4.0;
-    private double _camMatchMaxDiff = 6.0;
-    private double _nirMatchTimeDiff = 1.0;
-    private int _nirTimeWindowSeconds = 300;
-    private int _cameraTimeWindowSeconds = 60;
+    // Advanced options - Matching (DEPRECATED - Use DataSequenceSettings)
+    // All time-based matching is now controlled by DataSequenceSettings in the Sequence tab
 
     // Advanced options - UI
     private bool _legacyUiMode;
@@ -68,6 +65,10 @@ public class SettingsDialogViewModel : ViewModelBase
     // Line mode
     private bool _isSeparatedMode;
 
+    // Data Sequence settings
+    private ObservableCollection<DataSequenceItemViewModel> _sequenceItems = new();
+    private List<DataSequenceItemViewModel> _originalSequence = new(); // For cancel
+
     public SettingsDialogViewModel(
         IConfigurationManager configurationManager,
         ILogger<SettingsDialogViewModel> logger)
@@ -83,6 +84,8 @@ public class SettingsDialogViewModel : ViewModelBase
         CancelCommand = new RelayCommand(ExecuteCancel);
         ApplyCommand = new RelayCommand(ExecuteApply);
         BrowsePathCommand = new RelayCommand<string>(ExecuteBrowsePath);
+        OpenFolderCommand = new RelayCommand<string>(ExecuteOpenFolder);
+        BrowseExeCommand = new RelayCommand<string>(ExecuteBrowseExe);
 
         // Load configuration
         LoadFromConfiguration();
@@ -206,42 +209,8 @@ public class SettingsDialogViewModel : ViewModelBase
         set => SetProperty(ref _thumbnailQuality, value);
     }
 
-    // Matching options
-    public bool UseCamTimeMatching
-    {
-        get => _useCamTimeMatching;
-        set => SetProperty(ref _useCamTimeMatching, value);
-    }
-
-    public double CamMatchMinDiff
-    {
-        get => _camMatchMinDiff;
-        set => SetProperty(ref _camMatchMinDiff, value);
-    }
-
-    public double CamMatchMaxDiff
-    {
-        get => _camMatchMaxDiff;
-        set => SetProperty(ref _camMatchMaxDiff, value);
-    }
-
-    public double NirMatchTimeDiff
-    {
-        get => _nirMatchTimeDiff;
-        set => SetProperty(ref _nirMatchTimeDiff, value);
-    }
-
-    public int NirTimeWindowSeconds
-    {
-        get => _nirTimeWindowSeconds;
-        set => SetProperty(ref _nirTimeWindowSeconds, value);
-    }
-
-    public int CameraTimeWindowSeconds
-    {
-        get => _cameraTimeWindowSeconds;
-        set => SetProperty(ref _cameraTimeWindowSeconds, value);
-    }
+    // Matching options (DEPRECATED - Use DataSequenceSettings)
+    // All time-based matching properties removed - use Sequence tab for configuration
 
     // UI options
     public bool LegacyUiMode
@@ -318,6 +287,39 @@ public class SettingsDialogViewModel : ViewModelBase
         set => SetProperty(ref _isSeparatedMode, value);
     }
 
+    // Data Sequence settings
+    public ObservableCollection<DataSequenceItemViewModel> SequenceItems
+    {
+        get => _sequenceItems;
+        set => SetProperty(ref _sequenceItems, value);
+    }
+
+    #endregion
+
+    #region Properties - External Programs
+
+    private string _generalCameraProgramPath = string.Empty;
+    private string _nir1ProgramPath = string.Empty;
+    private string _nir2ProgramPath = string.Empty;
+
+    public string GeneralCameraProgramPath
+    {
+        get => _generalCameraProgramPath;
+        set => SetProperty(ref _generalCameraProgramPath, value);
+    }
+
+    public string Nir1ProgramPath
+    {
+        get => _nir1ProgramPath;
+        set => SetProperty(ref _nir1ProgramPath, value);
+    }
+
+    public string Nir2ProgramPath
+    {
+        get => _nir2ProgramPath;
+        set => SetProperty(ref _nir2ProgramPath, value);
+    }
+
     #endregion
 
     #region Commands
@@ -326,6 +328,8 @@ public class SettingsDialogViewModel : ViewModelBase
     public ICommand CancelCommand { get; }
     public ICommand ApplyCommand { get; }
     public ICommand BrowsePathCommand { get; }
+    public ICommand OpenFolderCommand { get; }
+    public ICommand BrowseExeCommand { get; }
 
     /// <summary>
     /// Event raised when the dialog should be closed.
@@ -423,6 +427,86 @@ public class SettingsDialogViewModel : ViewModelBase
         }
     }
 
+    private void ExecuteOpenFolder(string? pathType)
+    {
+        if (string.IsNullOrWhiteSpace(pathType))
+            return;
+
+        string? folderPath = pathType.ToLowerInvariant() switch
+        {
+            "nir" or "nir1" => NirPath,
+            "nir2" => Nir2Path,
+            "normal" or "normal1" => NormalPath,
+            "normal2" => Normal2Path,
+            "cam1" => Camera1Path,
+            "cam2" => Camera2Path,
+            "cam3" => Camera3Path,
+            "cam4" => Camera4Path,
+            "cam5" => Camera5Path,
+            "cam6" => Camera6Path,
+            "output" => OutputPath,
+            "quarantine" or "deletequarantine" or "deletequarantinepath" => DeleteQuarantinePath,
+            _ => null
+        };
+
+        if (string.IsNullOrWhiteSpace(folderPath))
+        {
+            WpfMessageBox.Show("Path is not set.", "Cannot Open Folder", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!Directory.Exists(folderPath))
+        {
+            WpfMessageBox.Show($"Folder does not exist:\n{folderPath}", "Cannot Open Folder", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start("explorer.exe", folderPath);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open folder: {Path}", folderPath);
+            WpfMessageBox.Show($"Failed to open folder:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ExecuteBrowseExe(string? programType)
+    {
+        if (string.IsNullOrWhiteSpace(programType))
+            return;
+
+        using var dialog = new WinForms.OpenFileDialog
+        {
+            Title = "Select Program",
+            Filter = "Executable Files (*.exe)|*.exe|All Files (*.*)|*.*",
+            FilterIndex = 1,
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog() != WinForms.DialogResult.OK)
+            return;
+
+        var selected = dialog.FileName;
+
+        switch (programType.ToLowerInvariant())
+        {
+            case "generalcamera":
+                GeneralCameraProgramPath = selected;
+                break;
+            case "nir1program":
+                Nir1ProgramPath = selected;
+                break;
+            case "nir2program":
+                Nir2ProgramPath = selected;
+                break;
+            default:
+                // Unknown program type; ignore
+                break;
+        }
+    }
+
     #endregion
 
     #region Configuration Management
@@ -459,13 +543,7 @@ public class SettingsDialogViewModel : ViewModelBase
         ThumbnailHeight = _configuration.ImageSettings.ThumbnailHeight;
         ThumbnailQuality = _configuration.ImageSettings.ThumbnailQuality;
 
-        // Load matching options
-        UseCamTimeMatching = _configuration.MatchingSettings.UseCamTimeMatching;
-        CamMatchMinDiff = _configuration.MatchingSettings.CamMatchMinDiff;
-        CamMatchMaxDiff = _configuration.MatchingSettings.CamMatchMaxDiff;
-        NirMatchTimeDiff = _configuration.MatchingSettings.NirMatchTimeDiff;
-        NirTimeWindowSeconds = _configuration.MatchingSettings.NirTimeWindowSeconds;
-        CameraTimeWindowSeconds = _configuration.MatchingSettings.CameraTimeWindowSeconds;
+        // Matching options (DEPRECATED - removed, use DataSequenceSettings)
 
         // Load camera subfolder options
         UseCameraSubfolderNormal = _configuration.MatchingSettings.UseCameraSubfolderNormal;
@@ -487,6 +565,14 @@ public class SettingsDialogViewModel : ViewModelBase
         NirThumbnailHeight = _configuration.UISettings.NirThumbnailHeight;
         NirDisplayWidth = _configuration.UISettings.NirDisplayWidth;
         NirDisplayHeight = _configuration.UISettings.NirDisplayHeight;
+
+        // Load Data Sequence settings
+        LoadSequenceSettings();
+
+        // Load External Programs settings
+        GeneralCameraProgramPath = _configuration.ExternalProgramSettings.GeneralCameraProgramPath;
+        Nir1ProgramPath = _configuration.ExternalProgramSettings.Nir1ProgramPath;
+        Nir2ProgramPath = _configuration.ExternalProgramSettings.Nir2ProgramPath;
     }
 
     /// <summary>
@@ -527,13 +613,7 @@ public class SettingsDialogViewModel : ViewModelBase
         _configuration.ImageSettings.ThumbnailHeight = ThumbnailHeight;
         _configuration.ImageSettings.ThumbnailQuality = ThumbnailQuality;
 
-        // Save matching options
-        _configuration.MatchingSettings.UseCamTimeMatching = UseCamTimeMatching;
-        _configuration.MatchingSettings.CamMatchMinDiff = CamMatchMinDiff;
-        _configuration.MatchingSettings.CamMatchMaxDiff = CamMatchMaxDiff;
-        _configuration.MatchingSettings.NirMatchTimeDiff = NirMatchTimeDiff;
-        _configuration.MatchingSettings.NirTimeWindowSeconds = NirTimeWindowSeconds;
-        _configuration.MatchingSettings.CameraTimeWindowSeconds = CameraTimeWindowSeconds;
+        // Matching options (DEPRECATED - removed, use DataSequenceSettings)
 
         // Save camera subfolder options
         _configuration.MatchingSettings.UseCameraSubfolderNormal = UseCameraSubfolderNormal;
@@ -556,6 +636,14 @@ public class SettingsDialogViewModel : ViewModelBase
         _configuration.UISettings.NirDisplayWidth = NirDisplayWidth;
         _configuration.UISettings.NirDisplayHeight = NirDisplayHeight;
 
+        // Save Data Sequence settings
+        SaveSequenceSettings();
+
+        // Save External Programs settings
+        _configuration.ExternalProgramSettings.GeneralCameraProgramPath = GeneralCameraProgramPath;
+        _configuration.ExternalProgramSettings.Nir1ProgramPath = Nir1ProgramPath;
+        _configuration.ExternalProgramSettings.Nir2ProgramPath = Nir2ProgramPath;
+
         // Persist to disk
         try 
         {
@@ -574,6 +662,136 @@ public class SettingsDialogViewModel : ViewModelBase
     public ApplicationConfiguration GetConfiguration()
     {
         return _configuration;
+    }
+
+    #endregion
+
+    #region Data Sequence Management
+
+    /// <summary>
+    /// Load data sequence settings from configuration
+    /// Filters out Cam4-6 (Line 2) as they are auto-mapped from Cam1-3
+    /// </summary>
+    private void LoadSequenceSettings()
+    {
+        SequenceItems.Clear();
+
+        var settings = _configuration.DataSequenceSettings;
+        foreach (var item in settings.Sequence.OrderBy(x => x.Order))
+        {
+            // FILTER: Hide Cam4-6 from UI (they are Line 2 internal types)
+            if (item.Type == DataType.Cam4 || item.Type == DataType.Cam5 || item.Type == DataType.Cam6)
+            {
+                _logger.LogTrace("Skipping {Type} from UI (Line 2 internal type)", item.Type);
+                continue;
+            }
+
+            var viewModel = new DataSequenceItemViewModel
+            {
+                Type = item.Type,
+                Order = item.Order,
+                MinDelay = item.MinDelaySeconds,
+                MaxDelay = item.MaxDelaySeconds,
+                Enabled = item.Enabled
+            };
+            SequenceItems.Add(viewModel);
+        }
+
+        // Store original for cancel
+        _originalSequence = SequenceItems.Select(item => new DataSequenceItemViewModel
+        {
+            Type = item.Type,
+            Order = item.Order,
+            MinDelay = item.MinDelay,
+            MaxDelay = item.MaxDelay,
+            Enabled = item.Enabled
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Save data sequence settings to configuration
+    /// </summary>
+    private void SaveSequenceSettings()
+    {
+        var sequenceSettings = new DataSequenceSettings
+        {
+            Sequence = SequenceItems.Select(vm => new DataSequenceItem
+            {
+                Type = vm.Type,
+                Order = vm.Order,
+                MinDelaySeconds = vm.MinDelay,
+                MaxDelaySeconds = vm.MaxDelay,
+                Enabled = vm.Enabled
+            }).ToList()
+        };
+
+        // Validate
+        if (!sequenceSettings.Validate(out var errors))
+        {
+            var errorMessage = string.Join("\n", errors);
+            _logger.LogWarning("Data sequence validation failed: {Errors}", errorMessage);
+            WpfMessageBox.Show($"Validation failed:\n{errorMessage}", "Invalid Sequence", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        _configuration.DataSequenceSettings = sequenceSettings;
+        _logger.LogInformation("Data sequence settings saved");
+    }
+
+    /// <summary>
+    /// Apply a preset configuration
+    /// </summary>
+
+
+    /// <summary>
+    /// Check if there are unsaved changes in sequence
+    /// </summary>
+    private bool HasUnsavedSequenceChanges()
+    {
+        if (SequenceItems.Count != _originalSequence.Count)
+            return true;
+
+        for (int i = 0; i < SequenceItems.Count; i++)
+        {
+            var current = SequenceItems[i];
+            var original = _originalSequence[i];
+
+            if (current.Type != original.Type ||
+                current.Order != original.Order ||
+                current.MinDelay != original.MinDelay ||
+                current.MaxDelay != original.MaxDelay ||
+                current.Enabled != original.Enabled)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Move item in sequence after drag-drop (called from code-behind)
+    /// </summary>
+    public void ReorderSequenceItem(int oldIndex, int newIndex)
+    {
+        if (oldIndex < 0 || oldIndex >= SequenceItems.Count || 
+            newIndex < 0 || newIndex >= SequenceItems.Count ||
+            oldIndex == newIndex)
+            return;
+
+        // Move item in collection
+        var item = SequenceItems[oldIndex];
+        SequenceItems.RemoveAt(oldIndex);
+        SequenceItems.Insert(newIndex, item);
+
+        // Reassign Order values to match new positions
+        for (int i = 0; i < SequenceItems.Count; i++)
+        {
+            SequenceItems[i].Order = i + 1;  // 1-based ordering
+        }
+
+        _logger.LogDebug("Reordered: {Type} from index {OldIndex} to {NewIndex}", 
+            item.Type, oldIndex, newIndex);
     }
 
     #endregion

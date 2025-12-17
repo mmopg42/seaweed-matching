@@ -24,6 +24,7 @@ public class StartCommandTests
     private readonly Mock<IPathManagementService> _mockPathManagementService;
     private readonly Mock<IImageProcessor> _mockImageProcessor;
     private readonly Mock<IAbnormalDetector> _mockAbnormalDetector;
+    private readonly Mock<ChronoView.Core.FileMatching.IFileGroupMatcher> _mockFileGroupMatcher;
     private readonly Mock<ILogger<MainWindowViewModel>> _mockLogger;
     private readonly Mock<ILogger<FileGroupViewModel>> _mockFileGroupLogger;
     private readonly ApplicationConfiguration _testConfig;
@@ -37,6 +38,7 @@ public class StartCommandTests
         _mockPathManagementService = new Mock<IPathManagementService>();
         _mockImageProcessor = new Mock<IImageProcessor>();
         _mockAbnormalDetector = new Mock<IAbnormalDetector>();
+        _mockFileGroupMatcher = new Mock<ChronoView.Core.FileMatching.IFileGroupMatcher>();
         _mockLogger = new Mock<ILogger<MainWindowViewModel>>();
         _mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
@@ -65,6 +67,7 @@ public class StartCommandTests
             _mockPathManagementService.Object,
             _mockImageProcessor.Object,
             _mockAbnormalDetector.Object,
+            _mockFileGroupMatcher.Object,
             _mockLogger.Object,
             _mockFileGroupLogger.Object);
     }
