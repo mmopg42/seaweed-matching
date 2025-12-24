@@ -37,7 +37,7 @@ namespace ChronoView.Tests
             
             var nirItem = settings.GetByType(DataType.NIR);
             Assert(nirItem != null, "GetByType(NIR) should return item");
-            Assert(nirItem.Type == DataType.NIR, "Item type should be NIR");
+            Assert(nirItem!.Type == DataType.NIR, "Item type should be NIR");
             
             var missing = settings.GetByType((DataType)999);
             Assert(missing == null, "GetByType(invalid) should return null");

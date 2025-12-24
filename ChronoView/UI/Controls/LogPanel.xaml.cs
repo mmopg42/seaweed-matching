@@ -20,12 +20,18 @@ public partial class LogPanel : WpfUserControl
     private ObservableCollection<LogMessage> _allMessages = new();
     private ICollectionView? _filteredView;
     private string _searchText = string.Empty;
-    private string _selectedLevel = "All";
+    private string? _selectedLevel = null; // null = "All", otherwise LogSeverity enum string
 
     public LogPanel()
     {
         InitializeComponent();
         InitializeLogView();
+        
+        // Initialize selected level after XAML is loaded
+        if (LevelFilter.SelectedItem is ComboBoxItem selectedItem)
+        {
+            _selectedLevel = selectedItem.Tag?.ToString();
+        }
     }
 
     /// <summary>
@@ -48,28 +54,54 @@ public partial class LogPanel : WpfUserControl
     {
         if (d is LogPanel panel)
         {
-            panel._allMessages = e.NewValue as ObservableCollection<LogMessage> ?? new();
+            // Unsubscribe from old collection
+            if (e.OldValue is ObservableCollection<LogMessage> oldCollection)
+            {
+                oldCollection.CollectionChanged -= panel.OnLogMessagesCollectionChanged;
+            }
+            
+            // Set new collection - use the same reference from DependencyProperty
+            // This ensures that when LogMessages.Add() is called, it updates _allMessages too
+            if (e.NewValue is ObservableCollection<LogMessage> newCollection)
+            {
+                panel._allMessages = newCollection;
+            }
+            else
+            {
+                // If null, create empty collection but this should not happen in normal usage
+                panel._allMessages = new ObservableCollection<LogMessage>();
+            }
+            
             panel.InitializeLogView();
             
-            // Subscribe to collection changes for auto-scroll
-            if (panel._allMessages != null)
-            {
-                panel._allMessages.CollectionChanged += (s, args) =>
-                {
-                    if (panel.AutoScrollCheckBox.IsChecked == true && panel.LogDataGrid.Items.Count > 0)
-                    {
-                        panel.LogDataGrid.ScrollIntoView(panel.LogDataGrid.Items[^1]);
-                    }
-                };
-            }
+            // Subscribe to new collection changes for auto-scroll
+            panel._allMessages.CollectionChanged += panel.OnLogMessagesCollectionChanged;
+        }
+    }
+
+    private void OnLogMessagesCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        if (AutoScrollCheckBox.IsChecked == true && LogDataGrid.Items.Count > 0)
+        {
+            LogDataGrid.ScrollIntoView(LogDataGrid.Items[^1]);
         }
     }
 
     private void InitializeLogView()
     {
+        // Ensure _allMessages is not null
+        if (_allMessages == null)
+        {
+            _allMessages = new ObservableCollection<LogMessage>();
+        }
+        
+        // Create or recreate the filtered view
         _filteredView = CollectionViewSource.GetDefaultView(_allMessages);
-        _filteredView.Filter = FilterLogMessage;
-        LogDataGrid.ItemsSource = _filteredView;
+        if (_filteredView != null)
+        {
+            _filteredView.Filter = FilterLogMessage;
+            LogDataGrid.ItemsSource = _filteredView;
+        }
     }
 
     private bool FilterLogMessage(object obj)
@@ -89,7 +121,7 @@ public partial class LogPanel : WpfUserControl
         }
 
         // Filter by severity level
-        if (_selectedLevel != "All")
+        if (_selectedLevel != null)
         {
             if (message.Severity.ToString() != _selectedLevel)
             {
@@ -110,7 +142,8 @@ public partial class LogPanel : WpfUserControl
     {
         if (LevelFilter.SelectedItem is ComboBoxItem item)
         {
-            _selectedLevel = item.Content.ToString() ?? "All";
+            // Use Tag property to store enum value (set in XAML)
+            _selectedLevel = item.Tag?.ToString(); // null = "All", otherwise enum string like "Debug", "Info", etc.
             _filteredView?.Refresh();
         }
     }
@@ -118,8 +151,8 @@ public partial class LogPanel : WpfUserControl
     private void Clear_Click(object sender, RoutedEventArgs e)
     {
         var result = WpfMessageBox.Show(
-            "Are you sure you want to clear all log messages?",
-            "Clear Log",
+            Core.Localization.LocalizationManager.GetString("Message_ClearLogConfirm"),
+            Core.Localization.LocalizationManager.GetString("Dialog_ClearLog"),
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
 
@@ -133,7 +166,7 @@ public partial class LogPanel : WpfUserControl
     {
         var saveDialog = new WpfSaveFileDialog
         {
-            Filter = "Text Files (*.txt)|*.txt|CSV Files (*.csv)|*.csv|All Files (*.*)|*.*",
+            Filter = Core.Localization.LocalizationManager.GetString("Filter_TextFiles"),
             DefaultExt = ".txt",
             FileName = $"ChronoView_Log_{DateTime.Now:yyyyMMdd_HHmmss}"
         };
@@ -144,16 +177,16 @@ public partial class LogPanel : WpfUserControl
             {
                 ExportToFile(saveDialog.FileName);
                 WpfMessageBox.Show(
-                    $"Log exported successfully to:\n{saveDialog.FileName}",
-                    "Export Complete",
+                    Core.Localization.LocalizationManager.GetString("Message_ExportSuccess", saveDialog.FileName),
+                    Core.Localization.LocalizationManager.GetString("Dialog_ExportComplete"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 WpfMessageBox.Show(
-                    $"Failed to export log:\n{ex.Message}",
-                    "Export Error",
+                    Core.Localization.LocalizationManager.GetString("Message_ExportError", ex.Message),
+                    Core.Localization.LocalizationManager.GetString("Dialog_ExportError"),
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }

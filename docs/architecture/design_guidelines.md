@@ -1,6 +1,6 @@
 ---
 Owner: ChronoView Development Team
-Last Updated: 2025-12-15
+Last Updated: 2025-12-18
 Code Ref: MainWindow.xaml, SettingsDialog.xaml, SplashWindow.xaml
 ---
 
@@ -647,4 +647,5 @@ To extract a style for reuse:
 
 ## Changelog
 
+- **2025-12-18**: Added Status Display Logic section for file group completion states
 - **2025-12-15**: Initial creation based on MainWindow.xaml, SettingsDialog.xaml, and SplashWindow.xaml

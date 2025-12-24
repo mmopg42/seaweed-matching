@@ -243,8 +243,6 @@ public class ConfigurationManager : IConfigurationManager
         {
             if (config.WorkflowSettings.WatcherBufferSize <= 0)
                 throw new ConfigurationValidationException("WatcherBufferSize must be positive");
-            if (config.WorkflowSettings.PollingIntervalMs <= 0)
-                throw new ConfigurationValidationException("PollingIntervalMs must be positive");
         }
     }
 

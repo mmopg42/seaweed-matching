@@ -64,8 +64,6 @@ public class ConfigurationPersistencePropertyTests : IDisposable
         bool showProgress,
         bool enableRealTimeMonitoring,
         int watcherBufferSize,
-        bool enableNetworkDrivePolling,
-        int pollingIntervalMs,
         double windowWidth,
         double windowHeight,
         bool rememberPosition)
@@ -88,7 +86,7 @@ public class ConfigurationPersistencePropertyTests : IDisposable
         normalFolderTimeWindow = Math.Clamp(normalFolderTimeWindow, 10, 600);
         zScoreThreshold = Math.Clamp(zScoreThreshold, 1.0, 5.0);
         watcherBufferSize = Math.Clamp(watcherBufferSize, 4096, 131072);
-        pollingIntervalMs = Math.Clamp(pollingIntervalMs, 1000, 30000);
+        watcherBufferSize = Math.Clamp(watcherBufferSize, 4096, 131072);
         windowWidth = Math.Clamp(windowWidth, 400, 3840);
         windowHeight = Math.Clamp(windowHeight, 300, 2160);
 
@@ -124,8 +122,6 @@ public class ConfigurationPersistencePropertyTests : IDisposable
                 ShowProgress = showProgress,
                 EnableRealTimeMonitoring = enableRealTimeMonitoring,
                 WatcherBufferSize = watcherBufferSize,
-                EnableNetworkDrivePolling = enableNetworkDrivePolling,
-                PollingIntervalMs = pollingIntervalMs
             },
             WindowSettings = new WindowSettings
             {
@@ -163,8 +159,7 @@ public class ConfigurationPersistencePropertyTests : IDisposable
         Assert.Equal(config.WorkflowSettings.ShowProgress, loadedConfig.WorkflowSettings.ShowProgress);
         Assert.Equal(config.WorkflowSettings.EnableRealTimeMonitoring, loadedConfig.WorkflowSettings.EnableRealTimeMonitoring);
         Assert.Equal(config.WorkflowSettings.WatcherBufferSize, loadedConfig.WorkflowSettings.WatcherBufferSize);
-        Assert.Equal(config.WorkflowSettings.EnableNetworkDrivePolling, loadedConfig.WorkflowSettings.EnableNetworkDrivePolling);
-        Assert.Equal(config.WorkflowSettings.PollingIntervalMs, loadedConfig.WorkflowSettings.PollingIntervalMs);
+        Assert.Equal(config.WorkflowSettings.WatcherBufferSize, loadedConfig.WorkflowSettings.WatcherBufferSize);
         Assert.Equal(config.WindowSettings.Width, loadedConfig.WindowSettings.Width, 0.0001);
         Assert.Equal(config.WindowSettings.Height, loadedConfig.WindowSettings.Height, 0.0001);
         Assert.Equal(config.WindowSettings.RememberPosition, loadedConfig.WindowSettings.RememberPosition);

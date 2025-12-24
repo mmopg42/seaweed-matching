@@ -87,15 +87,15 @@ namespace ChronoView.UI.ViewModels
             CompositeCameras.Clear();
             if (group.LineNumber == 1)
             {
-                AddCamera("Cam 1", group.Camera1ImagePath, 1);
-                AddCamera("Cam 2", group.Camera2ImagePath, 2);
-                AddCamera("Cam 3", group.Camera3ImagePath, 3);
+                AddCamera(Core.Localization.LocalizationManager.GetCameraLabel(1), group.Camera1ImagePath, 1);
+                AddCamera(Core.Localization.LocalizationManager.GetCameraLabel(2), group.Camera2ImagePath, 2);
+                AddCamera(Core.Localization.LocalizationManager.GetCameraLabel(3), group.Camera3ImagePath, 3);
             }
             else
             {
-                AddCamera("Cam 4", group.Camera4ImagePath, 4);
-                AddCamera("Cam 5", group.Camera5ImagePath, 5);
-                AddCamera("Cam 6", group.Camera6ImagePath, 6);
+                AddCamera(Core.Localization.LocalizationManager.GetCameraLabel(4), group.Camera4ImagePath, 4);
+                AddCamera(Core.Localization.LocalizationManager.GetCameraLabel(5), group.Camera5ImagePath, 5);
+                AddCamera(Core.Localization.LocalizationManager.GetCameraLabel(6), group.Camera6ImagePath, 6);
             }
 
             IsVisible = true;
@@ -110,7 +110,8 @@ namespace ChronoView.UI.ViewModels
             {
                 StatusColor = "#ffc107"; // Warning Yellow/Orange
             }
-            else if (group.StatusText == "Incomplete" || group.StatusText.Contains("Missing"))
+            else if (group.StatusText.Contains(Core.Localization.LocalizationManager.GetString("Status_Incomplete")) || 
+                     group.StatusText.Contains(Core.Localization.LocalizationManager.GetString("Status_Missing")))
             {
                 StatusColor = "#dc3545"; // Error Red
             }

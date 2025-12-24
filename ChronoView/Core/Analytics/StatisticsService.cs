@@ -57,6 +57,8 @@ public class StatisticsService : IStatisticsService, IDisposable
 
     public async Task StartMonitoringAsync(ApplicationConfiguration config)
     {
+        _logger.LogError("DEBUG: StartMonitoringAsync called, _isMonitoring={IsMonitoring}", _isMonitoring);
+        
         if (_isMonitoring)
         {
             _logger.LogWarning("Monitoring is already running");
@@ -66,10 +68,13 @@ public class StatisticsService : IStatisticsService, IDisposable
         _currentConfig = config ?? throw new ArgumentNullException(nameof(config));
         _isMonitoring = true;
         
+        _logger.LogError("DEBUG: Starting background file counting task...");
+        
         // Start background file counting worker
         _monitoringTask = Task.Run(async () => await MonitorFileCountsAsync(_cancellationTokenSource.Token));
         
         _logger.LogInformation("Statistics monitoring started");
+        _logger.LogError("DEBUG: Statistics monitoring started successfully");
         await Task.CompletedTask;
     }
 

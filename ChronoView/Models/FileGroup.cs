@@ -157,48 +157,55 @@ public class FileGroup : IEquatable<FileGroup>
     }
 
     /// <summary>
-    /// Gets all file paths associated with this group (MainImage, NIR, Cameras).
-    /// </summary>
-    public IEnumerable<string> GetAllFilePaths()
-    {
-        if (!string.IsNullOrEmpty(MainImagePath))
-            yield return MainImagePath;
+/// Gets all file paths associated with this group (NIR, Cameras).
+/// NOTE: MainImagePath is NOT included here because it's inside NormalFolder,
+/// which is handled separately by FileOperationService.
+/// </summary>
+public IEnumerable<string> GetAllFilePaths()
+{
+    // DON'T return MainImagePath - it's inside NormalFolder which is moved as a whole directory
+    // MainImagePath is typically: "C:\...\Normal\C251216T200720_0\stitched_original.png"
+    // NormalFolder is:            "C:\...\Normal\C251216T200720_0"
+    // If we returned MainImagePath, the file would be moved twice (once with folder, once individually)
 
-        if (HasNir && !string.IsNullOrEmpty(NirFilePath))
+    if (HasNir && !string.IsNullOrEmpty(NirFilePath))
+    {
+        // Primary NIR file (.spc typically) - VERIFY IT EXISTS
+        if (File.Exists(NirFilePath))
         {
-            // Primary NIR file (.spc typically)
             yield return NirFilePath;
+        }
+        
+        // .txt file in the NIR file set (NirKey + A.txt pattern)
+        var nirDirectory = Path.GetDirectoryName(NirFilePath);
+        if (!string.IsNullOrEmpty(nirDirectory))
+        {
+            var nirKey = Path.GetFileNameWithoutExtension(NirFilePath);
+            var txtPathA = Path.Combine(nirDirectory, nirKey + "A.txt");
             
-            //. txt file in the NIR file set (NirKey + A.txt pattern)
-            var nirDirectory = Path.GetDirectoryName(NirFilePath);
-            if (!string.IsNullOrEmpty(nirDirectory))
+            if (File.Exists(txtPathA))
             {
-                var nirKey = Path.GetFileNameWithoutExtension(NirFilePath);
-                var txtPathA = Path.Combine(nirDirectory, nirKey + "A.txt");
-                
-                if (File.Exists(txtPathA))
+                yield return txtPathA;
+            }
+            else
+            {
+                // Fallback: try plain .txt
+                var txtPath = Path.Combine(nirDirectory, nirKey + ".txt");
+                if (File.Exists(txtPath))
                 {
-                    yield return txtPathA;
-                }
-                else
-                {
-                    // Fallback: try plain .txt
-                    var txtPath = Path.Combine(nirDirectory, nirKey + ".txt");
-                    if (File.Exists(txtPath))
-                    {
-                        yield return txtPath;
-                    }
+                    yield return txtPath;
                 }
             }
         }
-
-        foreach (var path in CameraFiles.Values)
-        {
-            if (!string.IsNullOrEmpty(path))
-                yield return path;
-        }
     }
 
+    // Camera files - VERIFY THEY EXIST
+    foreach (var path in CameraFiles.Values)
+    {
+        if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            yield return path;
+    }
+}
     /// <summary>
     /// Gets a safe filename with prefix to avoid collisions.
     /// </summary>

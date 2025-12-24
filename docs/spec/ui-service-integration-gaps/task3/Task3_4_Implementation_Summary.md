@@ -1,7 +1,27 @@
 # Task 3.4 Implementation Summary: ExecutePathAutoConfig
 
+## ⚠️ WARNING: INCORRECT IMPLEMENTATION
+
+**Status**: 🔴 **BROKEN** - This implementation does NOT match the intended behavior.
+
+**Current Issues**:
+- ❌ Uses `DateTime.Today` instead of user input
+- ❌ Generates new paths instead of replacing date patterns in existing paths
+- ❌ Does not create folders automatically
+- ❌ Completely different logic from Python reference implementation
+
+**Correct Behavior** (see Python `script/apps/monitoring_app.py:path_auto_setting_edit_config`):
+- ✅ Takes date from user input field (YYYYMMDD format)
+- ✅ Finds 8-digit date patterns in existing paths and replaces them
+- ✅ Automatically creates folders if missing
+- ✅ Preserves existing path structure
+
+**Reference**: `docs/architecture/module_configuration.md` - Path Auto-Configuration Feature section
+
+---
+
 ## Overview
-Task 3.4에서는 **경로 자동 설정(Path Auto-Configuration)** 기능을 구현했습니다. 사용자가 수동으로 날짜별 경로를 설정하는 대신, 버튼 클릭만으로 오늘 날짜 기준의 모든 모니터링 경로가 자동 생성되도록 했습니다.
+Task 3.4에서는 **경로 자동 설정(Path Auto-Configuration)** 기능을 구현했습니다. **하지만 현재 구현은 의도된 동작과 다릅니다.** (위 경고 참조)
 
 ---
 
@@ -98,6 +118,22 @@ private async Task ExecutePathAutoConfigAsync()
 
 ---
 
-## Next Steps (Task 3.5)
+## Next Steps
+
+### Immediate Fix Required (Task 3.4 Fix)
+
+1. **Add user date input field** to UI (currently missing)
+2. **Implement date pattern replacement** logic:
+   - Find 8-digit date patterns (YYYYMMDD) in existing paths
+   - Replace with user-provided date
+   - Preserve path structure
+3. **Add automatic folder creation**:
+   - Create folders if they don't exist
+   - Handle permission errors gracefully
+4. **Update PathManagementService** or create new service for pattern replacement
+
+**Reference Implementation**: `script/apps/monitoring_app.py:639-780`
+
+### Future Tasks (Task 3.5)
 
 - Implement `ExecuteCreateSampleFolder` for test data generation

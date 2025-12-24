@@ -18,7 +18,7 @@
 
             <!-- Custom Title Bar -->
             <Border Grid.Row="0" 
-                    Background="#EB1E24" 
+                    Background="#5a5a5a" 
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Grid>
                     <TextBlock Text="시스템 설정 - System Setup"
@@ -44,18 +44,29 @@
                                         <Setter.Value>
                                             <ControlTemplate TargetType="Button">
                                                 <Border Background="{TemplateBinding Background}">
-                                                    <TextBlock Text="⚙" 
-                                                               FontSize="18" 
-                                                               Foreground="White"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"/>
+                                                    <Image Source="pack://application:,,,/Resources/Images/settings_icon.png" 
+                                                           Width="20" Height="20"
+                                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center">
+                                                        <Image.Style>
+                                                            <Style TargetType="Image">
+                                                                <Setter Property="Opacity" Value="0.9"/>
+                                                                <Style.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter Property="Opacity" Value="1.0"/>
+                                                                    </Trigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </Image.Style>
+                                                    </Image>
                                                 </Border>
                                             </ControlTemplate>
                                         </Setter.Value>
                                     </Setter>
                                     <Style.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#D41C24"/>
+                                            <Setter Property="Background" Value="#4a4a4a"/>
                                         </Trigger>
                                     </Style.Triggers>
                                 </Style>
@@ -85,7 +96,7 @@
                                     </Setter>
                                     <Style.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#D41C24"/>
+                                            <Setter Property="Background" Value="#4a4a4a"/>
                                         </Trigger>
                                     </Style.Triggers>
                                 </Style>
@@ -115,7 +126,7 @@
                                     </Setter>
                                     <Style.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#C0392B"/>
+                                            <Setter Property="Background" Value="#c62828"/>
                                         </Trigger>
                                     </Style.Triggers>
                                 </Style>
@@ -133,7 +144,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- Left Panel - PRISCHE Branding -->
-            <Border Grid.Column="0" Background="#EB1E24">
+            <Border Grid.Column="0" Background="#5a5a5a">
                 <Grid>
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <!-- PRISCHE Logo -->
@@ -240,7 +251,7 @@
                                 <Button Command="{Binding LaunchGeneralCameraCommand}"
                                         Margin="0,25,0,0"
                                         Height="48"
-                                        Background="#EB1E24"
+                                        Background="#6a6a6a"
                                         Foreground="White"
                                         BorderThickness="0"
                                         FontSize="15"
@@ -258,10 +269,10 @@
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#D41C24"/>
+                                                    <Setter Property="Background" Value="#4a4a4a"/>
                                                 </Trigger>
                                                 <Trigger Property="IsPressed" Value="True">
-                                                    <Setter Property="Background" Value="#B01A20"/>
+                                                    <Setter Property="Background" Value="#4a4a4a"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -296,7 +307,7 @@
                                 <Button Command="{Binding LaunchNir1CameraCommand}"
                                         Margin="0,25,0,0"
                                         Height="48"
-                                        Background="#EB1E24"
+                                        Background="#6a6a6a"
                                         Foreground="White"
                                         BorderThickness="0"
                                         FontSize="15"
@@ -314,10 +325,10 @@
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#D41C24"/>
+                                                    <Setter Property="Background" Value="#4a4a4a"/>
                                                 </Trigger>
                                                 <Trigger Property="IsPressed" Value="True">
-                                                    <Setter Property="Background" Value="#B01A20"/>
+                                                    <Setter Property="Background" Value="#4a4a4a"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -328,7 +339,7 @@
                                 <Button Command="{Binding LaunchNir2CameraCommand}"
                                         Margin="0,12,0,0"
                                         Height="48"
-                                        Background="#EB1E24"
+                                        Background="#6a6a6a"
                                         Foreground="White"
                                         BorderThickness="0"
                                         FontSize="15"
@@ -346,10 +357,45 @@
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#D41C24"/>
+                                                    <Setter Property="Background" Value="#4a4a4a"/>
                                                 </Trigger>
                                                 <Trigger Property="IsPressed" Value="True">
-                                                    <Setter Property="Background" Value="#B01A20"/>
+                                                    <Setter Property="Background" Value="#4a4a4a"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
+                                <!-- NIR Filtering Toggle Button -->
+                                <Button Command="{Binding ToggleNirFilteringCommand}"
+                                        Margin="0,15,0,0"
+                                        Height="42"
+                                        Background="{Binding Nir2FilteringForeground}"
+                                        Foreground="White"
+                                        BorderThickness="0"
+                                        FontSize="13"
+                                        FontWeight="Medium"
+                                        Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    CornerRadius="6"
+                                                    Padding="15,0">
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <TextBlock Text="⚡" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                                    <TextBlock VerticalAlignment="Center">
+                                                        <Run Text="NIR 필터: "/>
+                                                        <Run Text="{Binding Nir2FilteringStatus, Mode=OneWay}" FontWeight="Bold"/>
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Opacity" Value="0.9"/>
+                                                </Trigger>
+                                                <Trigger Property="IsPressed" Value="True">
+                                                    <Setter Property="Opacity" Value="0.8"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>

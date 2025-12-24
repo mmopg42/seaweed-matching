@@ -20,6 +20,8 @@
     <PackageReference Include="ScottPlot.WPF" Version="5.0.42" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.7" />
+    <PackageReference Include="FlaUI.Core" Version="5.0.0" />
+    <PackageReference Include="FlaUI.UIA3" Version="5.0.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -29,6 +31,18 @@
 
   <ItemGroup>
     <Resource Include="Resources\Images\nir_placeholder.png" />
+    <Resource Include="Resources\Images\settings_icon.png" />
+    <Resource Include="Resources\Images\start_icon.png" />
+    <Resource Include="Resources\Images\stop_icon.png" />
+    <Resource Include="Resources\Images\refresh_icon.png" />
+    <Resource Include="Resources\Images\next_icon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\Strings.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

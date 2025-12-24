@@ -2,7 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:ChronoView.UI.ViewModels"
-        Title="Settings" Height="600" Width="800"
+        xmlns:res="clr-namespace:ChronoView.Resources"
+        Title="{x:Static res:Strings.Dialog_Settings}" Height="600" Width="800"
         WindowStartupLocation="CenterOwner"
         Background="#f0f0f0">
     
@@ -336,6 +337,27 @@
                             <Label Content="Program Path:" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Nir2ProgramPath}" Width="400" Margin="0,0,5,0"/>
                             <Button Content="Browse..." Width="80" Command="{Binding BrowseExeCommand}" CommandParameter="nir2program"/>
+                        </StackPanel>
+                        
+                        <!-- NIR2 Filtering Paths -->
+                        <TextBlock Text="NIR2 Filtering Configuration" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="Set paths for automatic NIR spectrum filtering." 
+                                   TextWrapping="Wrap" Margin="0,0,0,5" Foreground="Gray" FontSize="11"/>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Monitor Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding Nir2FilterMonitorPath}" Width="400" Margin="0,0,5,0" 
+                                     ToolTip="Folder path to monitor for new NIR .txt files"/>
+                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="nir2filtermonitor"/>
+                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="nir2filtermonitor" ToolTip="Open folder in Explorer"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Destination Path:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding Nir2FilterDestinationPath}" Width="400" Margin="0,0,5,0"
+                                     ToolTip="Folder path where filtered NIR files will be moved"/>
+                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="nir2filterdest"/>
+                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="nir2filterdest" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                         
                         <!-- Help Text -->

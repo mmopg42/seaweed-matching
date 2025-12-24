@@ -330,14 +330,23 @@ public class WorkflowSettings
     public int WatcherBufferSize { get; set; } = 65536;
 
     /// <summary>
-    /// Enable network drive polling fallback.
+    /// Time-to-live for folder timestamp cache entries in seconds.
+    /// Default is 300 seconds (5 minutes).
     /// </summary>
-    public bool EnableNetworkDrivePolling { get; set; } = true;
+    public int FolderTimestampCacheTTL { get; set; } = 300;
 
     /// <summary>
-    /// Polling interval in milliseconds for network drives.
+    /// Maximum number of parallel workers for event processing.
+    /// Default is 3 workers. Valid range: 1-8.
     /// </summary>
-    public int PollingIntervalMs { get; set; } = 1000;  // 1 second for faster detection
+    public int MaxEventProcessingWorkers { get; set; } = 3;
+
+    /// <summary>
+    /// Enable parallel event processing for improved throughput.
+    /// When enabled, multiple file events are processed concurrently.
+    /// Default is true.
+    /// </summary>
+    public bool EnableParallelProcessing { get; set; } = true;
 
     /// <summary>
     /// Quarantine (trash) folder path for soft delete operations.
@@ -454,4 +463,14 @@ public class ExternalProgramSettings
     /// Path to NIR Program 2 executable.
     /// </summary>
     public string Nir2ProgramPath { get; set; } = "";
+
+    /// <summary>
+    /// Path to monitor for new NIR spectrum files (.txt) for filtering.
+    /// </summary>
+    public string Nir2FilterMonitorPath { get; set; } = "";
+
+    /// <summary>
+    /// Destination path for NIR files that pass the filter criteria.
+    /// </summary>
+    public string Nir2FilterDestinationPath { get; set; } = "";
 }

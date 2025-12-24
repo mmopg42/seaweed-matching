@@ -1,8 +1,8 @@
 ---
 Owner: Development Team
-Last Updated: 2025-12-16
+Last Updated: 2025-12-18
 Related PRs: []
-Code Ref: 2025-12-16 (Sequential Scan timestamp-ordered processing)
+Code Ref: 2025-12-18 (Normal/NIR file type detection fixes)
 ---
 
 # MonitoringOrchestrator - Real-time File Matching Fix
@@ -270,17 +270,113 @@ if (existingGroup != null)
     - Prevents overwriting existing camera data
   - Preserves existing data (never overwrites)
 
+## Key Methods (Continued)
+
+### 6. DetermineFileType (Critical Fix 2025-12-18)
+**Purpose**: Identifies file type (Normal/NIR/Camera) from file path
+
+**Location**: `MonitoringOrchestrator.cs:2283-2353`
+
+**Critical Fixes Applied (2025-12-18)**:
+
+#### Fix 1: Normal Folder Detection Improvement
+**Problem**: `Directory.Exists(filePath)` check failed on network drives due to race condition
+- Folder creation event fires before filesystem fully reflects the change
+- Network drive (Z:\) latency exacerbated the issue
+- Result: Normal folders identified as `Unknown`
+
+**Solution**: Check `Path.HasExtension` BEFORE `Directory.Exists`
+```csharp
+// Check if this is a Normal folder itself
+bool isFolder = !Path.HasExtension(filePath) || Directory.Exists(filePath);
+
+if (isFolder)
+{
+    var folderName = Path.GetFileName(filePath);
+    if (!string.IsNullOrEmpty(folderName) && folderName.StartsWith("C"))
+    {
+        _logger.LogInformation("Folder Identified as Normal: {Path}", filePath);
+        return FileType.Normal;
+    }
+}
+```
+
+**Why This Works**:
+- Folders have no extension → `Path.HasExtension` returns false immediately
+- Avoids filesystem latency on network drives
+- Falls back to `Directory.Exists` only if extension exists (edge case)
+
+#### Fix 2: NIR File Path Comparison Improvement
+**Problem**: Path comparison failed due to trailing backslash differences
+- Config: `Z:\path\nir\` (with trailing backslash)
+- File: `Z:\path\nir\file.txt` (no trailing backslash)
+- `StartsWith` comparison failed → NIR files identified as `Unknown`
+
+**Solution**: Normalize paths before comparison
+```csharp
+private bool IsPathUnderNirPath(string filePath, string nirPath)
+{
+    if (string.IsNullOrEmpty(nirPath)) return false;
+    
+    // Normalize: remove trailing backslashes before comparison
+    var normalizedNirPath = nirPath.TrimEnd('\\', '/');
+    var normalizedFilePath = filePath.TrimEnd('\\', '/');
+    
+    return normalizedFilePath.StartsWith(normalizedNirPath, StringComparison.OrdinalIgnoreCase);
+}
+```
+
+**Why This Works**:
+- Handles both `\` and `/` path separators
+- Works regardless of trailing separator in configuration
+- Consistent path comparison across all platforms
+
+#### Fix 3: Normal Folder Duplicate Processing Prevention
+**Problem**: Folder creation event and `stitched_original.png` file event both queued, causing duplicate processing
+- Folder event: `processKey = "Z:\...\normal\C251201T140609_0"`
+- File event: Converted to folder event → same `processKey`
+- Both processed separately → duplicate groups
+
+**Solution**: Always use folder path as `processKey` for Normal files
+```csharp
+// For Normal files: use folder path as key to prevent duplicates across batches
+if (fileType == FileType.Normal && !Directory.Exists(filePath))
+{
+    // This is an image file inside a Normal folder
+    // Extract parent folder path for processKey
+    var folderPath = Path.GetDirectoryName(filePath);
+    processKey = folderPath ?? filePath;
+}
+```
+
+**Why This Works**:
+- Both folder and file events use same `processKey`
+- `processedPaths` HashSet prevents duplicate processing in same batch
+- Ensures single group creation per Normal folder
+
+**Related Code Locations**:
+- `MonitoringOrchestrator.cs:2297-2307` (Normal folder detection)
+- `MonitoringOrchestrator.cs:2320-2340` (NIR path comparison)
+- `MonitoringOrchestrator.cs:2101-2114` (processKey unification)
+
+**Impact**: Fixes Normal and NIR file detection on network drives and prevents duplicate group creation
+
 ## Failure Modes & Recovery
 
 ### Common Failures
 1. **File locked/inaccessible**: Logged as warning, operation skipped
 2. **Timestamp extraction fails**: File not matched, logged as warning
 3. **FileGroupMatcher returns no groups**: Logged as warning, file not added
+4. **Network drive latency**: `Directory.Exists` may fail immediately after folder creation
+   - **Mitigation**: Use `Path.HasExtension` check first (Fix 1 above)
+5. **Path comparison failures**: Trailing backslash differences cause `StartsWith` to fail
+   - **Mitigation**: Normalize paths before comparison (Fix 2 above)
 
 ### Recovery Strategy
 - All errors are caught and logged
 - Failed operations don't crash the application
 - Monitoring continues even if individual files fail
+- Network drive issues handled via polling fallback (see `module_file_watcher_service.md`)
 
 ## Edge Cases
 
@@ -314,6 +410,7 @@ if (existingGroup != null)
 - `module_file_group_matcher.md`: Core matching algorithm documentation
 - `module_file_watcher_service.md`: File system monitoring implementation
 - `impact_deprecated_matching_properties.md`: Deprecated properties migration guide
+- `docs/trouble/normal_nir_matching_failure.md`: Normal/NIR matching failure troubleshooting (2025-12-18)
 - `.kiro/specs/refactor-matching-logic/`: Refactoring spec and tasks
 
 ## Verification Commands
@@ -600,6 +697,32 @@ await _orchestrator.RefreshAsync(cancellationToken);
   - **Feature**: `StartAsync` now configures `FileWatcherService` with polling options
   - **Goal**: Enable reliable detection of files on network drives (`Z:`)
   - **Integration**: Injection of `WorkflowSettings` polling configuration
+
+- **2025-12-18**: CRITICAL FIX - Normal and NIR File Type Detection
+  - **Problem**: Normal folders and NIR files identified as `Unknown` on network drives
+  - **Root Cause 1**: `Directory.Exists` race condition on network drives (Z:\)
+    - Folder creation event fires before filesystem reflects change
+    - `Directory.Exists` returns false → Normal folders missed
+  - **Root Cause 2**: Path comparison failure due to trailing backslash differences
+    - Config: `Z:\path\nir\` vs File: `Z:\path\nir\file.txt`
+    - `StartsWith` comparison failed → NIR files missed
+  - **Root Cause 3**: Duplicate processing of Normal folders
+    - Folder event and `stitched_original.png` file event both processed
+    - Created duplicate groups for same Normal folder
+  - **Fix 1**: Normal folder detection improvement
+    - Check `Path.HasExtension` BEFORE `Directory.Exists`
+    - Avoids network drive latency issues
+    - Location: `MonitoringOrchestrator.cs:2297-2307`
+  - **Fix 2**: NIR path comparison normalization
+    - Added `IsPathUnderNirPath()` helper with `TrimEnd` normalization
+    - Handles trailing backslash differences
+    - Location: `MonitoringOrchestrator.cs:2320-2340`
+  - **Fix 3**: Normal folder duplicate prevention
+    - Always use folder path as `processKey` for Normal files
+    - Prevents duplicate processing in same batch
+    - Location: `MonitoringOrchestrator.cs:2101-2114`
+  - **Result**: Normal and NIR files now correctly detected and matched
+  - **Related**: `docs/trouble/normal_nir_matching_failure.md` for detailed analysis
 
 - **2024-12-14 (Morning)**: Refactored `CreateOrUpdateGroupAsync` to use `FileGroupMatcher` for consistency
   - Added `CreateUnmatchedFilesForSingleFile()` helper method

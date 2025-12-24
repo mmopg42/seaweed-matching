@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace ChronoView.Core.NIR;
+namespace ChronoView.Core.Nir;
 
 /// <summary>
 /// NIR file resolver for .spc/.txt file sets with 'A' suffix pattern.

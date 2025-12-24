@@ -22,11 +22,12 @@ public class FileOperationService : IFileOperationService
     public async Task<OperationResult> MoveFileGroupAsync(
         FileGroup group,
         string destinationPath,
+        string? subject = null,
         IProgress<OperationProgress>? progress = null,
         Func<string, ConflictResolution>? onConflict = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Moving file group {GroupId} to {Destination}", group.GroupId, destinationPath);
+        _logger.LogInformation("Moving file group {GroupId} to {Destination} with subject '{Subject}'", group.GroupId, destinationPath, subject ?? "UnknownSubject");
         
         var result = new OperationResult();
         ConflictResolution? stickyResolution = null; // "Apply to All" resolution
@@ -49,12 +50,18 @@ public class FileOperationService : IFileOperationService
         {
             Directory.CreateDirectory(destinationPath);
 
-            // 2. Handle Normal Folder (Copy-then-Delete for Stability)
+            // 2. Handle Normal Folder with structured path (Copy-then-Delete for Stability)
             if (hasNormalFolder)
             {
                 currentProcessingPath = group.NormalFolder;
                 var folderName = Path.GetFileName(group.NormalFolder);
-                var destNormalPath = Path.Combine(destinationPath, folderName);
+                
+                // Build structured path: <output>/<subject>/with NIR or without NIR/일반 or 일반2/
+                var normalRole = group.LineNumber == 1 ? "일반" : "일반2";
+                var destNormalDir = BuildStructuredPathForMove(destinationPath, group, normalRole, subject);
+                Directory.CreateDirectory(destNormalDir);
+                
+                var destNormalPath = Path.Combine(destNormalDir, folderName);
 
                 bool skipDirectory = false;
                 if (Directory.Exists(destNormalPath))
@@ -127,30 +134,121 @@ public class FileOperationService : IFileOperationService
                 }
             }
             
-            // 3. Handle Individual Files (NIR, Cameras, etc.)
-            // Exclude files that are inside the Normal folder if we already moved/skipped the directory
-            var allFiles = group.GetAllFilePaths().Where(f => File.Exists(f)).ToList();
-            if (hasNormalFolder)
+            // 3. Process individual files with structured paths
+            // NIR files and Camera files are handled separately with their own role-based folders
+            
+            // 3a. Handle NIR files (.spc + .txt)
+            if (group.HasNir && !string.IsNullOrEmpty(group.NirFilePath))
             {
-                var normalPathPrefix = group.NormalFolder.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-                allFiles = allFiles.Where(f => !f.StartsWith(normalPathPrefix, StringComparison.OrdinalIgnoreCase)).ToList();
-                
-                // Adjust estimate if we filtered out files (though typically GetAllFilePaths shouldn't include inside Normal)
-                // If logic changes, totalEstimate might be slightly off, but acceptable.
+                var nirDestDir = BuildStructuredPathForMove(destinationPath, group, "Nir", subject);
+                Directory.CreateDirectory(nirDestDir);
+
+                // Get all NIR files (both .spc and .txt)
+                var nirFiles = new List<string>();
+                if (File.Exists(group.NirFilePath))
+                {
+                    nirFiles.Add(group.NirFilePath);
+                }
+
+                // Also get the .txt file
+                var nirDirectory = Path.GetDirectoryName(group.NirFilePath);
+                if (!string.IsNullOrEmpty(nirDirectory))
+                {
+                    var nirKey = Path.GetFileNameWithoutExtension(group.NirFilePath);
+                    var txtPathA = Path.Combine(nirDirectory, nirKey + "A.txt");
+                    if (File.Exists(txtPathA))
+                    {
+                        nirFiles.Add(txtPathA);
+                    }
+                    else
+                    {
+                        var txtPath = Path.Combine(nirDirectory, nirKey + ".txt");
+                        if (File.Exists(txtPath))
+                        {
+                            nirFiles.Add(txtPath);
+                        }
+                    }
+                }
+
+                // Move all NIR files
+                foreach (var nirFile in nirFiles)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    currentProcessingPath = nirFile;
+
+                    var fileName = Path.GetFileName(nirFile);
+                    var destPath = Path.Combine(nirDestDir, fileName);
+
+                    if (File.Exists(destPath))
+                    {
+                        var resolution = stickyResolution ?? onConflict?.Invoke(destPath) ?? ConflictResolution.Skip;
+                        if (stickyResolution == null && resolution != ConflictResolution.Abort)
+                        {
+                            stickyResolution = resolution;
+                        }
+
+                        if (resolution == ConflictResolution.Skip)
+                        {
+                            result.FilesProcessed++;
+                            processedCount++;
+                            continue;
+                        }
+                        else if (resolution == ConflictResolution.Overwrite)
+                        {
+                            await Task.Run(() => File.Delete(destPath), cancellationToken);
+                        }
+                        else if (resolution == ConflictResolution.Abort)
+                        {
+                            throw new OperationCanceledException("Operation aborted by user.");
+                        }
+                    }
+
+                    progress?.Report(new OperationProgress
+                    {
+                        TotalFiles = totalEstimate,
+                        ProcessedFiles = processedCount,
+                        CurrentFile = fileName,
+                        Status = "Copying"
+                    });
+
+                    await Task.Run(() => File.Copy(nirFile, destPath, overwrite: false), cancellationToken);
+
+                    if (!VerifyFileCopy(nirFile, destPath))
+                    {
+                        throw new IOException($"File copy verification failed: {nirFile}");
+                    }
+
+                    movedItems.Add((nirFile, destPath, false));
+
+                    await Task.Run(() => File.Delete(nirFile), cancellationToken);
+
+                    result.FilesProcessed++;
+                    processedCount++;
+                }
             }
 
-            foreach (var sourcePath in allFiles)
+            // 3b. Handle Camera files (cam1~6)
+            foreach (var camEntry in group.CameraFiles)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                currentProcessingPath = sourcePath;
+                var camKey = camEntry.Key;  // "cam1", "cam2", etc.
+                var camFile = camEntry.Value;
 
-                var fileName = Path.GetFileName(sourcePath);
-                var destPath = Path.Combine(destinationPath, fileName);
+                if (string.IsNullOrEmpty(camFile) || !File.Exists(camFile))
+                    continue;
+
+                cancellationToken.ThrowIfCancellationRequested();
+                currentProcessingPath = camFile;
+
+                // Build structured path for this camera
+                var camDestDir = BuildStructuredPathForMove(destinationPath, group, camKey, subject);
+                Directory.CreateDirectory(camDestDir);
+
+                var fileName = Path.GetFileName(camFile);
+                var destPath = Path.Combine(camDestDir, fileName);
 
                 if (File.Exists(destPath))
                 {
                     var resolution = stickyResolution ?? onConflict?.Invoke(destPath) ?? ConflictResolution.Skip;
-
                     if (stickyResolution == null && resolution != ConflictResolution.Abort)
                     {
                         stickyResolution = resolution;
@@ -158,22 +256,12 @@ public class FileOperationService : IFileOperationService
 
                     if (resolution == ConflictResolution.Skip)
                     {
-                        // Skip counts as success/processed
                         result.FilesProcessed++;
                         processedCount++;
-                        progress?.Report(new OperationProgress
-                        {
-                            TotalFiles = totalEstimate,
-                            ProcessedFiles = processedCount,
-                            CurrentFile = fileName,
-                            Status = "Skipped"
-                        });
                         continue;
                     }
                     else if (resolution == ConflictResolution.Overwrite)
                     {
-                        // Delete existing file before copy
-                        _logger.LogWarning("Overwriting file: {Path}", destPath);
                         await Task.Run(() => File.Delete(destPath), cancellationToken);
                     }
                     else if (resolution == ConflictResolution.Abort)
@@ -190,28 +278,16 @@ public class FileOperationService : IFileOperationService
                     Status = "Copying"
                 });
 
-                // Copy-then-Delete Pattern for File
-                // 1. Copy file
-                await Task.Run(() => File.Copy(sourcePath, destPath, overwrite: false), cancellationToken);
+                await Task.Run(() => File.Copy(camFile, destPath, overwrite: false), cancellationToken);
 
-                // 2. Verify copy
-                if (!VerifyFileCopy(sourcePath, destPath))
+                if (!VerifyFileCopy(camFile, destPath))
                 {
-                    throw new IOException($"File copy verification failed: {sourcePath}");
+                    throw new IOException($"File copy verification failed: {camFile}");
                 }
 
-                movedItems.Add((sourcePath, destPath, false));
+                movedItems.Add((camFile, destPath, false));
 
-                // 3. Delete original after successful copy
-                progress?.Report(new OperationProgress
-                {
-                    TotalFiles = totalEstimate,
-                    ProcessedFiles = processedCount,
-                    CurrentFile = fileName,
-                    Status = "Cleaning up"
-                });
-
-                await Task.Run(() => File.Delete(sourcePath), cancellationToken);
+                await Task.Run(() => File.Delete(camFile), cancellationToken);
 
                 result.FilesProcessed++;
                 processedCount++;
@@ -332,6 +408,64 @@ public class FileOperationService : IFileOperationService
         return sourceSize == destSize;
     }
 
+    /// <summary>
+    /// Builds structured destination path for DELETE: <base>/<date>/<subject>/Line#/<role>/
+    /// </summary>
+    private string BuildStructuredPath(
+        string basePath,
+        FileGroup group,
+        string role,  // "nir1", "nir2", "일반1", "일반2", "cam1", etc.
+        string? subject = null)
+    {
+        // 1. Extract date from group timestamp (YYYYMMDD)
+        var date = group.Timestamp.ToString("yyyyMMdd");
+        
+        // 2. Use subject or default "UnknownSubject"
+        var subjectFolder = string.IsNullOrWhiteSpace(subject) ? "UnknownSubject" : subject;
+        
+        // 3. Determine line folder
+        var lineFolder = $"Line{group.LineNumber}";
+        
+        // 4. Construct path
+        return Path.Combine(basePath, date, subjectFolder, lineFolder, role);
+    }
+
+    /// <summary>
+    /// Builds structured destination path for MOVE: <base>/<subject>/with NIR or without NIR/<role>/
+    /// </summary>
+    private string BuildStructuredPathForMove(
+        string basePath,
+        FileGroup group,
+        string role,  // "Nir", "일반", "일반2", "cam1", etc.
+        string? subject = null)
+    {
+        // 1. Use subject or default "UnknownSubject"
+        var subjectFolder = string.IsNullOrWhiteSpace(subject) ? "UnknownSubject" : subject;
+        
+        // 2. Determine with NIR or without NIR
+        var nirFolder = group.HasNir ? "with NIR" : "without NIR";
+        
+        // 3. Construct path based on role
+        // For cameras, group under "복합 카메라"
+        if (role.StartsWith("cam"))
+        {
+            return Path.Combine(basePath, subjectFolder, nirFolder, "복합 카메라", role);
+        }
+        // For normal cameras, use specific naming
+        else if (role == "일반" || role == "일반2")
+        {
+            // with NIR: "일반" or "일반2"
+            // without NIR: "일반 카메라" or "일반2 카메라"
+            var normalRole = group.HasNir ? role : $"{role} 카메라";
+            return Path.Combine(basePath, subjectFolder, nirFolder, normalRole);
+        }
+        // For NIR
+        else
+        {
+            return Path.Combine(basePath, subjectFolder, nirFolder, role);
+        }
+    }
+
     #endregion
 
     /// <summary>
@@ -423,11 +557,12 @@ public class FileOperationService : IFileOperationService
     public async Task<OperationResult> DeleteFileGroupAsync(
         FileGroup group,
         string quarantinePath,
+        string? subject = null,
         IProgress<OperationProgress>? progress = null,
         Func<string, ConflictResolution>? onConflict = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Deleting file group {GroupId}", group.GroupId);
+        _logger.LogInformation("Deleting file group {GroupId} with subject '{Subject}'", group.GroupId, subject ?? "UnknownSubject");
         
         var result = new OperationResult();
         string? currentProcessingPath = null;
@@ -450,12 +585,18 @@ public class FileOperationService : IFileOperationService
         
         try
         {
-            // Move Normal Folder to quarantine (soft delete with Copy-then-Delete)
+            // Move Normal Folder to quarantine with structured path (soft delete with Copy-then-Delete)
             if (hasNormalFolder)
             {
                 currentProcessingPath = group.NormalFolder;
                 var folderName = Path.GetFileName(group.NormalFolder);
-                var destNormalPath = Path.Combine(quarantinePath, folderName);
+                
+                // Build structured path: <quarantine>/<date>/<subject>/Line#/일반#/
+                var normalRole = group.LineNumber == 1 ? "일반1" : "일반2";
+                var destNormalDir = BuildStructuredPath(quarantinePath, group, normalRole, subject);
+                Directory.CreateDirectory(destNormalDir);
+                
+                var destNormalPath = Path.Combine(destNormalDir, folderName);
 
                 bool skipDirectory = false;
                 if (Directory.Exists(destNormalPath))
@@ -519,21 +660,125 @@ public class FileOperationService : IFileOperationService
                 }
             }
 
-            // Delete other files (excluding inside normal folder logic similar to move)
-            var allFiles = group.GetAllFilePaths().Where(f => File.Exists(f)).ToList();
-             if (hasNormalFolder)
+
+            // Process individual files with structured paths
+            // NIR files and Camera files are handled separately with their own role-based folders
+            
+            // 1. Handle NIR files (.spc + .txt)
+            if (group.HasNir && !string.IsNullOrEmpty(group.NirFilePath))
             {
-                var normalPathPrefix = group.NormalFolder.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-                allFiles = allFiles.Where(f => !f.StartsWith(normalPathPrefix, StringComparison.OrdinalIgnoreCase)).ToList();
+                var nirRole = group.LineNumber == 1 ? "nir1" : "nir2";
+                var nirDestDir = BuildStructuredPath(quarantinePath, group, nirRole, subject);
+                Directory.CreateDirectory(nirDestDir);
+
+                // Get all NIR files (both .spc and .txt)
+                var nirFiles = new List<string>();
+                if (File.Exists(group.NirFilePath))
+                {
+                    nirFiles.Add(group.NirFilePath);
+                }
+
+                // Also get the .txt file
+                var nirDirectory = Path.GetDirectoryName(group.NirFilePath);
+                if (!string.IsNullOrEmpty(nirDirectory))
+                {
+                    var nirKey = Path.GetFileNameWithoutExtension(group.NirFilePath);
+                    var txtPathA = Path.Combine(nirDirectory, nirKey + "A.txt");
+                    if (File.Exists(txtPathA))
+                    {
+                        nirFiles.Add(txtPathA);
+                    }
+                    else
+                    {
+                        var txtPath = Path.Combine(nirDirectory, nirKey + ".txt");
+                        if (File.Exists(txtPath))
+                        {
+                            nirFiles.Add(txtPath);
+                        }
+                    }
+                }
+
+                // Move all NIR files
+                foreach (var nirFile in nirFiles)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    currentProcessingPath = nirFile;
+
+                    var fileName = Path.GetFileName(nirFile);
+                    var destPath = Path.Combine(nirDestDir, fileName);
+
+                    if (File.Exists(destPath))
+                    {
+                        var resolution = stickyResolution ?? onConflict?.Invoke(destPath) ?? ConflictResolution.Skip;
+                        if (stickyResolution == null && resolution != ConflictResolution.Abort)
+                        {
+                            stickyResolution = resolution;
+                        }
+
+                        if (resolution == ConflictResolution.Skip)
+                        {
+                            result.FilesProcessed++;
+                            processedCount++;
+                            continue;
+                        }
+                        else if (resolution == ConflictResolution.Overwrite)
+                        {
+                            await Task.Run(() => File.Delete(destPath), cancellationToken);
+                        }
+                        else if (resolution == ConflictResolution.Abort)
+                        {
+                            throw new OperationCanceledException("Operation aborted by user.");
+                        }
+                    }
+
+                    try
+                    {
+                        progress?.Report(new OperationProgress
+                        {
+                            TotalFiles = totalEstimate,
+                            ProcessedFiles = processedCount,
+                            CurrentFile = fileName,
+                            Status = "Copying to quarantine"
+                        });
+
+                        await Task.Run(() => File.Copy(nirFile, destPath, overwrite: false), cancellationToken);
+
+                        if (!VerifyFileCopy(nirFile, destPath))
+                        {
+                            throw new IOException($"File copy verification failed: {nirFile}");
+                        }
+
+                        await Task.Run(() => File.Delete(nirFile), cancellationToken);
+
+                        result.FilesProcessed++;
+                        processedCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to delete NIR file {Path}", nirFile);
+                        result.FailedFiles.Add(nirFile);
+                    }
+                }
             }
 
-            foreach (var filePath in allFiles)
+            // 2. Handle Camera files (cam1~6)
+            foreach (var camEntry in group.CameraFiles)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                currentProcessingPath = filePath;
+                var camKey = camEntry.Key;  // "cam1", "cam2", etc.
+                var camFile = camEntry.Value;
 
-                var fileName = Path.GetFileName(filePath);
-                var destPath = Path.Combine(quarantinePath, fileName);
+                if (string.IsNullOrEmpty(camFile) || !File.Exists(camFile))
+                    continue;
+
+                cancellationToken.ThrowIfCancellationRequested();
+                currentProcessingPath = camFile;
+
+                // Build structured path for this camera
+                var camDestDir = BuildStructuredPath(quarantinePath, group, camKey, subject);
+                Directory.CreateDirectory(camDestDir);
+
+                var fileName = Path.GetFileName(camFile);
+                var destPath = Path.Combine(camDestDir, fileName);
 
                 if (File.Exists(destPath))
                 {
@@ -547,19 +792,10 @@ public class FileOperationService : IFileOperationService
                     {
                         result.FilesProcessed++;
                         processedCount++;
-                        progress?.Report(new OperationProgress
-                        {
-                            TotalFiles = totalEstimate,
-                            ProcessedFiles = processedCount,
-                            CurrentFile = fileName,
-                            Status = "Skipped"
-                        });
                         continue;
                     }
                     else if (resolution == ConflictResolution.Overwrite)
                     {
-                        // Delete existing file before copy
-                        _logger.LogWarning("Overwriting file in quarantine: {Path}", destPath);
                         await Task.Run(() => File.Delete(destPath), cancellationToken);
                     }
                     else if (resolution == ConflictResolution.Abort)
@@ -578,35 +814,22 @@ public class FileOperationService : IFileOperationService
                         Status = "Copying to quarantine"
                     });
 
-                    // Copy-then-Delete Pattern for File
-                    // 1. Copy file to quarantine
-                    await Task.Run(() => File.Copy(filePath, destPath, overwrite: false), cancellationToken);
+                    await Task.Run(() => File.Copy(camFile, destPath, overwrite: false), cancellationToken);
 
-                    // 2. Verify copy
-                    if (!VerifyFileCopy(filePath, destPath))
+                    if (!VerifyFileCopy(camFile, destPath))
                     {
-                        throw new IOException($"File copy verification failed: {filePath}");
+                        throw new IOException($"File copy verification failed: {camFile}");
                     }
 
-                    // 3. Delete original after successful copy
-                    progress?.Report(new OperationProgress
-                    {
-                        TotalFiles = totalEstimate,
-                        ProcessedFiles = processedCount,
-                        CurrentFile = fileName,
-                        Status = "Deleting original"
-                    });
-
-                    await Task.Run(() => File.Delete(filePath), cancellationToken);
+                    await Task.Run(() => File.Delete(camFile), cancellationToken);
 
                     result.FilesProcessed++;
                     processedCount++;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to delete (move to quarantine) file {Path}", filePath);
-                    result.FailedFiles.Add(filePath);
-                    // Continue deletion attempts for other files
+                    _logger.LogError(ex, "Failed to delete camera file {Path}", camFile);
+                    result.FailedFiles.Add(camFile);
                 }
             }
             

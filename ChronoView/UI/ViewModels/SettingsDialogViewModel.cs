@@ -301,6 +301,8 @@ public class SettingsDialogViewModel : ViewModelBase
     private string _generalCameraProgramPath = string.Empty;
     private string _nir1ProgramPath = string.Empty;
     private string _nir2ProgramPath = string.Empty;
+    private string _nir2FilterMonitorPath = string.Empty;
+    private string _nir2FilterDestinationPath = string.Empty;
 
     public string GeneralCameraProgramPath
     {
@@ -318,6 +320,18 @@ public class SettingsDialogViewModel : ViewModelBase
     {
         get => _nir2ProgramPath;
         set => SetProperty(ref _nir2ProgramPath, value);
+    }
+
+    public string Nir2FilterMonitorPath
+    {
+        get => _nir2FilterMonitorPath;
+        set => SetProperty(ref _nir2FilterMonitorPath, value);
+    }
+
+    public string Nir2FilterDestinationPath
+    {
+        get => _nir2FilterDestinationPath;
+        set => SetProperty(ref _nir2FilterDestinationPath, value);
     }
 
     #endregion
@@ -421,6 +435,13 @@ public class SettingsDialogViewModel : ViewModelBase
             case "deletequarantinepath":
                 DeleteQuarantinePath = selected;
                 break;
+            case "nir2filtermonitor":
+                Nir2FilterMonitorPath = selected;
+                break;
+            case "nir2filterdest":
+            case "nir2filterdestination":
+                Nir2FilterDestinationPath = selected;
+                break;
             default:
                 // Unknown path type; ignore
                 break;
@@ -446,6 +467,8 @@ public class SettingsDialogViewModel : ViewModelBase
             "cam6" => Camera6Path,
             "output" => OutputPath,
             "quarantine" or "deletequarantine" or "deletequarantinepath" => DeleteQuarantinePath,
+            "nir2filtermonitor" => Nir2FilterMonitorPath,
+            "nir2filterdest" or "nir2filterdestination" => Nir2FilterDestinationPath,
             _ => null
         };
 
@@ -573,6 +596,8 @@ public class SettingsDialogViewModel : ViewModelBase
         GeneralCameraProgramPath = _configuration.ExternalProgramSettings.GeneralCameraProgramPath;
         Nir1ProgramPath = _configuration.ExternalProgramSettings.Nir1ProgramPath;
         Nir2ProgramPath = _configuration.ExternalProgramSettings.Nir2ProgramPath;
+        Nir2FilterMonitorPath = _configuration.ExternalProgramSettings.Nir2FilterMonitorPath;
+        Nir2FilterDestinationPath = _configuration.ExternalProgramSettings.Nir2FilterDestinationPath;
     }
 
     /// <summary>
@@ -643,6 +668,8 @@ public class SettingsDialogViewModel : ViewModelBase
         _configuration.ExternalProgramSettings.GeneralCameraProgramPath = GeneralCameraProgramPath;
         _configuration.ExternalProgramSettings.Nir1ProgramPath = Nir1ProgramPath;
         _configuration.ExternalProgramSettings.Nir2ProgramPath = Nir2ProgramPath;
+        _configuration.ExternalProgramSettings.Nir2FilterMonitorPath = Nir2FilterMonitorPath;
+        _configuration.ExternalProgramSettings.Nir2FilterDestinationPath = Nir2FilterDestinationPath;
 
         // Persist to disk
         try 

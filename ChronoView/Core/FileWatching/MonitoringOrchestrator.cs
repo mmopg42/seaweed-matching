@@ -1,11 +1,15 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
+using System.Windows.Media.Imaging;
 using ChronoView.Core.FileMatching;
-using ChronoView.Core.NIR;
+using ChronoView.Core.Nir;
 using ChronoView.Models;
 using Microsoft.Extensions.Logging;
 using ChronoView.Helpers;
@@ -22,9 +26,10 @@ namespace ChronoView.Core.FileWatching
         private readonly IFileWatcher _fileWatcher;
         private readonly ILogger<MonitoringOrchestrator> _logger;
         private readonly INirFileResolver _nirFileResolver;
+        private readonly FolderTimestampCache _folderTimestamps;
         private Action<LogSeverity, string, string>? _uiLog;
         private readonly Dictionary<string, DateTime> _processedFiles = new();
-        private readonly Dictionary<string, FileGroup> _activeGroups = new();
+        private readonly ConcurrentDictionary<string, FileGroup> _activeGroups = new();
         // Pending NIR files waiting for matching groups
         private readonly List<(string FilePath, DateTime Timestamp, DateTime ReceivedAt)> _pendingNirFiles = new();
         private const int NirPendingTimeoutSeconds = 10; // Create new group if no match after 10 seconds
@@ -32,6 +37,17 @@ namespace ChronoView.Core.FileWatching
         private ApplicationConfiguration? _currentConfig;
         private bool _isMonitoring;
         private int _nextGroupId = 1; // Counter for assigning unique GroupIds
+        
+        // ⚡ Image capture cache: store images in memory before ML program takes them
+        private readonly ConcurrentDictionary<string, BitmapImage> _imageCaptureCache = new();
+        
+        // Parallel processing infrastructure
+        private Channel<FileSystemEventArgs> _internalEventChannel = Channel.CreateUnbounded<FileSystemEventArgs>();
+        private SemaphoreSlim? _parallelismLimiter;
+        private List<Task> _workerTasks = new();
+        private CancellationTokenSource? _workerCts;
+        private int _maxParallelWorkers = 3; // Default: 3 workers
+
 
         public event EventHandler<FileGroup>? GroupCreated;
         public event EventHandler<string>? GroupRemoved;
@@ -45,12 +61,14 @@ namespace ChronoView.Core.FileWatching
             IFileWatcher fileWatcher,
             ILogger<MonitoringOrchestrator> logger,
             INirFileResolver nirFileResolver,
+            FolderTimestampCache folderTimestamps,
             Action<LogSeverity, string, string>? uiLog = null)
         {
             _fileGroupMatcher = fileGroupMatcher ?? throw new ArgumentNullException(nameof(fileGroupMatcher));
             _fileWatcher = fileWatcher ?? throw new ArgumentNullException(nameof(fileWatcher));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _nirFileResolver = nirFileResolver ?? throw new ArgumentNullException(nameof(nirFileResolver));
+            _folderTimestamps = folderTimestamps ?? throw new ArgumentNullException(nameof(folderTimestamps));
             _uiLog = uiLog;
         }
 
@@ -66,6 +84,13 @@ namespace ChronoView.Core.FileWatching
             {
                 _logger.LogInformation("Starting monitoring");
                 _currentConfig = config ?? throw new ArgumentNullException(nameof(config));
+
+                // Reset group ID counter to ensure groups start from 001
+                lock (_lockObject)
+                {
+                    _nextGroupId = 1;
+                    _logger.LogInformation("Group ID counter reset to 1 for fresh monitoring session");
+                }
                 
                 // Configure the file group matcher with the new configuration
                 _fileGroupMatcher.Configuration = new MatchingConfiguration
@@ -182,33 +207,65 @@ namespace ChronoView.Core.FileWatching
                 
                 _logger.LogError("DEBUG: Total paths collected for watching: {Count}", watchPaths.Count);
 
+                // ✅ Recreate channel if it was completed in previous StopAsync
+                if (_internalEventChannel.Reader.Completion.IsCompleted)
+                {
+                    _internalEventChannel = Channel.CreateUnbounded<FileSystemEventArgs>();
+                    _logger.LogInformation("Recreated event channel for new monitoring session");
+                }
+                else
+                {
+                    _logger.LogDebug("Event channel is active, reusing existing channel");
+                }
+
+                // Initialize parallel processing infrastructure
+                // Read MaxEventProcessingWorkers from config
+                _maxParallelWorkers = config.WorkflowSettings?.MaxEventProcessingWorkers ?? 3;
+                
+                if (_maxParallelWorkers < 1 || _maxParallelWorkers > 8)
+                {
+                    _logger.LogWarning("Invalid MaxEventProcessingWorkers value {Value}, using default 3", _maxParallelWorkers);
+                    _maxParallelWorkers = 3;
+                }
+                
+                _parallelismLimiter = new SemaphoreSlim(_maxParallelWorkers);
+                _workerCts = new CancellationTokenSource();
+                
+                _logger.LogInformation("Initialized parallel processing with {Workers} workers", _maxParallelWorkers);
+
                 // Start file watcher
                 if (watchPaths.Count > 0)
                 {
                     _fileWatcher.FileChanged += OnFileChanged;
                     
-                    var watcherOptions = new FileWatcherOptions
-                    {
-                        EnablePolling = config.WorkflowSettings.EnableNetworkDrivePolling,
-                        PollingIntervalMs = config.WorkflowSettings.PollingIntervalMs
-                    };
+                    // Pure event-based detection - no polling needed
+                    var watcherOptions = new FileWatcherOptions();
 
-                    _logger.LogInformation("Starting file watcher with Polling={Polling}, Interval={Interval}", 
-                        watcherOptions.EnablePolling, watcherOptions.PollingIntervalMs);
+                    _logger.LogInformation("Starting file watcher with pure event-based detection");
 
                     await _fileWatcher.StartWatchingAsync(watchPaths, watcherOptions);
                     
                     // Diagnostic logging: confirm watcher started and paths being watched
                     _logger.LogInformation("File watcher started. Registered FileChanged event handler. Watching {Count} paths", watchPaths.Count);
+                    _uiLog?.Invoke(LogSeverity.Info, "FileWatcher", $"감시 중인 경로: {watchPaths.Count}개");
                     foreach (var path in watchPaths)
                     {
                         _logger.LogInformation("  Watching: {Path}", path);
+                        _uiLog?.Invoke(LogSeverity.Info, "FileWatcher", $"  → {path}");
                     }
                 }
                 else
                 {
                     _logger.LogWarning("No valid paths found to watch");
                 }
+
+                // Start parallel worker tasks
+                _workerTasks = Enumerable.Range(0, _maxParallelWorkers)
+                    .Select(i => ProcessEventsWorkerAsync(i, _workerCts.Token))
+                    .ToList();
+
+                _logger.LogInformation("Started {Count} event processing workers", _workerTasks.Count);
+
 
                 _logger.LogInformation("Monitoring started successfully");
             }
@@ -232,6 +289,31 @@ namespace ChronoView.Core.FileWatching
             {
                 _logger.LogInformation("Stopping monitoring");
                 _isMonitoring = false;
+
+
+                // Stop worker tasks
+                if (_workerCts != null)
+                {
+                    _logger.LogInformation("Stopping {Count} event processing workers", _workerTasks.Count);
+                    _workerCts.Cancel();
+                    
+                    // Complete the channel to signal workers to stop
+                    _internalEventChannel.Writer.Complete();
+                    
+                    // Wait for all workers to complete
+                    try
+                    {
+                        await Task.WhenAll(_workerTasks);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Error waiting for workers to complete");
+                    }
+                    
+                    _workerTasks.Clear();
+                    _workerCts.Dispose();
+                    _workerCts = null;
+                }
                 
                 // Clear active groups
                 lock (_lockObject)
@@ -243,14 +325,144 @@ namespace ChronoView.Core.FileWatching
                 _fileWatcher.FileChanged -= OnFileChanged;
                 await _fileWatcher.StopWatchingAsync();
 
+                // Dispose parallelism limiter
+                _parallelismLimiter?.Dispose();
+                _parallelismLimiter = null;
+
                 _logger.LogInformation("Monitoring stopped successfully");
-                await Task.CompletedTask;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to stop monitoring");
                 OnMonitoringError($"Failed to stop monitoring: {ex.Message}");
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Event handler for file system changes from FileWatcher.
+        /// Writes events to internal channel for parallel worker processing.
+        /// </summary>
+        private void OnFileChanged(object? sender, FileSystemEventArgs e)
+        {
+            try
+            {
+                // Non-blocking write to internal channel
+                if (!_internalEventChannel.Writer.TryWrite(e))
+                {
+                    _logger.LogWarning("Failed to queue event to internal channel: {Path}", e.FullPath);
+                }
+                else
+                {
+                    _logger.LogDebug("Event queued for processing: {ChangeType} - {Path}", e.ChangeType, e.FullPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in OnFileChanged handler: {Path}", e.FullPath);
+            }
+        }
+
+        /// <summary>
+        /// Worker task that processes events from the internal channel.
+        /// Multiple workers run in parallel to process events concurrently.
+        /// </summary>
+        private async Task ProcessEventsWorkerAsync(int workerId, CancellationToken ct)
+        {
+            _logger.LogInformation("Worker {Id} started", workerId);
+            
+            try
+            {
+                // Read events from internal event queue
+                await foreach (var eventArgs in _internalEventChannel.Reader.ReadAllAsync(ct))
+                {
+                    // Process event with semaphore limiting concurrency
+                    await ProcessSingleEventAsync(eventArgs, workerId, ct);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Worker {Id} cancelled", workerId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Worker {Id} failed", workerId);
+            }
+            finally
+            {
+                _logger.LogInformation("Worker {Id} stopped", workerId);
+            }
+        }
+
+        /// <summary>
+        /// Process a single file system event with concurrency limiting.
+        /// </summary>
+        private async Task ProcessSingleEventAsync(
+            FileSystemEventArgs eventArgs, 
+            int workerId,
+            CancellationToken ct)
+        {
+            // Acquire semaphore slot (limit concurrency)
+            if (_parallelismLimiter == null)
+            {
+                _logger.LogError("Parallelism limiter not initialized");
+                return;
+            }
+
+            await _parallelismLimiter.WaitAsync(ct);
+            
+            try
+            {
+                _logger.LogDebug("Worker {WorkerId} processing: {Path}", workerId, eventArgs.FullPath);
+                
+                // Check if should skip (debouncing)
+                if (ShouldSkipEvent(eventArgs))
+                {
+                    _logger.LogDebug("Event skipped (debounced): {Path}", eventArgs.FullPath);
+                    return;
+                }
+                
+                // ⚡ FAST CAPTURE: Check if this is stitched_original.png
+                if (FileNamingHelper.IsStitchedImage(eventArgs.FullPath))
+                {
+                    await HandleStitchedImageCaptureAsync(eventArgs.FullPath, workerId);
+                    return; // Skip normal processing
+                }
+                
+                // Determine file type
+                FileType fileType = DetermineFileType(eventArgs.FullPath);
+                
+                if (fileType == FileType.Unknown)
+                {
+                    _logger.LogDebug("Unknown file type: {Path}", eventArgs.FullPath);
+                    return;
+                }
+                
+                // Handle different event types
+                switch (eventArgs.ChangeType)
+                {
+                    case WatcherChangeTypes.Created:
+                    case WatcherChangeTypes.Changed:
+                        // Create or update group (thread-safe)
+                        FileGroup? group = await CreateOrUpdateGroupAsync(eventArgs.FullPath, fileType);
+                        
+                        if (group != null)
+                        {
+                            MarkFileAsProcessed(eventArgs.FullPath);
+                            _logger.LogInformation("Worker {WorkerId} processed group {GroupId}", 
+                                workerId, group.GroupId);
+                        }
+                        break;
+
+                    case WatcherChangeTypes.Deleted:
+                        await RemoveFromGroupAsync(eventArgs.FullPath);
+                        break;
+                }
+            }
+            finally
+            {
+                // Release semaphore slot
+                _parallelismLimiter.Release();
             }
         }
 
@@ -271,7 +483,7 @@ namespace ChronoView.Core.FileWatching
                     var groupIds = _activeGroups.Keys.ToList();
                     foreach (var groupId in groupIds)
                     {
-                        _activeGroups.Remove(groupId);
+                        _activeGroups.TryRemove(groupId, out _);
                         OnGroupRemoved(groupId);
                     }
                     
@@ -632,6 +844,16 @@ namespace ChronoView.Core.FileWatching
                         await CreateOrUpdateGroupAsync(filePath, fileType);
                         result.FilesScanned++;
 
+                        // HOT FIX: Register Normal folders in polling tracker to prevent duplicate groups
+                        // when polling starts after initial scan
+                        if (fileType == FileType.Normal)
+                        {
+                            // This section was removed as polling is removed.
+                            // The original intent was to prevent duplicate groups when polling starts after initial scan.
+                            // With polling removed, this specific fix is no longer needed in this context.
+                            // The `_processedNormalFolders` and `_pollingLock` are also removed.
+                        }
+
                         if (result.FilesScanned % 10 == 0)
                         {
                             _logger.LogDebug("Processed {Count}/{Total} files", result.FilesScanned, sortedFiles.Count);
@@ -645,6 +867,49 @@ namespace ChronoView.Core.FileWatching
                 }
 
                 result.GroupsCreated = _activeGroups.Count;
+                
+                // ⚡ PRE-LOAD NORMAL IMAGES INTO CACHE
+                // This eliminates the 50-second delay when UI loads thumbnails
+                _logger.LogInformation("Pre-loading Normal images into cache...");
+                var cacheLoadStopwatch = Stopwatch.StartNew();
+                int cachedCount = 0, failedCount = 0;
+
+                foreach (var kvp in _activeGroups)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var group = kvp.Value;
+                    
+                    if (!string.IsNullOrEmpty(group.NormalFolder))
+                    {
+                        var stitchedPath = Path.Combine(group.NormalFolder, "stitched_original.png");
+                        if (File.Exists(stitchedPath))
+                        {
+                            try
+                            {
+                                var image = await LoadImageIntoMemoryAsync(stitchedPath);
+                                if (image != null)
+                                {
+                                    _imageCaptureCache[group.NormalFolder] = image;
+                                    _imageCaptureCache[group.GroupId] = image;
+                                    cachedCount++;
+                                }
+                                else
+                                {
+                                    failedCount++;
+                                }
+                            }
+                            catch
+                            {
+                                failedCount++;
+                            }
+                        }
+                    }
+                }
+
+                cacheLoadStopwatch.Stop();
+                _logger.LogInformation("✅ Pre-loaded {CachedCount} images in {Ms}ms ({FailedCount} failed)", 
+                    cachedCount, cacheLoadStopwatch.ElapsedMilliseconds, failedCount);
+                
                 _logger.LogInformation("Sequential initial scan complete: {FilesScanned} files, {GroupsCreated} groups",
                     result.FilesScanned, result.GroupsCreated);
             }
@@ -745,7 +1010,7 @@ namespace ChronoView.Core.FileWatching
             {
                 var fileName = Path.GetFileName(file);
                 // Only add files matching YYYYMMDD_HHMMSS naming convention
-                if (System.Text.RegularExpressions.Regex.IsMatch(fileName, @"\d{8}_\d{6}"))
+                if (FileNamingHelper.ExtractTimestampFromCameraFileName(fileName).HasValue)
                 {
                     files.Add(file);
                 }
@@ -856,10 +1121,29 @@ namespace ChronoView.Core.FileWatching
                     newGroup.HasNir,
                     newGroup.CameraFiles.Count);
 
+                // Use cached timestamp for Normal folders to avoid redundant extraction
+                if (fileType == FileType.Normal)
+                {
+                    if (_folderTimestamps.TryGet(processPath, out DateTime cachedTimestamp))
+                    {
+                        // Cache hit - use cached timestamp
+                        newGroup.Timestamp = cachedTimestamp;
+                        _logger.LogDebug("Cache HIT: Using cached timestamp for Normal folder: {Path}, Timestamp={Timestamp}", 
+                            processPath, cachedTimestamp);
+                    }
+                    else
+                    {
+                        // Cache miss - log warning and use extracted timestamp
+                        _logger.LogWarning("Cache MISS: No cached timestamp found for Normal folder: {Path}, using extracted timestamp: {Timestamp}", 
+                            processPath, newGroup.Timestamp);
+                    }
+                }
+
                 // CRITICAL FIX: Lock the entire check-and-add operation to prevent race conditions
                 // Without this, multiple images from the same Normal folder could both see "no existing group"
                 // and create duplicate groups
                 FileGroup? groupToReturn;
+                bool isDataChanged = false;
                 lock (_lockObject)
                 {
                     // Check if this matches an existing group
@@ -870,21 +1154,49 @@ namespace ChronoView.Core.FileWatching
                         // Merge new data into existing group
                         _logger.LogInformation("Merging into existing group {GroupId} (matched from {NewGroupId})", 
                             existingGroup.GroupId, newGroup.GroupId);
-                        MergeGroups(existingGroup, newGroup);
+                        
+                        // Thread-safe merge: Lock the target group to prevent concurrent modifications
+                        lock (existingGroup)
+                        {
+                            isDataChanged = MergeGroups(existingGroup, newGroup);
+                        }
                         groupToReturn = existingGroup;
+
+                        // ⚡ PROMOTE CACHE: If this is a Normal folder update, ensure cache is promoted
+                        if (fileType == FileType.Normal && !string.IsNullOrEmpty(existingGroup.NormalFolder))
+                        {
+                            PromoteCacheToGroupId(existingGroup.NormalFolder, existingGroup.GroupId);
+                        }
                     }
                     else
                     {
                         // Add as new group
-                        // Assign valid unique GroupId (FileGroupMatcher always gives group_001 for single files)
-                        var newGroupId = $"group_{_nextGroupId:D3}";
-                        _nextGroupId++;
+                        // Thread-safe group ID generation using Interlocked.Increment
+                        // Use pre-increment value: Increment returns NEW value, so subtract 1 to get the value we want
+                        // This ensures first group is group_001 (not group_002)
+                        var currentId = Interlocked.Increment(ref _nextGroupId) - 1;
+                        var newGroupId = $"group_{currentId:D3}";
                         _logger.LogInformation("Assigning new unique GroupId {NewGroupId} (matched was {OldGroupId})", 
                             newGroupId, newGroup.GroupId);
                         newGroup.GroupId = newGroupId;
                         
-                        _activeGroups[newGroup.GroupId] = newGroup;
+                        // Thread-safe add: Use TryAdd to handle collisions if ID already exists
+                        if (!_activeGroups.TryAdd(newGroup.GroupId, newGroup))
+                        {
+                            // Collision detected - retry with new ID
+                            _logger.LogWarning("Group ID collision detected: {GroupId}, retrying...", newGroup.GroupId);
+                            currentId = Interlocked.Increment(ref _nextGroupId) - 1;
+                            newGroupId = $"group_{currentId:D3}";
+                            newGroup.GroupId = newGroupId;
+                            _activeGroups.TryAdd(newGroup.GroupId, newGroup);
+                        }
                         groupToReturn = newGroup;
+
+                        // ⚡ PROMOTE CACHE: If this is a Normal folder, ensure cache is promoted
+                        if (fileType == FileType.Normal && !string.IsNullOrEmpty(newGroup.NormalFolder))
+                        {
+                            PromoteCacheToGroupId(newGroup.NormalFolder, newGroup.GroupId);
+                        }
                     }
                 }
 
@@ -903,13 +1215,38 @@ namespace ChronoView.Core.FileWatching
                 }
                 else
                 {
-                    OnGroupUpdated(groupToReturn);
+                    // Only raise update event if data actually changed
+                    if (isDataChanged)
+                    {
+                        OnGroupUpdated(groupToReturn);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Group {GroupId} matched but no new data added - skipping GroupUpdated event", groupToReturn.GroupId);
+                    }
                 }
                 
                 // Try to match pending NIR files to this group (if not already has NIR)
                 if (!groupToReturn.HasNir && fileType != FileType.Nir)
                 {
-                    TryMatchPendingNirToGroup(groupToReturn);
+                    bool nirMatched = TryMatchPendingNirToGroup(groupToReturn);
+                    // If NIR was matched, we need to update the group even if the initial merge didn't change anything
+                    // Note: If we just created the group (groupToReturn == newGroup), we already called OnGroupCreated, 
+                    // so we should technically call OnGroupUpdated if NIR is added afterwards.
+                    // However, for simplicity and to ensure UI has latest data, if nirMatched is true, we force an update.
+                    if (nirMatched && groupToReturn == newGroup) 
+                    {
+                         // If we just created it, the OnGroupCreated usually carries the initial state.
+                         // But if TryMatchPendingNirToGroup modifies it *after* OnGroupCreated call above?
+                         // Actually TryMatchPendingNirToGroup happens after OnGroupCreated block above.
+                         // So if NIR matches, we should fire Updated.
+                         OnGroupUpdated(groupToReturn);
+                    }
+                    else if (nirMatched && !isDataChanged && groupToReturn != newGroup)
+                    {
+                        // Was existing group, main merge didn't change data, but NIR matched -> fire update
+                        OnGroupUpdated(groupToReturn);
+                    }
                 }
                 
                 return groupToReturn;
@@ -923,6 +1260,50 @@ namespace ChronoView.Core.FileWatching
         }
 
         /// <summary>
+        /// Determine line number from file path or folder suffix
+        /// </summary>
+        private int DetermineLineNumber(string filePath, FileType fileType)
+        {
+            int lineNumber = 1; // Default
+
+            if (_currentConfig == null)
+                return lineNumber;
+
+            // For Normal folders, extract line number from suffix (C251216T200720_0 → Line 1, _1 → Line 2)
+            if (fileType == FileType.Normal)
+            {
+                string folderName = Path.GetFileName(filePath);
+                var suffixMatch = System.Text.RegularExpressions.Regex.Match(folderName, @"^C\d{6}T\d{6}_(\d+)$");
+                if (suffixMatch.Success)
+                {
+                    int suffix = int.Parse(suffixMatch.Groups[1].Value);
+                    return suffix == 1 ? 2 : 1; // _0 → Line 1, _1 → Line 2
+                }
+            }
+
+            // Check path-based line determination
+            if ((!string.IsNullOrEmpty(_currentConfig.MatchingSettings.Nir2Path) &&
+                 filePath.StartsWith(_currentConfig.MatchingSettings.Nir2Path, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(_currentConfig.MatchingSettings.Normal2Path) &&
+                 filePath.StartsWith(_currentConfig.MatchingSettings.Normal2Path, StringComparison.OrdinalIgnoreCase)))
+            {
+                return 2;
+            }
+
+            // Check camera paths for line 2 cams (4, 5, 6)
+            for (int i = 4; i <= 6; i++)
+            {
+                var camPath = _currentConfig.MatchingSettings.GetCameraPath(i);
+                if (!string.IsNullOrEmpty(camPath) && filePath.StartsWith(camPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    return 2;
+                }
+            }
+
+            return lineNumber;
+        }
+
+        /// <summary>
         /// Create UnmatchedFiles structure for a single file
         /// Extracted from CreateNewGroupAsync for reuse
         /// </summary>
@@ -930,29 +1311,8 @@ namespace ChronoView.Core.FileWatching
         {
             var unmatchedFiles = new UnmatchedFiles();
 
-            // Determine line number based on path
-            int lineNumber = 1; // Default
-            if (_currentConfig != null)
-            {
-                if ((!string.IsNullOrEmpty(_currentConfig.MatchingSettings.Nir2Path) && filePath.StartsWith(_currentConfig.MatchingSettings.Nir2Path, StringComparison.OrdinalIgnoreCase)) ||
-                    (!string.IsNullOrEmpty(_currentConfig.MatchingSettings.Normal2Path) && filePath.StartsWith(_currentConfig.MatchingSettings.Normal2Path, StringComparison.OrdinalIgnoreCase)))
-                {
-                    lineNumber = 2;
-                }
-                else
-                {
-                    // Check camera paths for line 2 cams (4, 5, 6)
-                    for (int i = 4; i <= 6; i++)
-                    {
-                        var camPath = _currentConfig.MatchingSettings.GetCameraPath(i);
-                        if (!string.IsNullOrEmpty(camPath) && filePath.StartsWith(camPath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            lineNumber = 2;
-                            break;
-                        }
-                    }
-                }
-            }
+            // Determine line number based on path or suffix
+            int lineNumber = DetermineLineNumber(filePath, fileType);
 
             switch (fileType)
             {
@@ -1031,29 +1391,8 @@ namespace ChronoView.Core.FileWatching
         {
             try
             {
-                // Determine line number based on path
-                int lineNumber = 1; // Default
-                if (_currentConfig != null)
-                {
-                    if ((!string.IsNullOrEmpty(_currentConfig.MatchingSettings.Nir2Path) && filePath.StartsWith(_currentConfig.MatchingSettings.Nir2Path, StringComparison.OrdinalIgnoreCase)) ||
-                        (!string.IsNullOrEmpty(_currentConfig.MatchingSettings.Normal2Path) && filePath.StartsWith(_currentConfig.MatchingSettings.Normal2Path, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        lineNumber = 2;
-                    }
-                    else
-                    {
-                        // Check camera paths for line 2 cams (4, 5, 6)
-                        for (int i = 4; i <= 6; i++)
-                        {
-                            var camPath = _currentConfig.MatchingSettings.GetCameraPath(i);
-                            if (!string.IsNullOrEmpty(camPath) && filePath.StartsWith(camPath, StringComparison.OrdinalIgnoreCase))
-                            {
-                                lineNumber = 2;
-                                break;
-                            }
-                        }
-                    }
-                }
+                // Determine line number based on path or suffix
+                int lineNumber = DetermineLineNumber(filePath, fileType);
 
                 var group = new FileGroup
                 {
@@ -1066,30 +1405,54 @@ namespace ChronoView.Core.FileWatching
 
                 switch (fileType)
                 {
-                    case FileType.Nir:
-                        // NIR files are deferred - add to pending queue
-                        // They will be matched when Non-NIR groups are created
-                        var nirTimestamp = ExtractTimestamp(filePath, fileType);
-                        
-                        if (!nirTimestamp.HasValue)
+                case FileType.Nir:
+                    // Check if NIR should create a group immediately (if it's the first in Data Sequence)
+                    bool allowNirToCreateGroup = false;
+                    if (_currentConfig?.DataSequenceSettings != null)
+                    {
+                        var orderedTypes = _currentConfig.DataSequenceSettings.GetOrderedTypes();
+                        if (orderedTypes.Count > 0 && orderedTypes[0] == DataType.NIR)
                         {
-                            _logger.LogWarning("Could not extract timestamp from NIR file: {Path}", filePath);
-                            return null;
+                            allowNirToCreateGroup = true;
                         }
+                    }
 
+                    var nirTimestamp = ExtractTimestamp(filePath, fileType);
+
+                    if (!nirTimestamp.HasValue)
+                    {
+                        _logger.LogWarning("Could not extract timestamp from NIR file: {Path}", filePath);
+                        return null;
+                    }
+
+                    // If not allowed to create group, defer it (add to pending queue)
+                    if (!allowNirToCreateGroup)
+                    {
                         lock (_lockObject)
                         {
                             _pendingNirFiles.Add((filePath, nirTimestamp.Value, DateTime.UtcNow));
                             _logger.LogInformation("NIR file added to pending queue: {Path}, Timestamp={Timestamp}, QueueSize={Size}",
                                 filePath, nirTimestamp.Value.ToString("HH:mm:ss"), _pendingNirFiles.Count);
                         }
-                        
+
                         // Return null - NIR will be processed when matched to a group
                         return null;
+                    }
+
+                    // Otherwise, allow NIR to create a group
+                    var sNirKey = _nirFileResolver.GetNirKey(filePath);
+                    group.NirFilePath = filePath;
+                    group.NirKey = sNirKey;
+                    group.HasNir = true;
+                    group.Timestamp = nirTimestamp.Value;
+                    group.CreatedAt = nirTimestamp.Value;
+                    group.Status = GroupStatus.Pending; // Initial status
+                    
+                    _logger.LogInformation("Created new group from NIR file (Leader): {Path}, Key={Key}", filePath, sNirKey);
+                    break;
 
                     case FileType.Normal:
                         // Extract folder name and timestamp
-                        var folderKey = Path.GetFileName(filePath);
                         var normalTimestamp = ExtractTimestamp(filePath, fileType);
 
                         if (!normalTimestamp.HasValue)
@@ -1098,7 +1461,8 @@ namespace ChronoView.Core.FileWatching
                             return null;
                         }
 
-                        group.NormalFolder = folderKey;
+                        // Store full folder path in NormalFolder (for matching consistency)
+                        group.NormalFolder = filePath;
                         group.MainImagePath = Path.Combine(filePath, "stitched_original.png");
                         group.Timestamp = normalTimestamp.Value;
                         group.CreatedAt = normalTimestamp.Value;
@@ -1158,85 +1522,88 @@ namespace ChronoView.Core.FileWatching
         /// </summary>
         private FileGroup? FindMatchingExistingGroup(FileGroup newGroup)
         {
-            lock (_lockObject)
+            // Thread-safe snapshot: Create snapshot to prevent inconsistent state during iteration
+            // Without snapshot, concurrent adds/removes could cause collection modified exceptions
+            // or miss groups that were added during iteration
+            var snapshot = _activeGroups.ToArray();
+            
+            _logger.LogDebug("FindMatchingExistingGroup: NormalFolder={NormalFolder}, NirKey={NirKey}, LineNumber={LineNumber}",
+                newGroup.NormalFolder ?? "null", newGroup.NirKey ?? "null", newGroup.LineNumber);
+
+            // Match 1: By NormalFolder (primary stable identifier for Normal-based groups)
+            if (!string.IsNullOrEmpty(newGroup.NormalFolder))
             {
-                _logger.LogDebug("FindMatchingExistingGroup: NormalFolder={NormalFolder}, NirKey={NirKey}, LineNumber={LineNumber}",
-                    newGroup.NormalFolder ?? "null", newGroup.NirKey ?? "null", newGroup.LineNumber);
-
-                // Match 1: By NormalFolder (primary stable identifier for Normal-based groups)
-                if (!string.IsNullOrEmpty(newGroup.NormalFolder))
+                var newGroupDataType = DetermineDataTypeForGroup(newGroup);
+                
+                var match = snapshot.Select(kvp => kvp.Value)
+                            .Where(g => g.NormalFolder == newGroup.NormalFolder)
+                            .Where(g => !HasDataType(g, newGroupDataType))  // Non-Duplicate Filter
+                            .FirstOrDefault();
+                        
+                if (match != null)
                 {
-                    var newGroupDataType = DetermineDataTypeForGroup(newGroup);
+                    _logger.LogInformation("Match 1: Found by NormalFolder={Folder}, DataType={Type}", 
+                        newGroup.NormalFolder, newGroupDataType);
                     
-                    var match = _activeGroups.Values
-                        .Where(g => g.NormalFolder == newGroup.NormalFolder)
-                        .Where(g => !HasDataType(g, newGroupDataType))  // Non-Duplicate Filter
-                        .FirstOrDefault();
+                    // GUI Log
+                    var newFileName = GetRepresentativeFileName(newGroup);
+                    var targetDataType = DetermineDataTypeForGroup(match);
+                    var targetFileName = GetFileNameForDataType(match, targetDataType);
+                    var newTime = newGroup.Timestamp.ToString("HH:mm:ss");
+                    var targetTime = match.Timestamp.ToString("HH:mm:ss");
+                    var timeDiff = Math.Abs((newGroup.Timestamp - match.Timestamp).TotalSeconds);
                     
-                    if (match != null)
-                    {
-                        _logger.LogInformation("Match 1: Found by NormalFolder={Folder}, DataType={Type}", 
-                            newGroup.NormalFolder, newGroupDataType);
-                        
-                        // GUI Log
-                        var newFileName = GetRepresentativeFileName(newGroup);
-                        var targetDataType = DetermineDataTypeForGroup(match);
-                        var targetFileName = GetFileNameForDataType(match, targetDataType);
-                        var newTime = newGroup.Timestamp.ToString("HH:mm:ss");
-                        var targetTime = match.Timestamp.ToString("HH:mm:ss");
-                        var timeDiff = Math.Abs((newGroup.Timestamp - match.Timestamp).TotalSeconds);
-                        
-                        _uiLog?.Invoke(LogSeverity.Debug, newGroupDataType.ToString(), 
-                            $"[{newFileName}] 그룹 {match.GroupId}의 {targetDataType} 파일({targetFileName}, {targetTime})과 매칭 시도 → {timeDiff:F0}초 차이로 성공");
-                        
-                        return match;
-                    }
-                    else if (_activeGroups.Values.Any(g => g.NormalFolder == newGroup.NormalFolder))
-                    {
-                        _logger.LogDebug("Match 1: NormalFolder={Folder} exists but already has {Type}", 
-                            newGroup.NormalFolder, newGroupDataType);
-                    }
+                    _uiLog?.Invoke(LogSeverity.Debug, newGroupDataType.ToString(), 
+                        $"[{newFileName}] 그룹 {match.GroupId}의 {targetDataType} 파일({targetFileName}, {targetTime})과 매칭 시도 → {timeDiff:F0}초 차이로 성공");
+                    
+                    return match;
                 }
-
-                // Match 2: By NirKey (stable identifier for NIR-only groups)
-                if (!string.IsNullOrEmpty(newGroup.NirKey))
+                else if (snapshot.Select(kvp => kvp.Value).Any(g => g.NormalFolder == newGroup.NormalFolder))
                 {
-                    var newGroupDataType = DetermineDataTypeForGroup(newGroup);
-                    
-                    var match = _activeGroups.Values
-                        .Where(g => g.NirKey == newGroup.NirKey)
-                        .Where(g => !HasDataType(g, newGroupDataType))  // Non-Duplicate Filter
-                        .FirstOrDefault();
-                    
-                    if (match != null)
-                    {
-                        _logger.LogInformation("Match 2: Found by NirKey={Key}, DataType={Type}", 
-                            newGroup.NirKey, newGroupDataType);
-                        
-                        // GUI Log
-                        var newFileName = GetRepresentativeFileName(newGroup);
-                        var targetDataType = DetermineDataTypeForGroup(match);
-                        var targetFileName = GetFileNameForDataType(match, targetDataType);
-                        var newTime = newGroup.Timestamp.ToString("HH:mm:ss");
-                        var targetTime = match.Timestamp.ToString("HH:mm:ss");
-                        var timeDiff = Math.Abs((newGroup.Timestamp - match.Timestamp).TotalSeconds);
-                        
-                        _uiLog?.Invoke(LogSeverity.Debug, newGroupDataType.ToString(), 
-                            $"[{newFileName}] 그룹 {match.GroupId}의 {targetDataType} 파일({targetFileName}, {targetTime})과 매칭 시도 → {timeDiff:F0}초 차이로 성공");
-                        
-                        return match;
-                    }
-                    else if (_activeGroups.Values.Any(g => g.NirKey == newGroup.NirKey))
-                    {
-                        _logger.LogDebug("Match 2: NirKey={Key} exists but already has {Type}", 
-                            newGroup.NirKey, newGroupDataType);
-                    }
+                    _logger.LogDebug("Match 1: NormalFolder={Folder} exists but already has {Type}", 
+                        newGroup.NormalFolder, newGroupDataType);
                 }
+            }
 
-                // ============================================================
-                // Match 3: By Timestamp + LineNumber + Priority (with Temporal Ordering Constraint)
-                // ============================================================
-                if (newGroup.Timestamp != DateTime.MinValue && _currentConfig?.DataSequenceSettings != null)
+            // Match 2: By NirKey (stable identifier for NIR-only groups)
+            if (!string.IsNullOrEmpty(newGroup.NirKey))
+            {
+                var newGroupDataType = DetermineDataTypeForGroup(newGroup);
+                
+                var match = snapshot.Select(kvp => kvp.Value)
+                            .Where(g => g.NirKey == newGroup.NirKey)
+                            .Where(g => !HasDataType(g, newGroupDataType))  // Non-Duplicate Filter
+                            .FirstOrDefault();
+                        
+                if (match != null)
+                {
+                    _logger.LogInformation("Match 2: Found by NirKey={Key}, DataType={Type}", 
+                        newGroup.NirKey, newGroupDataType);
+                    
+                    // GUI Log
+                    var newFileName = GetRepresentativeFileName(newGroup);
+                    var targetDataType = DetermineDataTypeForGroup(match);
+                    var targetFileName = GetFileNameForDataType(match, targetDataType);
+                    var newTime = newGroup.Timestamp.ToString("HH:mm:ss");
+                    var targetTime = match.Timestamp.ToString("HH:mm:ss");
+                    var timeDiff = Math.Abs((newGroup.Timestamp - match.Timestamp).TotalSeconds);
+                    
+                    _uiLog?.Invoke(LogSeverity.Debug, newGroupDataType.ToString(), 
+                        $"[{newFileName}] 그룹 {match.GroupId}의 {targetDataType} 파일({targetFileName}, {targetTime})과 매칭 시도 → {timeDiff:F0}초 차이로 성공");
+                    
+                    return match;
+                }
+                else if (snapshot.Select(kvp => kvp.Value).Any(g => g.NirKey == newGroup.NirKey))
+                {
+                    _logger.LogDebug("Match 2: NirKey={Key} exists but already has {Type}", 
+                        newGroup.NirKey, newGroupDataType);
+                }
+            }
+
+            // ============================================================
+            // Match 3: By Timestamp + LineNumber + Priority (with Temporal Ordering Constraint)
+            // ============================================================
+            if (newGroup.Timestamp != DateTime.MinValue && _currentConfig?.DataSequenceSettings != null)
                 {
                     try
                     {
@@ -1269,8 +1636,92 @@ namespace ChronoView.Core.FileWatching
 
                             if (predecessorType == null)
                             {
-                                _logger.LogDebug("Match 3: No predecessor type found for {NewGroupType} (Order={Order})", 
+                                _logger.LogDebug("Match 3: No predecessor type found for {NewGroupType} (Order={Order}). Checking for Successors.", 
                                     newGroupType, newGroupOrder);
+
+                                // If we are the leader (e.g., NIR), we should check if a Successor (e.g., Normal) already exists
+                                // This handles the case where Normal arrived first, and NIR arrived later
+                                DataType? successorType = null;
+                                int successorOrder = -1;
+
+                                foreach (var type in orderedTypes)
+                                {
+                                    var order = GetPriority(type);
+                                    if (order > newGroupOrder)
+                                    {
+                                        if (successorOrder == -1 || order < successorOrder)
+                                        {
+                                            successorType = type;
+                                            successorOrder = order;
+                                        }
+                                    }
+                                }
+
+                                if (successorType != null)
+                                {
+                                    // Treat the Successor as the target for matching validity
+                                    // Note: Delay is defined on the Successor (Delay FROM Predecessor)
+                                    // So we use Successor's delay settings for the window
+                                    var succType = successorType.Value;
+                                    var minDelay = _currentConfig.DataSequenceSettings.GetMinDelay(succType);
+                                    var maxDelay = _currentConfig.DataSequenceSettings.GetMaxDelay(succType);
+
+                                    _logger.LogDebug("Match 3 (Forward): Comparing {NewGroupType} (Leader) with existing Successor {SuccessorType}, Range={Min}~{Max}s",
+                                        newGroupType, succType, minDelay, maxDelay);
+
+                                    var newGroupDataType = DetermineDataTypeForGroup(newGroup);
+                                    var potentialCandidates = _activeGroups.Values
+                                        .Where(g => g.LineNumber == newGroup.LineNumber)
+                                        .OrderBy(g => g.GroupId)
+                                        .ToList();
+
+                                    foreach (var candidate in potentialCandidates)
+                                    {
+                                        if (HasDataType(candidate, newGroupDataType)) continue; // Already has this type
+
+                                        // We expect Candidate to represent the Successor
+                                        if (!HasDataType(candidate, succType) && !HasDataType(candidate, DataType.Normal)) 
+                                        {
+                                            // Ideally we want to match a group that HAS the successor data
+                                            // But even if it doesn't (maybe it's Cam1?), if it's "later", we might match?
+                                            // Validating against specific successor ensures we use the right tolerance.
+                                            // If candidate doesn't have the specific successor type, maybe skip?
+                                            // Exception: If Normal is 2nd, and Cam1 is 3rd. If we find Cam1, do we match?
+                                            // Let's be strict: Look for group that implies the Successor exists or at least matches timeframe
+                                            // For now, simple timestamp check
+                                        }
+
+                                        var timeDiff = (candidate.Timestamp - newGroup.Timestamp).TotalSeconds; 
+                                        // Note: Candidate (Successor) should be LATER than New (Leader)
+                                        // So (Cand - New) should be positive
+
+                                        if (timeDiff < 0) 
+                                        {
+                                            // Candidate is EARLIER than Leader? 
+                                            // If NIR(04) and Normal(05). (05 - 04) = 1. Positive. OK.
+                                            // If NIR(05) and Normal(04). (04 - 05) = -1. Negative. Violation?
+                                            // Sequence says NIR -> Normal. So NIR should be earlier.
+                                            // If TimeDiff < 0, it means Candidate is earlier than us. Violation.
+                                            continue; 
+                                        }
+
+                                        if (Math.Abs(timeDiff) >= minDelay && Math.Abs(timeDiff) <= maxDelay)
+                                        {
+                                            // MATCH FOUND!
+                                            _logger.LogInformation("Match 3 (Forward): Found Successor match! GroupId={GroupId}, Delta={Delta}s", candidate.GroupId, timeDiff);
+                                            
+                                            // GUI Log
+                                            var newFileName = GetRepresentativeFileName(newGroup);
+                                            var targetFileName = GetFileNameForDataType(candidate, succType);
+                                            _uiLog?.Invoke(LogSeverity.Debug, newGroupDataType.ToString(), 
+                                                $"[{newFileName}] (후행) 그룹 {candidate.GroupId}의 {succType} 파일과 매칭 시도 → {timeDiff:F0}초 차이로 성공");
+
+                                            return candidate;
+                                        }
+                                    }
+                                }
+                                
+                                // Fallthrough if no forward match
                             }
                             else
                             {
@@ -1402,58 +1853,86 @@ namespace ChronoView.Core.FileWatching
                         _logger.LogDebug("Skipping Match 3: DataSequenceSettings not available");
                 }
 
-                // No match found - will create new group
-                _logger.LogInformation("No match found for NormalFolder={NormalFolder}, NirKey={NirKey} - creating new group",
-                    newGroup.NormalFolder ?? "null", newGroup.NirKey ?? "null");
-                return null;
-            }
+            // No match found - will create new group
+            _logger.LogInformation("No match found for NormalFolder={NormalFolder}, NirKey={NirKey} - creating new group",
+                newGroup.NormalFolder ?? "null", newGroup.NirKey ?? "null");
+            return null;
         }
 
         /// <summary>
         /// Merge new group data into existing group
         /// Preserves existing data and adds new file paths
+        /// Returns true if any data was actually changed/added
         /// </summary>
-        private void MergeGroups(FileGroup existingGroup, FileGroup newGroup)
+        private bool MergeGroups(FileGroup existingGroup, FileGroup newGroup)
         {
+            bool changed = false;
+
             // Merge stable identifiers (CRITICAL for Non-Duplicate Filter to work)
             if (!string.IsNullOrEmpty(newGroup.NormalFolder) && string.IsNullOrEmpty(existingGroup.NormalFolder))
             {
                 existingGroup.NormalFolder = newGroup.NormalFolder;
                 _logger.LogDebug("Merged NormalFolder: {NormalFolder}", newGroup.NormalFolder);
+                changed = true;
             }
 
             if (!string.IsNullOrEmpty(newGroup.NirKey) && string.IsNullOrEmpty(existingGroup.NirKey))
             {
                 existingGroup.NirKey = newGroup.NirKey;
                 _logger.LogDebug("Merged NirKey: {NirKey}", newGroup.NirKey);
+                changed = true;
             }
 
             // Merge NIR file
             if (!string.IsNullOrEmpty(newGroup.NirFilePath))
             {
-                existingGroup.NirFilePath = newGroup.NirFilePath;
-                existingGroup.HasNir = true;
+                // Only mark as changed if it's a new path or previously was empty
+                if (existingGroup.NirFilePath != newGroup.NirFilePath)
+                {
+                    existingGroup.NirFilePath = newGroup.NirFilePath;
+                    existingGroup.HasNir = true;
+                    changed = true;
+                }
             }
 
             // Merge Main Image
             if (!string.IsNullOrEmpty(newGroup.MainImagePath))
             {
-                existingGroup.MainImagePath = newGroup.MainImagePath;
+                if (existingGroup.MainImagePath != newGroup.MainImagePath)
+                {
+                    existingGroup.MainImagePath = newGroup.MainImagePath;
+                    changed = true;
+                }
             }
 
             // Merge camera files (skip if already exists to prevent unnecessary GroupUpdated events)
             foreach (var camera in newGroup.CameraFiles)
             {
-                if (!string.IsNullOrEmpty(camera.Value) && !existingGroup.CameraFiles.ContainsKey(camera.Key))
+                if (!string.IsNullOrEmpty(camera.Value))
                 {
-                    existingGroup.CameraFiles[camera.Key] = camera.Value;
+                    if (!existingGroup.CameraFiles.ContainsKey(camera.Key))
+                    {
+                        existingGroup.CameraFiles[camera.Key] = camera.Value;
+                        changed = true;
+                    }
+                    else if (existingGroup.CameraFiles[camera.Key] != camera.Value)
+                    {
+                        // Same key but different value (unlikely but possible)
+                        existingGroup.CameraFiles[camera.Key] = camera.Value;
+                        changed = true;
+                    }
                 }
             }
 
-            _logger.LogDebug("Merged group data: NIR={HasNir}, Main={HasMain}, Cameras={CameraCount}",
-                existingGroup.HasNir,
-                !string.IsNullOrEmpty(existingGroup.MainImagePath),
-                existingGroup.CameraFiles.Count(kvp => !string.IsNullOrEmpty(kvp.Value)));
+            if (changed)
+            {
+                _logger.LogDebug("Merged group data: NIR={HasNir}, Main={HasMain}, Cameras={CameraCount}",
+                    existingGroup.HasNir,
+                    !string.IsNullOrEmpty(existingGroup.MainImagePath),
+                    existingGroup.CameraFiles.Count(kvp => !string.IsNullOrEmpty(kvp.Value)));
+            }
+
+            return changed;
         }
 
         /// <summary>
@@ -1463,136 +1942,11 @@ namespace ChronoView.Core.FileWatching
         {
             return fileType switch
             {
-                FileType.Nir => ExtractTimestampFromNirFile(filePath),
-                FileType.Normal => ExtractTimestampFromFolderName(filePath),  // filePath is already the folder
-                FileType.Camera => ExtractTimestampFromCameraFile(filePath),
+                FileType.Nir => FileNamingHelper.ExtractTimestampFromNirFileName(Path.GetFileName(filePath)),
+                FileType.Normal => FileNamingHelper.ExtractTimestampFromNormalFolderName(Path.GetFileName(filePath)),  // filePath is already the folder
+                FileType.Camera => FileNamingHelper.ExtractTimestampFromCameraFileName(Path.GetFileName(filePath)),
                 _ => null
             };
-        }
-
-        /// <summary>
-        /// Extract timestamp from NIR file (from filename in path)
-        /// </summary>
-        private DateTime? ExtractTimestampFromNirFile(string filePath)
-        {
-            if (string.IsNullOrEmpty(filePath))
-                return null;
-
-            var fileName = Path.GetFileNameWithoutExtension(filePath);
-            
-            // Pattern 1: With run_N prefix (e.g., run_120251201T140542)
-            // Match "run_" + single digit + timestamp (YYYYMMDDTHHMMSS)
-            var match = System.Text.RegularExpressions.Regex.Match(fileName, @"run_\d(\d{8}T\d{6})");
-            if (match.Success)
-            {
-                if (DateTime.TryParseExact(
-                    match.Groups[1].Value,
-                    "yyyyMMddTHHmmss",
-                    null,
-                    System.Globalization.DateTimeStyles.None,
-                    out var dt))
-                {
-                    _logger.LogDebug("Extracted timestamp from NIR file (run_N format): {FileName} → {Timestamp}", 
-                        fileName, dt);
-                    return dt;
-                }
-            }
-            
-            // Pattern 2: Direct timestamp without prefix (e.g., 20250926T103033)
-            match = System.Text.RegularExpressions.Regex.Match(fileName, @"(\d{8}T\d{6})");
-            if (match.Success)
-            {
-                if (DateTime.TryParseExact(
-                    match.Groups[1].Value,
-                    "yyyyMMddTHHmmss",
-                    null,
-                    System.Globalization.DateTimeStyles.None,
-                    out var dt))
-                {
-                    _logger.LogDebug("Extracted timestamp from NIR file (direct format): {FileName} → {Timestamp}", 
-                        fileName, dt);
-                    return dt;
-                }
-            }
-
-            _logger.LogWarning("Could not extract timestamp from NIR filename: {FileName}", fileName);
-            return null;
-        }
-
-        /// <summary>
-        /// Extract timestamp from folder name
-        /// </summary>
-        private DateTime? ExtractTimestampFromFolderName(string? folderPath)
-        {
-            if (string.IsNullOrEmpty(folderPath))
-                return null;
-
-            var folderName = Path.GetFileName(folderPath);
-            if (string.IsNullOrEmpty(folderName) || !folderName.StartsWith("C"))
-                return null;
-
-            // Pattern 1: C + 6 digits (date) + T + 6 digits (time)
-            // Example: C251204T111028
-            var match = System.Text.RegularExpressions.Regex.Match(folderName, @"C(\d{6}T\d{6})");
-            if (match.Success)
-            {
-                if (DateTime.TryParseExact(
-                    match.Groups[1].Value,
-                    "yyMMddTHHmmss",
-                    null,
-                    System.Globalization.DateTimeStyles.None,
-                    out var dt))
-                {
-                    return dt;
-                }
-            }
-
-            // Pattern 2: C + 8 digits (date) + _ + 6 digits (time)
-            // Example: C20240115_143022
-            match = System.Text.RegularExpressions.Regex.Match(folderName, @"C(\d{8}_\d{6})");
-            if (match.Success)
-            {
-                if (DateTime.TryParseExact(
-                    match.Groups[1].Value,
-                    "yyyyMMdd_HHmmss",
-                    null,
-                    System.Globalization.DateTimeStyles.None,
-                    out var dt))
-                {
-                    return dt;
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// Extract timestamp from camera file (from filename)
-        /// </summary>
-        private DateTime? ExtractTimestampFromCameraFile(string filePath)
-        {
-            if (string.IsNullOrEmpty(filePath))
-                return null;
-
-            var fileName = Path.GetFileNameWithoutExtension(filePath);
-            
-            // Pattern: YYYYMMDD_HHMMSS
-            // Example: 20241211_143022
-            var match = System.Text.RegularExpressions.Regex.Match(fileName, @"(\d{8}_\d{6})");
-            if (match.Success)
-            {
-                if (DateTime.TryParseExact(
-                    match.Groups[1].Value,
-                    "yyyyMMdd_HHmmss",
-                    null,
-                    System.Globalization.DateTimeStyles.None,
-                    out var dt))
-                {
-                    return dt;
-                }
-            }
-
-            return null;
         }
 
         /// <summary>
@@ -1609,6 +1963,7 @@ namespace ChronoView.Core.FileWatching
             }
 
             // Fallback to deprecated properties
+#pragma warning disable CS0618
             return fileType switch
             {
                 FileType.Nir => _currentConfig?.MatchingSettings.NirTimeWindowSeconds ?? 300,
@@ -1616,6 +1971,7 @@ namespace ChronoView.Core.FileWatching
                 FileType.Normal => _currentConfig?.MatchingSettings.NormalFolderTimeWindowSeconds ?? 120,
                 _ => 60 // Default fallback
             };
+#pragma warning restore CS0618
         }
 
         /// <summary>
@@ -1649,12 +2005,29 @@ namespace ChronoView.Core.FileWatching
             switch (fileType)
             {
                 case FileType.Nir:
+                    // Use INirFileResolver to get proper NirKey (handles .spc/.txt pairing)
+                    // Example: run_120251223T154651A.txt → NirKey = run_120251223T154651 (removes "A")
+                    var nirKey = _nirFileResolver.GetNirKey(filePath);
                     group.NirFilePath = filePath;
+                    group.NirKey = nirKey;
                     group.HasNir = true;
+                    
+                    _logger.LogInformation("Added NIR file to group {GroupId}: {FilePath}, NirKey={NirKey}", 
+                        group.GroupId, filePath, nirKey);
+                    _uiLog?.Invoke(LogSeverity.Info, "NIR",
+                        $"[{Path.GetFileName(filePath)}] → {group.GroupId}에 추가됨 (Key: {nirKey})");
                     break;
                 
                 case FileType.Normal:
-                    group.MainImagePath = filePath;
+                    // If input is a directory, point to the expected stitched image
+                    if (Directory.Exists(filePath))
+                    {
+                        group.MainImagePath = Path.Combine(filePath, "stitched_original.png");
+                    }
+                    else
+                    {
+                        group.MainImagePath = filePath;
+                    }
                     break;
                 
                 case FileType.Camera:
@@ -1694,29 +2067,8 @@ namespace ChronoView.Core.FileWatching
             // Create UnmatchedFiles with single file
             var unmatchedFiles = new UnmatchedFiles();
 
-            // Determine line number based on path
-            int lineNumber = 1; // Default
-            if (_currentConfig != null)
-            {
-                if ((!string.IsNullOrEmpty(_currentConfig.MatchingSettings.Nir2Path) && filePath.StartsWith(_currentConfig.MatchingSettings.Nir2Path, StringComparison.OrdinalIgnoreCase)) ||
-                    (!string.IsNullOrEmpty(_currentConfig.MatchingSettings.Normal2Path) && filePath.StartsWith(_currentConfig.MatchingSettings.Normal2Path, StringComparison.OrdinalIgnoreCase)))
-                {
-                    lineNumber = 2;
-                }
-                else
-                {
-                    // Check camera paths for line 2 cams (4, 5, 6)
-                    for (int i = 4; i <= 6; i++)
-                    {
-                        var camPath = _currentConfig.MatchingSettings.GetCameraPath(i);
-                        if (!string.IsNullOrEmpty(camPath) && filePath.StartsWith(camPath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            lineNumber = 2;
-                            break;
-                        }
-                    }
-                }
-            }
+            // Determine line number based on path or suffix
+            int lineNumber = DetermineLineNumber(filePath, fileType);
 
             switch (fileType)
             {
@@ -1792,7 +2144,7 @@ namespace ChronoView.Core.FileWatching
                     // Check if group is now empty
                     if (IsGroupEmpty(group))
                     {
-                        _activeGroups.Remove(group.GroupId);
+                        _activeGroups.TryRemove(group.GroupId, out _);
                         OnGroupRemoved(group.GroupId);
                         _logger.LogInformation("Group {GroupId} removed (empty)", group.GroupId);
                     }
@@ -1890,13 +2242,23 @@ namespace ChronoView.Core.FileWatching
                     }
 
                     // For Normal files: use folder path as key to prevent duplicates
+                    // CRITICAL: Normal 폴더 이벤트와 stitched_original.png 파일 이벤트가 모두 같은 폴더 경로로 변환되므로
+                    // processKey를 폴더 경로로 통일하여 중복 방지
                     string processKey;
-                    if (fileType == FileType.Normal && !Directory.Exists(filePath))
+                    if (fileType == FileType.Normal)
                     {
-                        // This is an image file inside a Normal folder
-                        // Use the parent folder as the process key
-                        var parentFolder = Path.GetDirectoryName(filePath);
-                        processKey = parentFolder ?? filePath;
+                        // Normal 타입인 경우 항상 폴더 경로를 processKey로 사용
+                        if (Directory.Exists(filePath) || !Path.HasExtension(filePath))
+                        {
+                            // 이미 폴더 경로이거나 확장자가 없는 경우 (폴더 이벤트)
+                            processKey = filePath;
+                        }
+                        else
+                        {
+                            // 이미지 파일인 경우 부모 폴더 경로 사용
+                            var parentFolder = Path.GetDirectoryName(filePath);
+                            processKey = parentFolder ?? filePath;
+                        }
                     }
                     else
                     {
@@ -2073,73 +2435,29 @@ namespace ChronoView.Core.FileWatching
 
         private FileType DetermineFileType(string filePath)
         {
-            if (_currentConfig == null) return FileType.Unknown;
-
-            var settings = _currentConfig.MatchingSettings;
-            var directory = Path.GetDirectoryName(filePath);
-            if (string.IsNullOrEmpty(directory)) return FileType.Unknown;
-
-            // Check Normal paths
-            _logger.LogInformation("Checking Normal: Path={Path}, N1={N1}", filePath, settings.Normal1Path);
-
-            if ((!string.IsNullOrEmpty(settings.Normal1Path) && filePath.StartsWith(settings.Normal1Path, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(settings.Normal2Path) && filePath.StartsWith(settings.Normal2Path, StringComparison.OrdinalIgnoreCase)))
+            var fileName = Path.GetFileName(filePath);
+            
+            // NIR files - ONLY .txt files (not .spc or .csv)
+            // .spc files are paired with .txt files and share the same NirKey
+            // We only process .txt files to avoid creating duplicate groups
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
+            if (extension == ".txt")
             {
-                // Check if this is a Normal folder itself (e.g., Z:\normal\C251201T140543_0)
-                if (Directory.Exists(filePath))
-                {
-                    // This is a folder - treat as Normal folder event
-                    var folderName = Path.GetFileName(filePath);
-                    if (!string.IsNullOrEmpty(folderName) && folderName.StartsWith("C"))
-                    {
-                        _logger.LogInformation("Folder Identified as Normal: {Path}", filePath);
-                        return FileType.Normal;
-                    }
-                }
-
-                // Only consider image files as triggers for Normal groups
-                var ext = Path.GetExtension(filePath).ToLowerInvariant();
-                if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp")
-                {
-                    _logger.LogInformation("File Identified as Normal: {Path}", filePath);
-                    return FileType.Normal;
-                }
-                // Ignore other files in Normal folder (cleaning logs, stitching temp files, etc.)
-                return FileType.Unknown;
+                return FileType.Nir;
             }
-
-            // Check NIR paths
-            if ((!string.IsNullOrEmpty(settings.Nir1Path) && filePath.StartsWith(settings.Nir1Path, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(settings.Nir2Path) && filePath.StartsWith(settings.Nir2Path, StringComparison.OrdinalIgnoreCase)))
+            
+            // Normal folders (directories matching pattern)
+            if (Directory.Exists(filePath) && FileNamingHelper.IsNormalFolder(fileName))
             {
-                // Accept .txt and .csv files for NIR
-                // .spc files are excluded to avoid duplicate groups (they're paired with .txt files)
-                var ext = Path.GetExtension(filePath).ToLowerInvariant();
-                if (ext == ".txt" || ext == ".csv")
-                {
-                    _logger.LogInformation("File Identified as NIR: {Path}", filePath);
-                    return FileType.Nir;
-                }
-                return FileType.Unknown;
+                return FileType.Normal;
             }
-
-            // Check Camera paths
-            for (int i = 1; i <= 6; i++)
+            
+            // Camera files (bitmaps or images with specific pattern)
+            if (extension == ".bmp" || extension == ".jpg" || extension == ".png")
             {
-                var camPath = settings.GetCameraPath(i);
-                if (!string.IsNullOrEmpty(camPath) && filePath.StartsWith(camPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    var ext = Path.GetExtension(filePath).ToLowerInvariant();
-                    if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp")
-                    {
-                        _logger.LogInformation("File Identified as Camera: {Path}", filePath);
-                        return FileType.Camera;
-                    }
-                    return FileType.Unknown;
-                }
+                return FileType.Camera;
             }
-
-            _logger.LogWarning("File Unknown: {Path}. Dir={Dir}, N1={N1}", filePath, directory, settings.Normal1Path);
+            
             return FileType.Unknown;
         }
 
@@ -2171,21 +2489,6 @@ namespace ChronoView.Core.FileWatching
         protected virtual void OnFileGroupsUpdated(FileGroupsUpdatedEventArgs e)
         {
             FileGroupsUpdated?.Invoke(this, e);
-        }
-
-        private async void OnFileChanged(object? sender, FileSystemEventArgs e)
-        {
-            // Diagnostic logging: confirm events reach orchestrator
-            _logger.LogInformation("OnFileChanged triggered: {ChangeType} - {Path}", e.ChangeType, e.FullPath);
-            
-            try
-            {
-                await ProcessFileEventsAsync(new List<FileSystemEventArgs> { e });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing file change event for {Path}", e.FullPath);
-            }
         }
 
         /// <summary>
@@ -2316,20 +2619,22 @@ namespace ChronoView.Core.FileWatching
         
         /// <summary>
         /// Try to match pending NIR files to a group based on timestamp
+        /// Returns true if a match was found and added
         /// </summary>
-        private void TryMatchPendingNirToGroup(FileGroup group)
+        private bool TryMatchPendingNirToGroup(FileGroup group)
         {
+            bool matchFound = false;
             lock (_lockObject)
             {
                 if (_pendingNirFiles.Count == 0)
-                    return;
+                    return false;
 
                 // Get NIR tolerance from data sequence settings
                 var nirItem = _currentConfig?.DataSequenceSettings.Sequence
                     .FirstOrDefault(ds => ds.Type == DataType.NIR);
                     
                 if (nirItem == null)
-                    return;
+                    return false;
 
                 var minDelay = nirItem.MinDelaySeconds;
                 var maxDelay = nirItem.MaxDelaySeconds;
@@ -2365,10 +2670,11 @@ namespace ChronoView.Core.FileWatching
                     _logger.LogInformation("Matched pending NIR to group {GroupId}: {NirPath}, TimeDiff={Diff}s",
                         group.GroupId, matchedNir.Value.FilePath, closestDiff);
                     
-                    _uiLog?.Invoke(LogSeverity.Debug, "NIR",
+                    _uiLog?.Invoke(LogSeverity.Info, "NIR",
                         $"[{Path.GetFileName(matchedNir.Value.FilePath)}] 대기 중 → {group.GroupId}에 매칭 ({closestDiff:F0}초 차이)");
                     
                     _pendingNirFiles.Remove(matchedNir.Value);
+                    matchFound = true;
                 }
                 
                 // Clean up expired pending NIR files (timeout)
@@ -2382,6 +2688,178 @@ namespace ChronoView.Core.FileWatching
                     _logger.LogWarning("NIR file timed out in pending queue: {Path}", expiredNir.FilePath);
                     _pendingNirFiles.Remove(expiredNir);
                 }
+            }
+            return matchFound;
+        }
+
+        /// <summary>
+        /// Loads image file into BitmapImage in memory with retry logic for file lock handling
+        /// </summary>
+        private async Task<BitmapImage?> LoadImageIntoMemoryAsync(string imagePath)
+        {
+            BitmapImage? capturedImage = null;
+            var stopwatch = Stopwatch.StartNew();
+            
+            // Retry up to 3 times (handle file locks from other processes)
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                try
+                {
+                    // Open file with read sharing allowed
+                    using var stream = new FileStream(imagePath, 
+                        FileMode.Open, 
+                        FileAccess.Read, 
+                        FileShare.Read | FileShare.Delete, // Allow ML program to access concurrently
+                        bufferSize: 81920, // 80KB buffer for faster reading
+                        useAsync: true);
+                    
+                    // Load into memory
+                    var bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad; // Load into memory immediately!
+                    bitmap.StreamSource = stream;
+                    bitmap.EndInit();
+                    bitmap.Freeze(); // Thread-safe + memory efficient
+                    
+                    capturedImage = bitmap;
+                    stopwatch.Stop();
+                    
+                    _logger.LogDebug("Image loaded in {Ms}ms: {Path}", 
+                        stopwatch.ElapsedMilliseconds, Path.GetFileName(imagePath));
+                    break;
+                }
+                catch (IOException ex) when (attempt < 2)
+                {
+                    _logger.LogWarning("File locked (attempt {Attempt}/3), retrying: {Message}", 
+                        attempt + 1, ex.Message);
+                    await Task.Delay(10); // 10ms delay before retry
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to load image: {Path}", Path.GetFileName(imagePath));
+                    break;
+                }
+            }
+            
+            return capturedImage;
+        }
+
+        /// <summary>
+        /// \u26a1 FAST CAPTURE: Handle stitched_original.png creation event
+        /// Loads image into memory immediately before ML inference program takes the file
+        /// </summary>
+        private async Task HandleStitchedImageCaptureAsync(string imagePath, int workerId)
+        {
+            _logger.LogInformation("🏁 Worker {WorkerId} racing to capture image: {Path}", workerId, imagePath);
+            
+            try
+            {
+                // Get parent folder path (this is the Normal folder = group key)
+                string? folderPath = Path.GetDirectoryName(imagePath);
+                if (string.IsNullOrEmpty(folderPath))
+                {
+                    _logger.LogWarning("Could not determine parent folder for: {Path}", imagePath);
+                    return;
+                }
+
+                // \u26a1 Load image into memory IMMEDIATELY (race condition critical!)
+                var capturedImage = await LoadImageIntoMemoryAsync(imagePath);
+                
+                if (capturedImage == null)
+                {
+                    _logger.LogError("❌ Failed to capture image after 3 attempts: {Path}", imagePath);
+                    return;
+                }
+                
+                _logger.LogInformation("✅ Image captured for group matching: {Path}", Path.GetFileName(imagePath));
+
+                // Find existing group by folder path (DON'T create new group!)
+                FileGroup? existingGroup = null;
+                lock (_lockObject)
+                {
+                    existingGroup = _activeGroups.Values
+                        .FirstOrDefault(g => g.NormalFolder?.Equals(folderPath, StringComparison.OrdinalIgnoreCase) == true);
+                }
+
+                if (existingGroup != null)
+                {
+                    // Store in cache
+                    _imageCaptureCache[existingGroup.GroupId] = capturedImage;
+                    
+                    _logger.LogInformation("📸 Cached image for group {GroupId} (folder: {Folder})", 
+                        existingGroup.GroupId, Path.GetFileName(folderPath));
+                    
+                    // Trigger UI update
+                    OnGroupUpdated(existingGroup);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ No existing group found for folder: {Folder}. Image will be cached by folder path temporarily.", 
+                        Path.GetFileName(folderPath));
+                    
+                    // Cache by folder path temporarily (group might be created soon)
+                    _imageCaptureCache[folderPath] = capturedImage;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to handle stitched image capture: {Path}", imagePath);
+            }
+        }
+
+        /// <summary>
+        /// Get cached image for a group (if available)
+        /// </summary>
+        public BitmapImage? GetCapturedImage(string groupId)
+        {
+            if (_imageCaptureCache.TryGetValue(groupId, out var image))
+            {
+                _logger.LogDebug("🎯 Cache hit for group {GroupId}", groupId);
+                return image;
+            }
+            
+            _logger.LogDebug("❌ Cache miss for group {GroupId}", groupId);
+            return null;
+        }
+
+        /// <summary>
+        /// Get cached image by folder path (fallback if group not created yet)
+        /// </summary>
+        public BitmapImage? GetCapturedImageByFolderPath(string folderPath)
+        {
+            if (_imageCaptureCache.TryGetValue(folderPath, out var image))
+            {
+                _logger.LogDebug("🎯 Cache hit for folder {Folder}", Path.GetFileName(folderPath));
+                return image;
+            }
+
+            return null;
+        }
+        /// <summary>
+        /// Promotes a cached image from folder-based key to GroupID-based key.
+        /// Call this when a group is created/updated to ensure persistent access.
+        /// </summary>
+        public void PromoteCacheToGroupId(string folderPath, string groupId)
+        {
+            if (string.IsNullOrEmpty(folderPath) || string.IsNullOrEmpty(groupId))
+                return;
+
+            // Normalize folder path key
+            // Note: StitchedImageCapture caches by folder path if group doesn't exist
+            
+            // Check if we have a cache for this folder
+            // Use ContainsKey to avoid race conditions with Remove/Add
+            if (_imageCaptureCache.TryGetValue(folderPath, out var image))
+            {
+                // Add to GroupID key
+                _imageCaptureCache[groupId] = image;
+                
+                // Optional: Remove folder key to save memory? 
+                // Better to keep it for a short while or until expiration?
+                // For now, keep it - LRU cache handles size limits.
+                
+                _logger.LogDebug("Promoted cached image from folder '{Folder}' to group '{GroupId}'", 
+                    Path.GetFileName(folderPath), groupId);
             }
         }
     }

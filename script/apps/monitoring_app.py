@@ -1010,6 +1010,10 @@ class MainWindow(QMainWindow):
             # 내부 상태 초기화 + UI 초기화
             self.groups = []
             self.file_matcher.reset_state()
+            
+            # ✅ 경로 변경 시 이미지 캐시 정리 (이전 경로의 이미지가 위젯에 남지 않도록)
+            self.image_registry.clear_cache()
+            
             self.reset_monitor_rows()
 
             # 변경된 설정으로 즉시 전체 재스캔

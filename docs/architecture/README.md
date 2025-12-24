@@ -38,6 +38,12 @@
   - **Key Change**: NirTimeWindowSeconds, CameraTimeWindowSeconds, NormalFolderTimeWindowSeconds marked obsolete
   - **Migration**: Use DataSequenceSettings instead
 
+### External Integration
+- [module_program_launching.md](module_program_launching.md) - Management of external camera/sensor programs
+  - **Last Updated**: 2025-12-19
+  - **Key Change**: Modularized launching logic into dedicated `Launcher` classes
+  - **Status**: Active monitoring of external process state
+
 ### UI/UX Design
 - [design_guidelines.md](design_guidelines.md) - ChronoView UI/UX design system
   - **Last Updated**: 2025-12-15
@@ -52,8 +58,10 @@
 | module_monitoring_orchestrator.md | Module | 2024-12-14 | 2024-12-14 |
 | module_file_group_matcher.md | Module | 2024-12-14 | 2024-12-14 |
 | module_file_watcher_service.md | Module | 2025-12-15 | 2025-12-15 |
+| module_configuration.md | Module | 2025-12-18 | 2025-12-18 |
 | impact_deprecated_matching_properties.md | Impact | 2024-12-16 | 2024-12-16 |
 | module_nir_file_resolver.md | Module | - | - |
+| module_program_launching.md | Module | 2025-12-19 | 2025-12-19 |
 | feature_ui_group_display.md | Feature | - | - |
 
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using System.Windows.Media.Imaging;
 using ChronoView.Models;
 using ChronoView.UI.ViewModels;
 
@@ -77,6 +78,22 @@ namespace ChronoView.Core.FileWatching
         /// Event raised when file groups are updated (batch)
         /// </summary>
         event EventHandler<FileGroupsUpdatedEventArgs> FileGroupsUpdated;
+
+        /// <summary>
+        /// ⚡ Get cached image for a group (if available from fast capture)
+        /// </summary>
+        BitmapImage? GetCapturedImage(string groupId);
+
+        /// <summary>
+        /// ⚡ Get cached image by folder path (fallback if group not created yet)
+        /// </summary>
+        BitmapImage? GetCapturedImageByFolderPath(string folderPath);
+
+        /// <summary>
+        /// Promotes a cached image from folder-based key to GroupID-based key.
+        /// Call this when a group is created/updated to ensure persistent access.
+        /// </summary>
+        void PromoteCacheToGroupId(string folderPath, string groupId);
     }
 
     /// <summary>

@@ -12,6 +12,7 @@ public interface IFileOperationService
     /// </summary>
     /// <param name="group">The file group to move.</param>
     /// <param name="destinationPath">The destination directory path.</param>
+    /// <param name="subject">Subject/sample name for structured path. Null uses default.</param>
     /// <param name="progress">Progress reporter for the operation.</param>
     /// <param name="onConflict">Callback for resolving name conflicts.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -19,6 +20,7 @@ public interface IFileOperationService
     Task<OperationResult> MoveFileGroupAsync(
         FileGroup group,
         string destinationPath,
+        string? subject = null,
         IProgress<OperationProgress>? progress = null,
         Func<string, ConflictResolution>? onConflict = null,
         CancellationToken cancellationToken = default);
@@ -28,6 +30,7 @@ public interface IFileOperationService
     /// </summary>
     /// <param name="group">The file group to delete.</param>
     /// <param name="quarantinePath">Destination quarantine (trash) path for soft delete.</param>
+    /// <param name="subject">Subject/sample name for structured path. Null uses default.</param>
     /// <param name="progress">Progress reporter for the operation.</param>
     /// <param name="onConflict">Callback for resolving name conflicts in quarantine.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -35,6 +38,7 @@ public interface IFileOperationService
     Task<OperationResult> DeleteFileGroupAsync(
         FileGroup group,
         string quarantinePath,
+        string? subject = null,
         IProgress<OperationProgress>? progress = null,
         Func<string, ConflictResolution>? onConflict = null,
         CancellationToken cancellationToken = default);

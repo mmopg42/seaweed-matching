@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -7,10 +7,11 @@ using ChronoView.Core.FileWatching;
 using ChronoView.Core.FileMatching;
 using ChronoView.Core.ImageProcessing;
 using ChronoView.Core.Analytics;
-using ChronoView.Core.NIR;
+using ChronoView.Core.Nir;
 using Application = System.Windows.Application;
 using WpfMessageBox = System.Windows.MessageBox;
 using ChronoView.Core.FileOperations;
+using ChronoView.Core.ProgramLaunching;
 using ChronoView.UI.ViewModels;
 using ChronoView.UI.Views;
 using ChronoView.Models;
@@ -83,7 +84,7 @@ public partial class App : Application
         try
         {
             logger2.LogInformation("Creating SetupWindow from DI container...");
-            var setupWindow = _serviceProvider.GetRequiredService<SetupWindow>();
+            var setupWindow = _serviceProvider!.GetRequiredService<SetupWindow>();
             logger2.LogInformation("SetupWindow created successfully");
 
             // Get ViewModel to access StartClicked property
@@ -99,7 +100,7 @@ public partial class App : Application
                     logger2.LogInformation("Setup completed. Showing Main Window");
                     try
                     {
-                        var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                        var mainWindow = _serviceProvider!.GetRequiredService<MainWindow>();
                         MainWindow = mainWindow;
                         mainWindow.Show();
                         logger2.LogInformation("MainWindow shown successfully");
@@ -154,8 +155,11 @@ public partial class App : Application
         }
         catch { /* ignored as we are in a critical state */ }
 
-        WpfMessageBox.Show($"Critical Error ({source}):\n{ex?.Message}\n\nCheck critical_error.log for details.", 
-                        "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        WpfMessageBox.Show(
+            Core.Localization.LocalizationManager.GetString("Error_CriticalMessage", source, ex?.Message ?? "Unknown error"),
+            Core.Localization.LocalizationManager.GetString("Error_Critical"),
+            MessageBoxButton.OK,
+            MessageBoxImage.Error);
     }
 
     private void ConfigureServices(IServiceCollection services)
@@ -180,6 +184,12 @@ public partial class App : Application
 
         // Core Services (Singleton - maintain state across application lifetime)
         services.AddSingleton<IConfigurationManager, ConfigurationManager>();
+        services.AddSingleton<FolderTimestampCache>(sp =>
+        {
+            var config = sp.GetRequiredService<ApplicationConfiguration>();
+            int ttl = config.WorkflowSettings?.FolderTimestampCacheTTL ?? 300;
+            return new FolderTimestampCache(ttl, sp.GetService<ILogger<FolderTimestampCache>>());
+        });
         services.AddSingleton<IFileWatcher, FileWatcherService>();
         services.AddSingleton<IFileGroupMatcher>(sp =>
             new FileGroupMatcherService(
@@ -187,12 +197,23 @@ public partial class App : Application
         services.AddSingleton<INirFileResolver, SpcTxtNirFileResolver>();
         services.AddSingleton<IImageProcessor, ImageProcessingService>();
         services.AddSingleton<IStatisticsService, StatisticsService>();
-        services.AddSingleton<IMonitoringOrchestrator, MonitoringOrchestrator>();
+        services.AddSingleton<IMonitoringOrchestrator, MonitoringOrchestrator>(sp =>
+            new MonitoringOrchestrator(
+                sp.GetRequiredService<IFileGroupMatcher>(),
+                sp.GetRequiredService<IFileWatcher>(),
+                sp.GetRequiredService<ILogger<MonitoringOrchestrator>>(),
+                sp.GetRequiredService<INirFileResolver>(),
+                sp.GetRequiredService<FolderTimestampCache>()));
         services.AddSingleton<IAbnormalDetector, AbnormalDetectorService>();
 
         // File Operation Services (Transient - new instance per operation)
         services.AddTransient<IFileOperationService, FileOperationService>();
         services.AddTransient<IPathManagementService, PathManagementService>();
+
+        // Program Launchers (Singleton - shared state for program status tracking)
+        services.AddSingleton<GeneralCameraLauncher>();
+        services.AddSingleton<NirCameraLauncher>();
+        services.AddSingleton<Nir2CameraLauncher>();
 
         // ViewModels (Transient - new instance per view)
         services.AddTransient<MainWindowViewModel>();

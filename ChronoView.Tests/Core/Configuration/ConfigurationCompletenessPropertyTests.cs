@@ -109,12 +109,10 @@ public class ConfigurationCompletenessPropertyTests
 
         var settings = new WorkflowSettings
         {
-            WatcherBufferSize = bufferSize,
-            PollingIntervalMs = pollingInterval
+            WatcherBufferSize = bufferSize
         };
 
         Assert.True(settings.WatcherBufferSize > 0);
-        Assert.True(settings.PollingIntervalMs > 0);
     }
 
     /// <summary>
@@ -215,8 +213,7 @@ public class ConfigurationCompletenessPropertyTests
         {
             WorkflowSettings = new WorkflowSettings
             {
-                WatcherBufferSize = -1000, // Invalid
-                PollingIntervalMs = 5000
+                WatcherBufferSize = -1000 // Invalid
             }
         };
 

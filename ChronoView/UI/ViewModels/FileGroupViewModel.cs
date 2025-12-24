@@ -9,6 +9,9 @@ using System.Windows;
 using Microsoft.Extensions.Logging;
 using WpfApplication = System.Windows.Application;
 
+using ChronoView.Core.FileWatching;
+
+
 namespace ChronoView.UI.ViewModels;
 
 /// <summary>
@@ -18,6 +21,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 {
     private readonly FileGroup _fileGroup;
     private readonly IImageProcessor _imageProcessor;
+    private readonly IMonitoringOrchestrator? _orchestrator;
     private readonly IAbnormalDetector? _abnormalDetector;
     private readonly ApplicationConfiguration? _configuration;
     private readonly ILogger<FileGroupViewModel>? _logger;
@@ -26,6 +30,10 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp" };
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     
+    // Concurrency control for thumbnail loading
+    private readonly HashSet<string> _activeLoadingTasks = new();
+    private readonly object _loadingTasksLock = new();
+
     private bool _isSelected;
     private bool _isAbnormal;
     private string? _abnormalReason;
@@ -42,12 +50,26 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     private BitmapSource? _camera5Thumbnail;
     private BitmapSource? _camera6Thumbnail;
     private bool _disposed;
+    
+    // Retry Infrastructure
+    private class RetryContext
+    {
+        public string Key { get; set; } = ""; // e.g., "Cam1", "Main"
+        public string ImagePath { get; set; } = "";
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public Action<BitmapSource> OnSuccess { get; set; } = _ => { };
+        public int RetryCount { get; set; } = 0;
+    }
+    private readonly System.Collections.Concurrent.ConcurrentQueue<RetryContext> _retryQueue = new();
+    private readonly System.Windows.Threading.DispatcherTimer _retryTimer;
 
     /// <summary>
     /// Creates a new FileGroupViewModel wrapping a FileGroup model.
     /// </summary>
     /// <param name="fileGroup">The FileGroup model to wrap.</param>
     /// <param name="imageProcessor">Image processor for thumbnail generation.</param>
+    /// <param name="orchestrator">Orchestrator for accessing cached images.</param>
     /// <param name="abnormalDetector">Optional abnormal detector for z-score analysis.</param>
     /// <param name="configuration">Optional application configuration for NIR graph settings.</param>
     /// <param name="logger">Optional logger for diagnostics.</param>
@@ -55,6 +77,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     public FileGroupViewModel(
         FileGroup fileGroup,
         IImageProcessor imageProcessor,
+        IMonitoringOrchestrator? orchestrator = null,
         IAbnormalDetector? abnormalDetector = null,
         ApplicationConfiguration? configuration = null,
         ILogger<FileGroupViewModel>? logger = null,
@@ -62,6 +85,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     {
         _fileGroup = fileGroup ?? throw new ArgumentNullException(nameof(fileGroup));
         _imageProcessor = imageProcessor ?? throw new ArgumentNullException(nameof(imageProcessor));
+        _orchestrator = orchestrator;
         _abnormalDetector = abnormalDetector;
         _configuration = configuration;
         _logger = logger;
@@ -69,6 +93,14 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 
         InitializeImagePaths();
         CheckAbnormalStatus();
+        
+        // Initialize Retry Timer (2 seconds interval)
+        _retryTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(2)
+        };
+        _retryTimer.Tick += ProcessRetryQueue;
+        // Timer starts only when items are queued
 
         // Removed duplicate VM creation logs - matching details are logged in FileMatchingEngine
     }
@@ -114,31 +146,57 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     public GroupStatus Status => _fileGroup.Status;
 
     /// <summary>
-    /// Status display text for UI, including abnormal indicator.
+    /// Status display text for UI based on completion criteria.
     /// </summary>
     public string StatusText
     {
         get
         {
-            var baseStatus = Status switch
+            // Priority 1: Abnormal status (when implemented)
+            if (IsAbnormal)
             {
-                GroupStatus.Complete => "✓ Complete",
-                GroupStatus.Pending => "⏳ Pending",
-                GroupStatus.Processing => "⚙ Processing",
-                GroupStatus.Moved => "📦 Moved",
-                GroupStatus.Error => "✗ Error",
-                GroupStatus.Abnormal => "⚠ Abnormal",
-                _ => Status.ToString()
-            };
-            
-            // Append abnormal indicator if detected by z-score analysis
-            if (IsAbnormal && Status != GroupStatus.Abnormal)
-            {
-                return $"{baseStatus} (⚠ Abnormal)";
+                return Core.Localization.LocalizationManager.GetString("Status_Abnormal");
             }
-            
-            return baseStatus;
+
+            // Priority 2: Check completion based on line-specific requirements
+            bool isComplete = IsGroupComplete();
+
+            if (isComplete)
+            {
+                return Core.Localization.LocalizationManager.GetString("Status_Complete");
+            }
+            else
+            {
+                return Core.Localization.LocalizationManager.GetString("Status_Pending");
+            }
         }
+    }
+
+    /// <summary>
+    /// Determines if this group is complete based on line-specific data requirements.
+    /// NIR presence is NOT a completion criterion.
+    /// </summary>
+    private bool IsGroupComplete()
+    {
+        if (LineNumber == 1)
+        {
+            // Line 1: Normal1 + Cam1 + Cam2 + Cam3 required for completion
+            return !string.IsNullOrEmpty(MainImagePath) &&  // Normal1 (stitched_original.png)
+                   !string.IsNullOrEmpty(Camera1ImagePath) && // Cam1
+                   !string.IsNullOrEmpty(Camera2ImagePath) && // Cam2
+                   !string.IsNullOrEmpty(Camera3ImagePath);   // Cam3
+        }
+        else if (LineNumber == 2)
+        {
+            // Line 2: Normal2 + Cam4 + Cam5 + Cam6 required for completion
+            return !string.IsNullOrEmpty(MainImagePath) &&  // Normal2 (stitched_original.png)
+                   !string.IsNullOrEmpty(Camera4ImagePath) && // Cam4
+                   !string.IsNullOrEmpty(Camera5ImagePath) && // Cam5
+                   !string.IsNullOrEmpty(Camera6ImagePath);   // Cam6
+        }
+
+        // Unknown line number - consider incomplete
+        return false;
     }
 
     /// <summary>
@@ -305,7 +363,13 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     public BitmapSource? MainImageThumbnail
     {
         get => _mainImageThumbnail;
-        private set => SetProperty(ref _mainImageThumbnail, value);
+        set 
+        {
+            if (SetProperty(ref _mainImageThumbnail, value))
+            {
+                OnPropertyChanged(nameof(NormalImageSizeLabel));
+            }
+        }
     }
 
     /// <summary>
@@ -411,6 +475,99 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
             _mainImagePath = Path.Combine(_fileGroup.NormalFolder, "stitched_original.png");
         }
         // Do NOT fallback to camera images - they belong in their own columns
+
+        // Notify that label properties have been initialized
+        OnPropertyChanged(nameof(NirLabel));
+        OnPropertyChanged(nameof(NormalLabel));
+        OnPropertyChanged(nameof(Camera1Label));
+        OnPropertyChanged(nameof(Camera2Label));
+        OnPropertyChanged(nameof(Camera3Label));
+        OnPropertyChanged(nameof(Camera4Label));
+        OnPropertyChanged(nameof(Camera5Label));
+        OnPropertyChanged(nameof(Camera6Label));
+    }
+
+    /// <summary>
+    /// Formatted label for NIR files (e.g. "file.spc\nfile.txt").
+    /// </summary>
+    public string NirLabel
+    {
+        get
+        {
+            if (!HasNir || string.IsNullOrEmpty(NirKey)) return string.Empty;
+            
+            // Expected filenames based on NirKey
+            // e.g. Key="run_120251204T120000" -> .spc and A.txt
+            return $"{NirKey}.spc\n{NirKey}A.txt";
+        }
+    }
+
+    /// <summary>
+    /// Label for Normal camera (Folder Name).
+    /// </summary>
+    public string NormalLabel
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(NormalFolder)) return string.Empty;
+            return Path.GetFileName(NormalFolder);
+        }
+    }
+
+    /// <summary>
+    /// Label for Normal camera image size (e.g. "640 x 480 px").
+    /// Only available after thumbnail is loaded.
+    /// </summary>
+    public string NormalImageSizeLabel
+    {
+        get
+        {
+            if (_mainImageThumbnail == null) return string.Empty;
+            // Since we are using thumbnails, the size might be small (100x100).
+            // However, for correct display, we show the pixel dimensions of the loaded bitmap.
+            // If the user wants ORIGINAL size, we would need to read metadata which is expensive.
+            // For now, we display the bitmap size which acts as a proxy or placeholder.
+            // Note: If using generated thumbnails, this will show thumbnail size.
+            // To show real size, we'd need to metadata read. 
+            // Given the requirement "below image size", and performance constraints, we stick to loaded image properties.
+            return $"{_mainImageThumbnail.PixelWidth} x {_mainImageThumbnail.PixelHeight} px";
+        }
+    }
+
+    /// <summary>
+    /// Label for Camera 1 (Filename).
+    /// </summary>
+    public string Camera1Label => GetCameraLabel(1);
+
+    /// <summary>
+    /// Label for Camera 2 (Filename).
+    /// </summary>
+    public string Camera2Label => GetCameraLabel(2);
+
+    /// <summary>
+    /// Label for Camera 3 (Filename).
+    /// </summary>
+    public string Camera3Label => GetCameraLabel(3);
+
+    /// <summary>
+    /// Label for Camera 4 (Filename).
+    /// </summary>
+    public string Camera4Label => GetCameraLabel(4);
+
+    /// <summary>
+    /// Label for Camera 5 (Filename).
+    /// </summary>
+    public string Camera5Label => GetCameraLabel(5);
+
+    /// <summary>
+    /// Label for Camera 6 (Filename).
+    /// </summary>
+    public string Camera6Label => GetCameraLabel(6);
+
+    private string GetCameraLabel(int cameraNumber)
+    {
+        var path = GetCameraImagePath(cameraNumber);
+        return string.IsNullOrEmpty(path) ? "비어있음" : Path.GetFileName(path);
     }
 
     /// <summary>
@@ -433,7 +590,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
             if (isAbnormal)
             {
                 IsAbnormal = true;
-                AbnormalReason = "Detected by z-score analysis";
+                AbnormalReason = Core.Localization.LocalizationManager.GetString("Status_AbnormalReason");
             }
             else
             {
@@ -527,137 +684,256 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
         if (_disposed)
             return;
 
+        _logger?.LogDebug("[{GroupId}] LoadThumbnailsAsync 시작", GroupId);
+        _uiLog?.Invoke(LogSeverity.Debug, "Image", $"[{GroupId}] 썸네일 로딩 시작");
+
         const int thumbnailWidth = 100;
         const int thumbnailHeight = 100;
 
         try
         {
-            // Thumbnail loading - only log errors, not every load attempt
+            // Create list of parallel loading tasks
+            var loadingTasks = new List<Task>();
 
             // Load main image thumbnail (only if not already loaded)
             if (!string.IsNullOrEmpty(MainImagePath) && MainImageThumbnail == null)
             {
-                var mainThumbnail = await LoadSingleThumbnailAsync(MainImagePath, thumbnailWidth, thumbnailHeight);
-                await WpfApplication.Current.Dispatcher.InvokeAsync(() => MainImageThumbnail = mainThumbnail);
+                _logger?.LogDebug("[{GroupId}] Main 이미지 로딩 시도: {Path}", GroupId, MainImagePath);
+                if (TryEnterLoading("Main"))
+                {
+                    loadingTasks.Add(Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var mainThumbnail = await LoadSingleThumbnailAsync(MainImagePath, thumbnailWidth, thumbnailHeight);
+                            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                if (mainThumbnail != null)
+                                {
+                                    MainImageThumbnail = mainThumbnail;
+                                    _logger?.LogDebug("[{GroupId}] Main 이미지 표시 완료: {Path}", GroupId, MainImagePath);
+                                    _uiLog?.Invoke(LogSeverity.Debug, "Image", $"[{GroupId}] Main 이미지 표시: {Path.GetFileName(MainImagePath)}");
+                                }
+                                else
+                                {
+                                    _logger?.LogDebug("[{GroupId}] Main 이미지 로딩 실패 -> Retry Queue", GroupId, MainImagePath);
+                                    QueueRetry("Main", MainImagePath, thumbnailWidth, thumbnailHeight, (bmp) => MainImageThumbnail = bmp);
+                                }
+                            }).Task;
+                        }
+                        finally { ExitLoading("Main"); }
+                    }));
+                }
+                else
+                {
+                    _logger?.LogDebug("[{GroupId}] Main 이미지 로딩 건너뜀 - 이미 로딩 중", GroupId);
+                }
+            }
+            else if (MainImageThumbnail != null)
+            {
+                _logger?.LogDebug("[{GroupId}] Main 이미지는 이미 로드됨", GroupId);
             }
 
             // Load NIR image thumbnail (only if not already loaded)
-            if (!string.IsNullOrEmpty(NirImagePath) && NirImageThumbnail == null)
+            if (HasNir && !string.IsNullOrEmpty(NirImagePath))
             {
-            var ext = Path.GetExtension(NirImagePath);
-            // Skip non-image files (spc/txt 등)
-            if (!_imageExtensions.Contains(ext))
+                if (NirImageThumbnail != null)
                 {
-                // Skip non-image NIR files silently
+                     _logger?.LogDebug("[{GroupId}] NIR 이미지는 이미 로드됨", GroupId);
                 }
                 else
                 {
-                    var nirThumbnail = await LoadSingleThumbnailAsync(NirImagePath, thumbnailWidth, thumbnailHeight);
-                    await WpfApplication.Current.Dispatcher.InvokeAsync(() => NirImageThumbnail = nirThumbnail);
+                    var ext = Path.GetExtension(NirImagePath);
+                    if (!_imageExtensions.Contains(ext))
+                    {
+                        _logger?.LogDebug("[{GroupId}] NIR 이미지 건너김 (이미지 파일 아님): {Path}", GroupId, NirImagePath);
+                    }
+                    else
+                    {
+                        _logger?.LogDebug("[{GroupId}] NIR 이미지 로딩 시도: {Path}", GroupId, NirImagePath);
+                        if (TryEnterLoading("NIR"))
+                        {
+                            loadingTasks.Add(Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    var nirThumbnail = await LoadSingleThumbnailAsync(NirImagePath, thumbnailWidth, thumbnailHeight);
+                                    await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                                    {
+                                        if (nirThumbnail != null)
+                                        {
+                                            NirImageThumbnail = nirThumbnail;
+                                            _logger?.LogDebug("[{GroupId}] NIR 이미지 표시 완료: {Path}", GroupId, NirImagePath);
+                                            _uiLog?.Invoke(LogSeverity.Debug, "Image", $"[{GroupId}] NIR 이미지 표시: {Path.GetFileName(NirImagePath)}");
+                                        }
+                                        else
+                                        {
+                                            _logger?.LogDebug("[{GroupId}] NIR 이미지 로딩 실패 -> Retry Queue", GroupId, NirImagePath);
+                                            QueueRetry("NIR", NirImagePath, thumbnailWidth, thumbnailHeight, (bmp) => NirImageThumbnail = bmp);
+                                        }
+                                    }).Task;
+                                }
+                                finally { ExitLoading("NIR"); }
+                            }));
+                        }
+                        else
+                        {
+                             _logger?.LogDebug("[{GroupId}] NIR 이미지 로딩 건너김 - 이미 로딩 중", GroupId);
+                        }
+                    }
                 }
             }
-
-            // Load NIR graph thumbnail (only if not already loaded)
-            if (HasNir && NirGraphThumbnail == null)
+            else if (NirImageThumbnail != null)
             {
-                if (_configuration?.MatchingSettings.EnableNirGraph == true)
-                {
-                    var nirGraphThumbnail = await LoadNirGraphThumbnailAsync(_configuration);
-                    await WpfApplication.Current.Dispatcher.InvokeAsync(() => NirGraphThumbnail = nirGraphThumbnail);
-                }
-                else
-                {
-                    // Show placeholder when NIR graph is disabled
-                    await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
-                        NirGraphThumbnail = ResourceHelper.GetNirPlaceholder());
-                }
+                 // Handle case where NIR might have been removed but thumbnail persists? (Unlikely)
+            }
+            else if (string.IsNullOrEmpty(NirImagePath))
+            {
+                _logger?.LogDebug("[{GroupId}] NIR 이미지 경로가 없음", GroupId);
             }
 
-            // Load camera thumbnails (only if not already loaded)
-            if (Camera1Thumbnail == null) await LoadCameraThumbnailAsync(1, thumbnailWidth, thumbnailHeight);
-            if (Camera2Thumbnail == null) await LoadCameraThumbnailAsync(2, thumbnailWidth, thumbnailHeight);
-            if (Camera3Thumbnail == null) await LoadCameraThumbnailAsync(3, thumbnailWidth, thumbnailHeight);
-            if (Camera4Thumbnail == null) await LoadCameraThumbnailAsync(4, thumbnailWidth, thumbnailHeight);
-            if (Camera5Thumbnail == null) await LoadCameraThumbnailAsync(5, thumbnailWidth, thumbnailHeight);
-            if (Camera6Thumbnail == null) await LoadCameraThumbnailAsync(6, thumbnailWidth, thumbnailHeight);
-
-            // If everything is null, log warning for empty row visibility
-            if (MainImageThumbnail == null &&
-                NirImageThumbnail == null &&
-                NirGraphThumbnail == null &&
-                Camera1Thumbnail == null &&
-                Camera2Thumbnail == null &&
-                Camera3Thumbnail == null &&
-                Camera4Thumbnail == null &&
-                Camera5Thumbnail == null &&
-                Camera6Thumbnail == null)
+            // Load NIR Graph thumbnail (uses LoadNirGraphThumbnailAsync which handles its own logic)
+            if (NirGraphThumbnail == null && _configuration?.MatchingSettings.EnableNirGraph == true)
             {
-                _logger?.LogWarning("All thumbnails are null for {GroupId}. Paths -> Main:{Main} Nir:{Nir} NirTxt:{NirTxtCandidate} Cams:{CamCount}",
-                    GroupId, MainImagePath, NirImagePath, _fileGroup.NirFilePath, _fileGroup.CameraFiles?.Count ?? 0);
-                _uiLog?.Invoke(LogSeverity.Error, "Thumb", $"All thumbnails null for {GroupId} Main={MainImagePath} Nir={NirImagePath} NirSrc={_fileGroup.NirFilePath} CamCount={_fileGroup.CameraFiles?.Count ?? 0}");
+                 if (TryEnterLoading("NirGraph"))
+                 {
+                    loadingTasks.Add(Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var nirGraphThumbnail = await LoadNirGraphThumbnailAsync(_configuration);
+                            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+                            {
+                                NirGraphThumbnail = nirGraphThumbnail;
+                                if (nirGraphThumbnail != null)
+                                {
+                                    _logger?.LogDebug("[{GroupId}] NIR 그래프 표시 완료", GroupId);
+                                    _uiLog?.Invoke(LogSeverity.Debug, "Image", $"[{GroupId}] NIR 그래프 표시 완료");
+                                }
+                            });
+                        }
+                        finally { ExitLoading("NirGraph"); }
+                    }));
+                 }
+            }
+            else if (NirGraphThumbnail == null && _configuration?.MatchingSettings.EnableNirGraph == false)
+            {
+                 await WpfApplication.Current.Dispatcher.InvokeAsync(() => NirGraphThumbnail = ResourceHelper.GetNirPlaceholder());
+            }
+
+            // Load camera thumbnails in parallel (only if not already loaded)
+            if (Camera1Thumbnail == null) loadingTasks.Add(LoadCameraThumbnailAsync(1, thumbnailWidth, thumbnailHeight));
+            if (Camera2Thumbnail == null) loadingTasks.Add(LoadCameraThumbnailAsync(2, thumbnailWidth, thumbnailHeight));
+            if (Camera3Thumbnail == null) loadingTasks.Add(LoadCameraThumbnailAsync(3, thumbnailWidth, thumbnailHeight));
+            if (Camera4Thumbnail == null) loadingTasks.Add(LoadCameraThumbnailAsync(4, thumbnailWidth, thumbnailHeight));
+            if (Camera5Thumbnail == null) loadingTasks.Add(LoadCameraThumbnailAsync(5, thumbnailWidth, thumbnailHeight));
+            if (Camera6Thumbnail == null) loadingTasks.Add(LoadCameraThumbnailAsync(6, thumbnailWidth, thumbnailHeight));
+
+            // Wait for all parallel tasks to complete
+            if (loadingTasks.Count > 0)
+            {
+                await Task.WhenAll(loadingTasks);
+            }
+
+            // Final State Logging
+            bool allNull = MainImageThumbnail == null && NirImageThumbnail == null && NirGraphThumbnail == null &&
+                           Camera1Thumbnail == null && Camera2Thumbnail == null && Camera3Thumbnail == null &&
+                           Camera4Thumbnail == null && Camera5Thumbnail == null && Camera6Thumbnail == null;
+
+            if (allNull)
+            {
+                // Only log warning if we expected images
+                bool expectedImages = !string.IsNullOrEmpty(MainImagePath) || HasNir || (_fileGroup.CameraFiles?.Count > 0);
+                if (expectedImages)
+                {
+                    _logger?.LogWarning("[{GroupId}] 초기 로딩에서 썸네일 확보 실패 (Retry Queue에서 처리 예정)", GroupId);
+                }
+            }
+            else
+            {
+                 _logger?.LogDebug("[{GroupId}] LoadThumbnailsAsync 완료 (일부 성공)", GroupId);
+                 _uiLog?.Invoke(LogSeverity.Debug, "Image", $"[{GroupId}] 썸네일 로딩 완료");
             }
         }
         catch (OperationCanceledException)
         {
-            // Expected when disposing - no action needed
+            _logger?.LogDebug("[{GroupId}] LoadThumbnailsAsync 취소됨", GroupId);
         }
         catch (Exception ex)
         {
-            // Log error but don't throw - thumbnails are non-critical
-            _logger?.LogError(ex, "Error loading thumbnails for group {GroupId}", GroupId);
+            _logger?.LogError(ex, "[{GroupId}] 썸네일 로딩 중 오류 발생", GroupId);
             _uiLog?.Invoke(LogSeverity.Error, "Thumb", $"Error loading thumbnails for {GroupId}: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// Loads a single thumbnail image and converts it to BitmapSource.
+    /// Loads a single thumbnail image. STRICT MODE: Fails fast if locked/invalid.
+    /// Caller is responsible for queuing retries if needed.
     /// </summary>
     private async Task<BitmapSource?> LoadSingleThumbnailAsync(string imagePath, int width, int height)
     {
-        if (_disposed || string.IsNullOrEmpty(imagePath))
-            return null;
+        if (_disposed || string.IsNullOrEmpty(imagePath)) return null;
+
+        // ⚡ CACHE CHECK
+        if (_orchestrator != null && Path.GetFileName(imagePath).Equals("stitched_original.png", StringComparison.OrdinalIgnoreCase))
+        {
+            var cachedImage = _orchestrator.GetCapturedImage(GroupId);
+            if (cachedImage == null && !string.IsNullOrEmpty(NormalFolder))
+                cachedImage = _orchestrator.GetCapturedImageByFolderPath(NormalFolder);
+
+            if (cachedImage != null) return cachedImage;
+        }
 
         try
         {
-            var ext = Path.GetExtension(imagePath);
-            if (!_imageExtensions.Contains(ext))
+            if (!File.Exists(imagePath)) return null; // Fail fast
+
+            // FAST LOCK CHECK
+            try 
             {
-                // Skip non-image files silently
-                return null;
+                var info = new FileInfo(imagePath);
+                if (info.Length == 0) return null; // Empty file
+                
+                using (var fs = File.Open(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    // Accessible
+                }
+            }
+            catch (IOException) 
+            { 
+                // Locked
+                _logger?.LogDebug("[{GroupId}] 파일 잠김 (Fast-Check): {Path}", GroupId, imagePath);
+                return null; 
             }
 
-            if (!File.Exists(imagePath))
-            {
-                // File missing - silently return null
-                return null;
-            }
-
+            // Generate
+            _logger?.LogDebug("[{GroupId}] 썸네일 생성 시도: {Path}", GroupId, imagePath);
             var thumbnailBytes = await _imageProcessor.GenerateThumbnailAsync(
                 imagePath, width, height, _cancellationTokenSource.Token);
 
-            if (thumbnailBytes == null || thumbnailBytes.Length == 0)
-            {
-                // Empty thumbnail - silently return null
-                return null;
-            }
+            if (thumbnailBytes == null || thumbnailBytes.Length == 0) return null;
 
-            // Convert byte array to BitmapSource
             using var ms = new System.IO.MemoryStream(thumbnailBytes);
             var bitmap = new BitmapImage();
             bitmap.BeginInit();
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
             bitmap.StreamSource = ms;
             bitmap.EndInit();
-            bitmap.Freeze(); // Make it thread-safe for cross-thread access
+            bitmap.Freeze();
+            
+            // STRICT VALIDATION
+            if (bitmap.PixelWidth == 0 || bitmap.PixelHeight == 0)
+            {
+                _logger?.LogWarning("[{GroupId}] 유효하지 않은 이미지 (0x0): {Path}", GroupId, imagePath);
+                return null;
+            }
+            
             return bitmap;
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
         {
-            throw; // Re-throw cancellation
-        }
-        catch (Exception)
-        {
-            // Return null for failed loads - placeholder will be shown
+            _logger?.LogDebug("[{GroupId}] 썸네일 생성 예외: {Error}", GroupId, ex.Message);
             return null;
         }
     }
@@ -669,35 +945,155 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     {
         if (_disposed)
             return;
-
-        var imagePath = GetCameraImagePath(cameraNumber);
-        if (string.IsNullOrEmpty(imagePath))
-        {
-            // Only log if this camera should exist for this group's line
-            // Cam 1-3 are for Line 1, Cam 4-6 are for Line 2
-            bool shouldHaveCamera = (LineNumber == 1 && cameraNumber <= 3) || (LineNumber == 2 && cameraNumber >= 4);
             
-            if (shouldHaveCamera)
-            {
-                // Camera path missing - expected for some line/camera combinations
-            }
+        // Safety net: check if this camera is already loading
+        var key = $"Cam{cameraNumber}";
+        if (!TryEnterLoading(key))
+        {
+            _logger?.LogDebug("[{GroupId}] Camera{Number} 로딩 건너뜀 - 이미 로딩 중", GroupId, cameraNumber);
             return;
         }
 
-        var thumbnail = await LoadSingleThumbnailAsync(imagePath, width, height);
-
-        await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+        try
         {
-            switch (cameraNumber)
+            var imagePath = GetCameraImagePath(cameraNumber);
+            if (string.IsNullOrEmpty(imagePath))
             {
-                case 1: Camera1Thumbnail = thumbnail; break;
-                case 2: Camera2Thumbnail = thumbnail; break;
-                case 3: Camera3Thumbnail = thumbnail; break;
-                case 4: Camera4Thumbnail = thumbnail; break;
-                case 5: Camera5Thumbnail = thumbnail; break;
-                case 6: Camera6Thumbnail = thumbnail; break;
+                // Only log if this camera should exist for this group's line
+                // Cam 1-3 are for Line 1, Cam 4-6 are for Line 2
+                bool shouldHaveCamera = (LineNumber == 1 && cameraNumber <= 3) || (LineNumber == 2 && cameraNumber >= 4);
+                
+                if (shouldHaveCamera)
+                {
+                    _logger?.LogDebug("[{GroupId}] Camera{Number} 이미지 경로가 없음 (예상됨)", GroupId, cameraNumber);
+                }
+                return;
             }
+
+            _logger?.LogDebug("[{GroupId}] Camera{Number} 이미지 로딩 시도: {Path}", GroupId, cameraNumber, imagePath);
+            var thumbnail = await LoadSingleThumbnailAsync(imagePath, width, height);
+
+            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+            {
+                // Update UI if successful
+                if (thumbnail != null)
+                {
+                    UpdateCameraThumbnail(cameraNumber, thumbnail);
+                    _logger?.LogDebug("[{GroupId}] Camera{Number} 이미지 표시 완료: {Path}", GroupId, cameraNumber, imagePath);
+                    _uiLog?.Invoke(LogSeverity.Debug, "Image", $"[{GroupId}] Camera{cameraNumber} 이미지 표시: {Path.GetFileName(imagePath)}");
+                }
+                else
+                {
+                    // FAIL -> Queue Retry
+                    _logger?.LogDebug("[{GroupId}] Camera{Number} 이미지 로딩 실패 (잠김/없음) -> Retry Queue 추가", GroupId, cameraNumber);
+                    QueueRetry($"Camera{cameraNumber}", imagePath, width, height, (bmp) => UpdateCameraThumbnail(cameraNumber, bmp));
+                }
+            }).Task;
+        }
+        finally
+        {
+            ExitLoading(key);
+        }
+    }
+
+    private void UpdateCameraThumbnail(int cameraNumber, BitmapSource thumbnail)
+    {
+        switch (cameraNumber)
+        {
+            case 1: Camera1Thumbnail = thumbnail; break;
+            case 2: Camera2Thumbnail = thumbnail; break;
+            case 3: Camera3Thumbnail = thumbnail; break;
+            case 4: Camera4Thumbnail = thumbnail; break;
+            case 5: Camera5Thumbnail = thumbnail; break;
+            case 6: Camera6Thumbnail = thumbnail; break;
+        }
+    }
+
+    private void QueueRetry(string key, string path, int width, int height, Action<BitmapSource> onSuccess)
+    {
+        if (_disposed) return;
+
+        _retryQueue.Enqueue(new RetryContext 
+        { 
+            Key = key, 
+            ImagePath = path, 
+            Width = width, 
+            Height = height, 
+            OnSuccess = onSuccess 
         });
+
+        if (!_retryTimer.IsEnabled) 
+        {
+            _retryTimer.Start();
+            _logger?.LogDebug("[{GroupId}] Retry Timer 시작 (Queue Size: {Size})", GroupId, _retryQueue.Count);
+        }
+    }
+
+    private async void ProcessRetryQueue(object? sender, EventArgs e)
+    {
+        if (_disposed || _retryQueue.IsEmpty) 
+        {
+            _retryTimer.Stop();
+            return;
+        }
+
+        // Dequeue UP TO current count (avoid infinite loop if retries are re-queued immediately)
+        int batchSize = _retryQueue.Count;
+        List<RetryContext> nextCycle = new();
+
+        for (int i = 0; i < batchSize; i++)
+        {
+            if (!_retryQueue.TryDequeue(out var context)) break;
+
+            if (context.RetryCount > 30) // Max retries (e.g. 1 min) - give up
+            {
+                _logger?.LogDebug("[{GroupId}] Retry 포기 (Max Attempts): {Key}", GroupId, context.Key);
+                continue;
+            }
+
+            // Attempt Load
+            var bitmap = await LoadSingleThumbnailAsync(context.ImagePath, context.Width, context.Height);
+            if (bitmap != null)
+            {
+                // SUCCESS
+                context.OnSuccess(bitmap);
+                
+                // Explicit Log
+                _logger?.LogDebug("[{GroupId}] {Key} 이미지 표시 완료 (Retry 성공): {Path}", GroupId, context.Key, context.ImagePath);
+                _uiLog?.Invoke(LogSeverity.Debug, "Image", $"[{GroupId}] {context.Key} 이미지 표시 완료 (Retry)");
+            }
+            else
+            {
+                // FAIL - Re-queue for next tick
+                context.RetryCount++;
+                nextCycle.Add(context);
+            }
+        }
+
+        // Re-queue failed items
+        foreach (var item in nextCycle) _retryQueue.Enqueue(item);
+
+        if (_retryQueue.IsEmpty) _retryTimer.Stop();
+    }
+
+    private bool TryEnterLoading(string key)
+    {
+        lock (_loadingTasksLock)
+        {
+            if (_activeLoadingTasks.Contains(key))
+                return false;
+            
+            _activeLoadingTasks.Add(key);
+            return true;
+        }
+    }
+
+    private void ExitLoading(string key)
+    {
+        lock (_loadingTasksLock)
+        {
+            _activeLoadingTasks.Remove(key);
+        }
     }
 
     /// <summary>

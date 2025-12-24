@@ -172,6 +172,58 @@ public partial class MainWindow : Window
         System.Windows.Input.CommandManager.InvalidateRequerySuggested();
     }
 
+    /// <summary>
+    /// Handles SelectAll checkbox Checked event
+    /// </summary>
+    private void SelectAllCheckBox_Checked(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.CheckBox checkBox && checkBox.Tag is string lineTag)
+        {
+            _logger.LogDebug("SelectAll checkbox checked for {Line}", lineTag);
+            
+            if (lineTag == "Line1")
+            {
+                foreach (var group in _viewModel.Line1Groups)
+                {
+                    group.IsSelected = true;
+                }
+            }
+            else if (lineTag == "Line2")
+            {
+                foreach (var group in _viewModel.Line2Groups)
+                {
+                    group.IsSelected = true;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handles SelectAll checkbox Unchecked event
+    /// </summary>
+    private void SelectAllCheckBox_Unchecked(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.CheckBox checkBox && checkBox.Tag is string lineTag)
+        {
+            _logger.LogDebug("SelectAll checkbox unchecked for {Line}", lineTag);
+            
+            if (lineTag == "Line1")
+            {
+                foreach (var group in _viewModel.Line1Groups)
+                {
+                    group.IsSelected = false;
+                }
+            }
+            else if (lineTag == "Line2")
+            {
+                foreach (var group in _viewModel.Line2Groups)
+                {
+                    group.IsSelected = false;
+                }
+            }
+        }
+    }
+
     #region Dynamic Column Generation
 
     /// <summary>
@@ -359,19 +411,10 @@ public partial class MainWindow : Window
     /// Get column header text for a data type
     /// Cam1-3 show as "Cam 1", "Cam 2", "Cam 3" regardless of line
     /// (Actual camera used is determined by lineNumber: Line 1 = Cam1-3, Line 2 = Cam4-6)
-    /// TODO: Move to Resources.resx for localization support
     /// </summary>
     private string GetColumnHeader(DataType dataType, int lineNumber)
     {
-        return dataType switch
-        {
-            DataType.Normal => "Main Img",      // TODO: Resources.Column_Normal
-            DataType.NIR => "NIR Graph",         // TODO: Resources.Column_NIR
-            DataType.Cam1 => "Cam 1",            // TODO: Resources.Column_Cam1 (Line 1: Cam1, Line 2: Cam4)
-            DataType.Cam2 => "Cam 2",            // TODO: Resources.Column_Cam2 (Line 1: Cam2, Line 2: Cam5)
-            DataType.Cam3 => "Cam 3",            // TODO: Resources.Column_Cam3 (Line 1: Cam3, Line 2: Cam6)
-            _ => dataType.ToString()
-        };
+        return Core.Localization.LocalizationManager.GetColumnHeader(dataType);
     }
 
     /// <summary>

@@ -116,7 +116,7 @@ public class FileOperationServiceTests : IDisposable
         });
 
         // 3. Act
-        var result = await _service.MoveFileGroupAsync(fileGroup, _destDir, progress, cancellationToken: cts.Token);
+        var result = await _service.MoveFileGroupAsync(fileGroup, _destDir, subject: null, progress: progress, cancellationToken: cts.Token);
 
         // 4. Assert
         Assert.False(result.Success, "Operation should fail due to cancellation");

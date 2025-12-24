@@ -256,6 +256,12 @@ public class ViewModelTests
         var mockLogger = new Mock<Microsoft.Extensions.Logging.ILogger<MainWindowViewModel>>();
         var mockFileGroupLogger = new Mock<Microsoft.Extensions.Logging.ILogger<FileGroupViewModel>>();
 
+        var mockLineLogger = new Mock<ILogger<ChronoView.Core.ProgramLaunching.GeneralCameraLauncher>>();
+        var mockNirLogger = new Mock<ILogger<ChronoView.Core.ProgramLaunching.NirCameraLauncher>>();
+        var config = new ApplicationConfiguration();
+        var generalCameraLauncher = new ChronoView.Core.ProgramLaunching.GeneralCameraLauncher(mockLineLogger.Object, config);
+        var nirCameraLauncher = new ChronoView.Core.ProgramLaunching.NirCameraLauncher(mockNirLogger.Object, config);
+
         return new MainWindowViewModel(
             mockOrchestrator.Object,
             mockStatisticsService.Object,
@@ -266,7 +272,9 @@ public class ViewModelTests
             mockAbnormalDetector.Object,
             mockFileGroupMatcher.Object,
             mockLogger.Object,
-            mockFileGroupLogger.Object);
+            mockFileGroupLogger.Object,
+            generalCameraLauncher,
+            nirCameraLauncher);
     }
 
     [Fact]

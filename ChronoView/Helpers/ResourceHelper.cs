@@ -46,4 +46,44 @@ public static class ResourceHelper
     {
         return LoadImageFromResource("Resources/Images/nir_placeholder.png");
     }
+
+    /// <summary>
+    /// Gets the settings icon image.
+    /// </summary>
+    public static BitmapSource? GetSettingsIcon()
+    {
+        return LoadImageFromResource("Resources/Images/settings_icon.png");
+    }
+
+    /// <summary>
+    /// Gets the start icon image.
+    /// </summary>
+    public static BitmapSource? GetStartIcon()
+    {
+        return LoadImageFromResource("Resources/Images/start_icon.png");
+    }
+
+    /// <summary>
+    /// Gets the stop icon image.
+    /// </summary>
+    public static BitmapSource? GetStopIcon()
+    {
+        return LoadImageFromResource("Resources/Images/stop_icon.png");
+    }
+
+    /// <summary>
+    /// Gets the refresh icon image.
+    /// </summary>
+    public static BitmapSource? GetRefreshIcon()
+    {
+        return LoadImageFromResource("Resources/Images/refresh_icon.png");
+    }
+
+    /// <summary>
+    /// Gets the next icon image.
+    /// </summary>
+    public static BitmapSource? GetNextIcon()
+    {
+        return LoadImageFromResource("Resources/Images/next_icon.png");
+    }
 }

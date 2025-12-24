@@ -1,4 +1,4 @@
-namespace ChronoView.Core.NIR;
+namespace ChronoView.Core.Nir;
 
 /// <summary>
 /// Resolves NIR file paths and keys for different NIR systems.

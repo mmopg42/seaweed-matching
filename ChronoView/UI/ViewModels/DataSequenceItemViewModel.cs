@@ -118,24 +118,12 @@ namespace ChronoView.UI.ViewModels
         /// <summary>
         /// Display name for UI
         /// Note: Cam4-6 exist internally for Line 2, but are hidden from settings UI
-        /// TODO: Localization - move to Resources.resx
         /// </summary>
         public string DisplayName
         {
             get
             {
-                return Type switch
-                {
-                    Models.DataType.Normal => "Normal (일반)",
-                    Models.DataType.NIR => "NIR",
-                    Models.DataType.Cam1 => "Camera 1",
-                    Models.DataType.Cam2 => "Camera 2",
-                    Models.DataType.Cam3 => "Camera 3",
-                    Models.DataType.Cam4 => "Camera 4 (Line 2)",
-                    Models.DataType.Cam5 => "Camera 5 (Line 2)",
-                    Models.DataType.Cam6 => "Camera 6 (Line 2)",
-                    _ => Type.ToString()
-                };
+                return Core.Localization.LocalizationManager.GetDataTypeDisplayName(Type);
             }
         }
 

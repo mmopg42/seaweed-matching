@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
+using ChronoView.Core.ProgramLaunching;
+
 namespace ChronoView.Tests.UI.ViewModels;
 
 /// <summary>
@@ -59,6 +61,12 @@ public class StopCommandTests
 
     private MainWindowViewModel CreateViewModel()
     {
+        var mockLineLogger = new Mock<ILogger<GeneralCameraLauncher>>();
+        var mockNirLogger = new Mock<ILogger<NirCameraLauncher>>();
+        var config = new ApplicationConfiguration();
+        var generalCameraLauncher = new GeneralCameraLauncher(mockLineLogger.Object, config);
+        var nirCameraLauncher = new NirCameraLauncher(mockNirLogger.Object, config);
+
         return new MainWindowViewModel(
             _mockOrchestrator.Object,
             _mockStatisticsService.Object,
@@ -69,7 +77,9 @@ public class StopCommandTests
             _mockAbnormalDetector.Object,
             _mockFileGroupMatcher.Object,
             _mockLogger.Object,
-            _mockFileGroupLogger.Object);
+            _mockFileGroupLogger.Object,
+            generalCameraLauncher,
+            nirCameraLauncher);
     }
 
     [Fact]

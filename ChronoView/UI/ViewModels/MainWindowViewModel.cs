@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Windows.Input;
 using System.Windows;
 using ChronoView.Models;
@@ -9,7 +10,10 @@ using ChronoView.Core.Configuration;
 using ChronoView.Core.FileOperations;
 using ChronoView.Core.ImageProcessing;
 using ChronoView.Core.FileMatching;
+using ChronoView.Core.ProgramLaunching;
+using ChronoView.Resources;
 using Microsoft.Extensions.Logging;
+using System.Windows.Media;
 using WpfApplication = System.Windows.Application;
 using WpfMessageBox = System.Windows.MessageBox;
 
@@ -29,6 +33,9 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private readonly IAbnormalDetector _abnormalDetector;
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly ILogger<FileGroupViewModel> _fileGroupLogger;
+    private readonly GeneralCameraLauncher _generalCameraLauncher;
+    private readonly NirCameraLauncher _nirCameraLauncher;
+    private readonly Nir2CameraLauncher _nir2CameraLauncher;
     private readonly Action<LogSeverity, string, string> _uiLog;
 
     // CancellationToken management
@@ -100,9 +107,24 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     // UI display settings
     private int _displayImageWidth = 120;
     private int _displayImageHeight = 90;
-    private int _dataGridRowHeight = 100;
+    private int _dataGridRowHeight = 140;
     private int _nirDisplayWidth = 120;
     private int _nirDisplayHeight = 90;
+
+    // Program status tracking
+    private string _generalCameraStatus = "Deactivated";
+    private System.Windows.Media.Brush _generalCameraForeground = new SolidColorBrush(Colors.Red);
+    private string _nirCameraStatus = "Deactivated";
+    private System.Windows.Media.Brush _nirCameraForeground = new SolidColorBrush(Colors.Red);
+    
+    // NIR2 Filtering status tracking
+    private string _nir2FilteringStatus = "Deactivated";
+    private System.Windows.Media.Brush _nir2FilteringForeground = new SolidColorBrush(Colors.Red);
+    private string _nir2FilteringButtonText = "ON";
+    private System.Windows.Media.Brush _nir2FilteringButtonBackground = new SolidColorBrush(Colors.Green);
+
+    // Cached conflict resolution for file operations (applies to all conflicts in operation)
+    private ConflictResolution? _cachedConflictResolution = null;
 
     public MainWindowViewModel(
         IMonitoringOrchestrator orchestrator,
@@ -114,7 +136,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         IAbnormalDetector abnormalDetector,
         IFileGroupMatcher fileGroupMatcher,
         ILogger<MainWindowViewModel> logger,
-        ILogger<FileGroupViewModel> fileGroupLogger)
+        ILogger<FileGroupViewModel> fileGroupLogger,
+        GeneralCameraLauncher generalCameraLauncher,
+        NirCameraLauncher nirCameraLauncher,
+        Nir2CameraLauncher nir2CameraLauncher)
     {
         _orchestrator = orchestrator ?? throw new ArgumentNullException(nameof(orchestrator));
         _statisticsService = statisticsService ?? throw new ArgumentNullException(nameof(statisticsService));
@@ -125,6 +150,9 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _abnormalDetector = abnormalDetector ?? throw new ArgumentNullException(nameof(abnormalDetector));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _fileGroupLogger = fileGroupLogger ?? throw new ArgumentNullException(nameof(fileGroupLogger));
+        _generalCameraLauncher = generalCameraLauncher ?? throw new ArgumentNullException(nameof(generalCameraLauncher));
+        _nirCameraLauncher = nirCameraLauncher ?? throw new ArgumentNullException(nameof(nirCameraLauncher));
+        _nir2CameraLauncher = nir2CameraLauncher ?? throw new ArgumentNullException(nameof(nir2CameraLauncher));
 
         // Initialize collections FIRST before any AddLogMessage calls
         FileGroups = new ObservableCollection<FileGroupViewModel>();
@@ -163,11 +191,13 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         MoveCommand = new RelayCommand(ExecuteMove, CanExecuteMove);
         DeleteCommand = new RelayCommand(ExecuteDelete, CanExecuteDelete);
         RefreshCommand = new RelayCommand(ExecuteRefresh, CanExecuteRefresh);
-        PathAutoConfigCommand = new RelayCommand(ExecutePathAutoConfig);
         CreateSampleFolderCommand = new RelayCommand(ExecuteCreateSampleFolder);
         CreateSampleFolderCommand = new RelayCommand(ExecuteCreateSampleFolder);
         SetupCommand = new RelayCommand(ExecuteSetup);
         OpenDetailViewCommand = new RelayCommand<FileGroupViewModel>(ExecuteOpenDetailView);
+        SelectAllCommand = new RelayCommand(ExecuteSelectAll);
+        DeselectAllCommand = new RelayCommand(ExecuteDeselectAll);
+        ToggleNir2FilteringCommand = new RelayCommand(ExecuteToggleNir2Filtering);
 
         // Subscribe to orchestrator events
         _orchestrator.GroupCreated += OnGroupCreated;
@@ -178,6 +208,14 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         // Subscribe to statistics service events
         _statisticsService.FileCountsUpdated += OnFileCountsUpdated;
         _statisticsService.MatchingStatisticsUpdated += OnMatchingStatisticsUpdated;
+
+        // Subscribe to program launcher status events
+        _generalCameraLauncher.StatusChanged += OnGeneralCameraStatusChanged;
+        _nirCameraLauncher.StatusChanged += OnNirCameraStatusChanged;
+        _nir2CameraLauncher.StatusChanged += OnNir2FilteringStatusChanged;
+
+        // Initialize program status
+        UpdateProgramStatus();
 
         // Add initial log message
         AddLogMessage(LogSeverity.Info, "System", "Application started");
@@ -718,10 +756,12 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     public ICommand MoveCommand { get; }
     public ICommand DeleteCommand { get; }
     public ICommand RefreshCommand { get; }
-    public ICommand PathAutoConfigCommand { get; }
     public ICommand CreateSampleFolderCommand { get; }
     public ICommand SetupCommand { get; }
     public ICommand OpenDetailViewCommand { get; }
+    public ICommand SelectAllCommand { get; }
+    public ICommand DeselectAllCommand { get; }
+    public ICommand ToggleNir2FilteringCommand { get; }
 
     #endregion
 
@@ -759,6 +799,9 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             // Load configuration from ConfigurationManager
             var config = await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
 
+            // Auto-configure paths with today's date (replace date patterns in existing paths)
+            await AutoConfigurePathsAsync(config);
+
             // Validate configuration paths exist
             var missingPaths = new List<string>();
             if (!string.IsNullOrEmpty(config.MatchingSettings.Nir1Path) && !Directory.Exists(config.MatchingSettings.Nir1Path))
@@ -785,16 +828,31 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                 return;
             }
 
-            // Call MonitoringOrchestrator.StartAsync(config)
-            await _orchestrator.StartAsync(config);
-
-            // Call StatisticsService.StartMonitoringAsync(config)
+            // Call StatisticsService.StartMonitoringAsync(config) FIRST
+            // It doesn't need to wait for initial scan
+            _logger.LogError("DEBUG: About to call StatisticsService.StartMonitoringAsync");
             await _statisticsService.StartMonitoringAsync(config);
+            _logger.LogError("DEBUG: StatisticsService.StartMonitoringAsync returned");
+
+            // Call MonitoringOrchestrator.StartAsync(config)
+            // This does initial scan which may take time
+            await _orchestrator.StartAsync(config);
 
             // Load UI display settings from configuration
             DisplayImageWidth = config.UISettings.DisplayImageWidth;
             DisplayImageHeight = config.UISettings.DisplayImageHeight;
-            DataGridRowHeight = config.UISettings.DataGridRowHeight;
+            
+            // Enforce minimum row height of 140 to accommodate labels (migration from old default of 100)
+            if (config.UISettings.DataGridRowHeight < 140)
+            {
+                DataGridRowHeight = 140;
+                // Ideally we should save this back to config, but for now we just enforce it in runtime
+            }
+            else
+            {
+                DataGridRowHeight = config.UISettings.DataGridRowHeight;
+            }
+
             NirDisplayWidth = config.UISettings.NirDisplayWidth;
             NirDisplayHeight = config.UISettings.NirDisplayHeight;
 
@@ -1026,6 +1084,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                 var result = await _fileOperationService.MoveFileGroupAsync(
                     groupViewModel.Model,
                     outputPath,
+                    null,  // subject - will implement in next step
                     progress,
                     onConflict: ResolveConflict,
                     cancellationToken);
@@ -1220,8 +1279,11 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         // Begin operation
         var cancellationToken = BeginOperation();
 
-        _logger.LogInformation("Starting delete operation for {Count} groups", selectedGroups.Count);
-        AddLogMessage(LogSeverity.Info, "FileOperation", $"Deleting {selectedGroups.Count} group(s)");
+        // Extract subject/sample name from toolbar input
+        var subject = _sampleName;
+
+        _logger.LogInformation("Starting delete operation for {Count} groups with subject '{Subject}'", selectedGroups.Count, subject);
+        AddLogMessage(LogSeverity.Info, "FileOperation", $"Deleting {selectedGroups.Count} group(s) to subject '{subject}'");
 
         // Create progress reporter
         var progress = CreateProgressReporter();
@@ -1232,6 +1294,9 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         int failedCount = 0;
         int totalFilesFailed = 0;
 
+        // Reset cached conflict resolution for this operation
+        _cachedConflictResolution = null;
+
         try
         {
             foreach (var groupViewModel in selectedGroups)
@@ -1241,10 +1306,11 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                 _logger.LogInformation("Deleting group {GroupId}", groupViewModel.GroupId);
                 AddLogMessage(LogSeverity.Info, "FileOperation", $"Deleting group {groupViewModel.GroupId}");
 
-                // Call DeleteFileGroupAsync
+                // Call DeleteFileGroupAsync with subject
                 var result = await _fileOperationService.DeleteFileGroupAsync(
                     groupViewModel.Model,
                     quarantinePath,
+                    subject,  // ← NEW: Pass subject for structured paths
                     progress,
                     onConflict: ResolveConflict,
                     cancellationToken);
@@ -1318,6 +1384,8 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         {
             EndOperation();
             ((RelayCommand)DeleteCommand).RaiseCanExecuteChanged();
+            // Clear cached resolution after operation
+            _cachedConflictResolution = null;
         }
     }
 
@@ -1397,104 +1465,95 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private void ExecutePathAutoConfig()
-    {
-        _ = ExecutePathAutoConfigAsync();
-    }
-
     /// <summary>
-    /// Executes the Path Auto Config command asynchronously.
-    /// Automatically generates and applies paths based on today's date.
+    /// Automatically configures paths by replacing date patterns in existing paths with today's date.
+    /// This follows the Python reference implementation behavior.
     /// </summary>
-    private async Task ExecutePathAutoConfigAsync()
+    private async Task AutoConfigurePathsAsync(ApplicationConfiguration config)
     {
-        if (IsOperationInProgress) return;
-
         try
         {
-            // Use today's date for path generation
-            var targetDate = DateTime.Today;
-            var dateString = targetDate.ToString("yyyyMMdd");
+            // Use today's date for path replacement
+            var todayDate = DateTime.Today.ToString("yyyyMMdd");
+            var datePattern = new System.Text.RegularExpressions.Regex(@"\d{8}");
 
-            // Confirm with user
-            var confirmMessage = $"Auto-configure all paths for date: {targetDate:yyyy-MM-dd} ({dateString})?\n\n" +
-                                 "This will update NIR, Normal, and Camera paths in the configuration.";
-            
-            var confirmResult = await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
-                WpfMessageBox.Show(confirmMessage, "Confirm Path Auto-Configuration",
-                    MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No));
+            var updatedPaths = new List<string>();
+            var createdFolders = new List<string>();
+            var failedFolders = new List<string>();
 
-            if (confirmResult != MessageBoxResult.Yes) return;
-
-            StatusMessage = "Auto-configuring paths...";
-            AddLogMessage(LogSeverity.Info, "Configuration", $"Auto-configuring paths for date: {dateString}");
-
-            // Load current configuration
-            var config = await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
-
-            // Generate paths from date
-            var generatedPaths = _pathManagementService.GeneratePathsFromDate(dateString, config);
-
-            // Update configuration with generated paths
-            if (generatedPaths.TryGetValue("NIR1", out var nir1Path))
-                config.MatchingSettings.Nir1Path = nir1Path;
-            if (generatedPaths.TryGetValue("NIR2", out var nir2Path))
-                config.MatchingSettings.Nir2Path = nir2Path;
-            if (generatedPaths.TryGetValue("Normal1", out var normal1Path))
-                config.MatchingSettings.Normal1Path = normal1Path;
-            if (generatedPaths.TryGetValue("Normal2", out var normal2Path))
-                config.MatchingSettings.Normal2Path = normal2Path;
-            if (generatedPaths.TryGetValue("Output", out var outputPath))
-                config.MatchingSettings.OutputPath = outputPath;
-
-            // Update camera paths (cam1-cam6)
-            for (int i = 1; i <= 6; i++)
+            // Helper function to update a single path
+            string UpdatePath(string path)
             {
-                var cameraPathKey = $"Cam{i}";
-                if (generatedPaths.TryGetValue(cameraPathKey, out var cameraPath))
+                if (string.IsNullOrEmpty(path))
+                    return path;
+
+                var newPath = datePattern.Replace(path, todayDate);
+                if (newPath != path)
                 {
-                    switch (i)
+                    updatedPaths.Add($"{Path.GetFileName(path)} → {Path.GetFileName(newPath)}");
+
+                    // Try to create the folder
+                    try
                     {
-                        case 1: config.MatchingSettings.Camera1Path = cameraPath; break;
-                        case 2: config.MatchingSettings.Camera2Path = cameraPath; break;
-                        case 3: config.MatchingSettings.Camera3Path = cameraPath; break;
-                        case 4: config.MatchingSettings.Camera4Path = cameraPath; break;
-                        case 5: config.MatchingSettings.Camera5Path = cameraPath; break;
-                        case 6: config.MatchingSettings.Camera6Path = cameraPath; break;
+                        if (!Directory.Exists(newPath))
+                        {
+                            Directory.CreateDirectory(newPath);
+                            createdFolders.Add(newPath);
+                            _logger.LogInformation("Created folder: {Path}", newPath);
+                        }
                     }
+                    catch (Exception ex)
+                    {
+                        failedFolders.Add($"{newPath}: {ex.Message}");
+                        _logger.LogWarning(ex, "Failed to create folder: {Path}", newPath);
+                    }
+
+                    return newPath;
                 }
+                return path;
             }
 
-            // Save configuration
-            await _configManager.SaveConfigurationAsync(config);
+            // Update all matching paths
+            config.MatchingSettings.Nir1Path = UpdatePath(config.MatchingSettings.Nir1Path);
+            config.MatchingSettings.Nir2Path = UpdatePath(config.MatchingSettings.Nir2Path);
+            config.MatchingSettings.Normal1Path = UpdatePath(config.MatchingSettings.Normal1Path);
+            config.MatchingSettings.Normal2Path = UpdatePath(config.MatchingSettings.Normal2Path);
+            config.MatchingSettings.Camera1Path = UpdatePath(config.MatchingSettings.Camera1Path);
+            config.MatchingSettings.Camera2Path = UpdatePath(config.MatchingSettings.Camera2Path);
+            config.MatchingSettings.Camera3Path = UpdatePath(config.MatchingSettings.Camera3Path);
+            config.MatchingSettings.Camera4Path = UpdatePath(config.MatchingSettings.Camera4Path);
+            config.MatchingSettings.Camera5Path = UpdatePath(config.MatchingSettings.Camera5Path);
+            config.MatchingSettings.Camera6Path = UpdatePath(config.MatchingSettings.Camera6Path);
+            config.MatchingSettings.OutputPath = UpdatePath(config.MatchingSettings.OutputPath);
 
-            var pathCount = generatedPaths.Count;
-            StatusMessage = $"Path auto-configuration complete ({pathCount} paths updated)";
-            AddLogMessage(LogSeverity.Info, "Configuration", 
-                $"Successfully updated {pathCount} paths from date pattern");
-
-            // Show success message
-            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+            // Save updated configuration
+            if (updatedPaths.Count > 0)
             {
-                WpfMessageBox.Show($"Path configuration updated successfully.\n\n" +
-                                  $"Date: {targetDate:yyyy-MM-dd}\n" +
-                                  $"Paths updated: {pathCount}\n\n" +
-                                  $"Please restart monitoring if it is currently active.",
-                    "Auto-Configuration Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-            });
+                await _configManager.SaveConfigurationAsync(config);
+
+                AddLogMessage(LogSeverity.Info, "Configuration",
+                    $"Auto-configured {updatedPaths.Count} paths for date {todayDate}");
+
+                if (createdFolders.Count > 0)
+                {
+                    AddLogMessage(LogSeverity.Info, "Configuration",
+                        $"Created {createdFolders.Count} folders");
+                }
+
+                if (failedFolders.Count > 0)
+                {
+                    AddLogMessage(LogSeverity.Warning, "Configuration",
+                        $"Failed to create {failedFolders.Count} folders");
+                }
+
+                _logger.LogInformation("Auto-configured paths: {Paths}, Created: {Created}, Failed: {Failed}",
+                    string.Join(", ", updatedPaths), createdFolders.Count, failedFolders.Count);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during path auto-configuration");
-            AddLogMessage(LogSeverity.Error, "Configuration", $"Path auto-config failed: {ex.Message}");
-            
-            await WpfApplication.Current.Dispatcher.InvokeAsync(() =>
-            {
-                WpfMessageBox.Show($"Failed to auto-configure paths:\n{ex.Message}",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            });
-            
-            StatusMessage = "Path auto-configuration failed";
+            _logger.LogError(ex, "Error during automatic path configuration");
+            AddLogMessage(LogSeverity.Error, "Configuration", $"Path auto-configuration failed: {ex.Message}");
         }
     }
 
@@ -1598,11 +1657,20 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Callback for resolving file name conflicts during move operations.
     /// Must be called from a background thread and marshals to UI thread.
+    /// Uses cached resolution after first conflict to avoid repeated dialogs.
     /// </summary>
     /// <param name="conflictPath">The full path of the implementation file that caused the conflict.</param>
     /// <returns>Resolution strategy chosen by the user.</returns>
     private ConflictResolution ResolveConflict(string conflictPath)
     {
+        // Return cached resolution if already decided
+        if (_cachedConflictResolution.HasValue)
+        {
+            _logger.LogDebug("Using cached conflict resolution: {Resolution} for {Path}", 
+                _cachedConflictResolution.Value, conflictPath);
+            return _cachedConflictResolution.Value;
+        }
+
         ConflictResolution resolution = ConflictResolution.Skip;
         
         WpfApplication.Current.Dispatcher.Invoke(() =>
@@ -1625,6 +1693,10 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                 MessageBoxResult.Cancel => ConflictResolution.Abort,
                 _ => ConflictResolution.Skip
             };
+
+            // Cache the resolution for subsequent conflicts
+            _cachedConflictResolution = resolution;
+            _logger.LogInformation("Conflict resolution cached: {Resolution} (will apply to all future conflicts)", resolution);
         });
         
         return resolution;
@@ -1671,7 +1743,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         }
 
         var config = _configManager.LoadConfiguration<ApplicationConfiguration>();
-        var viewModel = new FileGroupViewModel(fileGroup, _imageProcessor, _abnormalDetector, config, _fileGroupLogger, _uiLog);
+        var viewModel = new FileGroupViewModel(fileGroup, _imageProcessor, _orchestrator, _abnormalDetector, config, _fileGroupLogger, _uiLog);
 
         FileGroups.Add(viewModel);
 
@@ -2025,7 +2097,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                 }
 
                 var config = _configManager.LoadConfiguration<ApplicationConfiguration>();
-                var viewModel = new FileGroupViewModel(group, _imageProcessor, _abnormalDetector, config, _fileGroupLogger, _uiLog);
+                var viewModel = new FileGroupViewModel(group, _imageProcessor, _orchestrator, _abnormalDetector, config, _fileGroupLogger, _uiLog);
 
                 FileGroups.Add(viewModel);
 
@@ -2038,7 +2110,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                     Line2Groups.Add(viewModel);
                 }
 
-                // Load thumbnails asynchronously (fire and forget - non-blocking)
+                // Initial thumbnail loading - OnGroupUpdated will handle subsequent updates
                 _ = viewModel.LoadThumbnailsAsync();
 
                 UpdateStatistics();
@@ -2062,7 +2134,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         _logger.LogDebug("GroupUpdated event received for group {GroupId}", group.GroupId);
         
         // Marshal to UI thread for collection updates
-        WpfApplication.Current.Dispatcher.InvokeAsync(() =>
+        WpfApplication.Current.Dispatcher.InvokeAsync(async () =>
         {
             try
             {
@@ -2073,10 +2145,15 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
                     return;
                 }
 
-                // Refresh paths from model
+                // ⚡ Delegated to ViewModel: LoadThumbnailsAsync now checks cache internally
+                // We don't need to manually set MainImageThumbnail here anymore because
+                // LoadThumbnailsAsync (called below) handles both cache lookup and disk loading.
+
+                // Only refresh paths - thumbnails were already loaded on creation
+                // LoadThumbnailsAsync checks for null thumbnails, so new images will load automatically
                 viewModel.Refresh();
                 
-                // Reload thumbnails for newly added files (fire and forget)
+                // Trigger thumbnail loading (will check cache -> disk)
                 _ = viewModel.LoadThumbnailsAsync();
                 
                 UpdateStatistics();
@@ -2271,6 +2348,12 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             _statisticsService.FileCountsUpdated -= OnFileCountsUpdated;
             _statisticsService.MatchingStatisticsUpdated -= OnMatchingStatisticsUpdated;
 
+            // Unsubscribe from program launcher events
+            _generalCameraLauncher.StatusChanged -= OnGeneralCameraStatusChanged;
+            _nirCameraLauncher.StatusChanged -= OnNirCameraStatusChanged;
+            _generalCameraLauncher.Dispose();
+            _nirCameraLauncher.Dispose();
+
             // Dispose CancellationTokenSources
             _windowCts.Dispose();
             _operationCts?.Dispose();
@@ -2279,6 +2362,214 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
         }
 
         _disposed = true;
+    }
+
+    #endregion
+
+    #region Program Status Tracking
+
+    /// <summary>
+    /// General Camera status text
+    /// </summary>
+    public string GeneralCameraStatus
+    {
+        get => _generalCameraStatus;
+        set => SetProperty(ref _generalCameraStatus, value);
+    }
+
+    /// <summary>
+    /// General Camera status color
+    /// </summary>
+    public System.Windows.Media.Brush GeneralCameraForeground
+    {
+        get => _generalCameraForeground;
+        set => SetProperty(ref _generalCameraForeground, value);
+    }
+
+    /// <summary>
+    /// NIR Camera status text
+    /// </summary>
+    public string NirCameraStatus
+    {
+        get => _nirCameraStatus;
+        set => SetProperty(ref _nirCameraStatus, value);
+    }
+
+    /// <summary>
+    /// NIR Camera status color
+    /// </summary>
+    public System.Windows.Media.Brush NirCameraForeground
+    {
+        get => _nirCameraForeground;
+        set => SetProperty(ref _nirCameraForeground, value);
+    }
+    
+    /// <summary>
+    /// NIR2 filtering activation status ("Activated" or "Deactivated").
+    /// </summary>
+    public string Nir2FilteringStatus
+    {
+        get => _nir2FilteringStatus;
+        set => SetProperty(ref _nir2FilteringStatus, value);
+    }
+
+    /// <summary>
+    /// NIR2 filtering status indicator color (green when active, red when inactive).
+    /// </summary>
+    public System.Windows.Media.Brush Nir2FilteringForeground
+    {
+        get => _nir2FilteringForeground;
+        set => SetProperty(ref _nir2FilteringForeground, value);
+    }
+
+    /// <summary>
+    /// NIR2 filtering toggle button text ("ON" when inactive, "OFF" when active).
+    /// </summary>
+    public string Nir2FilteringButtonText
+    {
+        get => _nir2FilteringButtonText;
+        set => SetProperty(ref _nir2FilteringButtonText, value);
+    }
+
+    /// <summary>
+    /// NIR2 filtering toggle button background color.
+    /// </summary>
+    public System.Windows.Media.Brush Nir2FilteringButtonBackground
+    {
+        get => _nir2FilteringButtonBackground;
+        set => SetProperty(ref _nir2FilteringButtonBackground, value);
+    }
+
+    private void OnGeneralCameraStatusChanged(object? sender, bool isActive)
+    {
+        UpdateProgramStatus();
+    }
+
+    private void OnNirCameraStatusChanged(object? sender, bool isActive)
+    {
+        WpfApplication.Current.Dispatcher.Invoke(() =>
+        {
+            NirCameraStatus = isActive ? "Activated" : "Deactivated";
+            NirCameraForeground = isActive 
+                ? new SolidColorBrush(Colors.Green) 
+                : new SolidColorBrush(Colors.Red);
+        });
+    }
+
+    private void OnNir2FilteringStatusChanged(object? sender, bool isActive)
+    {
+        WpfApplication.Current.Dispatcher.Invoke(() =>
+        {
+            Nir2FilteringStatus = isActive ? "Activated" : "Deactivated";
+            Nir2FilteringForeground = isActive 
+                ? new SolidColorBrush(Colors.Green) 
+                : new SolidColorBrush(Colors.Red);
+            
+            // Button shows opposite action (what clicking will do)
+            Nir2FilteringButtonText = isActive ? "OFF" : "ON";
+            Nir2FilteringButtonBackground = isActive
+                ? new SolidColorBrush(Colors.Red)    // Red when active (to turn OFF)
+                : new SolidColorBrush(Colors.Green); // Green when inactive (to turn ON)
+        });
+    }
+
+    private async void ExecuteToggleNir2Filtering()
+    {
+        try
+        {
+            if (_nir2CameraLauncher.IsFilteringActive)
+            {
+                _nir2CameraLauncher.StopFiltering();
+                AddLogMessage(LogSeverity.Info, "NIR2", "필터링 중지됨");
+            }
+            else
+            {
+                var result = await _nir2CameraLauncher.StartFilteringAsync();
+                if (result.Success)
+                {
+                    AddLogMessage(LogSeverity.Info, "NIR2", "필터링 시작됨");
+                }
+                else
+                {
+                    AddLogMessage(LogSeverity.Error, "NIR2", $"필터링 시작 실패: {result.Message}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to toggle NIR2 filtering");
+            AddLogMessage(LogSeverity.Error, "NIR2", $"오류: {ex.Message}");
+        }
+    }
+    private void UpdateProgramStatus()
+    {
+        // 색상 정의
+        var greenBrush = new SolidColorBrush(Colors.Green);
+        var redBrush = new SolidColorBrush(Colors.Red);
+        
+        // 상태 확인
+        var nir1Active = _nirCameraLauncher.IsActive;  // NIR1만 체크
+        var generalActive = _generalCameraLauncher.IsActive;
+        
+        // NIR Camera 상태 업데이트 (NIR1만)
+        if (nir1Active)
+        {
+            NirCameraStatus = "Activated";
+            NirCameraForeground = greenBrush;
+        }
+        else
+        {
+            NirCameraStatus = "Deactivated";
+            NirCameraForeground = redBrush;
+        }
+        
+        // General Camera 상태 업데이트
+        if (generalActive)
+        {
+            GeneralCameraStatus = "Activated";
+            GeneralCameraForeground = greenBrush;
+        }
+        else
+        {
+            GeneralCameraStatus = "Deactivated";
+            GeneralCameraForeground = redBrush;
+        }
+    }
+
+    /// <summary>
+    /// Selects all items in the currently active tab.
+    /// </summary>
+    private void ExecuteSelectAll()
+    {
+        var targetCollection = ActiveTabIndex == 0 ? Line1Groups : Line2Groups;
+        
+        if (targetCollection == null)
+            return;
+
+        foreach (var group in targetCollection)
+        {
+            group.IsSelected = true;
+        }
+        
+        _logger.LogInformation("Selected all {Count} groups in {Tab}", targetCollection.Count, ActiveTabIndex == 0 ? "Line 1" : "Line 2");
+    }
+
+    /// <summary>
+    /// Deselects all items in the currently active tab.
+    /// </summary>
+    private void ExecuteDeselectAll()
+    {
+        var targetCollection = ActiveTabIndex == 0 ? Line1Groups : Line2Groups;
+        
+        if (targetCollection == null)
+            return;
+
+        foreach (var group in targetCollection)
+        {
+            group.IsSelected = false;
+        }
+        
+        _logger.LogInformation("Deselected all groups in {Tab}", ActiveTabIndex == 0 ? "Line 1" : "Line 2");
     }
 
     #endregion

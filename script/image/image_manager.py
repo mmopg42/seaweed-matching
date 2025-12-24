@@ -178,6 +178,12 @@ class ImageManager:
                     if hasattr(img_widget, '_current_path') and img_widget._current_path:
                         # 캐시에서 이미지 가져오기
                         widget_path = img_widget._current_path
+                        
+                        # ✅ 경로 유효성 확인: 파일이 존재하지 않으면 위젯 초기화
+                        if not os.path.exists(widget_path):
+                            img_widget.set_image(None, "")
+                            continue
+                        
                         cached_pixmap = self.image_registry.get_pixmap(widget_path)
                         if cached_pixmap is not None:
                             # 캐시된 이미지로 무조건 업데이트

@@ -443,14 +443,99 @@ class SimulatorGUI:
             self.reset_button.configure(state=tk.NORMAL)
         self.root.after(0, update_ui)
 
+    def scan_target_folder(self):
+        """Scan target folder and create reset mapping to source folder"""
+        if not self.simulator.target_base:
+            self.log("Error: Target folder is not set")
+            return []
+
+        if not os.path.exists(self.simulator.target_base):
+            self.log(f"Error: Target folder does not exist: {self.simulator.target_base}")
+            return []
+
+        if not self.simulator.source_base:
+            self.log("Error: Source folder is not set")
+            return []
+
+        if not os.path.exists(self.simulator.source_base):
+            self.log(f"Error: Source folder does not exist: {self.simulator.source_base}")
+            return []
+
+        self.log(f"Scanning target: {self.simulator.target_base}")
+        self.log(f"Will restore to source: {self.simulator.source_base}")
+
+        items = []
+
+        # Scan NIR files in target
+        target_nir = os.path.join(self.simulator.target_base, 'nir')
+        source_nir = os.path.join(self.simulator.source_base, 'nir')
+        if os.path.exists(target_nir):
+            for file_name in os.listdir(target_nir):
+                if file_name.endswith('.spc') or file_name.endswith('.txt'):
+                    target_path = os.path.join(target_nir, file_name)
+                    source_path = os.path.join(source_nir, file_name)
+                    items.append({
+                        'target': target_path,
+                        'source': source_path
+                    })
+                    self.log(f"Found NIR file: {file_name}")
+
+        # Scan normal folders in target
+        target_normal = os.path.join(self.simulator.target_base, 'normal')
+        source_normal = os.path.join(self.simulator.source_base, 'normal')
+        if os.path.exists(target_normal):
+            for folder_name in os.listdir(target_normal):
+                folder_path = os.path.join(target_normal, folder_name)
+                if os.path.isdir(folder_path):
+                    source_path = os.path.join(source_normal, folder_name)
+                    items.append({
+                        'target': folder_path,
+                        'source': source_path
+                    })
+                    self.log(f"Found normal folder: {folder_name}")
+
+        # Scan camera files in target
+        for cam_idx in range(1, 7):
+            target_cam = os.path.join(self.simulator.target_base, f'cam{cam_idx}')
+            source_cam = os.path.join(self.simulator.source_base, f'cam{cam_idx}')
+            if os.path.exists(target_cam):
+                for file_name in os.listdir(target_cam):
+                    if file_name.endswith('.bmp'):
+                        target_path = os.path.join(target_cam, file_name)
+                        source_path = os.path.join(source_cam, file_name)
+                        items.append({
+                            'target': target_path,
+                            'source': source_path
+                        })
+                        self.log(f"Found cam{cam_idx} file: {file_name}")
+
+        self.log(f"Total items found in target: {len(items)}")
+        return items
+
     def reset_target(self):
-        if not self.simulator.moved_items:
-            messagebox.showinfo("Info", "No files to reset. Run a simulation first.")
+        # Update paths from entry fields
+        self.simulator.source_base = self.source_entry.get()
+        self.simulator.target_base = self.target_entry.get()
+
+        # Log current paths
+        self.log("="*60)
+        self.log(f"Source folder: {self.simulator.source_base}")
+        self.log(f"Target folder: {self.simulator.target_base}")
+        self.log("="*60)
+
+        # Always scan target folder directly (ignore tracked items)
+        self.log("Scanning target folder...")
+        items_to_reset = self.scan_target_folder()
+
+        if not items_to_reset:
+            messagebox.showinfo("Info", "No files found in target folder to reset.")
+            self.simulator.moved_items = []
             return
 
         result = messagebox.askyesno(
             "Confirm Reset",
-            f"Move {len(self.simulator.moved_items)} items back to original location?\n\n"
+            f"Found {len(items_to_reset)} items at target location.\n"
+            f"Move them back to original location?\n\n"
             "This will restore the source folder."
         )
 
@@ -461,37 +546,54 @@ class SimulatorGUI:
             try:
                 moved_back = 0
                 failed = 0
+                failed_items = []  # Track failed items for retry
 
                 # Move files back to original location in reverse order
-                for item in reversed(self.simulator.moved_items):
+                for idx, item in enumerate(reversed(items_to_reset)):
                     try:
                         target_path = item['target']
                         source_path = item['source']
 
-                        # Only move if file exists at target
-                        if os.path.exists(target_path):
-                            # Ensure source parent directory exists
-                            source_parent = os.path.dirname(source_path)
-                            if source_parent:
-                                os.makedirs(source_parent, exist_ok=True)
+                        # Ensure source parent directory exists
+                        source_parent = os.path.dirname(source_path)
+                        if source_parent:
+                            os.makedirs(source_parent, exist_ok=True)
 
-                            # Move back using os.rename (instant)
-                            os.rename(target_path, source_path)
-                            moved_back += 1
-                            self.log(f"✓ Restored: {os.path.basename(source_path)}")
-                        else:
-                            self.log(f"⊘ Skip (not found): {os.path.basename(target_path)}")
+                        # Move back using os.rename (instant)
+                        os.rename(target_path, source_path)
+                        moved_back += 1
+                        self.log(f"✓ Restored: {os.path.basename(source_path)}")
+
+                    except PermissionError as e:
+                        failed += 1
+                        failed_items.append(item)
+                        self.log(f"✗ File in use: {os.path.basename(source_path)}")
 
                     except Exception as e:
                         failed += 1
+                        failed_items.append(item)
                         self.log(f"✗ Error restoring {os.path.basename(source_path)}: {str(e)}")
 
-                # Clear moved items list
-                self.simulator.moved_items = []
+                    # Update progress
+                    progress = (idx + 1) / len(items_to_reset) * 100
+                    self.update_progress(progress)
 
-                self.log(f"Reset complete: {moved_back} items restored, {failed} failed")
-                messagebox.showinfo("Reset Complete",
-                                  f"Moved {moved_back} items back to original location\nFailed: {failed}")
+                # Update moved_items to only include failed items
+                self.simulator.moved_items = failed_items
+
+                # Show result
+                if failed > 0:
+                    self.log(f"Reset partial: {moved_back} items restored, {failed} failed")
+                    messagebox.showwarning(
+                        "Reset Partially Complete",
+                        f"Moved {moved_back} items back to original location\n"
+                        f"Failed: {failed} (possibly files in use)\n\n"
+                        "Click 'Reset' again to retry the remaining files."
+                    )
+                else:
+                    self.log(f"Reset complete: {moved_back} items restored")
+                    messagebox.showinfo("Reset Complete",
+                                      f"All {moved_back} items moved back to original location")
 
             except Exception as e:
                 self.log(f"Error during reset: {str(e)}")

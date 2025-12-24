@@ -5,11 +5,13 @@ using ChronoView.Core.Configuration;
 using ChronoView.Core.FileOperations;
 using ChronoView.Core.ImageProcessing;
 using ChronoView.Models;
+using ChronoView.Core.ProgramLaunching;
 using Microsoft.Extensions.Logging;
 using Moq;
 using FsCheck;
 using FsCheck.Xunit;
 using Xunit;
+using ChronoView.Core.FileMatching;
 
 namespace ChronoView.Tests.UI.ViewModels;
 
@@ -38,7 +40,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockPathManagementService = new Mock<IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<IAbnormalDetector>();
-        var mockFileGroupMatcher = new Mock<ChronoView.Core.FileMatching.IFileGroupMatcher>();
+        var mockFileGroupMatcher = new Mock<IFileGroupMatcher>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
         var mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
@@ -75,6 +77,12 @@ public class EventSubscriptionCleanupPropertyTests
         mockStatisticsService.SetupRemove(s => s.MatchingStatisticsUpdated -= It.IsAny<EventHandler<MatchingStatistics>>())
             .Callback(() => matchingStatsUpdatedSubscriptions--);
 
+        var mockLineLogger = new Mock<ILogger<GeneralCameraLauncher>>();
+        var mockNirLogger = new Mock<ILogger<NirCameraLauncher>>();
+        var config = new ApplicationConfiguration();
+        var generalCameraLauncher = new GeneralCameraLauncher(mockLineLogger.Object, config);
+        var nirCameraLauncher = new NirCameraLauncher(mockNirLogger.Object, config);
+
         // Act - Create ViewModel (this subscribes to events)
         var viewModel = new MainWindowViewModel(
             mockOrchestrator.Object,
@@ -86,7 +94,10 @@ public class EventSubscriptionCleanupPropertyTests
             mockAbnormalDetector.Object,
             mockFileGroupMatcher.Object,
             mockLogger.Object,
-            mockFileGroupLogger.Object);
+            mockFileGroupLogger.Object,
+            generalCameraLauncher,
+            nirCameraLauncher,
+            Mock.Of<Nir2CameraLauncher>());
 
         // Verify subscriptions were added
         Assert.Equal(1, groupCreatedSubscriptions);
@@ -130,7 +141,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockPathManagementService = new Mock<IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<IAbnormalDetector>();
-        var mockFileGroupMatcher = new Mock<ChronoView.Core.FileMatching.IFileGroupMatcher>();
+        var mockFileGroupMatcher = new Mock<IFileGroupMatcher>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
         var mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
@@ -148,6 +159,12 @@ public class EventSubscriptionCleanupPropertyTests
         mockStatisticsService.SetupRemove(s => s.MatchingStatisticsUpdated -= It.IsAny<EventHandler<MatchingStatistics>>())
             .Callback(() => unsubscribeCount++);
 
+        var mockLineLogger = new Mock<ILogger<GeneralCameraLauncher>>();
+        var mockNirLogger = new Mock<ILogger<NirCameraLauncher>>();
+        var config = new ApplicationConfiguration();
+        var generalCameraLauncher = new GeneralCameraLauncher(mockLineLogger.Object, config);
+        var nirCameraLauncher = new NirCameraLauncher(mockNirLogger.Object, config);
+
         var viewModel = new MainWindowViewModel(
             mockOrchestrator.Object,
             mockStatisticsService.Object,
@@ -158,7 +175,9 @@ public class EventSubscriptionCleanupPropertyTests
             mockAbnormalDetector.Object,
             mockFileGroupMatcher.Object,
             mockLogger.Object,
-            mockFileGroupLogger.Object);
+            mockFileGroupLogger.Object,
+            generalCameraLauncher,
+            nirCameraLauncher);
 
         // Act - Dispose multiple times
         for (int i = 0; i < disposeCount; i++)
@@ -185,7 +204,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockPathManagementService = new Mock<IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<IAbnormalDetector>();
-        var mockFileGroupMatcher = new Mock<ChronoView.Core.FileMatching.IFileGroupMatcher>();
+        var mockFileGroupMatcher = new Mock<IFileGroupMatcher>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
         var mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
@@ -207,6 +226,12 @@ public class EventSubscriptionCleanupPropertyTests
         mockStatisticsService.SetupAdd(s => s.MatchingStatisticsUpdated += It.IsAny<EventHandler<MatchingStatistics>>())
             .Callback<EventHandler<MatchingStatistics>>(h => matchingStatsUpdatedHandler = h);
 
+        var mockLineLogger = new Mock<ILogger<GeneralCameraLauncher>>();
+        var mockNirLogger = new Mock<ILogger<NirCameraLauncher>>();
+        var config = new ApplicationConfiguration();
+        var generalCameraLauncher = new GeneralCameraLauncher(mockLineLogger.Object, config);
+        var nirCameraLauncher = new NirCameraLauncher(mockNirLogger.Object, config);
+
         var viewModel = new MainWindowViewModel(
             mockOrchestrator.Object,
             mockStatisticsService.Object,
@@ -217,7 +242,9 @@ public class EventSubscriptionCleanupPropertyTests
             mockAbnormalDetector.Object,
             mockFileGroupMatcher.Object,
             mockLogger.Object,
-            mockFileGroupLogger.Object);
+            mockFileGroupLogger.Object,
+            generalCameraLauncher,
+            nirCameraLauncher);
 
         // Act - Dispose ViewModel
         viewModel.Dispose();
@@ -272,7 +299,7 @@ public class EventSubscriptionCleanupPropertyTests
         var mockPathManagementService = new Mock<IPathManagementService>();
         var mockImageProcessor = new Mock<IImageProcessor>();
         var mockAbnormalDetector = new Mock<IAbnormalDetector>();
-        var mockFileGroupMatcher = new Mock<ChronoView.Core.FileMatching.IFileGroupMatcher>();
+        var mockFileGroupMatcher = new Mock<IFileGroupMatcher>();
         var mockLogger = new Mock<ILogger<MainWindowViewModel>>();
         var mockFileGroupLogger = new Mock<ILogger<FileGroupViewModel>>();
 
@@ -300,6 +327,12 @@ public class EventSubscriptionCleanupPropertyTests
         mockStatisticsService.SetupRemove(s => s.MatchingStatisticsUpdated -= It.IsAny<EventHandler<MatchingStatistics>>())
             .Callback(() => totalSubscriptions--);
 
+        var mockLineLogger = new Mock<ILogger<GeneralCameraLauncher>>();
+        var mockNirLogger = new Mock<ILogger<NirCameraLauncher>>();
+        var config = new ApplicationConfiguration();
+        var generalCameraLauncher = new GeneralCameraLauncher(mockLineLogger.Object, config);
+        var nirCameraLauncher = new NirCameraLauncher(mockNirLogger.Object, config);
+
         // Act - Create and dispose multiple ViewModels
         for (int i = 0; i < viewModelCount; i++)
         {
@@ -313,7 +346,10 @@ public class EventSubscriptionCleanupPropertyTests
                 mockAbnormalDetector.Object,
                 mockFileGroupMatcher.Object,
                 mockLogger.Object,
-                mockFileGroupLogger.Object);
+                mockFileGroupLogger.Object,
+                mockGeneralCameraLauncher.Object, // Changed to mock object
+                mockNirCameraLauncher.Object, // Changed to mock object
+                Mock.Of<Nir2CameraLauncher>()); // Added
 
             // Verify subscriptions were added (5 events per ViewModel)
             Assert.Equal(5, totalSubscriptions);

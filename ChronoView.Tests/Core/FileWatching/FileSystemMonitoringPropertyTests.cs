@@ -43,7 +43,8 @@ namespace ChronoView.Tests.Core.FileWatching
             // Arrange
             var testDir = CreateTestDirectory();
             var mockLogger = new Mock<ILogger<FileWatcherService>>();
-            var watcher = new FileWatcherService(mockLogger.Object);
+            var timestampCache = new FolderTimestampCache();
+            var watcher = new FileWatcherService(mockLogger.Object, timestampCache);
             var eventsDetected = new List<FileSystemEventArgs>();
             var eventSignal = new ManualResetEventSlim(false);
 
@@ -108,7 +109,8 @@ namespace ChronoView.Tests.Core.FileWatching
             Thread.Sleep(200);
 
             var mockLogger = new Mock<ILogger<FileWatcherService>>();
-            var watcher = new FileWatcherService(mockLogger.Object);
+            var timestampCache = new FolderTimestampCache();
+            var watcher = new FileWatcherService(mockLogger.Object, timestampCache);
             var modificationDetected = false;
             var eventSignal = new ManualResetEventSlim(false);
 
@@ -164,7 +166,8 @@ namespace ChronoView.Tests.Core.FileWatching
             Thread.Sleep(200);
 
             var mockLogger = new Mock<ILogger<FileWatcherService>>();
-            var watcher = new FileWatcherService(mockLogger.Object);
+            var timestampCache = new FolderTimestampCache();
+            var watcher = new FileWatcherService(mockLogger.Object, timestampCache);
             var deletionDetected = false;
             var eventSignal = new ManualResetEventSlim(false);
 
@@ -214,7 +217,8 @@ namespace ChronoView.Tests.Core.FileWatching
             // Arrange
             var testDir = CreateTestDirectory();
             var mockLogger = new Mock<ILogger<FileWatcherService>>();
-            var watcher = new FileWatcherService(mockLogger.Object);
+            var timestampCache = new FolderTimestampCache();
+            var watcher = new FileWatcherService(mockLogger.Object, timestampCache);
             var eventsDetected = new List<FileSystemEventArgs>();
 
             watcher.FileChanged += (sender, e) =>
@@ -264,7 +268,8 @@ namespace ChronoView.Tests.Core.FileWatching
                 .ToList();
 
             var mockLogger = new Mock<ILogger<FileWatcherService>>();
-            var watcher = new FileWatcherService(mockLogger.Object);
+            var timestampCache = new FolderTimestampCache();
+            var watcher = new FileWatcherService(mockLogger.Object, timestampCache);
 
             try
             {
@@ -299,7 +304,8 @@ namespace ChronoView.Tests.Core.FileWatching
             // Arrange
             var testDir = CreateTestDirectory();
             var mockLogger = new Mock<ILogger<FileWatcherService>>();
-            var watcher = new FileWatcherService(mockLogger.Object);
+            var timestampCache = new FolderTimestampCache();
+            var watcher = new FileWatcherService(mockLogger.Object, timestampCache);
 
             try
             {

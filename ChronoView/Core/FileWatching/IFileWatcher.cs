@@ -44,19 +44,13 @@ namespace ChronoView.Core.FileWatching
     }
 
     /// <summary>
-    /// Options for file watcher behavior
+    /// Options for file watcher behavior.
+    /// Currently empty - reserved for future configuration options.
     /// </summary>
     public class FileWatcherOptions
     {
-        /// <summary>
-        /// Enable periodic polling for network drives
-        /// </summary>
-        public bool EnablePolling { get; set; } = false;
-
-        /// <summary>
-        /// Polling interval in milliseconds
-        /// </summary>
-        public int PollingIntervalMs { get; set; } = 5000;
+        // Reserved for future options
+        // Polling has been permanently removed in favor of pure event-based detection
     }
 
     /// <summary>

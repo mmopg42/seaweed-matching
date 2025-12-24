@@ -41,6 +41,9 @@ grep -rn "term_name" docs/architecture/
 | `FileWatcherOptions` | Configuration options for file watcher | `ChronoView.Core.FileWatching` |
 | `FileWatcherService` | Hybrid file monitoring service implementation | `ChronoView.Core.FileWatching` |
 | `FileMatchingEngine` | Standalone matching engine with pure logic (stateless, framework-agnostic) | `module_file_matching_engine.md` |
+| `NirSpectrumFilter` | NIR spectrum filtering using 5-criteria scoring system | `ChronoView.Core.Nir` |
+| `CriteriaResult` | Individual criterion evaluation result with value, threshold, and pass/fail status | `ChronoView.Core.Nir` |
+| `FilterResult` | Result of NIR spectrum analysis with detailed scoring information | `ChronoView.Core.Nir` |
 
 > **Naming Convention**: Use `PascalCase` for classes and interfaces.
 
@@ -159,6 +162,11 @@ grep -rn "term_name" docs/architecture/
 | Panel (UI) | Container area with light gray background (`#f5f5f5`) | `design_guidelines.md` |
 | Statistics Bar (UI) | Horizontal bar displaying multiple chips with file counts or matching status | `design_guidelines.md` |
 | Abnormal (UI) | State indicating data mismatch or quality issue (highlighted in yellow) | `design_guidelines.md` |
+| y_range | Overall Y intensity range in NIR wavelength window 4500-6500nm | NIR filtering algorithm |
+| y_std | Standard deviation of Y intensities in NIR wavelength window | NIR filtering algorithm |
+| window_800_mean | Mean of Y ranges across all 800nm sliding windows | NIR filtering algorithm |
+| window_800_std | Standard deviation of Y ranges across 800nm windows | NIR filtering algorithm |
+| window_800_max | Maximum Y range found in any 800nm window | NIR filtering algorithm |
 
 ---
 
@@ -169,10 +177,13 @@ grep -rn "term_name" docs/architecture/
 | `IsMatchingTimestamp` | Use `FileGroupMatcher.MatchFilesAsync` | Simple time check replaced by full matcher algorithm | 2024-12-14 |
 | `UpdateGroupWithFile` | `MergeGroups` | More descriptive name for merging operation | 2024-12-14 |
 
----
 
 ## Changelog
 
+- 2025-12-23: Added NIR filtering algorithm terms (upgrade_nir_filtering_algorithm spec)
+  - Added `NirSpectrumFilter`, `CriteriaResult`, `FilterResult` classes
+  - Added domain concepts: y_range, y_std, window_800_mean, window_800_std, window_800_max
+  - Upgraded from simple Y-range check to 5-criteria scoring system
 - 2024-12-16: Marked deprecated matching properties (Phase 5 - refactor-matching-logic)
   - Marked `NirTimeWindowSeconds`, `CameraTimeWindowSeconds`, `NormalFolderTimeWindowSeconds` as DEPRECATED
   - Added reference to `impact_deprecated_matching_properties.md`

@@ -21,7 +21,7 @@ public partial class ImagePreviewDialog : Window
         DataContext = this;
     }
 
-    public string ImageTitle { get; set; } = "Image Preview";
+    public string ImageTitle { get; set; } = Core.Localization.LocalizationManager.GetString("Dialog_ImagePreview");
     public bool IsLoading { get; set; }
 
     /// <summary>
@@ -32,7 +32,11 @@ public partial class ImagePreviewDialog : Window
     {
         if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
         {
-            WpfMessageBox.Show("Image file not found.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            WpfMessageBox.Show(
+                Core.Localization.LocalizationManager.GetString("Message_ImageNotFound"),
+                Core.Localization.LocalizationManager.GetString("Dialog_Error"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
             return;
         }
 

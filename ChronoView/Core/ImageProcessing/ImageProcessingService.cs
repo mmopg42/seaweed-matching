@@ -72,8 +72,10 @@ public class ImageProcessingService : IImageProcessor
                 // Use Task.Run for CPU-intensive image processing on background thread
                 var thumbnail = await Task.Run(async () =>
                 {
-                    using var image = await SixLabors.ImageSharp.Image.LoadAsync(imagePath, cancellationToken);
-                    
+                    // Open file with FileShare.Read to allow other processes to access it
+                    using var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    using var image = await SixLabors.ImageSharp.Image.LoadAsync(fileStream, cancellationToken);
+
                     // Resize image maintaining aspect ratio
                     image.Mutate(x => x.Resize(new ResizeOptions
                     {
@@ -141,7 +143,10 @@ public class ImageProcessingService : IImageProcessor
                 var metadata = await Task.Run(async () =>
                 {
                     var fileInfo = new FileInfo(imagePath);
-                    using var image = await SixLabors.ImageSharp.Image.LoadAsync(imagePath, cancellationToken);
+
+                    // Open file with FileShare.Read to allow other processes to access it
+                    using var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    using var image = await SixLabors.ImageSharp.Image.LoadAsync(fileStream, cancellationToken);
 
                     return new ImageMetadata
                     {
