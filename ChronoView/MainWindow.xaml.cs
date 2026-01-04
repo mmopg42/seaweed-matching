@@ -325,84 +325,49 @@ public partial class MainWindow : Window
     /// <summary>
     /// Create a DataGrid column for a specific data type
     /// </summary>
+    /// <summary>
+    /// Create a DataGrid column for a specific data type using shared XAML resources
+    /// </summary>
     private DataGridTemplateColumn? CreateColumnForDataType(DataType dataType, int lineNumber)
     {
+        string? resourceKey = null;
+
+        if (lineNumber == 1)
+        {
+            resourceKey = dataType switch
+            {
+                DataType.Normal => "NormalFileTemplate",
+                DataType.NIR => "NirFileTemplate",
+                DataType.Cam1 => "Camera1Template",
+                DataType.Cam2 => "Camera2Template",
+                DataType.Cam3 => "Camera3Template",
+                _ => null
+            };
+        }
+        else if (lineNumber == 2)
+        {
+            resourceKey = dataType switch
+            {
+                DataType.Normal => "NormalFileTemplate",
+                DataType.NIR => "NirFileTemplate",
+                DataType.Cam1 => "Camera4Template", // Cam1 slot in Line 2 is Cam4
+                DataType.Cam2 => "Camera5Template", // Cam2 slot in Line 2 is Cam5
+                DataType.Cam3 => "Camera6Template", // Cam3 slot in Line 2 is Cam6
+                _ => null
+            };
+        }
+
+        if (string.IsNullOrEmpty(resourceKey))
+        {
+            return null;
+        }
+
         var column = new DataGridTemplateColumn
         {
             Header = GetColumnHeader(dataType, lineNumber),
-            Width = new DataGridLength(1, DataGridLengthUnitType.Star)
+            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
+            CellTemplate = (DataTemplate)FindResource(resourceKey)
         };
-
-        // Create data template
-        var factory = new FrameworkElementFactory(typeof(WpfBorder));
-
-        // Bind to appropriate width/height based on data type
-        if (dataType == DataType.NIR)
-        {
-            factory.SetBinding(WpfBorder.WidthProperty,
-                new WpfBinding("DataContext.NirDisplayWidth")
-                {
-                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(Window), 1),
-                    FallbackValue = 120
-                });
-            factory.SetBinding(WpfBorder.HeightProperty,
-                new WpfBinding("DataContext.NirDisplayHeight")
-                {
-                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(Window), 1),
-                    FallbackValue = 90
-                });
-        }
-        else
-        {
-            factory.SetBinding(WpfBorder.WidthProperty,
-                new WpfBinding("DataContext.DisplayImageWidth")
-                {
-                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(Window), 1),
-                    FallbackValue = 120
-                });
-            factory.SetBinding(WpfBorder.HeightProperty,
-                new WpfBinding("DataContext.DisplayImageHeight")
-                {
-                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(Window), 1),
-                    FallbackValue = 90
-                });
-        }
-
-        factory.SetValue(WpfBorder.BackgroundProperty, new System.Windows.Media.SolidColorBrush(
-            (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#3a3a3a")));
-        factory.SetValue(WpfBorder.BorderBrushProperty, new System.Windows.Media.SolidColorBrush(
-            (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#505050")));
-        factory.SetValue(WpfBorder.BorderThicknessProperty, new Thickness(1));
-
-        //Inner Grid
-        var gridFactory = new FrameworkElementFactory(typeof(WpfGrid));
-
-        // Image
-        var imageFactory = new FrameworkElementFactory(typeof(WpfImage));
-       imageFactory.SetBinding(WpfImage.SourceProperty, new WpfBinding(GetBindingPath(dataType, lineNumber)));
-        imageFactory.SetValue(WpfImage.StretchProperty, System.Windows.Media.Stretch.Uniform);
-        gridFactory.AppendChild(imageFactory);
-
-        // ProgressBar (shown when image is loading)
-        var progressFactory = new FrameworkElementFactory(typeof(WpfProgressBar));
-        progressFactory.SetValue(WpfProgressBar.IsIndeterminateProperty, true);
-        progressFactory.SetValue(WpfProgressBar.HeightProperty, 4.0);
-        progressFactory.SetValue(WpfProgressBar.VerticalAlignmentProperty, VerticalAlignment.Bottom);
-
-        // ProgressBar visibility: show when image is null (loading)
-        // Create converter instance directly instead of resource lookup to avoid runtime errors
-        var nullToVisConverter = new NullToVisibilityConverter();
-        var visibilityBinding = new WpfBinding(GetBindingPath(dataType, lineNumber))
-        {
-            Converter = nullToVisConverter
-        };
-        progressFactory.SetBinding(WpfProgressBar.VisibilityProperty, visibilityBinding);
-        gridFactory.AppendChild(progressFactory);
-
-        factory.AppendChild(gridFactory);
-
-        var template = new DataTemplate { VisualTree = factory };
-        column.CellTemplate = template;
 
         return column;
     }
@@ -415,23 +380,6 @@ public partial class MainWindow : Window
     private string GetColumnHeader(DataType dataType, int lineNumber)
     {
         return Core.Localization.LocalizationManager.GetColumnHeader(dataType);
-    }
-
-    /// <summary>
-    /// Get binding path for a data type to access the thumbnail property
-    /// Automatically maps Cam1-3 to Cam4-6 for Line 2
-    /// </summary>
-    private string GetBindingPath(DataType dataType, int lineNumber)
-    {
-        return dataType switch
-        {
-            DataType.Normal => "MainImageThumbnail",
-            DataType.NIR => "NirGraphThumbnail",
-            DataType.Cam1 => lineNumber == 1 ? "Camera1Thumbnail" : "Camera4Thumbnail",
-            DataType.Cam2 => lineNumber == 1 ? "Camera2Thumbnail" : "Camera5Thumbnail",
-            DataType.Cam3 => lineNumber == 1 ? "Camera3Thumbnail" : "Camera6Thumbnail",
-            _ => string.Empty
-        };
     }
 
     #endregion

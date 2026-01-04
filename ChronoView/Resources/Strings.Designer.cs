@@ -60,1040 +60,1176 @@ namespace ChronoView.Resources {
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 자동 설정.
-        /// </summary>
+        // Settings Dialog - Buttons
+        public static string Button_Apply {
+            get {
+                return ResourceManager.GetString("Button_Apply", resourceCulture);
+            }
+        }
+        
+        public static string Button_OK {
+            get {
+                return ResourceManager.GetString("Button_OK", resourceCulture);
+            }
+        }
+        
+        public static string Button_Cancel {
+            get {
+                return ResourceManager.GetString("Button_Cancel", resourceCulture);
+            }
+        }
+        
+        public static string Button_Browse {
+            get {
+                return ResourceManager.GetString("Button_Browse", resourceCulture);
+            }
+        }
+        
+        public static string Button_Open {
+            get {
+                return ResourceManager.GetString("Button_Open", resourceCulture);
+            }
+        }
+        
+        // Settings Dialog - Tab Headers
+        public static string Tab_Paths {
+            get {
+                return ResourceManager.GetString("Tab_Paths", resourceCulture);
+            }
+        }
+        
+        public static string Tab_Advanced {
+            get {
+                return ResourceManager.GetString("Tab_Advanced", resourceCulture);
+            }
+        }
+        
+        public static string Tab_UIOptions {
+            get {
+                return ResourceManager.GetString("Tab_UIOptions", resourceCulture);
+            }
+        }
+        
+        public static string Tab_DataSequence {
+            get {
+                return ResourceManager.GetString("Tab_DataSequence", resourceCulture);
+            }
+        }
+        
+        public static string Tab_ExternalPrograms {
+            get {
+                return ResourceManager.GetString("Tab_ExternalPrograms", resourceCulture);
+            }
+        }
+        
+        // Settings Dialog - Section Headers
+        public static string Section_Line1Paths {
+            get {
+                return ResourceManager.GetString("Section_Line1Paths", resourceCulture);
+            }
+        }
+        
+        public static string Section_Line2Paths {
+            get {
+                return ResourceManager.GetString("Section_Line2Paths", resourceCulture);
+            }
+        }
+        
+        public static string Section_Output {
+            get {
+                return ResourceManager.GetString("Section_Output", resourceCulture);
+            }
+        }
+        
+        public static string Section_Quarantine {
+            get {
+                return ResourceManager.GetString("Section_Quarantine", resourceCulture);
+            }
+        }
+        
+        public static string Section_CameraSubfolderOptions {
+            get {
+                return ResourceManager.GetString("Section_CameraSubfolderOptions", resourceCulture);
+            }
+        }
+        
+        public static string Section_ImageProcessing {
+            get {
+                return ResourceManager.GetString("Section_ImageProcessing", resourceCulture);
+            }
+        }
+        
+        public static string Section_UIOptions {
+            get {
+                return ResourceManager.GetString("Section_UIOptions", resourceCulture);
+            }
+        }
+        
+        public static string Section_ImageDisplaySize {
+            get {
+                return ResourceManager.GetString("Section_ImageDisplaySize", resourceCulture);
+            }
+        }
+        
+        public static string Section_NirGraphOptions {
+            get {
+                return ResourceManager.GetString("Section_NirGraphOptions", resourceCulture);
+            }
+        }
+        
+        public static string Section_UIDisplayOptions {
+            get {
+                return ResourceManager.GetString("Section_UIDisplayOptions", resourceCulture);
+            }
+        }
+        
+        public static string Section_DataArrivalSequence {
+            get {
+                return ResourceManager.GetString("Section_DataArrivalSequence", resourceCulture);
+            }
+        }
+        
+        public static string Section_ExternalProgramConfig {
+            get {
+                return ResourceManager.GetString("Section_ExternalProgramConfig", resourceCulture);
+            }
+        }
+        
+        public static string Section_GeneralCameraProgram {
+            get {
+                return ResourceManager.GetString("Section_GeneralCameraProgram", resourceCulture);
+            }
+        }
+        
+        public static string Section_NirProgram1 {
+            get {
+                return ResourceManager.GetString("Section_NirProgram1", resourceCulture);
+            }
+        }
+        
+        public static string Section_NirProgram2 {
+            get {
+                return ResourceManager.GetString("Section_NirProgram2", resourceCulture);
+            }
+        }
+        
+        public static string Section_Nir2FilteringConfig {
+            get {
+                return ResourceManager.GetString("Section_Nir2FilteringConfig", resourceCulture);
+            }
+        }
+        
+        // Settings Dialog - Labels
+        public static string Label_Nir1Path {
+            get {
+                return ResourceManager.GetString("Label_Nir1Path", resourceCulture);
+            }
+        }
+        
+        public static string Label_Normal1Path {
+            get {
+                return ResourceManager.GetString("Label_Normal1Path", resourceCulture);
+            }
+        }
+        
+        public static string Label_Camera1Path {
+            get {
+                return ResourceManager.GetString("Label_Camera1Path", resourceCulture);
+            }
+        }
+        
+        public static string Label_Camera2Path {
+            get {
+                return ResourceManager.GetString("Label_Camera2Path", resourceCulture);
+            }
+        }
+        
+        public static string Label_Camera3Path {
+            get {
+                return ResourceManager.GetString("Label_Camera3Path", resourceCulture);
+            }
+        }
+        
+        public static string Label_Nir2Path {
+            get {
+                return ResourceManager.GetString("Label_Nir2Path", resourceCulture);
+            }
+        }
+        
+        public static string Label_Normal2Path {
+            get {
+                return ResourceManager.GetString("Label_Normal2Path", resourceCulture);
+            }
+        }
+        
+        public static string Label_Camera4Path {
+            get {
+                return ResourceManager.GetString("Label_Camera4Path", resourceCulture);
+            }
+        }
+        
+        public static string Label_Camera5Path {
+            get {
+                return ResourceManager.GetString("Label_Camera5Path", resourceCulture);
+            }
+        }
+        
+        public static string Label_Camera6Path {
+            get {
+                return ResourceManager.GetString("Label_Camera6Path", resourceCulture);
+            }
+        }
+        
+        public static string Label_OutputPath {
+            get {
+                return ResourceManager.GetString("Label_OutputPath", resourceCulture);
+            }
+        }
+        
+        public static string Label_QuarantinePath {
+            get {
+                return ResourceManager.GetString("Label_QuarantinePath", resourceCulture);
+            }
+        }
+        
+        public static string Label_ProgramPath {
+            get {
+                return ResourceManager.GetString("Label_ProgramPath", resourceCulture);
+            }
+        }
+        
+        public static string Label_MonitorPath {
+            get {
+                return ResourceManager.GetString("Label_MonitorPath", resourceCulture);
+            }
+        }
+        
+        public static string Label_DestinationPath {
+            get {
+                return ResourceManager.GetString("Label_DestinationPath", resourceCulture);
+            }
+        }
+        
+        public static string Label_ImageWidth {
+            get {
+                return ResourceManager.GetString("Label_ImageWidth", resourceCulture);
+            }
+        }
+        
+        public static string Label_ImageHeight {
+            get {
+                return ResourceManager.GetString("Label_ImageHeight", resourceCulture);
+            }
+        }
+        
+        public static string Label_NirDisplayWidth {
+            get {
+                return ResourceManager.GetString("Label_NirDisplayWidth", resourceCulture);
+            }
+        }
+        
+        public static string Label_NirDisplayHeight {
+            get {
+                return ResourceManager.GetString("Label_NirDisplayHeight", resourceCulture);
+            }
+        }
+        
+        public static string Label_RowHeight {
+            get {
+                return ResourceManager.GetString("Label_RowHeight", resourceCulture);
+            }
+        }
+        
+        public static string Label_GraphGenWidth {
+            get {
+                return ResourceManager.GetString("Label_GraphGenWidth", resourceCulture);
+            }
+        }
+        
+        public static string Label_GraphGenHeight {
+            get {
+                return ResourceManager.GetString("Label_GraphGenHeight", resourceCulture);
+            }
+        }
+        
+        public static string Label_DataSequence {
+            get {
+                return ResourceManager.GetString("Label_DataSequence", resourceCulture);
+            }
+        }
+        
+        public static string Label_Min {
+            get {
+                return ResourceManager.GetString("Label_Min", resourceCulture);
+            }
+        }
+        
+        public static string Label_Max {
+            get {
+                return ResourceManager.GetString("Label_Max", resourceCulture);
+            }
+        }
+        
+        public static string Label_Seconds {
+            get {
+                return ResourceManager.GetString("Label_Seconds", resourceCulture);
+            }
+        }
+        
+        // Settings Dialog - Checkboxes
+        public static string Checkbox_UseCameraSubfolderNormal {
+            get {
+                return ResourceManager.GetString("Checkbox_UseCameraSubfolderNormal", resourceCulture);
+            }
+        }
+        
+        public static string Checkbox_UseCameraSubfolderNormal2 {
+            get {
+                return ResourceManager.GetString("Checkbox_UseCameraSubfolderNormal2", resourceCulture);
+            }
+        }
+        
+        public static string Checkbox_EnableDiskCache {
+            get {
+                return ResourceManager.GetString("Checkbox_EnableDiskCache", resourceCulture);
+            }
+        }
+        
+        public static string Checkbox_LegacyUiMode {
+            get {
+                return ResourceManager.GetString("Checkbox_LegacyUiMode", resourceCulture);
+            }
+        }
+        
+        public static string Checkbox_UseFolderSuffix {
+            get {
+                return ResourceManager.GetString("Checkbox_UseFolderSuffix", resourceCulture);
+            }
+        }
+        
+        public static string Checkbox_ShowTooltips {
+            get {
+                return ResourceManager.GetString("Checkbox_ShowTooltips", resourceCulture);
+            }
+        }
+        
+        public static string Checkbox_EnableNirGraph {
+            get {
+                return ResourceManager.GetString("Checkbox_EnableNirGraph", resourceCulture);
+            }
+        }
+        
+        public static string Checkbox_Enabled {
+            get {
+                return ResourceManager.GetString("Checkbox_Enabled", resourceCulture);
+            }
+        }
+        
+        // Settings Dialog - Default Values
+        public static string Default_120 {
+            get {
+                return ResourceManager.GetString("Default_120", resourceCulture);
+            }
+        }
+        
+        public static string Default_90 {
+            get {
+                return ResourceManager.GetString("Default_90", resourceCulture);
+            }
+        }
+        
+        public static string Default_100 {
+            get {
+                return ResourceManager.GetString("Default_100", resourceCulture);
+            }
+        }
+        
+        // Settings Dialog - Helper Text
+        public static string Helper_ImageGenerationSize {
+            get {
+                return ResourceManager.GetString("Helper_ImageGenerationSize", resourceCulture);
+            }
+        }
+        
+        public static string Helper_DataSequenceDescription {
+            get {
+                return ResourceManager.GetString("Helper_DataSequenceDescription", resourceCulture);
+            }
+        }
+        
+        public static string Helper_ExternalProgramDescription {
+            get {
+                return ResourceManager.GetString("Helper_ExternalProgramDescription", resourceCulture);
+            }
+        }
+        
+        public static string Helper_Nir2FilteringDescription {
+            get {
+                return ResourceManager.GetString("Helper_Nir2FilteringDescription", resourceCulture);
+            }
+        }
+        
+        // Settings Dialog - Tooltips
+        public static string Tooltip_OpenFolderInExplorer {
+            get {
+                return ResourceManager.GetString("Tooltip_OpenFolderInExplorer", resourceCulture);
+            }
+        }
+        
+        public static string Tooltip_MonitorPath {
+            get {
+                return ResourceManager.GetString("Tooltip_MonitorPath", resourceCulture);
+            }
+        }
+        
+        public static string Tooltip_DestinationPath {
+            get {
+                return ResourceManager.GetString("Tooltip_DestinationPath", resourceCulture);
+            }
+        }
+        
+        // Settings Dialog - Data Sequence Help Text
+        public static string Help_DragToReorder {
+            get {
+                return ResourceManager.GetString("Help_DragToReorder", resourceCulture);
+            }
+        }
+        
+        public static string Help_MinDelay {
+            get {
+                return ResourceManager.GetString("Help_MinDelay", resourceCulture);
+            }
+        }
+        
+        public static string Help_MaxDelay {
+            get {
+                return ResourceManager.GetString("Help_MaxDelay", resourceCulture);
+            }
+        }
+        
+        public static string Help_UncheckedItems {
+            get {
+                return ResourceManager.GetString("Help_UncheckedItems", resourceCulture);
+            }
+        }
+        
+        // Settings Dialog - External Programs Help Text
+        public static string Help_ExternalProgramsLaunch {
+            get {
+                return ResourceManager.GetString("Help_ExternalProgramsLaunch", resourceCulture);
+            }
+        }
+        
+        public static string Help_OnlyExeSupported {
+            get {
+                return ResourceManager.GetString("Help_OnlyExeSupported", resourceCulture);
+            }
+        }
+        
+        // Existing resources continue below (only adding new ones above)
+        // Note: This file should be regenerated with all existing resources from the original Strings.Designer.cs
+        // For now, adding only the new Settings Dialog resources
+        
         public static string Button_AutoConfig {
             get {
                 return ResourceManager.GetString("Button_AutoConfig", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 폴더 생성.
-        /// </summary>
         public static string Button_CreateFolder {
             get {
                 return ResourceManager.GetString("Button_CreateFolder", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 삭제.
-        /// </summary>
-        public static string Button_Delete {
-            get {
-                return ResourceManager.GetString("Button_Delete", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 이동.
-        /// </summary>
         public static string Button_Move {
             get {
                 return ResourceManager.GetString("Button_Move", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Cam 1.
-        /// </summary>
-        public static string Camera_Cam1 {
+        public static string Button_Delete {
             get {
-                return ResourceManager.GetString("Camera_Cam1", resourceCulture);
+                return ResourceManager.GetString("Button_Delete", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Cam 2.
-        /// </summary>
-        public static string Camera_Cam2 {
-            get {
-                return ResourceManager.GetString("Camera_Cam2", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Cam 3.
-        /// </summary>
-        public static string Camera_Cam3 {
-            get {
-                return ResourceManager.GetString("Camera_Cam3", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Cam 4.
-        /// </summary>
-        public static string Camera_Cam4 {
-            get {
-                return ResourceManager.GetString("Camera_Cam4", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Cam 5.
-        /// </summary>
-        public static string Camera_Cam5 {
-            get {
-                return ResourceManager.GetString("Camera_Cam5", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to Cam 6.
-        /// </summary>
-        public static string Camera_Cam6 {
-            get {
-                return ResourceManager.GetString("Camera_Cam6", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 카메라 1.
-        /// </summary>
-        public static string Column_Cam1 {
-            get {
-                return ResourceManager.GetString("Column_Cam1", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 카메라 2.
-        /// </summary>
-        public static string Column_Cam2 {
-            get {
-                return ResourceManager.GetString("Column_Cam2", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 카메라 3.
-        /// </summary>
-        public static string Column_Cam3 {
-            get {
-                return ResourceManager.GetString("Column_Cam3", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 카메라 4.
-        /// </summary>
-        public static string Column_Cam4 {
-            get {
-                return ResourceManager.GetString("Column_Cam4", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 카메라 5.
-        /// </summary>
-        public static string Column_Cam5 {
-            get {
-                return ResourceManager.GetString("Column_Cam5", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 카메라 6.
-        /// </summary>
-        public static string Column_Cam6 {
-            get {
-                return ResourceManager.GetString("Column_Cam6", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 일반 이미지.
-        /// </summary>
         public static string Column_Normal {
             get {
                 return ResourceManager.GetString("Column_Normal", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to NIR 그래프.
-        /// </summary>
         public static string Column_NIR {
             get {
                 return ResourceManager.GetString("Column_NIR", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 카메라 1.
-        /// </summary>
-        public static string DataType_Camera1 {
+        public static string Column_Cam1 {
             get {
-                return ResourceManager.GetString("DataType_Camera1", resourceCulture);
+                return ResourceManager.GetString("Column_Cam1", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 카메라 2.
-        /// </summary>
-        public static string DataType_Camera2 {
+        public static string Column_Cam2 {
             get {
-                return ResourceManager.GetString("DataType_Camera2", resourceCulture);
+                return ResourceManager.GetString("Column_Cam2", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 카메라 3.
-        /// </summary>
-        public static string DataType_Camera3 {
+        public static string Column_Cam3 {
             get {
-                return ResourceManager.GetString("DataType_Camera3", resourceCulture);
+                return ResourceManager.GetString("Column_Cam3", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 카메라 4 (라인 2).
-        /// </summary>
-        public static string DataType_Camera4 {
+        public static string Column_Cam4 {
             get {
-                return ResourceManager.GetString("DataType_Camera4", resourceCulture);
+                return ResourceManager.GetString("Column_Cam4", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 카메라 5 (라인 2).
-        /// </summary>
-        public static string DataType_Camera5 {
+        public static string Column_Cam5 {
             get {
-                return ResourceManager.GetString("DataType_Camera5", resourceCulture);
+                return ResourceManager.GetString("Column_Cam5", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 카메라 6 (라인 2).
-        /// </summary>
-        public static string DataType_Camera6 {
+        public static string Column_Cam6 {
             get {
-                return ResourceManager.GetString("DataType_Camera6", resourceCulture);
+                return ResourceManager.GetString("Column_Cam6", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 일반.
-        /// </summary>
-        public static string DataType_Normal {
-            get {
-                return ResourceManager.GetString("DataType_Normal", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to NIR.
-        /// </summary>
-        public static string DataType_NIR {
-            get {
-                return ResourceManager.GetString("DataType_NIR", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 오류.
-        /// </summary>
-        public static string Dialog_Error {
-            get {
-                return ResourceManager.GetString("Dialog_Error", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 이미지 미리보기.
-        /// </summary>
-        public static string Dialog_ImagePreview {
-            get {
-                return ResourceManager.GetString("Dialog_ImagePreview", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 설정.
-        /// </summary>
-        public static string Dialog_Settings {
-            get {
-                return ResourceManager.GetString("Dialog_Settings", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 로그 삭제.
-        /// </summary>
-        public static string Dialog_ClearLog {
-            get {
-                return ResourceManager.GetString("Dialog_ClearLog", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 내보내기 완료.
-        /// </summary>
-        public static string Dialog_ExportComplete {
-            get {
-                return ResourceManager.GetString("Dialog_ExportComplete", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 내보내기 오류.
-        /// </summary>
-        public static string Dialog_ExportError {
-            get {
-                return ResourceManager.GetString("Dialog_ExportError", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 텍스트 파일 (*.txt)|*.txt|CSV 파일 (*.csv)|*.csv|모든 파일 (*.*)|*.*.
-        /// </summary>
-        public static string Filter_TextFiles {
-            get {
-                return ResourceManager.GetString("Filter_TextFiles", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 날짜:.
-        /// </summary>
         public static string Label_Date {
             get {
                 return ResourceManager.GetString("Label_Date", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 시료:.
-        /// </summary>
         public static string Label_Sample {
             get {
                 return ResourceManager.GetString("Label_Sample", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 이미지 파일을 찾을 수 없습니다..
-        /// </summary>
-        public static string Message_ImageNotFound {
-            get {
-                return ResourceManager.GetString("Message_ImageNotFound", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 모든 로그 메시지를 삭제하시겠습니까?.
-        /// </summary>
-        public static string Message_ClearLogConfirm {
-            get {
-                return ResourceManager.GetString("Message_ClearLogConfirm", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 로그가 성공적으로 내보내졌습니다:\n{0}.
-        /// </summary>
-        public static string Message_ExportSuccess {
-            get {
-                return ResourceManager.GetString("Message_ExportSuccess", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 로그 내보내기 실패:\n{0}.
-        /// </summary>
-        public static string Message_ExportError {
-            get {
-                return ResourceManager.GetString("Message_ExportError", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 선택한 파일을 삭제합니다.
-        /// </summary>
-        public static string Tooltip_DeleteSelected {
-            get {
-                return ResourceManager.GetString("Tooltip_DeleteSelected", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to YYYYMMDD 형식.
-        /// </summary>
-        public static string Tooltip_DateInput {
-            get {
-                return ResourceManager.GetString("Tooltip_DateInput", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to 선택한 파일을 이동합니다.
-        /// </summary>
         public static string Tooltip_MoveSelected {
             get {
                 return ResourceManager.GetString("Tooltip_MoveSelected", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 시료 폴더명.
-        /// </summary>
+        public static string Tooltip_DeleteSelected {
+            get {
+                return ResourceManager.GetString("Tooltip_DeleteSelected", resourceCulture);
+            }
+        }
+        
+        public static string Tooltip_DateInput {
+            get {
+                return ResourceManager.GetString("Tooltip_DateInput", resourceCulture);
+            }
+        }
+        
         public static string Tooltip_SampleFolder {
             get {
                 return ResourceManager.GetString("Tooltip_SampleFolder", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 파일.
-        /// </summary>
+        public static string DataType_Normal {
+            get {
+                return ResourceManager.GetString("DataType_Normal", resourceCulture);
+            }
+        }
+        
+        public static string DataType_NIR {
+            get {
+                return ResourceManager.GetString("DataType_NIR", resourceCulture);
+            }
+        }
+        
+        public static string DataType_Camera1 {
+            get {
+                return ResourceManager.GetString("DataType_Camera1", resourceCulture);
+            }
+        }
+        
+        public static string DataType_Camera2 {
+            get {
+                return ResourceManager.GetString("DataType_Camera2", resourceCulture);
+            }
+        }
+        
+        public static string DataType_Camera3 {
+            get {
+                return ResourceManager.GetString("DataType_Camera3", resourceCulture);
+            }
+        }
+        
+        public static string DataType_Camera4 {
+            get {
+                return ResourceManager.GetString("DataType_Camera4", resourceCulture);
+            }
+        }
+        
+        public static string DataType_Camera5 {
+            get {
+                return ResourceManager.GetString("DataType_Camera5", resourceCulture);
+            }
+        }
+        
+        public static string DataType_Camera6 {
+            get {
+                return ResourceManager.GetString("DataType_Camera6", resourceCulture);
+            }
+        }
+        
+        public static string Message_ClearLogConfirm {
+            get {
+                return ResourceManager.GetString("Message_ClearLogConfirm", resourceCulture);
+            }
+        }
+        
+        public static string Dialog_ClearLog {
+            get {
+                return ResourceManager.GetString("Dialog_ClearLog", resourceCulture);
+            }
+        }
+        
+        public static string Message_ExportSuccess {
+            get {
+                return ResourceManager.GetString("Message_ExportSuccess", resourceCulture);
+            }
+        }
+        
+        public static string Dialog_ExportComplete {
+            get {
+                return ResourceManager.GetString("Dialog_ExportComplete", resourceCulture);
+            }
+        }
+        
+        public static string Message_ExportError {
+            get {
+                return ResourceManager.GetString("Message_ExportError", resourceCulture);
+            }
+        }
+        
+        public static string Dialog_ExportError {
+            get {
+                return ResourceManager.GetString("Dialog_ExportError", resourceCulture);
+            }
+        }
+        
+        public static string Message_ImageNotFound {
+            get {
+                return ResourceManager.GetString("Message_ImageNotFound", resourceCulture);
+            }
+        }
+        
+        public static string Dialog_Error {
+            get {
+                return ResourceManager.GetString("Dialog_Error", resourceCulture);
+            }
+        }
+        
+        public static string Dialog_ImagePreview {
+            get {
+                return ResourceManager.GetString("Dialog_ImagePreview", resourceCulture);
+            }
+        }
+        
+        public static string Dialog_Settings {
+            get {
+                return ResourceManager.GetString("Dialog_Settings", resourceCulture);
+            }
+        }
+        
+        public static string Filter_TextFiles {
+            get {
+                return ResourceManager.GetString("Filter_TextFiles", resourceCulture);
+            }
+        }
+        
+        public static string Camera_Cam1 {
+            get {
+                return ResourceManager.GetString("Camera_Cam1", resourceCulture);
+            }
+        }
+        
+        public static string Camera_Cam2 {
+            get {
+                return ResourceManager.GetString("Camera_Cam2", resourceCulture);
+            }
+        }
+        
+        public static string Camera_Cam3 {
+            get {
+                return ResourceManager.GetString("Camera_Cam3", resourceCulture);
+            }
+        }
+        
+        public static string Camera_Cam4 {
+            get {
+                return ResourceManager.GetString("Camera_Cam4", resourceCulture);
+            }
+        }
+        
+        public static string Camera_Cam5 {
+            get {
+                return ResourceManager.GetString("Camera_Cam5", resourceCulture);
+            }
+        }
+        
+        public static string Camera_Cam6 {
+            get {
+                return ResourceManager.GetString("Camera_Cam6", resourceCulture);
+            }
+        }
+        
         public static string Menu_File {
             get {
                 return ResourceManager.GetString("Menu_File", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 보기.
-        /// </summary>
         public static string Menu_View {
             get {
                 return ResourceManager.GetString("Menu_View", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 도구.
-        /// </summary>
         public static string Menu_Tools {
             get {
                 return ResourceManager.GetString("Menu_Tools", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 도움말.
-        /// </summary>
         public static string Menu_Help {
             get {
                 return ResourceManager.GetString("Menu_Help", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 종료.
-        /// </summary>
         public static string Menu_Exit {
             get {
                 return ResourceManager.GetString("Menu_Exit", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 새로고침.
-        /// </summary>
         public static string Menu_Refresh {
             get {
                 return ResourceManager.GetString("Menu_Refresh", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 설정.
-        /// </summary>
         public static string Menu_Settings {
             get {
                 return ResourceManager.GetString("Menu_Settings", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 정보.
-        /// </summary>
         public static string Menu_About {
             get {
                 return ResourceManager.GetString("Menu_About", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 모니터링 시작.
-        /// </summary>
         public static string Tooltip_StartMonitoring {
             get {
                 return ResourceManager.GetString("Tooltip_StartMonitoring", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 모니터링 중지.
-        /// </summary>
         public static string Tooltip_StopMonitoring {
             get {
                 return ResourceManager.GetString("Tooltip_StopMonitoring", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 설정 열기.
-        /// </summary>
         public static string Tooltip_OpenSettings {
             get {
                 return ResourceManager.GetString("Tooltip_OpenSettings", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 데이터 새로고침.
-        /// </summary>
         public static string Tooltip_RefreshData {
             get {
                 return ResourceManager.GetString("Tooltip_RefreshData", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 로그 메시지 검색.
-        /// </summary>
         public static string Tooltip_SearchLog {
             get {
                 return ResourceManager.GetString("Tooltip_SearchLog", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 로그 레벨로 필터링.
-        /// </summary>
         public static string Tooltip_FilterLevel {
             get {
                 return ResourceManager.GetString("Tooltip_FilterLevel", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 파일 개수.
-        /// </summary>
         public static string Label_FileCounts {
             get {
                 return ResourceManager.GetString("Label_FileCounts", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 매칭 상태.
-        /// </summary>
         public static string Label_MatchingStatus {
             get {
                 return ResourceManager.GetString("Label_MatchingStatus", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 전체.
-        /// </summary>
         public static string Label_Total {
             get {
                 return ResourceManager.GetString("Label_Total", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to NIR 포함.
-        /// </summary>
         public static string Label_WithNIR {
             get {
                 return ResourceManager.GetString("Label_WithNIR", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to NIR 없음.
-        /// </summary>
         public static string Label_WithoutNIR {
             get {
                 return ResourceManager.GetString("Label_WithoutNIR", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 실패.
-        /// </summary>
         public static string Label_Failed {
             get {
                 return ResourceManager.GetString("Label_Failed", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 이상.
-        /// </summary>
         public static string Label_Abnormal {
             get {
                 return ResourceManager.GetString("Label_Abnormal", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to NIR1.
-        /// </summary>
         public static string Label_NIR1 {
             get {
                 return ResourceManager.GetString("Label_NIR1", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 일반1.
-        /// </summary>
         public static string Label_Normal1 {
             get {
                 return ResourceManager.GetString("Label_Normal1", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Cam1.
-        /// </summary>
         public static string Label_Cam1 {
             get {
                 return ResourceManager.GetString("Label_Cam1", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Cam2.
-        /// </summary>
         public static string Label_Cam2 {
             get {
                 return ResourceManager.GetString("Label_Cam2", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to Cam3.
-        /// </summary>
         public static string Label_Cam3 {
             get {
                 return ResourceManager.GetString("Label_Cam3", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 준비됨.
-        /// </summary>
         public static string Status_Ready {
             get {
                 return ResourceManager.GetString("Status_Ready", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 전체.
-        /// </summary>
         public static string Status_All {
             get {
                 return ResourceManager.GetString("Status_All", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 디버그.
-        /// </summary>
         public static string Status_Debug {
             get {
                 return ResourceManager.GetString("Status_Debug", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 정보.
-        /// </summary>
         public static string Status_Info {
             get {
                 return ResourceManager.GetString("Status_Info", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 경고.
-        /// </summary>
         public static string Status_Warning {
             get {
                 return ResourceManager.GetString("Status_Warning", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 오류.
-        /// </summary>
         public static string Status_Error {
             get {
                 return ResourceManager.GetString("Status_Error", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 메시지 로그.
-        /// </summary>
         public static string Log_MessageLog {
             get {
                 return ResourceManager.GetString("Log_MessageLog", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 검색:.
-        /// </summary>
         public static string Log_Search {
             get {
                 return ResourceManager.GetString("Log_Search", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 레벨:.
-        /// </summary>
         public static string Log_Level {
             get {
                 return ResourceManager.GetString("Log_Level", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 자동 스크롤.
-        /// </summary>
         public static string Log_AutoScroll {
             get {
                 return ResourceManager.GetString("Log_AutoScroll", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 지우기.
-        /// </summary>
         public static string Log_Clear {
             get {
                 return ResourceManager.GetString("Log_Clear", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 내보내기.
-        /// </summary>
         public static string Log_Export {
             get {
                 return ResourceManager.GetString("Log_Export", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 심각도.
-        /// </summary>
         public static string Log_Severity {
             get {
                 return ResourceManager.GetString("Log_Severity", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 시간.
-        /// </summary>
         public static string Log_Time {
             get {
                 return ResourceManager.GetString("Log_Time", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 소스.
-        /// </summary>
         public static string Log_Source {
             get {
                 return ResourceManager.GetString("Log_Source", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 메시지.
-        /// </summary>
         public static string Log_Message {
             get {
                 return ResourceManager.GetString("Log_Message", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 워크플로우 제어.
-        /// </summary>
         public static string Panel_WorkflowControl {
             get {
                 return ResourceManager.GetString("Panel_WorkflowControl", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 시스템 상태.
-        /// </summary>
         public static string Panel_SystemStatus {
             get {
                 return ResourceManager.GetString("Panel_SystemStatus", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 시료 정보.
-        /// </summary>
         public static string Panel_SampleInformation {
             get {
                 return ResourceManager.GetString("Panel_SampleInformation", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 데이터 상태.
-        /// </summary>
         public static string Panel_DataStatus {
             get {
                 return ResourceManager.GetString("Panel_DataStatus", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 인덱스.
-        /// </summary>
         public static string Column_Index {
             get {
                 return ResourceManager.GetString("Column_Index", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 상태.
-        /// </summary>
         public static string Column_Status {
             get {
                 return ResourceManager.GetString("Column_Status", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 전체 그룹:.
-        /// </summary>
         public static string Status_TotalGroups {
             get {
                 return ResourceManager.GetString("Status_TotalGroups", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 매칭률:.
-        /// </summary>
         public static string Status_MatchRate {
             get {
                 return ResourceManager.GetString("Status_MatchRate", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 실패:.
-        /// </summary>
         public static string Status_Failures {
             get {
                 return ResourceManager.GetString("Status_Failures", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 일반:.
-        /// </summary>
         public static string Status_Normal {
             get {
                 return ResourceManager.GetString("Status_Normal", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to NIR:.
-        /// </summary>
         public static string Status_NIR {
             get {
                 return ResourceManager.GetString("Status_NIR", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to NIR 필터링:.
-        /// </summary>
         public static string Status_NirFiltering {
             get {
                 return ResourceManager.GetString("Status_NirFiltering", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 시료명:.
-        /// </summary>
         public static string Sample_Name {
             get {
                 return ResourceManager.GetString("Sample_Name", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to NIR 이동:.
-        /// </summary>
         public static string Sample_MoveNIR {
             get {
                 return ResourceManager.GetString("Sample_MoveNIR", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 전체 데이터 이동:.
-        /// </summary>
         public static string Sample_MoveAllData {
             get {
                 return ResourceManager.GetString("Sample_MoveAllData", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 치명적 오류.
-        /// </summary>
         public static string Error_Critical {
             get {
                 return ResourceManager.GetString("Error_Critical", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 치명적 오류 ({0}):\n{1}\n\n자세한 내용은 critical_error.log 파일을 확인하세요..
-        /// </summary>
         public static string Error_CriticalMessage {
             get {
                 return ResourceManager.GetString("Error_CriticalMessage", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 일반.
-        /// </summary>
         public static string WindowState_Normal {
             get {
                 return ResourceManager.GetString("WindowState_Normal", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 최대화.
-        /// </summary>
         public static string WindowState_Maximized {
             get {
                 return ResourceManager.GetString("WindowState_Maximized", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 최소화.
-        /// </summary>
         public static string WindowState_Minimized {
             get {
                 return ResourceManager.GetString("WindowState_Minimized", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to ✓ 완료.
-        /// </summary>
         public static string Status_Complete {
             get {
                 return ResourceManager.GetString("Status_Complete", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to ⏳ 대기 중.
-        /// </summary>
         public static string Status_Pending {
             get {
                 return ResourceManager.GetString("Status_Pending", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to ⚙ 처리 중.
-        /// </summary>
         public static string Status_Processing {
             get {
                 return ResourceManager.GetString("Status_Processing", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 📦 이동됨.
-        /// </summary>
         public static string Status_Moved {
             get {
                 return ResourceManager.GetString("Status_Moved", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to ⚠ 이상.
-        /// </summary>
-        public static string Status_Abnormal {
-            get {
-                return ResourceManager.GetString("Status_Abnormal", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to ✗ 오류.
-        /// </summary>
         public static string Status_GroupError {
             get {
                 return ResourceManager.GetString("Status_GroupError", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to ⚠ 이상 (z-score 분석으로 감지됨).
-        /// </summary>
+        public static string Status_Abnormal {
+            get {
+                return ResourceManager.GetString("Status_Abnormal", resourceCulture);
+            }
+        }
+        
         public static string Status_AbnormalDetected {
             get {
                 return ResourceManager.GetString("Status_AbnormalDetected", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 불완전.
-        /// </summary>
         public static string Status_Incomplete {
             get {
                 return ResourceManager.GetString("Status_Incomplete", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to 누락.
-        /// </summary>
         public static string Status_Missing {
             get {
                 return ResourceManager.GetString("Status_Missing", resourceCulture);
             }
         }
         
-        /// <summary>
-        ///   Looks up a localized string similar to z-score 분석으로 감지됨.
-        /// </summary>
         public static string Status_AbnormalReason {
             get {
                 return ResourceManager.GetString("Status_AbnormalReason", resourceCulture);
             }
         }
+        
+        public static string Status_Activated {
+            get {
+                return ResourceManager.GetString("Status_Activated", resourceCulture);
+            }
+        }
+        
+        public static string Status_Deactivated {
+            get {
+                return ResourceManager.GetString("Status_Deactivated", resourceCulture);
+            }
+        }
     }
 }
-

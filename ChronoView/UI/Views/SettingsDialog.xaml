@@ -24,205 +24,205 @@
         <!-- Button Panel -->
         <Border DockPanel.Dock="Bottom" Background="#f5f5f5" BorderBrush="#d0d0d0" BorderThickness="0,1,0,0" Padding="10">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="Apply" Width="80" Height="30" Margin="0,0,10,0" Command="{Binding ApplyCommand}"/>
-                <Button Content="OK" Width="80" Height="30" Margin="0,0,10,0" Command="{Binding SaveCommand}" IsDefault="True"/>
-                <Button Content="Cancel" Width="80" Height="30" Click="Cancel_Click" IsCancel="True"/>
+                <Button Content="{x:Static res:Strings.Button_Apply}" Width="80" Height="30" Margin="0,0,10,0" Command="{Binding ApplyCommand}"/>
+                <Button Content="{x:Static res:Strings.Button_OK}" Width="80" Height="30" Margin="0,0,10,0" Command="{Binding SaveCommand}" IsDefault="True"/>
+                <Button Content="{x:Static res:Strings.Button_Cancel}" Width="80" Height="30" Click="Cancel_Click" IsCancel="True"/>
             </StackPanel>
         </Border>
         
         <!-- Main Content -->
         <TabControl Margin="10">
             <!-- Paths Tab -->
-            <TabItem Header="Paths">
+            <TabItem Header="{x:Static res:Strings.Tab_Paths}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
                         <!-- Line 1 Paths -->
-                        <TextBlock Text="Line 1 Paths" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_Line1Paths}" Style="{StaticResource SectionHeaderStyle}"/>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="NIR 1 Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_Nir1Path}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding NirPath}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="nir1"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="nir1" ToolTip="Open folder in Explorer"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="nir1"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="nir1" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Normal 1 Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_Normal1Path}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding NormalPath}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="normal1"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="normal1" ToolTip="Open folder in Explorer"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="normal1"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="normal1" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Camera 1 Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_Camera1Path}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Camera1Path}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="cam1"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="cam1" ToolTip="Open folder in Explorer"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="cam1"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="cam1" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Camera 2 Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_Camera2Path}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Camera2Path}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="cam2"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="cam2" ToolTip="Open folder in Explorer"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="cam2"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="cam2" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Camera 3 Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_Camera3Path}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Camera3Path}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="cam3"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="cam3" ToolTip="Open folder in Explorer"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="cam3"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="cam3" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                         
                         <!-- Line 2 Paths -->
-                        <TextBlock Text="Line 2 Paths" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_Line2Paths}" Style="{StaticResource SectionHeaderStyle}"/>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="NIR 2 Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_Nir2Path}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Nir2Path}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="nir2"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="nir2" ToolTip="Open folder in Explorer"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="nir2"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="nir2" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Normal 2 Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_Normal2Path}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Normal2Path}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="normal2"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="normal2" ToolTip="Open folder in Explorer"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="normal2"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="normal2" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Camera 4 Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_Camera4Path}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Camera4Path}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="cam4"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="cam4" ToolTip="Open folder in Explorer"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="cam4"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="cam4" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Camera 5 Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_Camera5Path}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Camera5Path}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="cam5"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="cam5" ToolTip="Open folder in Explorer"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="cam5"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="cam5" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Camera 6 Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_Camera6Path}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Camera6Path}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="cam6"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="cam6" ToolTip="Open folder in Explorer"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="cam6"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="cam6" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                         
                         <!-- Output Path -->
-                        <TextBlock Text="Output" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_Output}" Style="{StaticResource SectionHeaderStyle}"/>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Output Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_OutputPath}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding OutputPath}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="output"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="output" ToolTip="Open folder in Explorer"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="output"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="output" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                         
                         <!-- Quarantine Path -->
-                        <TextBlock Text="Quarantine (Trash)" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_Quarantine}" Style="{StaticResource SectionHeaderStyle}"/>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Quarantine Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_QuarantinePath}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding DeleteQuarantinePath}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="quarantine"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="quarantine" ToolTip="Open folder in Explorer"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="quarantine"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="quarantine" ToolTip="Open folder in Explorer"/>
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
             
             <!-- Advanced Tab -->
-            <TabItem Header="Advanced">
+            <TabItem Header="{x:Static res:Strings.Tab_Advanced}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
-                        <TextBlock Text="Camera Subfolder Options" Style="{StaticResource SectionHeaderStyle}"/>
-                        <CheckBox Content="Use camera subfolder for Normal1" IsChecked="{Binding UseCameraSubfolderNormal}" Margin="0,5"/>
-                        <CheckBox Content="Use camera subfolder for Normal2" IsChecked="{Binding UseCameraSubfolderNormal2}" Margin="0,5"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_CameraSubfolderOptions}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_UseCameraSubfolderNormal}" IsChecked="{Binding UseCameraSubfolderNormal}" Margin="0,5"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_UseCameraSubfolderNormal2}" IsChecked="{Binding UseCameraSubfolderNormal2}" Margin="0,5"/>
                         
-                        <TextBlock Text="Image Processing" Style="{StaticResource SectionHeaderStyle}"/>
-                        <CheckBox Content="Enable disk cache for thumbnails" IsChecked="{Binding UseDiskCache}" Margin="0,5"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_ImageProcessing}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_EnableDiskCache}" IsChecked="{Binding UseDiskCache}" Margin="0,5"/>
                         
-                        <TextBlock Text="UI Options" Style="{StaticResource SectionHeaderStyle}"/>
-                        <CheckBox Content="Legacy UI mode" IsChecked="{Binding LegacyUiMode}" Margin="0,5"/>
-                        <CheckBox Content="Use folder suffix" IsChecked="{Binding UseFolderSuffix}" Margin="0,5"/>
-                        <CheckBox Content="Show tooltips" IsChecked="{Binding ShowTooltips}" Margin="0,5"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_UIOptions}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_LegacyUiMode}" IsChecked="{Binding LegacyUiMode}" Margin="0,5"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_UseFolderSuffix}" IsChecked="{Binding UseFolderSuffix}" Margin="0,5"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_ShowTooltips}" IsChecked="{Binding ShowTooltips}" Margin="0,5"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
             
             <!-- UI Options Tab -->
-            <TabItem Header="UI Options">
+            <TabItem Header="{x:Static res:Strings.Tab_UIOptions}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
-                        <TextBlock Text="Image Display Size" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_ImageDisplaySize}" Style="{StaticResource SectionHeaderStyle}"/>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Image Width (px):" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_ImageWidth}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding DisplayImageWidth}" Width="100"/>
-                            <TextBlock Text="(Default: 120)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                            <TextBlock Text="{x:Static res:Strings.Default_120}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Image Height (px):" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_ImageHeight}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding DisplayImageHeight}" Width="100"/>
-                            <TextBlock Text="(Default: 90)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                            <TextBlock Text="{x:Static res:Strings.Default_90}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="NIR Display Width (px):" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_NirDisplayWidth}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding NirDisplayWidth}" Width="100"/>
-                            <TextBlock Text="(Default: 120)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                            <TextBlock Text="{x:Static res:Strings.Default_120}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="NIR Display Height (px):" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_NirDisplayHeight}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding NirDisplayHeight}" Width="100"/>
-                            <TextBlock Text="(Default: 90)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                            <TextBlock Text="{x:Static res:Strings.Default_90}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Row Height (px):" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_RowHeight}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding DataGridRowHeight}" Width="100"/>
-                            <TextBlock Text="(Default: 100)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                            <TextBlock Text="{x:Static res:Strings.Default_100}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
                         </StackPanel>
 
-                        <TextBlock Text="NIR Graph Options" Style="{StaticResource SectionHeaderStyle}"/>
-                        <CheckBox Content="Enable NIR Graph" IsChecked="{Binding EnableNirGraph}" Margin="0,5"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_NirGraphOptions}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_EnableNirGraph}" IsChecked="{Binding EnableNirGraph}" Margin="0,5"/>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Graph Gen Width (px):" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_GraphGenWidth}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding NirThumbnailWidth}" Width="100"/>
-                            <TextBlock Text="(Image Generation Size)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                            <TextBlock Text="{x:Static res:Strings.Helper_ImageGenerationSize}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Graph Gen Height (px):" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_GraphGenHeight}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding NirThumbnailHeight}" Width="100"/>
-                            <TextBlock Text="(Image Generation Size)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                            <TextBlock Text="{x:Static res:Strings.Helper_ImageGenerationSize}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
                         </StackPanel>
 
-                        <TextBlock Text="UI Display Options" Style="{StaticResource SectionHeaderStyle}"/>
-                        <CheckBox Content="Legacy UI mode" IsChecked="{Binding LegacyUiMode}" Margin="0,5"/>
-                        <CheckBox Content="Show tooltips" IsChecked="{Binding ShowTooltips}" Margin="0,5"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_UIDisplayOptions}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_LegacyUiMode}" IsChecked="{Binding LegacyUiMode}" Margin="0,5"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_ShowTooltips}" IsChecked="{Binding ShowTooltips}" Margin="0,5"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
             
             <!-- Data Sequence Tab -->
-            <TabItem Header="Data Sequence">
+            <TabItem Header="{x:Static res:Strings.Tab_DataSequence}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
-                        <TextBlock Text="Data Arrival Sequence Configuration" Style="{StaticResource SectionHeaderStyle}"/>
-                        <TextBlock Text="Configure the expected order of data arrival and matching tolerances." 
+                        <TextBlock Text="{x:Static res:Strings.Section_DataArrivalSequence}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="{x:Static res:Strings.Helper_DataSequenceDescription}" 
                                    TextWrapping="Wrap" Margin="0,0,0,10" Foreground="Gray"/>
                         
                         
                         <!-- Sequence List -->
-                        <TextBlock Text="Data Sequence (Drag to reorder):" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="{x:Static res:Strings.Label_DataSequence}" Style="{StaticResource SectionHeaderStyle}"/>
                         <Border BorderBrush="#d0d0d0" BorderThickness="1" Padding="5" Background="White">
                             <ListBox x:Name="SequenceListBox" 
                                      ItemsSource="{Binding SequenceItems}" 
@@ -256,23 +256,23 @@
                                                 
                                                 <!-- Min Delay -->
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <TextBlock Text="Min: " Foreground="Gray"/>
+                                                    <TextBlock Text="{x:Static res:Strings.Label_Min}" Foreground="Gray"/>
                                                     <TextBox Text="{Binding MinDelay}" Width="40"
                                                              VerticalAlignment="Center" Padding="2"/>
-                                                    <TextBlock Text="s" Margin="2,0,0,0" VerticalAlignment="Center" Foreground="Gray"/>
+                                                    <TextBlock Text="{x:Static res:Strings.Label_Seconds}" Margin="2,0,0,0" VerticalAlignment="Center" Foreground="Gray"/>
                                                 </StackPanel>
                                                 
                                                 <!-- Max Delay -->
                                                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <TextBlock Text="Max: " Foreground="Gray"/>
+                                                    <TextBlock Text="{x:Static res:Strings.Label_Max}" Foreground="Gray"/>
                                                     <TextBox Text="{Binding MaxDelay}" Width="40"
                                                              VerticalAlignment="Center" Padding="2"/>
-                                                    <TextBlock Text="s" Margin="2,0,0,0" VerticalAlignment="Center" Foreground="Gray"/>
+                                                    <TextBlock Text="{x:Static res:Strings.Label_Seconds}" Margin="2,0,0,0" VerticalAlignment="Center" Foreground="Gray"/>
                                                 </StackPanel>
                                                 
                                                 <!-- Enabled Checkbox -->
                                                 <CheckBox Grid.Column="4" IsChecked="{Binding Enabled}" 
-                                                          Content="Enabled" VerticalAlignment="Center"/>
+                                                          Content="{x:Static res:Strings.Checkbox_Enabled}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
@@ -295,76 +295,76 @@
                         
                         <!-- Help Text -->
                         <TextBlock TextWrapping="Wrap" Margin="0,10" Foreground="Gray" FontStyle="Italic">
-                            <Run Text="• Drag ≡ to reorder items"/>
+                            <Run Text="{x:Static res:Strings.Help_DragToReorder}"/>
                             <LineBreak/>
-                            <Run Text="• 'Min' is the minimum time (seconds) after the previous data type"/>
+                            <Run Text="{x:Static res:Strings.Help_MinDelay}"/>
                             <LineBreak/>
-                            <Run Text="• 'Max' is the maximum time (seconds) after the previous data type"/>
+                            <Run Text="{x:Static res:Strings.Help_MaxDelay}"/>
                             <LineBreak/>
-                            <Run Text="• Unchecked items will be hidden from the UI"/>
+                            <Run Text="{x:Static res:Strings.Help_UncheckedItems}"/>
                         </TextBlock>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
             
             <!-- External Programs Tab -->
-            <TabItem Header="External Programs">
+            <TabItem Header="{x:Static res:Strings.Tab_ExternalPrograms}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
-                        <TextBlock Text="External Program Configuration" Style="{StaticResource SectionHeaderStyle}"/>
-                        <TextBlock Text="Configure paths to external programs launched from Setup window." 
+                        <TextBlock Text="{x:Static res:Strings.Section_ExternalProgramConfig}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="{x:Static res:Strings.Helper_ExternalProgramDescription}" 
                                    TextWrapping="Wrap" Margin="0,0,0,10" Foreground="Gray"/>
                         
                         <!-- General Camera Program -->
-                        <TextBlock Text="General Camera Program" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_GeneralCameraProgram}" Style="{StaticResource SectionHeaderStyle}"/>
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Program Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_ProgramPath}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding GeneralCameraProgramPath}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Command="{Binding BrowseExeCommand}" CommandParameter="generalcamera"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Command="{Binding BrowseExeCommand}" CommandParameter="generalcamera"/>
                         </StackPanel>
                         
                         <!-- NIR Program 1 -->
-                        <TextBlock Text="NIR Program 1" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_NirProgram1}" Style="{StaticResource SectionHeaderStyle}"/>
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Program Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_ProgramPath}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Nir1ProgramPath}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Command="{Binding BrowseExeCommand}" CommandParameter="nir1program"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Command="{Binding BrowseExeCommand}" CommandParameter="nir1program"/>
                         </StackPanel>
                         
                         <!-- NIR Program 2 -->
-                        <TextBlock Text="NIR Program 2" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="{x:Static res:Strings.Section_NirProgram2}" Style="{StaticResource SectionHeaderStyle}"/>
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Program Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_ProgramPath}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Nir2ProgramPath}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="Browse..." Width="80" Command="{Binding BrowseExeCommand}" CommandParameter="nir2program"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Command="{Binding BrowseExeCommand}" CommandParameter="nir2program"/>
                         </StackPanel>
                         
                         <!-- NIR2 Filtering Paths -->
-                        <TextBlock Text="NIR2 Filtering Configuration" Style="{StaticResource SectionHeaderStyle}"/>
-                        <TextBlock Text="Set paths for automatic NIR spectrum filtering." 
+                        <TextBlock Text="{x:Static res:Strings.Section_Nir2FilteringConfig}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="{x:Static res:Strings.Helper_Nir2FilteringDescription}" 
                                    TextWrapping="Wrap" Margin="0,0,0,5" Foreground="Gray" FontSize="11"/>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Monitor Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_MonitorPath}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Nir2FilterMonitorPath}" Width="400" Margin="0,0,5,0" 
-                                     ToolTip="Folder path to monitor for new NIR .txt files"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="nir2filtermonitor"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="nir2filtermonitor" ToolTip="Open folder in Explorer"/>
+                                     ToolTip="{x:Static res:Strings.Tooltip_MonitorPath}"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="nir2filtermonitor"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="nir2filtermonitor" ToolTip="{x:Static res:Strings.Tooltip_OpenFolderInExplorer}"/>
                         </StackPanel>
                         
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="Destination Path:" Style="{StaticResource LabelStyle}"/>
+                            <Label Content="{x:Static res:Strings.Label_DestinationPath}" Style="{StaticResource LabelStyle}"/>
                             <TextBox Text="{Binding Nir2FilterDestinationPath}" Width="400" Margin="0,0,5,0"
-                                     ToolTip="Folder path where filtered NIR files will be moved"/>
-                            <Button Content="Browse..." Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="nir2filterdest"/>
-                            <Button Content="📁 Open" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="nir2filterdest" ToolTip="Open folder in Explorer"/>
+                                     ToolTip="{x:Static res:Strings.Tooltip_DestinationPath}"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0" Command="{Binding BrowsePathCommand}" CommandParameter="nir2filterdest"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80" Command="{Binding OpenFolderCommand}" CommandParameter="nir2filterdest" ToolTip="{x:Static res:Strings.Tooltip_OpenFolderInExplorer}"/>
                         </StackPanel>
                         
                         <!-- Help Text -->
                         <TextBlock TextWrapping="Wrap" Margin="0,20,0,0" Foreground="Gray" FontStyle="Italic">
-                            <Run Text="• These programs will be launched when clicking the corresponding buttons in the Setup window"/>
+                            <Run Text="{x:Static res:Strings.Help_ExternalProgramsLaunch}"/>
                             <LineBreak/>
-                            <Run Text="• Only .exe files are supported"/>
+                            <Run Text="{x:Static res:Strings.Help_OnlyExeSupported}"/>
                         </TextBlock>
                     </StackPanel>
                 </ScrollViewer>
