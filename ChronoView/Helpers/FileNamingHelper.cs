@@ -129,5 +129,36 @@ namespace ChronoView.Helpers
             var fileName = Path.GetFileName(filePath);
             return fileName.Equals("stitched_original.png", StringComparison.OrdinalIgnoreCase);
         }
+        /// <summary>
+        /// Generic timestamp extraction based on FileType
+        /// </summary>
+        public static DateTime? ExtractTimestamp(string filePath, string fileType)
+        {
+            try
+            {
+                if (fileType == "Nir")
+                {
+                    var fileName = Path.GetFileName(filePath);
+                    return ExtractTimestampFromNirFileName(fileName);
+                }
+                
+                if (fileType == "Normal")
+                {
+                    return ExtractTimestampFromFolderName(filePath);
+                }
+                
+                if (fileType == "Camera")
+                {
+                    var fileName = Path.GetFileName(filePath);
+                    return ExtractTimestampFromCameraFileName(fileName);
+                }
+                
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }

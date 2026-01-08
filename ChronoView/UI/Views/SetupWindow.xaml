@@ -18,7 +18,7 @@
 
             <!-- Custom Title Bar -->
             <Border Grid.Row="0" 
-                    Background="#5a5a5a" 
+                    Background="#E03030" 
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Grid>
                     <TextBlock Text="시스템 설정 - System Setup"
@@ -66,7 +66,7 @@
                                     </Setter>
                                     <Style.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#4a4a4a"/>
+                                            <Setter Property="Background" Value="#E03030"/>
                                         </Trigger>
                                     </Style.Triggers>
                                 </Style>
@@ -96,7 +96,7 @@
                                     </Setter>
                                     <Style.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#4a4a4a"/>
+                                            <Setter Property="Background" Value="#E03030"/>
                                         </Trigger>
                                     </Style.Triggers>
                                 </Style>
@@ -126,7 +126,7 @@
                                     </Setter>
                                     <Style.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#c62828"/>
+                                            <Setter Property="Background" Value="#E83C44"/>
                                         </Trigger>
                                     </Style.Triggers>
                                 </Style>
@@ -144,7 +144,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- Left Panel - PRISCHE Branding -->
-            <Border Grid.Column="0" Background="#5a5a5a">
+            <Border Grid.Column="0" Background="#E03030">
                 <Grid>
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <!-- PRISCHE Logo -->
@@ -249,9 +249,10 @@
                                            Margin="0,5,0,0"/>
 
                                 <Button Command="{Binding LaunchGeneralCameraCommand}"
+                                        FontFamily="Segoe UI"
                                         Margin="0,25,0,0"
                                         Height="48"
-                                        Background="#6a6a6a"
+                                        Background="#E03030"
                                         Foreground="White"
                                         BorderThickness="0"
                                         FontSize="15"
@@ -269,10 +270,10 @@
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#4a4a4a"/>
+                                                    <Setter Property="Background" Value="#E83C44"/>
                                                 </Trigger>
                                                 <Trigger Property="IsPressed" Value="True">
-                                                    <Setter Property="Background" Value="#4a4a4a"/>
+                                                    <Setter Property="Background" Value="#E83C44"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -305,9 +306,10 @@
 
                                 <!-- NIR Button 1 -->
                                 <Button Command="{Binding LaunchNir1CameraCommand}"
+                                        FontFamily="Segoe UI"
                                         Margin="0,25,0,0"
                                         Height="48"
-                                        Background="#6a6a6a"
+                                        Background="#E03030"
                                         Foreground="White"
                                         BorderThickness="0"
                                         FontSize="15"
@@ -325,10 +327,10 @@
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#4a4a4a"/>
+                                                    <Setter Property="Background" Value="#E83C44"/>
                                                 </Trigger>
                                                 <Trigger Property="IsPressed" Value="True">
-                                                    <Setter Property="Background" Value="#4a4a4a"/>
+                                                    <Setter Property="Background" Value="#E83C44"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -337,9 +339,10 @@
 
                                 <!-- NIR Button 2 -->
                                 <Button Command="{Binding LaunchNir2CameraCommand}"
+                                        FontFamily="Segoe UI"
                                         Margin="0,12,0,0"
                                         Height="48"
-                                        Background="#6a6a6a"
+                                        Background="#E03030"
                                         Foreground="White"
                                         BorderThickness="0"
                                         FontSize="15"
@@ -357,10 +360,10 @@
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#4a4a4a"/>
+                                                    <Setter Property="Background" Value="#E83C44"/>
                                                 </Trigger>
                                                 <Trigger Property="IsPressed" Value="True">
-                                                    <Setter Property="Background" Value="#4a4a4a"/>
+                                                    <Setter Property="Background" Value="#E83C44"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -369,9 +372,10 @@
 
                                 <!-- NIR Filtering Toggle Button -->
                                 <Button Command="{Binding ToggleNirFilteringCommand}"
+                                        FontFamily="Segoe UI"
                                         Margin="0,15,0,0"
                                         Height="42"
-                                        Background="{Binding Nir2FilteringForeground}"
+                                        Background="#E03030"
                                         Foreground="White"
                                         BorderThickness="0"
                                         FontSize="13"
@@ -392,10 +396,10 @@
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Opacity" Value="0.9"/>
+                                                    <Setter Property="Background" Value="#E83C44"/>
                                                 </Trigger>
                                                 <Trigger Property="IsPressed" Value="True">
-                                                    <Setter Property="Opacity" Value="0.8"/>
+                                                    <Setter Property="Background" Value="#E83C44"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -428,8 +432,9 @@
 
                         <!-- Start Button -->
                         <Button Command="{Binding StartCommand}"
+                                FontFamily="Segoe UI"
                                 Height="55"
-                                Background="#28A745"
+                                Background="#E03030"
                                 Foreground="White"
                                 BorderThickness="0"
                                 FontSize="16"
@@ -440,7 +445,7 @@
                                 <ControlTemplate TargetType="Button">
                                     <Border Background="{TemplateBinding Background}"
                                             CornerRadius="7">
-                                        <TextBlock Text="프로그램을 모두 실행해주세요"
+                                        <TextBlock Text="모니터링 프로그램 시작"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
                                                    Foreground="{TemplateBinding Foreground}"
@@ -449,10 +454,10 @@
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#218838"/>
+                                            <Setter Property="Background" Value="#E83C44"/>
                                         </Trigger>
                                         <Trigger Property="IsPressed" Value="True">
-                                            <Setter Property="Background" Value="#1E7E34"/>
+                                            <Setter Property="Background" Value="#E83C44"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>

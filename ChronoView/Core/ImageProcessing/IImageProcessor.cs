@@ -12,8 +12,8 @@ public interface IImageProcessor
     /// <param name="width">Desired thumbnail width in pixels.</param>
     /// <param name="height">Desired thumbnail height in pixels.</param>
     /// <param name="cancellationToken">Cancellation token for async operation.</param>
-    /// <returns>Byte array containing the thumbnail image data in JPEG format.</returns>
-    Task<byte[]> GenerateThumbnailAsync(string imagePath, int width, int height, CancellationToken cancellationToken = default);
+    /// <param name="throwOnError">If true, throws exception on error instead of returning placeholder.</param>
+    Task<byte[]> GenerateThumbnailAsync(string imagePath, int width, int height, CancellationToken cancellationToken = default, bool throwOnError = false);
 
     /// <summary>
     /// Extracts metadata from the specified image file.

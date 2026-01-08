@@ -42,6 +42,22 @@ public interface IFileOperationService
         IProgress<OperationProgress>? progress = null,
         Func<string, ConflictResolution>? onConflict = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes specific components of a file group (Partial Delete) using structured paths.
+    /// </summary>
+    /// <param name="group">The file group.</param>
+    /// <param name="componentsToDelete">List of component keys ("Normal", "Nir", "Cam1"..."Cam6") to delete.</param>
+    /// <param name="quarantinePath">Quarantine root path.</param>
+    /// <param name="subject">Subject/sample name.</param>
+    Task<OperationResult> DeleteComponentsAsync(
+        FileGroup group,
+        List<string> componentsToDelete,
+        string quarantinePath,
+        string? subject = null,
+        IProgress<OperationProgress>? progress = null,
+        Func<string, ConflictResolution>? onConflict = null,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>

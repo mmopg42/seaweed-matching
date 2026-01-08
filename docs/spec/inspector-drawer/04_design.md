@@ -624,3 +624,5 @@ InspectorDrawerViewModel (from MainWindowViewModel)
 **Next Step**: 05_tasks.md
 
 
+
+

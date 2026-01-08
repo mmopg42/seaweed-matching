@@ -3,388 +3,302 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using ChronoView.Helpers;
 
-namespace ChronoView.Core.FileWatching
+namespace ChronoView.Core.FileWatching;
+
+public class FileWatcherService : IFileWatcher, IDisposable
 {
-    /// <summary>
-    /// File system monitoring service optimized for WSL/Network paths using high-frequency polling
-    /// </summary>
-    public class FileWatcherService : IFileWatcher, IDisposable
+    private readonly ILogger<FileWatcherService> _logger;
+    private readonly List<FileSystemWatcher> _watchers = new();
+    private readonly HashSet<string> _knownFiles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _lockObject = new();
+    private bool _isWatching;
+    private System.Threading.Timer? _pollingTimer;
+    private IEnumerable<string> _paths = Enumerable.Empty<string>();
+    private FileWatcherOptions? _options;
+
+    public event EventHandler<FileSystemEventArgs>? FileChanged;
+
+    public FileWatcherService(ILogger<FileWatcherService> logger)
     {
-        private readonly ILogger<FileWatcherService> _logger;
-        private readonly FolderTimestampCache _folderTimestamps;
-        private readonly List<FileSystemWatcher> _watchers = new();
-        private readonly PriorityEventChannel _eventChannel;
-        private CancellationTokenSource? _cancellationTokenSource;
-        private readonly System.Threading.Timer _healthCheckTimer;
-        private System.Timers.Timer? _pollingTimer;
-        private Task? _processingTask;
-        private bool _isWatching;
-        private WatcherHealthStatus _healthStatus = WatcherHealthStatus.Healthy;
-        private DateTime _lastEventTime = DateTime.UtcNow;
-        private int _eventCount;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
 
-        private readonly object _lockObject = new();
-        private readonly HashSet<string> _knownItems = new();
-        private IEnumerable<string> _watchPaths = Enumerable.Empty<string>();
-        private FileWatcherOptions _options = new();
-
-        public event EventHandler<FileSystemEventArgs>? FileChanged;
-        public event EventHandler<WatcherHealthEventArgs>? HealthStatusChanged;
-
-        public bool IsWatching
+    public Task StartWatchingAsync(IEnumerable<string> paths, FileWatcherOptions options)
+    {
+        if (_isWatching)
         {
-            get { lock (_lockObject) return _isWatching; }
-            private set { lock (_lockObject) _isWatching = value; }
+            _logger.LogWarning("Watcher is already running.");
+            return Task.CompletedTask;
         }
 
-        public WatcherHealthStatus HealthStatus
+        _paths = paths;
+        _options = options;
+        _logger.LogInformation("Starting hybrid file watcher (Polling: {EnablePolling})", options.EnablePolling);
+
+        try
         {
-            get { lock (_lockObject) return _healthStatus; }
-            private set
+            // 1. Silent Baseline Scan (Don't fire events, just populate known files)
+            PerformSilentScan(paths);
+
+            // 2. Setup Watchers
+            foreach (var path in paths)
             {
-                lock (_lockObject)
+                if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
                 {
-                    if (_healthStatus != value)
-                    {
-                        _healthStatus = value;
-                        OnHealthStatusChanged(new WatcherHealthEventArgs
-                        {
-                            Status = value,
-                            Message = $"Watcher health status changed to {value}",
-                            Timestamp = DateTime.UtcNow
-                        });
-                    }
-                }
-            }
-        }
-
-        public FileWatcherService(
-            ILogger<FileWatcherService> logger,
-            FolderTimestampCache folderTimestamps)
-        {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _folderTimestamps = folderTimestamps ?? throw new ArgumentNullException(nameof(folderTimestamps));
-            _eventChannel = new PriorityEventChannel(logger as ILogger<PriorityEventChannel>);
-            _healthCheckTimer = new System.Threading.Timer(PerformHealthCheck, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
-        }
-
-        public async Task StartWatchingAsync(IEnumerable<string> paths, FileWatcherOptions? options = null)
-        {
-            if (IsWatching)
-            {
-                _logger.LogWarning("File watcher is already running");
-                return;
-            }
-
-            _watchPaths = paths.ToList();
-            _options = options ?? new FileWatcherOptions();
-            _logger.LogInformation("Starting high-frequency polling (0.1s) for {PathCount} paths", _watchPaths.Count());
-
-            try
-            {
-                _cancellationTokenSource?.Dispose();
-                _cancellationTokenSource = new CancellationTokenSource();
-
-                // 1. Silent Baseline Scan
-                lock (_lockObject)
-                {
-                    _knownItems.Clear();
-                    foreach (var path in _watchPaths)
-                    {
-                        if (Directory.Exists(path))
-                        {
-                            try
-                            {
-                                // Add directories
-                                foreach (var dir in Directory.EnumerateDirectories(path, "*", SearchOption.AllDirectories))
-                                    _knownItems.Add(dir);
-                                
-                                // Add files
-                                foreach (var file in Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories))
-                                    _knownItems.Add(file);
-                            }
-                            catch (Exception ex) { _logger.LogWarning(ex, "Baseline scan failed for {Path}", path); }
-                        }
-                    }
-                    _logger.LogInformation("Baseline scan complete: {Count} items registered", _knownItems.Count);
+                    _logger.LogWarning("Directory does not exist or invalid: {Path}", path);
+                    continue;
                 }
 
-                // 2. Setup Polling Timer (Primary Detection)
-                _pollingTimer = new System.Timers.Timer(100); // 100ms as requested
-                _pollingTimer.Elapsed += async (s, e) => await PollFileSystemAsync();
-                _pollingTimer.AutoReset = true;
-                _pollingTimer.Start();
-
-                // 3. Setup FileSystemWatcher (Secondary/Best Effort)
-                foreach (var path in _watchPaths)
+                var watcher = new FileSystemWatcher(path)
                 {
-                    if (Directory.Exists(path))
-                    {
-                        var watcher = CreateWatcher(path);
-                        _watchers.Add(watcher);
-                        watcher.EnableRaisingEvents = true;
-                    }
-                }
+                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.CreationTime,
+                    Filter = "*.*",
+                    IncludeSubdirectories = true, // We need to see contents of Normal folders
+                    EnableRaisingEvents = true
+                };
 
-                IsWatching = true;
-                HealthStatus = WatcherHealthStatus.Healthy;
-                _processingTask = ProcessEventsAsync(_cancellationTokenSource.Token);
+                watcher.Created += (s, e) => ProcessWatcherEvent(e);
+                watcher.Renamed += (s, e) => ProcessWatcherEvent(e);
 
-                _logger.LogInformation("File watcher (Polling + Events) started successfully");
+                _watchers.Add(watcher);
+                _logger.LogInformation("Started watching {Path}", path);
             }
-            catch (Exception ex)
+
+            // 3. Setup Polling
+            if (options.EnablePolling)
             {
-                _logger.LogError(ex, "Failed to start file watcher");
-                await StopWatchingAsync();
-                throw;
+                _pollingTimer = new System.Threading.Timer(OnPollTick, null, options.PollingIntervalMs, options.PollingIntervalMs);
+                _logger.LogInformation("Polling enabled every {Interval}ms", options.PollingIntervalMs);
             }
+
+            _isWatching = true;
+        }
+        catch (Exception ex)
+        {
+             _logger.LogError(ex, "Error starting file system watchers");
+             StopWatchingAsync().Wait();
+             throw;
         }
 
-        public async Task StopWatchingAsync()
+        return Task.CompletedTask;
+    }
+
+    private void PerformSilentScan(IEnumerable<string> paths)
+    {
+        lock (_lockObject)
         {
-            if (!IsWatching) return;
-
-            _logger.LogInformation("Stopping file watcher");
-            try
-            {
-                IsWatching = false;
-                _pollingTimer?.Stop();
-                _pollingTimer?.Dispose();
-                _pollingTimer = null;
-
-                foreach (var watcher in _watchers)
-                {
-                    watcher.EnableRaisingEvents = false;
-                    watcher.Dispose();
-                }
-                _watchers.Clear();
-
-                lock (_lockObject) { _knownItems.Clear(); }
-
-                _cancellationTokenSource?.Cancel();
-                if (_processingTask != null) await _processingTask;
-
-                HealthStatus = WatcherHealthStatus.Unhealthy;
-                _logger.LogInformation("File watcher stopped");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error stopping file watcher");
-                throw;
-            }
-        }
-
-        private async Task PollFileSystemAsync()
-        {
-            if (!IsWatching) return;
-
-            foreach (var path in _watchPaths)
+            _knownFiles.Clear();
+            foreach (var path in paths)
             {
                 if (!Directory.Exists(path)) continue;
 
                 try
                 {
-                    // Scan for new folders
-                    foreach (var dir in Directory.EnumerateDirectories(path, "*", SearchOption.TopDirectoryOnly))
-                    {
-                        CheckAndNotifyItem(dir, true);
-                    }
+                    // Scan files
+                    var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
+                    foreach (var file in files) _knownFiles.Add(file);
 
-                    // Scan for new files
-                    foreach (var file in Directory.EnumerateFiles(path, "*.*", SearchOption.TopDirectoryOnly))
-                    {
-                        CheckAndNotifyItem(file, false);
-                    }
+                    // Scan directories (Normal folders)
+                    var dirs = Directory.GetDirectories(path, "*", SearchOption.AllDirectories);
+                    foreach (var dir in dirs) _knownFiles.Add(dir);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogTrace("Error during polling path {Path}: {Message}", path, ex.Message);
+                    _logger.LogWarning("Silent scan error for {Path}: {Message}", path, ex.Message);
                 }
             }
-            await Task.CompletedTask;
+            _logger.LogDebug("Silent baseline scan completed: {Count} items found", _knownFiles.Count);
         }
+    }
 
-        private void CheckAndNotifyItem(string fullPath, bool isFolder)
+    private void ProcessWatcherEvent(FileSystemEventArgs e)
+    {
+        if (ShouldProcessEvent(e))
         {
-            bool isNew = false;
-            lock (_lockObject)
-            {
-                if (!_knownItems.Contains(fullPath))
-                {
-                    _knownItems.Add(fullPath);
-                    isNew = true;
-                }
-            }
-
-            if (isNew)
-            {
-                var args = new FileSystemEventArgs(WatcherChangeTypes.Created, 
-                    Path.GetDirectoryName(fullPath) ?? string.Empty, 
-                    Path.GetFileName(fullPath));
-                
-                _logger.LogDebug("Polling detected new {Type}: {Path}", isFolder ? "Folder" : "File", fullPath);
-                
-                if (isFolder) HandleFolderCreatedEvent(args);
-                else HandleFileCreatedEvent(args);
-            }
+            HandleEvent(e);
         }
+    }
 
-        private FileSystemWatcher CreateWatcher(string path)
+    private void OnPollTick(object? state)
+    {
+        if (!_isWatching) return;
+
+        // 1. 모든 새 파일/폴더 수집
+        var newItems = new List<(string Path, bool IsDirectory)>();
+
+        foreach (var path in _paths)
         {
-            var watcher = new FileSystemWatcher(path)
-            {
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.CreationTime,
-                IncludeSubdirectories = true,
-                InternalBufferSize = 64 * 1024
-            };
+            if (!Directory.Exists(path)) continue;
 
-            watcher.Created += (s, e) => { lock(_lockObject) { if(_knownItems.Contains(e.FullPath)) return; } OnFileSystemEvent(s, e); };
-            watcher.Error += OnWatcherError;
-            return watcher;
-        }
-
-        private void OnFileSystemEvent(object sender, FileSystemEventArgs e)
-        {
-            if (e.ChangeType != WatcherChangeTypes.Created) return;
-            
-            bool isFolder = Directory.Exists(e.FullPath);
-            lock (_lockObject) { _knownItems.Add(e.FullPath); }
-
-            if (isFolder) HandleFolderCreatedEvent(e);
-            else HandleFileCreatedEvent(e);
-        }
-
-        private void HandleFolderCreatedEvent(FileSystemEventArgs e)
-        {
-            string folderName = Path.GetFileName(e.FullPath);
-            if (!FileNamingHelper.IsNormalFolder(folderName)) return;
-
-            DateTime? timestamp = FileNamingHelper.ExtractTimestampFromFolderName(e.FullPath);
-            if (timestamp.HasValue)
-            {
-                _folderTimestamps.Add(e.FullPath, timestamp.Value);
-                _logger.LogInformation("Normal folder detected: {Name}, Timestamp: {Ts}", folderName, timestamp.Value);
-            }
-
-            EnqueueEvent(e, EventPriority.High);
-        }
-
-        private void HandleFileCreatedEvent(FileSystemEventArgs e)
-        {
-            string fileName = Path.GetFileName(e.FullPath);
-
-            // Fast Capture for stitched_original.png
-            if (FileNamingHelper.IsStitchedImage(e.FullPath))
-            {
-                _logger.LogInformation("⚡ FAST CAPTURE: Detected stitched_original.png: {Path}", e.FullPath);
-                EnqueueEvent(e, EventPriority.High);
-                return;
-            }
-
-            EventPriority priority = DetermineEventPriority(e);
-            EnqueueEvent(e, priority);
-        }
-
-        private void EnqueueEvent(FileSystemEventArgs e, EventPriority priority)
-        {
-            if (_eventChannel.Writer.TryWrite(e, priority))
-            {
-                Interlocked.Increment(ref _eventCount);
-                _lastEventTime = DateTime.UtcNow;
-            }
-        }
-
-        private EventPriority DetermineEventPriority(FileSystemEventArgs e)
-        {
-            if (Directory.Exists(e.FullPath) && FileNamingHelper.IsNormalFolder(Path.GetFileName(e.FullPath)))
-                return EventPriority.High;
-
-            string extension = Path.GetExtension(e.FullPath).ToLowerInvariant();
-            if (extension == ".csv" || extension == ".spc" || extension == ".txt") return EventPriority.Medium;
-            if (extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".bmp") return EventPriority.Low;
-
-            return EventPriority.Medium;
-        }
-
-        private async Task ProcessEventsAsync(CancellationToken cancellationToken)
-        {
             try
             {
-                await foreach (var eventArgs in _eventChannel.ReadAllAsync(cancellationToken))
+                var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
+                foreach (var file in files)
                 {
-                    if (ShouldProcessEvent(eventArgs))
-                    {
-                        await Task.Run(() => FileChanged?.Invoke(this, eventArgs), cancellationToken);
-                    }
+                    if (ShouldProcessPath(file))
+                        newItems.Add((file, false));
+                }
+
+                var dirs = Directory.GetDirectories(path, "*", SearchOption.AllDirectories);
+                foreach (var dir in dirs)
+                {
+                    if (ShouldProcessPath(dir))
+                        newItems.Add((dir, true));
                 }
             }
-            catch (OperationCanceledException) { }
-            catch (Exception ex) { _logger.LogError(ex, "Event processing failed"); HealthStatus = WatcherHealthStatus.Unhealthy; }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Poller tick error for {Path}: {Message}", path, ex.Message);
+            }
         }
 
-        private bool ShouldProcessEvent(FileSystemEventArgs e)
-        {
-            var fileName = Path.GetFileName(e.FullPath);
-            if (fileName.StartsWith("~") || fileName.StartsWith(".tmp") || fileName.EndsWith(".tmp")) return false;
-            
-            // Allow Normal folders and stitched images
-            if (FileNamingHelper.IsNormalFolder(fileName)) return true;
-            if (FileNamingHelper.IsStitchedImage(fileName)) return true;
+        // 2. 파일명 기준 정렬 (타임스탬프가 파일명에 포함됨)
+        var sortedItems = newItems.OrderBy(item => Path.GetFileName(item.Path)).ToList();
 
-            // Filter out files inside Normal folders (except stitched_original.png)
-            var parentDir = Path.GetDirectoryName(e.FullPath);
-            if (parentDir != null && FileNamingHelper.IsNormalFolder(Path.GetFileName(parentDir)))
+        // 3. 정렬된 순서로 이벤트 발생
+        foreach (var (itemPath, isDir) in sortedItems)
+        {
+            var args = new FileSystemEventArgs(
+                WatcherChangeTypes.Created,
+                Path.GetDirectoryName(itemPath)!,
+                Path.GetFileName(itemPath));
+            HandleEvent(args);
+        }
+    }
+
+    private bool ShouldProcessPath(string path)
+    {
+        lock (_lockObject)
+        {
+            if (_knownFiles.Contains(path)) return false;
+            
+            // Special case for stitched_original.png
+            if (Path.GetFileName(path).Equals("stitched_original.png", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // Apply filters similar to ShouldProcessEvent
+            var fileName = Path.GetFileName(path);
+            
+            // Filter files inside normal folders
+            var parentDir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(parentDir))
             {
-                return FileNamingHelper.IsStitchedImage(fileName);
+                var parentName = Path.GetFileName(parentDir);
+                if (IsNormalFolderName(parentName))
+                    return false;
             }
 
             return true;
         }
+    }
 
-        private void OnWatcherError(object sender, ErrorEventArgs e)
+    private bool ShouldProcessEvent(FileSystemEventArgs e)
+    {
+        lock (_lockObject)
         {
-            var ex = e.GetException();
-            if (ex is System.ComponentModel.Win32Exception winEx && winEx.NativeErrorCode == 1)
+            var path = e.FullPath;
+            
+            // Special Case: stitched_original.png conversion
+            var fileName = Path.GetFileName(path);
+            if (fileName.Equals("stitched_original.png", StringComparison.OrdinalIgnoreCase))
             {
-                // ERROR_INVALID_FUNCTION (1): common on WSL/Network mounts that don't support ReadDirectoryChangesW
-                // Since we have Polling enabled, we can safely ignore this watcher failure.
-                var watcher = sender as FileSystemWatcher;
-                _logger.LogWarning("FileSystemWatcher not supported for path '{Path}' (Incorrect Function). Disabling watcher and relying on Polling.", watcher?.Path);
-                
-                try 
-                {
-                    watcher?.Dispose();
-                    lock (_watchers) { _watchers.Remove(watcher); }
-                }
-                catch { /* Ignore dispose errors */ }
-                
-                return;
+                return true; 
             }
 
-            _logger.LogError(ex, "File system watcher error");
-            HealthStatus = WatcherHealthStatus.Degraded;
-        }
+            // Deduplication
+            if (_knownFiles.Contains(path)) return false;
 
-        private void PerformHealthCheck(object? state)
+            // Normal folder detection
+            bool isFolder = !Path.HasExtension(path) || Directory.Exists(path);
+            if (isFolder && IsNormalFolderName(fileName))
+            {
+                return true;
+            }
+
+            // Filter files inside normal folders (except stitched_original.png which we handled above)
+            var parentDir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(parentDir))
+            {
+                var parentName = Path.GetFileName(parentDir);
+                if (IsNormalFolderName(parentName))
+                {
+                    _logger.LogDebug("Filtering file inside Normal folder: {Path}", path);
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+
+    private bool IsNormalFolderName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return false;
+        // Basic pattern check (C...T...)
+        return name.StartsWith("C", StringComparison.OrdinalIgnoreCase) && name.Contains("T");
+    }
+
+    private void HandleEvent(FileSystemEventArgs e)
+    {
+        var eventToFire = e;
+
+        // Perform conversion if it's stitched_original.png
+        if (Path.GetFileName(e.FullPath).Equals("stitched_original.png", StringComparison.OrdinalIgnoreCase))
         {
-            if (!IsWatching) return;
-            Interlocked.Exchange(ref _eventCount, 0);
+            var parentDir = Path.GetDirectoryName(e.FullPath);
+            if (!string.IsNullOrEmpty(parentDir))
+            {
+                var parentName = Path.GetFileName(parentDir);
+                if (IsNormalFolderName(parentName))
+                {
+                    var grandParent = Path.GetDirectoryName(parentDir);
+                    if (!string.IsNullOrEmpty(grandParent))
+                    {
+                        _logger.LogInformation("Converting stitched image event to folder event for: {Folder}", parentName);
+                        eventToFire = new FileSystemEventArgs(WatcherChangeTypes.Created, grandParent, parentName);
+                    }
+                }
+            }
         }
 
-        protected virtual void OnHealthStatusChanged(WatcherHealthEventArgs e) => HealthStatusChanged?.Invoke(this, e);
-
-        public void Dispose()
+        lock (_lockObject)
         {
-            _healthCheckTimer?.Dispose();
-            _pollingTimer?.Dispose();
-            _cancellationTokenSource?.Cancel();
-            _cancellationTokenSource?.Dispose();
-            foreach (var watcher in _watchers) watcher?.Dispose();
+            if (_knownFiles.Contains(eventToFire.FullPath)) return;
+            _knownFiles.Add(eventToFire.FullPath);
         }
+
+        FileChanged?.Invoke(this, eventToFire);
+    }
+
+    public Task StopWatchingAsync()
+    {
+        if (!_isWatching) return Task.CompletedTask;
+
+        _pollingTimer?.Dispose();
+        _pollingTimer = null;
+
+        foreach (var watcher in _watchers)
+        {
+            watcher.EnableRaisingEvents = false;
+            watcher.Dispose();
+        }
+        _watchers.Clear();
+        
+        lock (_lockObject)
+        {
+            _knownFiles.Clear();
+        }
+
+        _isWatching = false;
+        _logger.LogInformation("Stopped hybrid file watcher");
+        return Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        StopWatchingAsync().Wait();
     }
 }

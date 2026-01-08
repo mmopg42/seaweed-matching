@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using ChronoView.Models;
+using ChronoView.Core.Configuration;
 
 namespace ChronoView.Core.ProgramLaunching;
 
@@ -14,17 +15,17 @@ namespace ChronoView.Core.ProgramLaunching;
 public class NirCameraLauncher : IDisposable
 {
     private readonly ILogger<NirCameraLauncher> _logger;
-    private readonly ApplicationConfiguration _config;
+    private readonly IConfigurationManager _configManager;
     
     private Process? _process;
     private CancellationTokenSource? _monitorCts;
 
     public NirCameraLauncher(
         ILogger<NirCameraLauncher> logger,
-        ApplicationConfiguration config)
+        IConfigurationManager configManager)
     {
         _logger = logger;
-        _config = config;
+        _configManager = configManager;
     }
 
     /// <summary>
@@ -45,8 +46,9 @@ public class NirCameraLauncher : IDisposable
     {
         try
         {
+            var config = _configManager.LoadConfiguration<ApplicationConfiguration>();
             var programName = "NIR Camera 1";
-            var programPath = _config?.ExternalProgramSettings?.Nir1ProgramPath ?? string.Empty;
+            var programPath = config?.ExternalProgramSettings?.Nir1ProgramPath ?? string.Empty;
             
             _logger.LogInformation("Attempting to launch {ProgramName}", programName);
 

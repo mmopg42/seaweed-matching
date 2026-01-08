@@ -18,7 +18,8 @@ namespace ChronoView.Models
         Cam3,   // Line 1: Cam3
         Cam4,   // Line 2: Auto-mapped from Cam1
         Cam5,   // Line 2: Auto-mapped from Cam2
-        Cam6    // Line 2: Auto-mapped from Cam3
+        Cam6,   // Line 2: Auto-mapped from Cam3
+        Camera  // Generic camera category
     }
 
     /// <summary>
@@ -37,6 +38,14 @@ namespace ChronoView.Models
                 return null;
 
             return Sequence.FirstOrDefault(item => item.Type == type);
+        }
+
+        /// <summary>
+        /// Get the order (priority) for a specific data type
+        /// </summary>
+        public int GetOrder(DataType type)
+        {
+            return GetByType(type)?.Order ?? int.MaxValue;
         }
 
         /// <summary>

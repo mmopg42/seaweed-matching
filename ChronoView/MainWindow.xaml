@@ -9,6 +9,7 @@
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:behaviors="clr-namespace:ChronoView.UI.Behaviors"
         xmlns:res="clr-namespace:ChronoView.Resources"
+        xmlns:views="clr-namespace:ChronoView.UI.Views"
         mc:Ignorable="d"
         Title="ChronoView Pro - Desktop Application" 
         Height="900" Width="1400"
@@ -17,278 +18,14 @@
         Closing="Window_Closing">
     
     <Window.Resources>
-        <!-- Converters -->
-        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
-        <local:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
-        <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        
-        <!-- Color Resources -->
-        <SolidColorBrush x:Key="BackgroundBrush" Color="#f0f0f0"/>
-        <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#f5f5f5"/>
-        <SolidColorBrush x:Key="BorderBrush" Color="#d0d0d0"/>
-        <SolidColorBrush x:Key="SelectionBrush" Color="#0078d4"/>
-        <SolidColorBrush x:Key="HoverBrush" Color="#e0e0e0"/>
-        <SolidColorBrush x:Key="TitleBarBrush" Color="#2d2d2d"/>
-        
-        <!-- Chip Style for Statistics -->
-        <Style x:Key="ChipStyle" TargetType="Border">
-            <Setter Property="Background" Value="#f5f5f5"/>
-            <Setter Property="BorderBrush" Value="#d0d0d0"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="3"/>
-            <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="Margin" Value="4,0"/>
-        </Style>
-        
-        <!-- Button Style -->
-        <Style x:Key="ToolbarButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="8,4"/>
-            <Setter Property="Margin" Value="2,0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{StaticResource HoverBrush}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        
-        <!-- DataGrid Style -->
-        <Style x:Key="FileGroupDataGridStyle" TargetType="DataGrid">
-            <Style.Resources>
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/>
-                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="Transparent"/>
-                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="Black"/>
-            </Style.Resources>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="#e0e0e0"/>
-            <Setter Property="AutoGenerateColumns" Value="False"/>
-            <Setter Property="CanUserAddRows" Value="False"/>
-            <Setter Property="CanUserDeleteRows" Value="False"/>
-            <Setter Property="SelectionMode" Value="Extended"/>
-            <Setter Property="SelectionUnit" Value="FullRow"/>
-            <Setter Property="RowHeight" Value="{Binding DataContext.DataGridRowHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=100}"/>
-            <Setter Property="HeadersVisibility" Value="Column"/>
-        </Style>
-        
-        <!-- DataGrid Row Style for Abnormal Highlighting -->
-        <Style x:Key="FileGroupRowStyle" TargetType="DataGridRow">
-            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsAbnormal}" Value="True">
-                    <Setter Property="Background" Value="#fff3cd"/>
-                    <Setter Property="BorderBrush" Value="#ffc107"/>
-                    <Setter Property="BorderThickness" Value="2,0,0,0"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- SHARED COLUMN TEMPLATES -->
-        <!-- Normal/Main Image Template -->
-        <DataTemplate x:Key="NormalFileTemplate">
-            <StackPanel Margin="5">
-                <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
-                        Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
-                        Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
-                    <Grid>
-                        <Image Source="{Binding MainImageThumbnail}" Stretch="Uniform"/>
-                        <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
-                                     Visibility="{Binding MainImageThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
-                    </Grid>
-                </Border>
-                <TextBlock Text="{Binding NormalLabel}"
-                           HorizontalAlignment="Center"
-                           FontSize="10"
-                           FontWeight="Bold"
-                           Foreground="Black"
-                           TextWrapping="Wrap"
-                           Margin="0,2,0,0"/>
-                <TextBlock Text="{Binding NormalImageSizeLabel}" 
-                           HorizontalAlignment="Center" 
-                           FontSize="9" 
-                           Foreground="#666666" 
-                           Margin="0,0,0,0"/>
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- NIR Graph Template -->
-        <DataTemplate x:Key="NirFileTemplate">
-            <StackPanel Margin="5">
-                <Border Width="{Binding DataContext.NirDisplayWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}"
-                        Height="{Binding DataContext.NirDisplayHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}"
-                        Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
-                    <Grid>
-                        <Image Source="{Binding NirGraphThumbnail}" Stretch="Uniform"/>
-                        <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
-                                     Visibility="{Binding NirGraphThumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
-                    </Grid>
-                </Border>
-                <TextBlock Text="{Binding NirLabel}"
-                           HorizontalAlignment="Center"
-                           FontSize="9"
-                           Foreground="Black"
-                           TextWrapping="Wrap"
-                           TextAlignment="Center"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- Camera 1 Template -->
-        <DataTemplate x:Key="Camera1Template">
-            <StackPanel Margin="5">
-                <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
-                        Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
-                        Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
-                    <Grid>
-                        <Image Source="{Binding Camera1Thumbnail}" Stretch="Uniform"/>
-                        <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
-                                     Visibility="{Binding Camera1Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
-                    </Grid>
-                </Border>
-                <TextBlock Text="{Binding Camera1Label}"
-                           Foreground="Black"
-                           HorizontalAlignment="Center" 
-                           FontSize="9" 
-                           TextWrapping="Wrap" 
-                           TextAlignment="Center"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- Camera 2 Template -->
-        <DataTemplate x:Key="Camera2Template">
-            <StackPanel Margin="5">
-                <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
-                        Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
-                        Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
-                    <Grid>
-                        <Image Source="{Binding Camera2Thumbnail}" Stretch="Uniform"/>
-                        <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
-                                     Visibility="{Binding Camera2Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
-                    </Grid>
-                </Border>
-                <TextBlock Text="{Binding Camera2Label}"
-                           Foreground="Black"
-                           HorizontalAlignment="Center" 
-                           FontSize="9" 
-                           TextWrapping="Wrap" 
-                           TextAlignment="Center"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- Camera 3 Template -->
-        <DataTemplate x:Key="Camera3Template">
-            <StackPanel Margin="5">
-                <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
-                        Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
-                        Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
-                    <Grid>
-                        <Image Source="{Binding Camera3Thumbnail}" Stretch="Uniform"/>
-                        <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
-                                     Visibility="{Binding Camera3Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
-                    </Grid>
-                </Border>
-                <TextBlock Text="{Binding Camera3Label}"
-                           Foreground="Black"
-                           HorizontalAlignment="Center" 
-                           FontSize="9" 
-                           TextWrapping="Wrap" 
-                           TextAlignment="Center"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- Camera 4 Template -->
-        <DataTemplate x:Key="Camera4Template">
-            <StackPanel Margin="5">
-                <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
-                        Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
-                        Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
-                    <Grid>
-                        <Image Source="{Binding Camera4Thumbnail}" Stretch="Uniform"/>
-                        <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
-                                     Visibility="{Binding Camera4Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
-                    </Grid>
-                </Border>
-                <TextBlock Text="{Binding Camera4Label}"
-                           Foreground="Black"
-                           HorizontalAlignment="Center" 
-                           FontSize="9" 
-                           TextWrapping="Wrap" 
-                           TextAlignment="Center"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- Camera 5 Template -->
-        <DataTemplate x:Key="Camera5Template">
-            <StackPanel Margin="5">
-                <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
-                        Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
-                        Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
-                    <Grid>
-                        <Image Source="{Binding Camera5Thumbnail}" Stretch="Uniform"/>
-                        <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
-                                     Visibility="{Binding Camera5Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
-                    </Grid>
-                </Border>
-                <TextBlock Text="{Binding Camera5Label}"
-                           Foreground="Black"
-                           HorizontalAlignment="Center" 
-                           FontSize="9" 
-                           TextWrapping="Wrap" 
-                           TextAlignment="Center"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- Camera 6 Template -->
-        <DataTemplate x:Key="Camera6Template">
-            <StackPanel Margin="5">
-                <Border Width="{Binding DataContext.DisplayImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}" 
-                        Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
-                        Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
-                    <Grid>
-                        <Image Source="{Binding Camera6Thumbnail}" Stretch="Uniform"/>
-                        <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
-                                     Visibility="{Binding Camera6Thumbnail, Converter={StaticResource NullToVisibilityConverter}}"/>
-                    </Grid>
-                </Border>
-                <TextBlock Text="{Binding Camera6Label}"
-                           Foreground="Black"
-                           HorizontalAlignment="Center" 
-                           FontSize="9" 
-                           TextWrapping="Wrap" 
-                           TextAlignment="Center"
-                           Margin="0,2,0,0"/>
-            </StackPanel>
-        </DataTemplate>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/SharedResources.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Window.Resources>
     
     <DockPanel>
-        <!-- Menu Bar -->
-        <Menu DockPanel.Dock="Top" Background="{StaticResource PanelBackgroundBrush}" 
-              BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
-            <MenuItem Header="{x:Static res:Strings.Menu_File}">
-                <MenuItem Header="{x:Static res:Strings.Menu_Exit}" Click="Exit_Click"/>
-            </MenuItem>
-            <MenuItem Header="{x:Static res:Strings.Menu_View}">
-                <MenuItem Header="{x:Static res:Strings.Menu_Refresh}" Command="{Binding RefreshCommand}"/>
-            </MenuItem>
-            <MenuItem Header="{x:Static res:Strings.Menu_Tools}">
-                <MenuItem Header="{x:Static res:Strings.Menu_Settings}" Command="{Binding SetupCommand}"/>
-            </MenuItem>
-            <MenuItem Header="{x:Static res:Strings.Menu_Help}">
-                <MenuItem Header="{x:Static res:Strings.Menu_About}"/>
-            </MenuItem>
-        </Menu>
-        
         <!-- Toolbar -->
         <ToolBarTray DockPanel.Dock="Top" Background="{StaticResource PanelBackgroundBrush}">
             <ToolBar Background="{StaticResource PanelBackgroundBrush}" 
@@ -341,174 +78,11 @@
                         <TextBlock Text="삭제" FontSize="10"/>
                     </StackPanel>
                 </Button>
-                <Separator/>
-                <!-- Sample Folder -->
-                <Label Content="{x:Static res:Strings.Label_Sample}" VerticalAlignment="Center"/>
-                <TextBox Width="120" VerticalAlignment="Center" Text="{Binding SampleFolderName}" ToolTip="{x:Static res:Strings.Tooltip_SampleFolder}"/>
-                <Button Content="{x:Static res:Strings.Button_CreateFolder}" Command="{Binding CreateSampleFolderCommand}" Margin="4,0"/>
             </ToolBar>
         </ToolBarTray>
         
-        <!-- File Count Statistics Bar -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource PanelBackgroundBrush}" 
-                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="12,8">
-            <WrapPanel>
-                <TextBlock FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Center">
-                    <Run Text="📊"/>
-                    <Run Text="{x:Static res:Strings.Label_FileCounts}"/>
-                    <Run Text=":"/>
-                </TextBlock>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="{x:Static res:Strings.Label_NIR1}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding NirCount}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="{x:Static res:Strings.Label_Normal1}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding NormalCount}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="{x:Static res:Strings.Label_Cam1}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding Cam1Count}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="{x:Static res:Strings.Label_Cam2}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding Cam2Count}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="{x:Static res:Strings.Label_Cam3}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding Cam3Count}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                
-                <!-- Line 2 Counts -->
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="NIR2"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding Nir2Count}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="일반2"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding Normal2Count}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="{x:Static res:Strings.Camera_Cam4}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding Cam4Count}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="{x:Static res:Strings.Camera_Cam5}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding Cam5Count}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="{x:Static res:Strings.Camera_Cam6}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding Cam6Count}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-            </WrapPanel>
-        </Border>
-        
-        <!-- Matching Statistics Bar -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource PanelBackgroundBrush}" 
-                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="12,8">
-            <WrapPanel>
-                <TextBlock FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Center">
-                    <Run Text="🔗"/>
-                    <Run Text="{x:Static res:Strings.Label_MatchingStatus}"/>
-                    <Run Text=":"/>
-                </TextBlock>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="{x:Static res:Strings.Label_Total}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding TotalGroups}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="{x:Static res:Strings.Label_WithNIR}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding WithNirCount}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#6c757d">
-                            <Run Text="{x:Static res:Strings.Label_WithoutNIR}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding WithoutNirCount}" FontWeight="Bold" Margin="5,0,0,0"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#dc2626">
-                            <Run Text="{x:Static res:Strings.Label_Failed}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding FailedCount}" FontWeight="Bold" Margin="5,0,0,0" Foreground="#dc2626"/>
-                    </StackPanel>
-                </Border>
-                <Border Style="{StaticResource ChipStyle}">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="#f59e0b">
-                            <Run Text="{x:Static res:Strings.Label_Abnormal}"/>
-                            <Run Text=":"/>
-                        </TextBlock>
-                        <TextBlock Text="{Binding AbnormalCount}" FontWeight="Bold" Margin="5,0,0,0" Foreground="#f59e0b"/>
-                    </StackPanel>
-                </Border>
-            </WrapPanel>
-        </Border>
+        <!-- File Count and Matching Statistics -->
+        <controls:StatisticsPanel DockPanel.Dock="Top" DataContext="{Binding Dashboard}"/>
         
         <!-- Status Bar -->
         <StatusBar DockPanel.Dock="Bottom" Background="{StaticResource PanelBackgroundBrush}" 
@@ -516,35 +90,20 @@
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusMessage}"/>
             </StatusBarItem>
-            
+
+            <Separator/>
             <StatusBarItem>
-                <ProgressBar Value="{Binding ProgressValue}" 
-                             Maximum="100" 
-                             Height="12" 
-                             Width="120" 
-                             Margin="10,0"
-                             Visibility="{Binding IsOperationInProgress, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="총 그룹: "/>
+                    <TextBlock Text="{Binding Dashboard.TotalGroups}" FontWeight="Bold" Margin="4,0"/>
+                </StackPanel>
             </StatusBarItem>
 
             <Separator/>
             <StatusBarItem>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="총 그룹룹: "/>
-                    <TextBlock Text="{Binding TotalGroups}" FontWeight="Bold" Margin="4,0"/>
-                </StackPanel>
-            </StatusBarItem>
-            <Separator/>
-            <StatusBarItem>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="매칭 비율율: "/>
-                    <TextBlock Text="{Binding MatchRate, StringFormat={}{0:F1}%}" FontWeight="Bold" Margin="4,0"/>
-                </StackPanel>
-            </StatusBarItem>
-            <Separator/>
-            <StatusBarItem>
-                <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Failures: "/>
-                    <TextBlock Text="{Binding FailedCount}" FontWeight="Bold" Foreground="Red" Margin="4,0"/>
+                    <TextBlock Text="{Binding Dashboard.FailedCount}" FontWeight="Bold" Foreground="Red" Margin="4,0"/>
                 </StackPanel>
             </StatusBarItem>
 
@@ -552,16 +111,26 @@
             <StatusBarItem HorizontalAlignment="Right" Margin="10,0,0,0">
                 <StackPanel Orientation="Horizontal" Width="200">
                     <ProgressBar Width="150" Height="16"
-                                 Value="{Binding ProgressValue}"
+                                 Value="{Binding Operations.ProgressValue}"
                                  Minimum="0" Maximum="100"
-                                 Visibility="{Binding IsOperationInProgress, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                    <TextBlock Text="{Binding ProgressValue, StringFormat={}{0:F0}%}"
+                                 Visibility="{Binding Operations.IsOperationInProgress, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <TextBlock Text="{Binding Operations.ProgressValue, StringFormat={}{0:F0}%}"
                                Margin="8,0,0,0" VerticalAlignment="Center"
-                               Visibility="{Binding IsOperationInProgress, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                               Visibility="{Binding Operations.IsOperationInProgress, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 </StackPanel>
             </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
-                <TextBlock Text="{Binding CurrentTime, StringFormat={}{0:HH:mm:ss}}"/>
+                <StackPanel Orientation="Horizontal">
+                    <Button Command="{Binding ToggleLogPanelCommand}"
+                            Content="{Binding LogPanelButtonText}"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="8,2"
+                            Margin="0,0,15,0"
+                            Cursor="Hand"
+                            FontSize="12"/>
+                    <TextBlock Text="{Binding CurrentTime, StringFormat={}{0:HH:mm:ss}}"/>
+                </StackPanel>
             </StatusBarItem>
         </StatusBar>
         
@@ -575,172 +144,51 @@
             <!-- Left Sidebar -->
             <Border Grid.Column="0" Background="{StaticResource PanelBackgroundBrush}" 
                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <!-- Workflow Control Section -->
-                        <Expander Header="{x:Static res:Strings.Panel_WorkflowControl}" IsExpanded="True" 
-                                  Background="{StaticResource HoverBrush}" Margin="0,0,0,1">
-                            <StackPanel Margin="10">
-                                <TextBlock Text="{x:Static res:Strings.Panel_SystemStatus}" FontWeight="Bold" Margin="0,0,0,8"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                    <TextBlock Text="일반:" Width="80"/>
-                                    <Ellipse Width="10" Height="10" Fill="{Binding GeneralCameraForeground}" Margin="0,0,5,0"/>
-                                    <TextBlock Text="{Binding GeneralCameraStatus}"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                    <TextBlock Text="NIR:" Width="80"/>
-                                    <Ellipse Width="10" Height="10" Fill="{Binding NirCameraForeground}" Margin="0,0,5,0"/>
-                                    <TextBlock Text="{Binding NirCameraStatus}"/>
-                                </StackPanel>
-                                
-                                <!-- NIR Filtering Toggle -->
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                                    <TextBlock Text="{x:Static res:Strings.Status_NirFiltering}" Width="80"/>
-                                    <Ellipse Width="10" Height="10" Fill="{Binding Nir2FilteringForeground}" Margin="0,0,5,0"/>
-                                    <TextBlock Text="{Binding Nir2FilteringStatus}" Width="80"/>
-                                    <Button Content="{Binding Nir2FilteringButtonText}" Width="40" Height="24" 
-                                            Command="{Binding ToggleNir2FilteringCommand}"
-                                            Background="{Binding Nir2FilteringButtonBackground}"
-                                            Foreground="White" Margin="4,0"
-                                            FontWeight="Bold"/>
-                                </StackPanel>
-                                
-                                <TextBlock Text="{x:Static res:Strings.Panel_SampleInformation}" FontWeight="Bold" Margin="0,0,0,8"/>
-                                <Label Content="{x:Static res:Strings.Sample_Name}" FontSize="10"/>
-                                <TextBox Text="{Binding SampleName}" Margin="0,0,0,8"/>
-                                <Label Content="{x:Static res:Strings.Sample_MoveNIR}" FontSize="10"/>
-                                <TextBox Text="{Binding MoveNir}" Margin="0,0,0,8"/>
-                                <Label Content="{x:Static res:Strings.Sample_MoveAllData}" FontSize="10"/>
-                                <TextBox Text="{Binding MoveAllData}"/>
-                            </StackPanel>
-                        </Expander>
-                        
-                        <!-- Data Status Section -->
-                        <Expander Header="{x:Static res:Strings.Panel_DataStatus}" IsExpanded="True" 
-                                  Background="{StaticResource HoverBrush}" Margin="0,0,0,1">
-                            <StackPanel Margin="10">
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                    <TextBlock Text="{x:Static res:Strings.Status_TotalGroups}" Width="100"/>
-                                    <TextBlock Text="{Binding TotalGroups}" FontWeight="Bold"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                    <TextBlock Text="{x:Static res:Strings.Status_MatchRate}" Width="100"/>
-                                    <TextBlock Text="{Binding MatchRate, StringFormat={}{0:F1}%}" FontWeight="Bold"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{x:Static res:Strings.Status_Failures}" Width="100"/>
-                                    <TextBlock Text="{Binding FailedCount}" FontWeight="Bold" Foreground="Red"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Expander>
-                    </StackPanel>
-                </ScrollViewer>
+                <controls:WorkflowPanel/>
             </Border>
             
             <!-- Main Panel -->
             <Grid Grid.Column="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
-                    <RowDefinition Height="5"/>
-                    <RowDefinition Height="150" MinHeight="50"/>
+                    <RowDefinition>
+                        <RowDefinition.Style>
+                            <Style TargetType="RowDefinition">
+                                <Setter Property="Height" Value="5"/>
+                                <Setter Property="MinHeight" Value="0"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsLogPanelVisible}" Value="False">
+                                        <Setter Property="Height" Value="0"/>
+                                        <Setter Property="MinHeight" Value="0"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </RowDefinition.Style>
+                    </RowDefinition>
+                    <RowDefinition>
+                        <RowDefinition.Style>
+                            <Style TargetType="RowDefinition">
+                                <Setter Property="Height" Value="200"/>
+                                <Setter Property="MinHeight" Value="0"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsLogPanelVisible}" Value="False">
+                                        <Setter Property="Height" Value="0"/>
+                                        <Setter Property="MinHeight" Value="0"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </RowDefinition.Style>
+                    </RowDefinition>
                 </Grid.RowDefinitions>
                 
                 
                 <!-- File Group Table with Tabs -->
                 <TabControl Grid.Row="0" SelectedIndex="{Binding ActiveTabIndex}">
                     <TabItem Header="Line 1">
-                        <DataGrid x:Name="Line1DataGrid"
-                                  ItemsSource="{Binding Line1Groups}"
-                                  SelectionChanged="DataGrid_SelectionChanged"
-                                  SelectionMode="Extended"
-                                  SelectionUnit="FullRow"
-                                  Style="{StaticResource FileGroupDataGridStyle}"
-                                  RowStyle="{StaticResource FileGroupRowStyle}"
-                                  RowHeight="{Binding DataContext.DataGridRowHeight, RelativeSource={RelativeSource AncestorType=Window}}">
-                            <i:Interaction.Behaviors>
-                                <behaviors:DragSelectBehavior/>
-                            </i:Interaction.Behaviors>
-                            <DataGrid.Columns>
-                                <DataGridTemplateColumn Width="40">
-                                    <DataGridTemplateColumn.HeaderTemplate>
-                                        <DataTemplate>
-                                            <CheckBox x:Name="CombinedLine1SelectAllCheckBox"
-                                                    HorizontalAlignment="Center" 
-                                                    VerticalAlignment="Center"
-                                                    Checked="SelectAllCheckBox_Checked"
-                                                    Unchecked="SelectAllCheckBox_Unchecked"
-                                                    Tag="Line1"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.HeaderTemplate>
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="{x:Static res:Strings.Column_Index}" Width="80" Binding="{Binding GroupId}" IsReadOnly="True"/>
-                                <DataGridTextColumn Header="{x:Static res:Strings.Column_Status}" Width="100" Binding="{Binding StatusText}" IsReadOnly="True">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="VerticalAlignment" Value="Center"/>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTemplateColumn Header="Main Img" Width="*" CellTemplate="{StaticResource NormalFileTemplate}"/>
-                                <DataGridTemplateColumn Header="NIR Graph" Width="*" CellTemplate="{StaticResource NirFileTemplate}"/>
-                                <DataGridTemplateColumn Header="Cam 1" Width="*" CellTemplate="{StaticResource Camera1Template}"/>
-                                <DataGridTemplateColumn Header="Cam 2" Width="*" CellTemplate="{StaticResource Camera2Template}"/>
-                                <DataGridTemplateColumn Header="Cam 3" Width="*" CellTemplate="{StaticResource Camera3Template}"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <controls:FileGroupDataGrid x:Name="Line1DataGrid" ItemsSource="{Binding Dashboard.Line1Groups}" LineNumber="1" />
                     </TabItem>
                     <TabItem Header="Line 2">
-                        <DataGrid x:Name="Line2DataGrid"
-                                  ItemsSource="{Binding Line2Groups}"
-                                  SelectionChanged="DataGrid_SelectionChanged"
-                                  SelectionMode="Extended"
-                                  SelectionUnit="FullRow"
-                                  Style="{StaticResource FileGroupDataGridStyle}"
-                                  RowStyle="{StaticResource FileGroupRowStyle}"
-                                  RowHeight="{Binding DataContext.DataGridRowHeight, RelativeSource={RelativeSource AncestorType=Window}}">
-                            <i:Interaction.Behaviors>
-                                <behaviors:DragSelectBehavior/>
-                            </i:Interaction.Behaviors>
-                            <DataGrid.Columns>
-                                <DataGridTemplateColumn Width="40">
-                                    <DataGridTemplateColumn.HeaderTemplate>
-                                        <DataTemplate>
-                                            <CheckBox x:Name="Line2SelectAllCheckBox"
-                                                    HorizontalAlignment="Center" 
-                                                    VerticalAlignment="Center"
-                                                    Checked="SelectAllCheckBox_Checked"
-                                                    Unchecked="SelectAllCheckBox_Unchecked"
-                                                    Tag="Line2"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.HeaderTemplate>
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
-                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="{x:Static res:Strings.Column_Index}" Width="80" Binding="{Binding GroupId}" IsReadOnly="True"/>
-                                <DataGridTextColumn Header="{x:Static res:Strings.Column_Status}" Width="100" Binding="{Binding StatusText}" IsReadOnly="True">
-                                    <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="VerticalAlignment" Value="Center"/>
-                                        </Style>
-                                    </DataGridTextColumn.ElementStyle>
-                                </DataGridTextColumn>
-                                <DataGridTemplateColumn Header="Main Img" Width="*" CellTemplate="{StaticResource NormalFileTemplate}"/>
-                                <DataGridTemplateColumn Header="NIR Graph" Width="*" CellTemplate="{StaticResource NirFileTemplate}"/>
-                                <DataGridTemplateColumn Header="Cam 4" Width="*" CellTemplate="{StaticResource Camera4Template}"/>
-                                <DataGridTemplateColumn Header="Cam 5" Width="*" CellTemplate="{StaticResource Camera5Template}"/>
-                                <DataGridTemplateColumn Header="Cam 6" Width="*" CellTemplate="{StaticResource Camera6Template}"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <controls:FileGroupDataGrid x:Name="Line2DataGrid" ItemsSource="{Binding Dashboard.Line2Groups}" LineNumber="2" />
                     </TabItem>
                     <TabItem Header="Combined">
                         <Grid>
@@ -765,50 +213,7 @@
                                     </Border>
                                     
                                     <!-- DataGrid -->
-                                    <DataGrid Grid.Row="1" ItemsSource="{Binding Line1Groups}"
-                                              SelectionChanged="DataGrid_SelectionChanged"
-                                              SelectionMode="Extended"
-                                              SelectionUnit="FullRow"
-                                              Style="{StaticResource FileGroupDataGridStyle}"
-                                              RowStyle="{StaticResource FileGroupRowStyle}"
-                                              RowHeight="{Binding DataContext.DataGridRowHeight, RelativeSource={RelativeSource AncestorType=Window}}">
-                                        <i:Interaction.Behaviors>
-                                            <behaviors:DragSelectBehavior/>
-                                        </i:Interaction.Behaviors>
-                                        <DataGrid.Columns>
-                                            <DataGridTemplateColumn Width="40">
-                                                <DataGridTemplateColumn.HeaderTemplate>
-                                                    <DataTemplate>
-                                                        <CheckBox x:Name="Line1SelectAllCheckBox"
-                                                                HorizontalAlignment="Center" 
-                                                                VerticalAlignment="Center"
-                                                                Checked="SelectAllCheckBox_Checked"
-                                                                Unchecked="SelectAllCheckBox_Unchecked"
-                                                                Tag="Line1"/>
-                                                    </DataTemplate>
-                                                </DataGridTemplateColumn.HeaderTemplate>
-                                                <DataGridTemplateColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
-                                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </DataTemplate>
-                                                </DataGridTemplateColumn.CellTemplate>
-                                            </DataGridTemplateColumn>
-                                            <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}" IsReadOnly="True"/>
-                                            <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}" IsReadOnly="True">
-                                                <DataGridTextColumn.ElementStyle>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                                    </Style>
-                                                </DataGridTextColumn.ElementStyle>
-                                            </DataGridTextColumn>
-                                            <DataGridTemplateColumn Header="Main Img" Width="*" CellTemplate="{StaticResource NormalFileTemplate}"/>
-                                            <DataGridTemplateColumn Header="NIR Graph" Width="*" CellTemplate="{StaticResource NirFileTemplate}"/>
-                                            <DataGridTemplateColumn Header="Cam 1" Width="*" CellTemplate="{StaticResource Camera1Template}"/>
-                                            <DataGridTemplateColumn Header="Cam 2" Width="*" CellTemplate="{StaticResource Camera2Template}"/>
-                                            <DataGridTemplateColumn Header="Cam 3" Width="*" CellTemplate="{StaticResource Camera3Template}"/>
-                                        </DataGrid.Columns>
-                                    </DataGrid>
+                                    <controls:FileGroupDataGrid x:Name="CombinedLine1DataGrid" Grid.Row="1" ItemsSource="{Binding Dashboard.Line1Groups}" LineNumber="1" />
                                 </Grid>
                             </Border>
                             
@@ -830,40 +235,7 @@
                                     </Border>
                                     
                                     <!-- DataGrid -->
-                                    <DataGrid Grid.Row="1" ItemsSource="{Binding Line2Groups}"
-                                              SelectionChanged="DataGrid_SelectionChanged"
-                                              SelectionMode="Extended"
-                                              SelectionUnit="FullRow"
-                                              Style="{StaticResource FileGroupDataGridStyle}"
-                                              RowStyle="{StaticResource FileGroupRowStyle}"
-                                              RowHeight="{Binding DataContext.DataGridRowHeight, RelativeSource={RelativeSource AncestorType=Window}}">
-                                        <i:Interaction.Behaviors>
-                                            <behaviors:DragSelectBehavior/>
-                                        </i:Interaction.Behaviors>
-                                        <DataGrid.Columns>
-                                            <DataGridTemplateColumn Header="" Width="40">
-                                                <DataGridTemplateColumn.CellTemplate>
-                                                    <DataTemplate>
-                                                        <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" 
-                                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    </DataTemplate>
-                                                </DataGridTemplateColumn.CellTemplate>
-                                            </DataGridTemplateColumn>
-                                            <DataGridTextColumn Header="Index" Width="80" Binding="{Binding GroupId}" IsReadOnly="True"/>
-                                            <DataGridTextColumn Header="Status" Width="100" Binding="{Binding StatusText}" IsReadOnly="True">
-                                                <DataGridTextColumn.ElementStyle>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                                    </Style>
-                                                </DataGridTextColumn.ElementStyle>
-                                            </DataGridTextColumn>
-                                            <DataGridTemplateColumn Header="Main Img" Width="*" CellTemplate="{StaticResource NormalFileTemplate}"/>
-                                            <DataGridTemplateColumn Header="NIR Graph" Width="*" CellTemplate="{StaticResource NirFileTemplate}"/>
-                                            <DataGridTemplateColumn Header="Cam 4" Width="*" CellTemplate="{StaticResource Camera4Template}"/>
-                                            <DataGridTemplateColumn Header="Cam 5" Width="*" CellTemplate="{StaticResource Camera5Template}"/>
-                                            <DataGridTemplateColumn Header="Cam 6" Width="*" CellTemplate="{StaticResource Camera6Template}"/>
-                                        </DataGrid.Columns>
-                                    </DataGrid>
+                                    <controls:FileGroupDataGrid x:Name="CombinedLine2DataGrid" Grid.Row="1" ItemsSource="{Binding Dashboard.Line2Groups}" LineNumber="2" />
                                 </Grid>
                             </Border>
                         </Grid>
@@ -876,13 +248,18 @@
                               VerticalAlignment="Stretch"
                               Background="{StaticResource BorderBrush}"
                               ShowsPreview="False"
-                              ResizeDirection="Rows"/>
+                              ResizeDirection="Rows"
+                              Visibility="{Binding IsLogPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}"/>
                 
                 <!-- Message Log -->
-                <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0">
-                    <controls:LogPanel LogMessages="{Binding LogMessages}"/>
+                <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0"
+                        Visibility="{Binding IsLogPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <controls:LogPanel LogMessages="{Binding LogMessages}" CloseCommand="{Binding CloseLogPanelCommand}"/>
                 </Border>
             </Grid>
-        </Grid>
+        
+        <!-- Detail View Overlay -->
+        <views:DetailPreviewView DataContext="{Binding DetailPreviewVM}" Panel.ZIndex="100"/>
+    </Grid>
     </DockPanel>
 </Window>

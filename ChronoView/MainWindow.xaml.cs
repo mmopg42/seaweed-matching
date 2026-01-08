@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
+using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -10,6 +11,7 @@ using ChronoView.UI.Views;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using WpfApplication = System.Windows.Application;
+using System.Windows.Threading;
 
 // Using aliases to avoid ambiguous references with System.Windows.Forms
 using WpfBorder = System.Windows.Controls.Border;
@@ -37,6 +39,9 @@ public partial class MainWindow : Window
         
         // Set DataContext to injected ViewModel
         DataContext = _viewModel;
+
+        // Subscribe to ViewModel events
+        _viewModel.RequestOpenSettings += OnRequestOpenSettings;
         
         _logger.LogInformation("MainWindow initialized with dependency injection");
     }
@@ -47,8 +52,12 @@ public partial class MainWindow : Window
     {
         _logger?.LogInformation("MainWindow loaded");
 
-        // Generate dynamic columns based on DataSequenceSettings
-        GenerateDataGridColumns();
+        // Subscribe to collection changes for auto-scroll during monitoring
+        if (_viewModel?.Dashboard != null)
+        {
+            _viewModel.Dashboard.Line1Groups.CollectionChanged += OnLine1GroupsChanged;
+            _viewModel.Dashboard.Line2Groups.CollectionChanged += OnLine2GroupsChanged;
+        }
 
         // Restore window state from configuration
         // This will be implemented when window state manager is available
@@ -57,18 +66,33 @@ public partial class MainWindow : Window
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
         _logger?.LogInformation("MainWindow closing");
+        
+        // Unsubscribe from collection change events
+        if (_viewModel?.Dashboard != null)
+        {
+            _viewModel.Dashboard.Line1Groups.CollectionChanged -= OnLine1GroupsChanged;
+            _viewModel.Dashboard.Line2Groups.CollectionChanged -= OnLine2GroupsChanged;
+        }
+
+        // Unsubscribe from events to prevent memory leaks
+        if (_viewModel != null)
+        {
+            _viewModel.RequestOpenSettings -= OnRequestOpenSettings;
+        }
+
         // Save window state to configuration
         // This will be implemented when window state manager is available
-    }
-
-    private void Exit_Click(object sender, RoutedEventArgs e)
-    {
-        Close();
     }
 
     private void Setup_Click(object sender, RoutedEventArgs e)
     {
         OpenSettingsDialog();
+    }
+
+    private void OnRequestOpenSettings(object? sender, EventArgs e)
+    {
+        // Marshal to UI thread if needed (though usually called from UI command)
+        Dispatcher.Invoke(OpenSettingsDialog);
     }
 
     /// <summary>
@@ -116,20 +140,17 @@ public partial class MainWindow : Window
     {
         _logger.LogInformation("Settings applied, reloading all settings and restarting monitoring");
         
-        // Reload UI display settings from configuration
-        var app = (App)WpfApplication.Current;
-        var configManager = app.Services.GetRequiredService<Core.Configuration.IConfigurationManager>();
-        var config = configManager.LoadConfiguration<ApplicationConfiguration>();
+        // Reload UI display settings by delegating to ViewModel logic
+        _viewModel.LoadSettings();
         
-        _viewModel.DisplayImageWidth = config.UISettings.DisplayImageWidth;
-        _viewModel.DisplayImageHeight = config.UISettings.DisplayImageHeight;
-        _viewModel.DataGridRowHeight = config.UISettings.DataGridRowHeight;
-        _viewModel.NirDisplayWidth = config.UISettings.NirDisplayWidth;
-        _viewModel.NirDisplayHeight = config.UISettings.NirDisplayHeight;
-        
-        // Regenerate DataGrid columns based on updated DataSequenceSettings
+        // Regenerate DataGrid columns based on updated settings
         _logger.LogInformation("Regenerating DataGrid columns after settings change");
-        GenerateDataGridColumns();
+        
+        // Refresh columns on all DataGrid instances
+        Line1DataGrid?.RefreshColumns();
+        Line2DataGrid?.RefreshColumns();
+        CombinedLine1DataGrid?.RefreshColumns();
+        CombinedLine2DataGrid?.RefreshColumns();
         
         // Restart monitoring if currently running to apply new settings
         if (_viewModel.IsMonitoring)
@@ -165,222 +186,28 @@ public partial class MainWindow : Window
             }
         }
     }
-    
-    private void DataGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+
+    private void OnLine1GroupsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // Force command re-evaluation for CanExecute
-        System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+        if (!_viewModel.IsMonitoring) return;
+        if (e.Action != NotifyCollectionChangedAction.Add) return;
+
+        Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
+        {
+            Line1DataGrid?.ScrollToBottom();
+            CombinedLine1DataGrid?.ScrollToBottom();
+        }));
     }
 
-    /// <summary>
-    /// Handles SelectAll checkbox Checked event
-    /// </summary>
-    private void SelectAllCheckBox_Checked(object sender, RoutedEventArgs e)
+    private void OnLine2GroupsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (sender is System.Windows.Controls.CheckBox checkBox && checkBox.Tag is string lineTag)
+        if (!_viewModel.IsMonitoring) return;
+        if (e.Action != NotifyCollectionChangedAction.Add) return;
+
+        Dispatcher.BeginInvoke(DispatcherPriority.Render, new Action(() =>
         {
-            _logger.LogDebug("SelectAll checkbox checked for {Line}", lineTag);
-            
-            if (lineTag == "Line1")
-            {
-                foreach (var group in _viewModel.Line1Groups)
-                {
-                    group.IsSelected = true;
-                }
-            }
-            else if (lineTag == "Line2")
-            {
-                foreach (var group in _viewModel.Line2Groups)
-                {
-                    group.IsSelected = true;
-                }
-            }
-        }
+            Line2DataGrid?.ScrollToBottom();
+            CombinedLine2DataGrid?.ScrollToBottom();
+        }));
     }
-
-    /// <summary>
-    /// Handles SelectAll checkbox Unchecked event
-    /// </summary>
-    private void SelectAllCheckBox_Unchecked(object sender, RoutedEventArgs e)
-    {
-        if (sender is System.Windows.Controls.CheckBox checkBox && checkBox.Tag is string lineTag)
-        {
-            _logger.LogDebug("SelectAll checkbox unchecked for {Line}", lineTag);
-            
-            if (lineTag == "Line1")
-            {
-                foreach (var group in _viewModel.Line1Groups)
-                {
-                    group.IsSelected = false;
-                }
-            }
-            else if (lineTag == "Line2")
-            {
-                foreach (var group in _viewModel.Line2Groups)
-                {
-                    group.IsSelected = false;
-                }
-            }
-        }
-    }
-
-    #region Dynamic Column Generation
-
-    /// <summary>
-    /// Generate DataGrid columns dynamically based on DataSequenceSettings
-    /// </summary>
-    private void GenerateDataGridColumns()
-    {
-        try
-        {
-            var app = (App)WpfApplication.Current;
-            var configManager = app.Services.GetRequiredService<Core.Configuration.IConfigurationManager>();
-            var config = configManager.LoadConfiguration<ApplicationConfiguration>();
-            var sequenceSettings = config.DataSequenceSettings;
-
-            // Get ordered types from configuration
-            var orderedTypes = sequenceSettings.GetOrderedTypes();
-
-            _logger.LogInformation("Generating dynamic columns. Ordered types: {Types}",
-                string.Join(", ", orderedTypes));
-
-            // Generate for Line 1 (Normal, NIR, Cam1-3)
-            GenerateColumnsForDataGrid(Line1DataGrid, orderedTypes, 1);
-
-            // Generate for Line 2 (Normal2, NIR2, Cam4-6)
-            GenerateColumnsForDataGrid(Line2DataGrid, orderedTypes, 2);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to generate dynamic columns");
-        }
-    }
-
-    /// <summary>
-    /// Generate columns for a specific DataGrid
-    /// </summary>
-    private void GenerateColumnsForDataGrid(System.Windows.Controls.DataGrid dataGrid, List<DataType> orderedTypes, int lineNumber)
-    {
-        if (dataGrid == null)
-        {
-            _logger.LogWarning("DataGrid is null, cannot generate columns for Line {Line}", lineNumber);
-            return;
-        }
-
-        // BeginInit to prevent UI flicker
-        dataGrid.BeginInit();
-
-        try
-        {
-            // Keep first 3 static columns (Checkbox, Index, Status)
-            // Remove all columns after index 2
-            while (dataGrid.Columns.Count > 3)
-            {
-                dataGrid.Columns.RemoveAt(3);
-            }
-
-            // Add dynamic data columns based on sequence
-            foreach (var dataType in orderedTypes)
-            {
-                // Skip data types not relevant to this line
-                if (!IsDataTypeForLine(dataType, lineNumber))
-                {
-                    _logger.LogDebug("Skipping {DataType} for Line {Line}", dataType, lineNumber);
-                    continue;
-                }
-
-                var column = CreateColumnForDataType(dataType, lineNumber);
-                if (column != null)
-                {
-                    dataGrid.Columns.Add(column);
-                    _logger.LogDebug("Add column: {Header} for Line {Line}", column.Header, lineNumber);
-                }
-            }
-        }
-        finally
-        {
-            // EndInit to commit changes and update UI
-            dataGrid.EndInit();
-        }
-    }
-
-    /// <summary>
-    /// Check if a data type is relevant for a specific line
-    /// Line 1: Normal, NIR, Cam1-3
-    /// Line 2: Normal, NIR, Cam1-3 (automatically mapped to Cam4-6)
-    /// </summary>
-    private bool IsDataTypeForLine(DataType dataType, int lineNumber)
-    {
-        return dataType switch
-        {
-            DataType.Normal => true,  // Both lines
-            DataType.NIR => true,     // Both lines
-            DataType.Cam1 => true,    // Both lines (Cam1 for Line 1, Cam4 for Line 2)
-            DataType.Cam2 => true,    // Both lines (Cam2 for Line 1, Cam5 for Line 2)
-            DataType.Cam3 => true,    // Both lines (Cam3 for Line 1, Cam6 for Line 2)
-            _ => false
-        };
-    }
-
-    /// <summary>
-    /// Create a DataGrid column for a specific data type
-    /// </summary>
-    /// <summary>
-    /// Create a DataGrid column for a specific data type using shared XAML resources
-    /// </summary>
-    private DataGridTemplateColumn? CreateColumnForDataType(DataType dataType, int lineNumber)
-    {
-        string? resourceKey = null;
-
-        if (lineNumber == 1)
-        {
-            resourceKey = dataType switch
-            {
-                DataType.Normal => "NormalFileTemplate",
-                DataType.NIR => "NirFileTemplate",
-                DataType.Cam1 => "Camera1Template",
-                DataType.Cam2 => "Camera2Template",
-                DataType.Cam3 => "Camera3Template",
-                _ => null
-            };
-        }
-        else if (lineNumber == 2)
-        {
-            resourceKey = dataType switch
-            {
-                DataType.Normal => "NormalFileTemplate",
-                DataType.NIR => "NirFileTemplate",
-                DataType.Cam1 => "Camera4Template", // Cam1 slot in Line 2 is Cam4
-                DataType.Cam2 => "Camera5Template", // Cam2 slot in Line 2 is Cam5
-                DataType.Cam3 => "Camera6Template", // Cam3 slot in Line 2 is Cam6
-                _ => null
-            };
-        }
-
-        if (string.IsNullOrEmpty(resourceKey))
-        {
-            return null;
-        }
-
-        var column = new DataGridTemplateColumn
-        {
-            Header = GetColumnHeader(dataType, lineNumber),
-            Width = new DataGridLength(1, DataGridLengthUnitType.Star),
-            CellTemplate = (DataTemplate)FindResource(resourceKey)
-        };
-
-        return column;
-    }
-
-    /// <summary>
-    /// Get column header text for a data type
-    /// Cam1-3 show as "Cam 1", "Cam 2", "Cam 3" regardless of line
-    /// (Actual camera used is determined by lineNumber: Line 1 = Cam1-3, Line 2 = Cam4-6)
-    /// </summary>
-    private string GetColumnHeader(DataType dataType, int lineNumber)
-    {
-        return Core.Localization.LocalizationManager.GetColumnHeader(dataType);
-    }
-
-    #endregion
 }

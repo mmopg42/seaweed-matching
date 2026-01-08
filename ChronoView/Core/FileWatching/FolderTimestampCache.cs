@@ -9,7 +9,7 @@ namespace ChronoView.Core.FileWatching
     /// Used to cache timestamps extracted from Normal folder names to avoid
     /// repeated extraction and file system access.
     /// </summary>
-    public class FolderTimestampCache
+    public class FolderTimestampCache : ITimestampCache
     {
         private readonly ConcurrentDictionary<string, CacheEntry> _cache;
         private readonly int _ttlSeconds;

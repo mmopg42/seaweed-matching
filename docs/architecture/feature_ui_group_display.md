@@ -2,7 +2,7 @@
 Owner: Development Team
 Last Updated: 2024-12-14
 Related PRs: []
-Code Ref: (MainWindow.xaml)
+Code Ref: (MainWindow.xaml, Resources/SharedResources.xaml)
 ---
 
 # UI Display: Group Monitoring
@@ -25,6 +25,8 @@ The backend `FileGroup` is wrapped in `FileGroupViewModel` for display.
 ### 1.1 Data Source Mapping
 
 Defines exactly which physical files are visualized for each component.
+
+> **Note**: Visual templates (`NormalFileTemplate`, `NirFileTemplate`, etc.) are defined in `Resources/SharedResources.xaml`.
 
 | UI Component | Source File Rule | Description |
 |--------------|------------------|-------------|
@@ -49,8 +51,9 @@ The monitoring grid is divided into tabs: **Line 1**, **Line 2**, and **Combined
 | **Cam 4..6** | Configurable | `CameraXThumbnail` | **Image** | Additional camera images (Line 2) |
 
 ### Configuration
-- **Image Size**: Controlled by `DisplayImageWidth` / `DisplayImageHeight` settings.
-- **NIR Size**: Controlled by dedicated `NirDisplayWidth` / `NirDisplayHeight` settings.
+- **Automatic Row Height**: DataGrid row height is **auto-calculated** based on `DisplayImageHeight` + `DisplayFontSize` * 1.5. This ensures that text labels and images fit perfectly without manual adjustment.
+- **Image Width**: **Auto-calculated** based on aspect ratio to eliminate empty palette space.
+- **NIR Size**: Controlled by `NirDisplayWidth` / `NirDisplayHeight` settings (Fixed size).
 
 ## 3. Visual States
 
@@ -77,9 +80,23 @@ NIR data is unique because it is raw data (`.spc` or `.csv`) that must be conver
 1. **Source**: `.spc` file from `NirFilePath`
 2. **Processing**: `NirGraphGenerator` converts creates a plot
 3. **Output**: `BitmapImage` displayed in the "NIR Graph" column
-4. **Interaction**: Double-clicking a row opens `DetailView`, showing the interactive NIR graph.
+4. **Interaction**: 
+    - Hover: Cursor changes to `Hand`.
+    - Click: Shows "NIR은 이미지가 없습니다." message (since it's raw data).
+    - Double-click: Opens `DetailView` for interactive analysis.
 
-## 5. Line Separation
+## 5. Image Preview Feature
+
+For visual inspection, users can preview full-size images in a dedicated popup.
+
+- **Trigger**: Click any image thumbnail in the DataGrid.
+- **Window**: `ImagePreviewWindow` (Non-modal, Draggable).
+- **Behavior**:
+    - **Dynamic Sizing**: Window adjusts to image content (up to 1200x900).
+    - **Closing**: Click the image itself, the "✕" button, or press `ESC`.
+    - **Non-blocking**: Users can move the main window while the preview is open.
+
+## 6. Line Separation
 
 UI strictly separates data by Production Line:
 

@@ -116,6 +116,20 @@ These paths are used by `StatisticsService` and `MonitoringOrchestrator`:
 
 ---
 
+## UI Display Settings
+
+Stored in the `ui` object within `config.json`. These affect the dashboard visualization.
+
+| Field | Purpose | Notes |
+|-------|---------|-------|
+| `displayImageHeight` | Dashboard image height | Used for row height auto-calculation |
+| `displayFontSize` | Font size for grid labels | Used for row height auto-calculation |
+| `nirDisplayWidth` | NIR column width | Fixed size |
+| `nirDisplayHeight` | NIR column height | Fixed size |
+| `dataGridRowHeight` | **DEPRECATED** | No longer used. Now auto-calculated at runtime. |
+
+---
+
 ## Common Configuration Errors
 
 ### ❌ Error 1: Swapped NIR and Normal Paths

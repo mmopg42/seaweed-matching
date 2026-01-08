@@ -1,0 +1,171 @@
+<UserControl x:Class="ChronoView.UI.Controls.StatisticsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:res="clr-namespace:ChronoView.Resources"
+             mc:Ignorable="d" 
+             d:DesignHeight="100" d:DesignWidth="1400">
+    <StackPanel>
+        <!-- File Count Statistics Bar -->
+        <Border Background="{StaticResource PanelBackgroundBrush}" 
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="12,8">
+            <WrapPanel>
+                <TextBlock FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Center">
+                    <Run Text="📊"/>
+                    <Run Text="{x:Static res:Strings.Label_FileCounts}"/>
+                    <Run Text=":"/>
+                </TextBlock>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="{x:Static res:Strings.Label_NIR1}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding NirCount}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="{x:Static res:Strings.Label_Normal1}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding NormalCount}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="{x:Static res:Strings.Label_Cam1}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Cam1Count}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="{x:Static res:Strings.Label_Cam2}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Cam2Count}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="{x:Static res:Strings.Label_Cam3}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Cam3Count}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                
+                <!-- Line 2 Counts -->
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="NIR2"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Nir2Count}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="일반2"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Normal2Count}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="{x:Static res:Strings.Camera_Cam4}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Cam4Count}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="{x:Static res:Strings.Camera_Cam5}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Cam5Count}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="{x:Static res:Strings.Camera_Cam6}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Cam6Count}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+            </WrapPanel>
+        </Border>
+        
+        <!-- Matching Statistics Bar -->
+        <Border Background="{StaticResource PanelBackgroundBrush}" 
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="12,8">
+            <WrapPanel>
+                <TextBlock FontWeight="Bold" Margin="0,0,10,0" VerticalAlignment="Center">
+                    <Run Text="🔗"/>
+                    <Run Text="{x:Static res:Strings.Label_MatchingStatus}"/>
+                    <Run Text=":"/>
+                </TextBlock>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="{x:Static res:Strings.Label_Total}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding TotalGroups}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="{x:Static res:Strings.Label_WithNIR}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding WithNirCount}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#6c757d">
+                            <Run Text="{x:Static res:Strings.Label_WithoutNIR}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding WithoutNirCount}" FontWeight="Bold" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#dc2626">
+                            <Run Text="{x:Static res:Strings.Label_Failed}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding FailedCount}" FontWeight="Bold" Margin="5,0,0,0" Foreground="#dc2626"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource ChipStyle}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Foreground="#f59e0b">
+                            <Run Text="{x:Static res:Strings.Label_Abnormal}"/>
+                            <Run Text=":"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding AbnormalCount}" FontWeight="Bold" Margin="5,0,0,0" Foreground="#f59e0b"/>
+                    </StackPanel>
+                </Border>
+            </WrapPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

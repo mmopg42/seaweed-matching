@@ -38,13 +38,13 @@
                            Margin="0,0,0,10"/>
 
                 <!-- Subtitle -->
-                <TextBlock Text="Professional Monitoring Application"
+                <!-- <TextBlock Text="Professional Monitoring Application"
                            FontFamily="Segoe UI"
                            FontWeight="Light"
                            FontSize="16"
                            Foreground="White"
                            HorizontalAlignment="Center"
-                           Opacity="0.9"/>
+                           Opacity="0.9"/> -->
 
                 <!-- Loading Indicator (optional) -->
                 <StackPanel Orientation="Horizontal"

@@ -38,10 +38,7 @@ namespace ChronoView.Core.FileWatching
         /// </summary>
         void ResetState();
 
-        /// <summary>
-        /// Process file system events and update groups
-        /// </summary>
-        Task<List<FileGroup>> ProcessFileEventsAsync(List<FileSystemEventArgs> events);
+
 
         /// <summary>
         /// Sets the UI log callback for sending matching logs to the GUI.

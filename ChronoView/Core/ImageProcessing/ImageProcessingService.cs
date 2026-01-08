@@ -40,7 +40,7 @@ public class ImageProcessingService : IImageProcessor
     /// <summary>
     /// Generates a thumbnail image asynchronously using Task.Run for CPU-intensive operations.
     /// </summary>
-    public async Task<byte[]> GenerateThumbnailAsync(string imagePath, int width, int height, CancellationToken cancellationToken = default)
+    public async Task<byte[]> GenerateThumbnailAsync(string imagePath, int width, int height, CancellationToken cancellationToken = default, bool throwOnError = false)
     {
         if (string.IsNullOrWhiteSpace(imagePath))
             throw new ArgumentException("Image path cannot be null or empty", nameof(imagePath));
@@ -50,6 +50,7 @@ public class ImageProcessingService : IImageProcessor
 
         if (!File.Exists(imagePath))
         {
+            if (throwOnError) throw new FileNotFoundException("Image file not found", imagePath);
             _logger.LogWarning("Image file not found: {ImagePath}", imagePath);
             return GetPlaceholderImage(width, height);
         }
@@ -106,6 +107,7 @@ public class ImageProcessingService : IImageProcessor
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            if (throwOnError) throw; // Re-throw to caller to handle retry
             _logger.LogError(ex, "Error generating thumbnail for: {ImagePath}", imagePath);
             return GetPlaceholderImage(width, height);
         }

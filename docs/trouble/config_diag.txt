@@ -1,0 +1,120 @@
+{
+  "basePath": "D:/Data",
+  "folderPaths": {
+    "nir1": "C:\\Users\\redli\\AppData\\Local\\Temp\\ChronoViewIntegrationTest_6e726a6d-4a39-4c5b-b6cc-c442499e0e21\\nir1",
+    "normal1": "C:\\Users\\redli\\AppData\\Local\\Temp\\ChronoViewIntegrationTest_6e726a6d-4a39-4c5b-b6cc-c442499e0e21\\normal1",
+    "nir": "C:\\workspace\\seaweed\\data\\\uD14C\uC2A4\uD2B8 \uB370\uC774\uD130\\\uC2DC\uBBAC\\nir",
+    "nir2": "",
+    "normal": "C:\\workspace\\seaweed\\data\\\uD14C\uC2A4\uD2B8 \uB370\uC774\uD130\\\uC2DC\uBBAC\\normal",
+    "normal2": ""
+  },
+  "imageSettings": {
+    "thumbnailWidth": 200,
+    "thumbnailHeight": 150,
+    "thumbnailQuality": 85,
+    "maxCacheSizeMB": 500,
+    "enableCaching": true
+  },
+  "matchingSettings": {
+    "nirTimeWindowSeconds": 10,
+    "cameraTimeWindowSeconds": 60,
+    "normalFolderTimeWindowSeconds": 120,
+    "enableAbnormalDetection": true,
+    "zScoreThreshold": 2,
+    "supportMultipleLines": true,
+    "lineMode": "integrated",
+    "enableNirGraph": true,
+    "moveAllData": 100,
+    "useCameraSubfolderNormal": false,
+    "useCameraSubfolderNormal2": false,
+    "useFolderSuffix": false,
+    "nir1Path": "C:\\workspace\\seaweed\\data\\\uD14C\uC2A4\uD2B8 \uB370\uC774\uD130\\\uC2DC\uBBAC\\nir",
+    "normal1Path": "C:\\workspace\\seaweed\\data\\\uD14C\uC2A4\uD2B8 \uB370\uC774\uD130\\\uC2DC\uBBAC\\normal",
+    "camera1Path": "C:\\workspace\\seaweed\\data\\\uD14C\uC2A4\uD2B8 \uB370\uC774\uD130\\\uC2DC\uBBAC\\cam1",
+    "camera2Path": "C:\\workspace\\seaweed\\data\\\uD14C\uC2A4\uD2B8 \uB370\uC774\uD130\\\uC2DC\uBBAC\\cam2",
+    "camera3Path": "C:\\workspace\\seaweed\\data\\\uD14C\uC2A4\uD2B8 \uB370\uC774\uD130\\\uC2DC\uBBAC\\cam3",
+    "nir2Path": "",
+    "normal2Path": "",
+    "camera4Path": "",
+    "camera5Path": "",
+    "camera6Path": "",
+    "outputPath": ""
+  },
+  "workflowSettings": {
+    "enableAutoOperations": false,
+    "enableRollback": true,
+    "showProgress": true,
+    "enableRealTimeMonitoring": true,
+    "watcherBufferSize": 65536,
+    "folderTimestampCacheTTL": 300,
+    "maxEventProcessingWorkers": 3,
+    "enableParallelProcessing": true,
+    "deleteQuarantinePath": "D:/Data\\Trash"
+  },
+  "windowSettings": {
+    "width": 1200,
+    "height": 800,
+    "left": 100,
+    "top": 100,
+    "windowState": "Normal",
+    "rememberPosition": true
+  },
+  "uiSettings": {
+    "displayImageWidth": 200,
+    "displayImageHeight": 90,
+    "dataGridRowHeight": 100,
+    "legacyUiMode": false,
+    "showTooltips": true,
+    "nirThumbnailWidth": 200,
+    "nirThumbnailHeight": 150,
+    "nirDisplayWidth": 120,
+    "nirDisplayHeight": 90,
+    "displayFontSize": 10
+  },
+  "dataSequenceSettings": {
+    "sequence": [
+      {
+        "type": "NIR",
+        "order": 1,
+        "minDelaySeconds": 0,
+        "maxDelaySeconds": 50,
+        "enabled": true
+      },
+      {
+        "type": "Normal",
+        "order": 2,
+        "minDelaySeconds": 0,
+        "maxDelaySeconds": 50,
+        "enabled": true
+      },
+      {
+        "type": "Cam1",
+        "order": 3,
+        "minDelaySeconds": 0,
+        "maxDelaySeconds": 50,
+        "enabled": true
+      },
+      {
+        "type": "Cam2",
+        "order": 4,
+        "minDelaySeconds": 0,
+        "maxDelaySeconds": 50,
+        "enabled": true
+      },
+      {
+        "type": "Cam3",
+        "order": 5,
+        "minDelaySeconds": 0,
+        "maxDelaySeconds": 50,
+        "enabled": true
+      }
+    ]
+  },
+  "externalProgramSettings": {
+    "generalCameraProgramPath": "C:\\Users\\redli\\Downloads\\drygim_viewer_251103.exe",
+    "nir1ProgramPath": "",
+    "nir2ProgramPath": "",
+    "nir2FilterMonitorPath": "Z:\\\uC724\uD0DC\uACBD",
+    "nir2FilterDestinationPath": "Z:\\\uC724\uD0DC\uACBD\\seaweed"
+  }
+}

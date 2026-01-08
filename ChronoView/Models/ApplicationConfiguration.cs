@@ -152,6 +152,11 @@ public class MatchingSettings
     public int? MoveAllData { get; set; } = null;
 
     /// <summary>
+    /// Sample name/subject for file operations.
+    /// </summary>
+    public string? SampleName { get; set; } = null;
+
+    /// <summary>
     /// Use camera subfolder for Normal1 path.
     /// </summary>
     public bool UseCameraSubfolderNormal { get; set; } = false;
@@ -342,6 +347,16 @@ public class WorkflowSettings
     public int MaxEventProcessingWorkers { get; set; } = 3;
 
     /// <summary>
+    /// Enable periodic polling to ensure file detection on network drives.
+    /// </summary>
+    public bool EnablePolling { get; set; } = true;
+
+    /// <summary>
+    /// Polling interval in milliseconds.
+    /// </summary>
+    public int PollingIntervalMs { get; set; } = 2000;
+
+    /// <summary>
     /// Enable parallel event processing for improved throughput.
     /// When enabled, multiple file events are processed concurrently.
     /// Default is true.
@@ -353,6 +368,12 @@ public class WorkflowSettings
     /// If empty, a default path should be used by callers.
     /// </summary>
     public string DeleteQuarantinePath { get; set; } = "";
+
+    /// <summary>
+    /// Number of days to retain log files. Logs older than this will be deleted.
+    /// Default is 30 days. Set to 0 or less to disable.
+    /// </summary>
+    public int LogRetentionDays { get; set; } = 30;
 }
 
 /// <summary>
@@ -442,6 +463,11 @@ public class UISettings
     /// Separate from DisplayImageHeight to allow independent sizing.
     /// </summary>
     public int NirDisplayHeight { get; set; } = 90;
+
+    /// <summary>
+    /// Font size for labels in the DataGrid.
+    /// </summary>
+    public double DisplayFontSize { get; set; } = 10.0;
 }
 
 /// <summary>

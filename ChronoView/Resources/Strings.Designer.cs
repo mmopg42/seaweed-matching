@@ -1064,6 +1064,24 @@ namespace ChronoView.Resources {
             }
         }
         
+        public static string Panel_CameraStatus {
+            get {
+                return ResourceManager.GetString("Panel_CameraStatus", resourceCulture);
+            }
+        }
+        
+        public static string Panel_SampleMoveSettings {
+            get {
+                return ResourceManager.GetString("Panel_SampleMoveSettings", resourceCulture);
+            }
+        }
+        
+        public static string Label_MoveSettings {
+            get {
+                return ResourceManager.GetString("Label_MoveSettings", resourceCulture);
+            }
+        }
+        
         public static string Column_Index {
             get {
                 return ResourceManager.GetString("Column_Index", resourceCulture);

@@ -53,7 +53,6 @@ public class SettingsDialogViewModel : ViewModelBase
     private bool _showTooltips = true;
     private int _displayImageWidth = 120;
     private int _displayImageHeight = 90;
-    private int _dataGridRowHeight = 100;
 
     // NIR graph options
     private bool _enableNirGraph = true;
@@ -61,9 +60,13 @@ public class SettingsDialogViewModel : ViewModelBase
     private int _nirThumbnailHeight = 150;
     private int _nirDisplayWidth = 120;
     private int _nirDisplayHeight = 90;
+    private double _displayFontSize = 10.0;
 
     // Line mode
     private bool _isSeparatedMode;
+
+    // Log retention
+    private int _logRetentionDays = 30;
 
     // Data Sequence settings
     private ObservableCollection<DataSequenceItemViewModel> _sequenceItems = new();
@@ -243,12 +246,6 @@ public class SettingsDialogViewModel : ViewModelBase
         set => SetProperty(ref _displayImageHeight, value);
     }
 
-    public int DataGridRowHeight
-    {
-        get => _dataGridRowHeight;
-        set => SetProperty(ref _dataGridRowHeight, value);
-    }
-
     // NIR graph options
     public bool EnableNirGraph
     {
@@ -278,6 +275,18 @@ public class SettingsDialogViewModel : ViewModelBase
     {
         get => _nirDisplayHeight;
         set => SetProperty(ref _nirDisplayHeight, value);
+    }
+
+    public double DisplayFontSize
+    {
+        get => _displayFontSize;
+        set => SetProperty(ref _displayFontSize, value);
+    }
+
+    public int LogRetentionDays
+    {
+        get => _logRetentionDays;
+        set => SetProperty(ref _logRetentionDays, value);
     }
 
     // Line mode
@@ -552,6 +561,9 @@ public class SettingsDialogViewModel : ViewModelBase
         Camera5Path = _configuration.MatchingSettings.Camera5Path;
         Camera6Path = _configuration.MatchingSettings.Camera6Path;
 
+        // Load output path
+        OutputPath = _configuration.MatchingSettings.OutputPath ?? string.Empty;
+
         // Quarantine path (soft delete)
         DeleteQuarantinePath = _configuration.WorkflowSettings.DeleteQuarantinePath;
         if (string.IsNullOrWhiteSpace(DeleteQuarantinePath))
@@ -577,8 +589,8 @@ public class SettingsDialogViewModel : ViewModelBase
 
         // Load UI settings
         DisplayImageWidth = _configuration.UISettings.DisplayImageWidth;
+        DisplayImageWidth = _configuration.UISettings.DisplayImageWidth;
         DisplayImageHeight = _configuration.UISettings.DisplayImageHeight;
-        DataGridRowHeight = _configuration.UISettings.DataGridRowHeight;
         LegacyUiMode = _configuration.UISettings.LegacyUiMode;
         ShowTooltips = _configuration.UISettings.ShowTooltips;
 
@@ -588,6 +600,7 @@ public class SettingsDialogViewModel : ViewModelBase
         NirThumbnailHeight = _configuration.UISettings.NirThumbnailHeight;
         NirDisplayWidth = _configuration.UISettings.NirDisplayWidth;
         NirDisplayHeight = _configuration.UISettings.NirDisplayHeight;
+        DisplayFontSize = _configuration.UISettings.DisplayFontSize;
 
         // Load Data Sequence settings
         LoadSequenceSettings();
@@ -598,6 +611,9 @@ public class SettingsDialogViewModel : ViewModelBase
         Nir2ProgramPath = _configuration.ExternalProgramSettings.Nir2ProgramPath;
         Nir2FilterMonitorPath = _configuration.ExternalProgramSettings.Nir2FilterMonitorPath;
         Nir2FilterDestinationPath = _configuration.ExternalProgramSettings.Nir2FilterDestinationPath;
+
+        // Load Log retention settings
+        LogRetentionDays = _configuration.WorkflowSettings.LogRetentionDays;
     }
 
     /// <summary>
@@ -650,7 +666,6 @@ public class SettingsDialogViewModel : ViewModelBase
         // Save UI settings
         _configuration.UISettings.DisplayImageWidth = DisplayImageWidth;
         _configuration.UISettings.DisplayImageHeight = DisplayImageHeight;
-        _configuration.UISettings.DataGridRowHeight = DataGridRowHeight;
         _configuration.UISettings.LegacyUiMode = LegacyUiMode;
         _configuration.UISettings.ShowTooltips = ShowTooltips;
 
@@ -660,6 +675,7 @@ public class SettingsDialogViewModel : ViewModelBase
         _configuration.UISettings.NirThumbnailHeight = NirThumbnailHeight;
         _configuration.UISettings.NirDisplayWidth = NirDisplayWidth;
         _configuration.UISettings.NirDisplayHeight = NirDisplayHeight;
+        _configuration.UISettings.DisplayFontSize = DisplayFontSize;
 
         // Save Data Sequence settings
         SaveSequenceSettings();
@@ -670,6 +686,9 @@ public class SettingsDialogViewModel : ViewModelBase
         _configuration.ExternalProgramSettings.Nir2ProgramPath = Nir2ProgramPath;
         _configuration.ExternalProgramSettings.Nir2FilterMonitorPath = Nir2FilterMonitorPath;
         _configuration.ExternalProgramSettings.Nir2FilterDestinationPath = Nir2FilterDestinationPath;
+
+        // Save Log retention settings
+        _configuration.WorkflowSettings.LogRetentionDays = LogRetentionDays;
 
         // Persist to disk
         try 

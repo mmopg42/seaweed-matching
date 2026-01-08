@@ -17,7 +17,7 @@ public class StatisticsService : IStatisticsService, IDisposable
     private readonly IConfigurationManager _configManager;
     private readonly ILogger<StatisticsService> _logger;
     private readonly Dispatcher _dispatcher;
-    private readonly CancellationTokenSource _cancellationTokenSource;
+    private CancellationTokenSource _cancellationTokenSource; // Removed readonly to allow recreation
     private readonly ConcurrentQueue<string> _abnormalConditions;
     private readonly Stopwatch _performanceStopwatch;
     private readonly SemaphoreSlim _debounceSemaphore;
@@ -29,12 +29,43 @@ public class StatisticsService : IStatisticsService, IDisposable
     private int _fileCountUpdateCount;
     private int _statsCalculationCount;
     private DateTime _lastFileCountUpdate;
-    private ApplicationConfiguration? _currentConfig;
+    private ChronoView.Models.ApplicationConfiguration? _currentConfig;
 
     public event EventHandler<FileCountStatistics>? FileCountsUpdated;
     public event EventHandler<MatchingStatistics>? MatchingStatisticsUpdated;
 
     public bool IsMonitoring => _isMonitoring;
+
+    private bool _hasLoggedDispatcherInfo = false;
+
+    /// <summary>
+    /// UI Dispatcher로 FileCountsUpdated 이벤트를 발행하는 헬퍼 메서드.
+    /// 모든 FileCountsUpdated 발행을 이 메서드로 통일하여 UI 스레드 마샬링을 보장합니다.
+    /// </summary>
+    private void PublishFileCounts(FileCountStatistics stats)
+    {
+        // Debug 로깅 (첫 1회만)
+        if (!_hasLoggedDispatcherInfo)
+        {
+            _logger.LogDebug("PublishFileCounts: CheckAccess={CheckAccess}, ThreadId={ThreadId}", 
+                _dispatcher.CheckAccess(), Environment.CurrentManagedThreadId);
+            _hasLoggedDispatcherInfo = true;
+        }
+
+        if (_dispatcher.CheckAccess())
+        {
+            // Already on UI dispatcher thread, invoke synchronously
+            FileCountsUpdated?.Invoke(this, stats);
+        }
+        else
+        {
+            // Not on UI dispatcher thread, marshal to it
+            _dispatcher.BeginInvoke(() =>
+            {
+                FileCountsUpdated?.Invoke(this, stats);
+            }, DispatcherPriority.Normal);
+        }
+    }
 
     public StatisticsService(
         IConfigurationManager configManager,
@@ -55,27 +86,39 @@ public class StatisticsService : IStatisticsService, IDisposable
         _lastMatchingStats = null; // Start with null so first calculation always raises event
     }
 
-    public async Task StartMonitoringAsync(ApplicationConfiguration config)
+    public async Task StartMonitoringAsync(ChronoView.Models.ApplicationConfiguration config)
     {
-        _logger.LogError("DEBUG: StartMonitoringAsync called, _isMonitoring={IsMonitoring}", _isMonitoring);
-        
+        // Ensure we are truly stopped before starting
         if (_isMonitoring)
         {
             _logger.LogWarning("Monitoring is already running");
             return;
         }
 
+        // Recreate CancellationTokenSource if it was cancelled or disposed
+        if (_cancellationTokenSource.IsCancellationRequested)
+        {
+            _cancellationTokenSource.Dispose();
+            _cancellationTokenSource = new CancellationTokenSource();
+            _logger.LogInformation("Recreated CancellationTokenSource for new monitoring session");
+        }
+
         _currentConfig = config ?? throw new ArgumentNullException(nameof(config));
+        _lastFileCount = null;
         _isMonitoring = true;
         
-        _logger.LogError("DEBUG: Starting background file counting task...");
+        // 첫 번째 업데이트를 UI Dispatcher로 마샬링하여 수행
+        var initialStats = await GetFileCountsAsync();
+        PublishFileCounts(initialStats);
+        _lastFileCount = initialStats;
+        _lastFileCountUpdate = DateTime.Now;
         
-        // Start background file counting worker
+        // 이후 백그라운드 폴링 시작 (변경 감지만 수행)
         _monitoringTask = Task.Run(async () => await MonitorFileCountsAsync(_cancellationTokenSource.Token));
         
-        _logger.LogInformation("Statistics monitoring started");
-        _logger.LogError("DEBUG: Statistics monitoring started successfully");
-        await Task.CompletedTask;
+        _logger.LogInformation("Statistics monitoring started with initial counts: Nir={Nir}, Normal={Normal}, Cam1={Cam1}", 
+            initialStats.NirCount, initialStats.NormalCount, initialStats.Cam1Count);
+
     }
 
     public async Task StopMonitoringAsync()
@@ -105,6 +148,17 @@ public class StatisticsService : IStatisticsService, IDisposable
         }
         
         _logger.LogInformation("Statistics monitoring stopped");
+    }
+
+    public async Task ReloadStatsAsync(ChronoView.Models.ApplicationConfiguration config)
+    {
+        _currentConfig = config;
+        var stats = await GetFileCountsAsync();
+        
+        // Always raise event on reload (UI Dispatcher로 마샬링)
+        PublishFileCounts(stats);
+        _lastFileCount = stats;
+        _lastFileCountUpdate = DateTime.Now;
     }
 
     public FileCountStatistics GetCurrentFileCounts()
@@ -155,7 +209,7 @@ public class StatisticsService : IStatisticsService, IDisposable
     public async Task<FileCountStatistics> GetFileCountsAsync()
     {
         // Use current config if available, otherwise load from disk
-        var config = _currentConfig ?? await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
+        var config = _currentConfig ?? await _configManager.LoadConfigurationAsync<ChronoView.Models.ApplicationConfiguration>();
         var stats = new FileCountStatistics();
 
         try
@@ -312,8 +366,8 @@ public class StatisticsService : IStatisticsService, IDisposable
 
     private async Task MonitorFileCountsAsync(CancellationToken cancellationToken)
     {
-        const int updateIntervalMs = 2000; // 2 seconds
-        const int debounceMs = 500; // Debounce to 500ms
+        const int updateIntervalMs = 100; // 100ms for real-time updates
+        const int debounceMs = 50; // Reduced debounce for responsiveness
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -334,20 +388,8 @@ public class StatisticsService : IStatisticsService, IDisposable
                             _lastFileCount = stats;
                             _lastFileCountUpdate = DateTime.Now;
                             
-                            // Marshal to UI thread for event notification
-                            if (_dispatcher.CheckAccess())
-                            {
-                                // Already on dispatcher thread, invoke synchronously
-                                FileCountsUpdated?.Invoke(this, stats);
-                            }
-                            else
-                            {
-                                // Not on dispatcher thread, marshal to it
-                                await _dispatcher.InvokeAsync(() =>
-                                {
-                                    FileCountsUpdated?.Invoke(this, stats);
-                                }, DispatcherPriority.Normal);
-                            }
+                            // UI Dispatcher로 마샬링하여 이벤트 발행 (헬퍼 사용)
+                            PublishFileCounts(stats);
                         }
                         finally
                         {
@@ -380,7 +422,7 @@ public class StatisticsService : IStatisticsService, IDisposable
         try
         {
             // Use EnumerateFiles for efficient counting
-            return await Task.Run(() => Directory.EnumerateFiles(path, "*.*", SearchOption.TopDirectoryOnly).Count());
+            return await Task.Run(() => Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories).Count());
         }
         catch (UnauthorizedAccessException ex)
         {

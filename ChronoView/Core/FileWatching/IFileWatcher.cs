@@ -3,73 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace ChronoView.Core.FileWatching
+namespace ChronoView.Core.FileWatching;
+
+public interface IFileWatcher
 {
-    /// <summary>
-    /// Interface for file system monitoring service
-    /// </summary>
-    public interface IFileWatcher
-    {
-        /// <summary>
-        /// Event raised when a file system change is detected
-        /// </summary>
-        event EventHandler<FileSystemEventArgs> FileChanged;
-
-        /// <summary>
-        /// Event raised when the watcher health status changes
-        /// </summary>
-        event EventHandler<WatcherHealthEventArgs> HealthStatusChanged;
-
-        /// <summary>
-        /// Start monitoring the specified paths
-        /// </summary>
-        /// <summary>
-        /// Start monitoring the specified paths with options
-        /// </summary>
-        Task StartWatchingAsync(IEnumerable<string> paths, FileWatcherOptions? options = null);
-        /// <summary>
-        /// Stop monitoring all paths
-        /// </summary>
-        Task StopWatchingAsync();
-
-        /// <summary>
-        /// Gets whether the watcher is currently active
-        /// </summary>
-        bool IsWatching { get; }
-
-        /// <summary>
-        /// Gets the current health status of the watcher
-        /// </summary>
-        WatcherHealthStatus HealthStatus { get; }
-    }
-
-    /// <summary>
-    /// Options for file watcher behavior.
-    /// Currently empty - reserved for future configuration options.
-    /// </summary>
-    public class FileWatcherOptions
-    {
-        // Reserved for future options
-        // Polling has been permanently removed in favor of pure event-based detection
-    }
-
-    /// <summary>
-    /// Health status of the file watcher
-    /// </summary>
-    public enum WatcherHealthStatus
-    {
-        Healthy,
-        Degraded,
-        Unhealthy
-    }
-
-    /// <summary>
-    /// Event args for watcher health status changes
-    /// </summary>
-    public class WatcherHealthEventArgs : EventArgs
-    {
-        public WatcherHealthStatus Status { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public DateTime Timestamp { get; set; }
-    }
+    event EventHandler<FileSystemEventArgs> FileChanged;
+    Task StartWatchingAsync(IEnumerable<string> paths, FileWatcherOptions options);
+    Task StopWatchingAsync();
 }

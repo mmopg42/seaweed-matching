@@ -70,6 +70,10 @@ public partial class App : Application
             // Get logger
             var logger = _serviceProvider.GetRequiredService<ILogger<App>>();
             logger.LogInformation("ChronoView application starting...");
+            
+            // Initialize log cleanup service (run asynchronously to avoid blocking UI)
+            var cleanupService = _serviceProvider.GetRequiredService<Core.Logging.LogCleanupService>();
+            System.Threading.Tasks.Task.Run(() => cleanupService.CleanupOldLogFiles());
 
             // Ensure splash screen is visible for at least 2 seconds
             await System.Threading.Tasks.Task.Delay(2000);
@@ -170,10 +174,40 @@ public partial class App : Application
             configure.AddConsole();
             configure.AddDebug();
             configure.SetMinimumLevel(LogLevel.Debug);  // Changed from Information to Debug for detailed logging
+            
+            // 개발용 로그 파일 저장 추가
+            var logDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ChronoView",
+                "Logs");
+            Directory.CreateDirectory(logDir);
+            
+            // 날짜 폴더 생성 (App.xaml.cs의 책임)
+            var startTime = DateTime.Now;
+            var dateFolder = Path.Combine(logDir, startTime.ToString("yyyyMMdd"));
+            Directory.CreateDirectory(dateFolder);
+
+            // 완전한 로그 파일 경로 생성 (날짜 폴더 포함 + 시작 시간 포함)
+            var logFile = Path.Combine(dateFolder, $"ChronoView_Debug_{startTime:yyyyMMdd_HHmmss}.log");
+            
+            // 세션 시작 시간 기록 (파일이 새로 생성될 때만)
+            if (!File.Exists(logFile) || new FileInfo(logFile).Length == 0)
+            {
+                var sessionStartTime = DateTime.Now;
+                var separator = new string('=', 80);
+                var sessionHeader = $"\n{separator}\n" +
+                                   $"Session Started: {sessionStartTime:yyyy-MM-dd HH:mm:ss}\n" +
+                                   $"{separator}\n\n";
+                File.AppendAllText(logFile, sessionHeader);
+            }
+            
+            // FileLoggerProvider에 완전한 파일 경로 전달 (날짜 폴더 포함)
+            configure.AddProvider(new Infrastructure.Logging.FileLoggerProvider(logFile));
         });
 
         // Register WPF Dispatcher (Singleton - UI thread dispatcher)
-        services.AddSingleton(System.Windows.Threading.Dispatcher.CurrentDispatcher);
+        // Application.Current.Dispatcher를 사용하여 항상 UI Dispatcher를 주입
+        services.AddSingleton(sp => System.Windows.Application.Current.Dispatcher);
 
         // Configuration (Singleton - loaded once and shared)
         services.AddSingleton<ApplicationConfiguration>(sp =>
@@ -184,18 +218,22 @@ public partial class App : Application
 
         // Core Services (Singleton - maintain state across application lifetime)
         services.AddSingleton<IConfigurationManager, ConfigurationManager>();
-        services.AddSingleton<FolderTimestampCache>(sp =>
+        services.AddSingleton<ITimestampCache>(sp =>
         {
             var config = sp.GetRequiredService<ApplicationConfiguration>();
             int ttl = config.WorkflowSettings?.FolderTimestampCacheTTL ?? 300;
             return new FolderTimestampCache(ttl, sp.GetService<ILogger<FolderTimestampCache>>());
         });
+        services.AddSingleton<IGroupManager, GroupManager>();
         services.AddSingleton<IFileWatcher, FileWatcherService>();
         services.AddSingleton<IFileGroupMatcher>(sp =>
             new FileGroupMatcherService(
                 sp.GetService<ILogger<FileGroupMatcherService>>()));
         services.AddSingleton<INirFileResolver, SpcTxtNirFileResolver>();
+        services.AddSingleton<IInitialScanner, InitialScanner>();
         services.AddSingleton<IImageProcessor, ImageProcessingService>();
+        services.AddSingleton<IImageCaptureService, ImageCaptureService>(); // NEW: ImageCaptureService registration
+        services.AddSingleton<IEventProcessor, EventProcessor>(); // NEW: IEventProcessor registration
         services.AddSingleton<IStatisticsService, StatisticsService>();
         services.AddSingleton<IMonitoringOrchestrator, MonitoringOrchestrator>(sp =>
             new MonitoringOrchestrator(
@@ -203,10 +241,23 @@ public partial class App : Application
                 sp.GetRequiredService<IFileWatcher>(),
                 sp.GetRequiredService<ILogger<MonitoringOrchestrator>>(),
                 sp.GetRequiredService<INirFileResolver>(),
-                sp.GetRequiredService<FolderTimestampCache>()));
+                sp.GetRequiredService<ITimestampCache>(),
+                sp.GetRequiredService<IInitialScanner>(),
+                sp.GetRequiredService<IGroupManager>(),
+                sp.GetRequiredService<IImageCaptureService>(), // NEW: ImageCaptureService injection
+                sp.GetRequiredService<IEventProcessor>(), // NEW: IEventProcessor injection
+                (severity, category, message) => 
+                {
+                    var logPanel = App.Current.MainWindow?.FindName("LogPanel") as FrameworkElement;
+                    // ... simplified for now, orchestrated through events is better
+                }
+            ));
         services.AddSingleton<IAbnormalDetector, AbnormalDetectorService>();
 
         // File Operation Services (Transient - new instance per operation)
+        services.AddSingleton<IFileGroupOperator, FileGroupOperator>();
+        services.AddTransient<IMoveService, MoveService>();
+        services.AddTransient<IDeleteService, DeleteService>();
         services.AddTransient<IFileOperationService, FileOperationService>();
         services.AddTransient<IPathManagementService, PathManagementService>();
 
@@ -224,6 +275,9 @@ public partial class App : Application
         services.AddTransient<MainWindow>();
         services.AddTransient<SettingsDialog>();
         services.AddTransient<SetupWindow>();
+        
+        // Logging Services
+        services.AddSingleton<Core.Logging.LogCleanupService>();
     }
 
     protected override void OnExit(ExitEventArgs e)

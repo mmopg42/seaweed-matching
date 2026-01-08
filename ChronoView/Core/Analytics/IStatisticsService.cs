@@ -26,6 +26,11 @@ public interface IStatisticsService
     /// Stops monitoring.
     /// </summary>
     Task StopMonitoringAsync();
+    
+    /// <summary>
+    /// Forces a reload of statistics using the provided configuration.
+    /// </summary>
+    Task ReloadStatsAsync(ChronoView.Models.ApplicationConfiguration config);
 
     /// <summary>
     /// Gets the current file count statistics.

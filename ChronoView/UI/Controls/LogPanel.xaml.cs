@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 using ChronoView.UI.ViewModels;
 using Microsoft.Win32;
 using WpfUserControl = System.Windows.Controls.UserControl;
@@ -48,6 +49,22 @@ public partial class LogPanel : WpfUserControl
     {
         get => (ObservableCollection<LogMessage>)GetValue(LogMessagesProperty);
         set => SetValue(LogMessagesProperty, value);
+    }
+
+    /// <summary>
+    /// Dependency property for the close command (hides the log panel).
+    /// </summary>
+    public static readonly DependencyProperty CloseCommandProperty =
+        DependencyProperty.Register(
+            nameof(CloseCommand),
+            typeof(ICommand),
+            typeof(LogPanel),
+            new PropertyMetadata(null));
+
+    public ICommand CloseCommand
+    {
+        get => (ICommand)GetValue(CloseCommandProperty);
+        set => SetValue(CloseCommandProperty, value);
     }
 
     private static void OnLogMessagesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -162,34 +179,64 @@ public partial class LogPanel : WpfUserControl
         }
     }
 
-    private void Export_Click(object sender, RoutedEventArgs e)
+    private void QuickSave_Click(object sender, RoutedEventArgs e)
     {
-        var saveDialog = new WpfSaveFileDialog
+        try
         {
-            Filter = Core.Localization.LocalizationManager.GetString("Filter_TextFiles"),
-            DefaultExt = ".txt",
-            FileName = $"ChronoView_Log_{DateTime.Now:yyyyMMdd_HHmmss}"
-        };
+            var logDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ChronoView",
+                "Logs");
+            
+            // 날짜 폴더 생성
+            var dateFolder = Path.Combine(logDir, DateTime.Now.ToString("yyyyMMdd"));
+            Directory.CreateDirectory(dateFolder);
+            
+            var fileName = $"ChronoView_UI_Export_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
+            var filePath = Path.Combine(dateFolder, fileName);
+            
+            ExportToFile(filePath);
+            
+            WpfMessageBox.Show(
+                $"로그가 저장되었습니다:\n{filePath}",
+                "저장 완료",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            WpfMessageBox.Show(
+                $"저장 중 오류가 발생했습니다:\n{ex.Message}",
+                "저장 오류",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
 
-        if (saveDialog.ShowDialog() == true)
+    private void OpenLogFolder_Click(object sender, RoutedEventArgs e)
+    {
+        try
         {
-            try
+            var logDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ChronoView",
+                "Logs");
+            
+            Directory.CreateDirectory(logDir);
+            
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                ExportToFile(saveDialog.FileName);
-                WpfMessageBox.Show(
-                    Core.Localization.LocalizationManager.GetString("Message_ExportSuccess", saveDialog.FileName),
-                    Core.Localization.LocalizationManager.GetString("Dialog_ExportComplete"),
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                WpfMessageBox.Show(
-                    Core.Localization.LocalizationManager.GetString("Message_ExportError", ex.Message),
-                    Core.Localization.LocalizationManager.GetString("Dialog_ExportError"),
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            }
+                FileName = logDir,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            WpfMessageBox.Show(
+                $"폴더를 열 수 없습니다:\n{ex.Message}",
+                "오류",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 
@@ -269,7 +316,8 @@ public partial class LogPanel : WpfUserControl
 
             Directory.CreateDirectory(logDir);
 
-            var logFile = Path.Combine(logDir, $"ChronoView_{DateTime.Now:yyyyMMdd}.log");
+            var startTime = DateTime.Now;
+            var logFile = Path.Combine(logDir, $"ChronoView_{startTime:yyyyMMdd_HHmmss}.log");
 
             var logEntry = $"[{message.Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{message.Severity}] [{message.Source}] {message.Message}";
 

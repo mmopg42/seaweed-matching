@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using ChronoView.Models;
 using ChronoView.Core.Nir;
+using ChronoView.Core.Configuration;
 
 namespace ChronoView.Core.ProgramLaunching;
 
@@ -15,18 +16,19 @@ namespace ChronoView.Core.ProgramLaunching;
 public class Nir2CameraLauncher : IDisposable
 {
     private readonly ILogger<Nir2CameraLauncher> _logger;
-    private readonly ApplicationConfiguration _config;
+    private readonly IConfigurationManager _configManager;
     private Process? _process;
     private CancellationTokenSource? _monitorCts;
     private FileSystemWatcher? _fileWatcher;
     private bool _isFilteringActive;
+    private string _destinationPath = string.Empty;
 
     public Nir2CameraLauncher(
         ILogger<Nir2CameraLauncher> logger,
-        ApplicationConfiguration config)
+        IConfigurationManager configManager)
     {
         _logger = logger;
-        _config = config;
+        _configManager = configManager;
     }
 
     /// <summary>
@@ -52,8 +54,9 @@ public class Nir2CameraLauncher : IDisposable
     {
         try
         {
+            var config = _configManager.LoadConfiguration<ApplicationConfiguration>();
             var programName = "NIR Camera 2";
-            var programPath = _config?.ExternalProgramSettings?.Nir2ProgramPath ?? string.Empty;
+            var programPath = config?.ExternalProgramSettings?.Nir2ProgramPath ?? string.Empty;
             
             _logger.LogInformation("Attempting to launch {ProgramName}", programName);
 
@@ -114,8 +117,9 @@ public class Nir2CameraLauncher : IDisposable
 
         try
         {
-            var monitorPath = _config?.ExternalProgramSettings?.Nir2FilterMonitorPath ?? string.Empty;
-            var destinationPath = _config?.ExternalProgramSettings?.Nir2FilterDestinationPath ?? string.Empty;
+            var config = _configManager.LoadConfiguration<ApplicationConfiguration>();
+            var monitorPath = config?.ExternalProgramSettings?.Nir2FilterMonitorPath ?? string.Empty;
+            _destinationPath = config?.ExternalProgramSettings?.Nir2FilterDestinationPath ?? string.Empty;
 
             // 경로 검증
             if (string.IsNullOrWhiteSpace(monitorPath))
@@ -123,7 +127,7 @@ public class Nir2CameraLauncher : IDisposable
                 return (false, "Monitor path not configured");
             }
 
-            if (string.IsNullOrWhiteSpace(destinationPath))
+            if (string.IsNullOrWhiteSpace(_destinationPath))
             {
                 return (false, "Destination path not configured");
             }
@@ -134,10 +138,10 @@ public class Nir2CameraLauncher : IDisposable
             }
 
             // Destination 폴더가 없으면 생성
-            if (!Directory.Exists(destinationPath))
+            if (!Directory.Exists(_destinationPath))
             {
-                Directory.CreateDirectory(destinationPath);
-                _logger.LogInformation("Created destination directory: {Path}", destinationPath);
+                Directory.CreateDirectory(_destinationPath);
+                _logger.LogInformation("Created destination directory: {Path}", _destinationPath);
             }
 
             // FileSystemWatcher 설정
@@ -245,7 +249,7 @@ public class Nir2CameraLauncher : IDisposable
             // NIR spectrum 분석
             var result = NirSpectrumFilter.AnalyzeSpectrum(txtFilePath);
 
-            var destinationPath = _config?.ExternalProgramSettings?.Nir2FilterDestinationPath ?? "";
+            var destinationPath = _destinationPath;
 
             if (result.PassesFilter)
             {

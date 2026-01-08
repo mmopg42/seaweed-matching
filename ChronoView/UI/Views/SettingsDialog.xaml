@@ -135,83 +135,6 @@
                 </ScrollViewer>
             </TabItem>
             
-            <!-- Advanced Tab -->
-            <TabItem Header="{x:Static res:Strings.Tab_Advanced}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="10">
-                        <TextBlock Text="{x:Static res:Strings.Section_CameraSubfolderOptions}" Style="{StaticResource SectionHeaderStyle}"/>
-                        <CheckBox Content="{x:Static res:Strings.Checkbox_UseCameraSubfolderNormal}" IsChecked="{Binding UseCameraSubfolderNormal}" Margin="0,5"/>
-                        <CheckBox Content="{x:Static res:Strings.Checkbox_UseCameraSubfolderNormal2}" IsChecked="{Binding UseCameraSubfolderNormal2}" Margin="0,5"/>
-                        
-                        <TextBlock Text="{x:Static res:Strings.Section_ImageProcessing}" Style="{StaticResource SectionHeaderStyle}"/>
-                        <CheckBox Content="{x:Static res:Strings.Checkbox_EnableDiskCache}" IsChecked="{Binding UseDiskCache}" Margin="0,5"/>
-                        
-                        <TextBlock Text="{x:Static res:Strings.Section_UIOptions}" Style="{StaticResource SectionHeaderStyle}"/>
-                        <CheckBox Content="{x:Static res:Strings.Checkbox_LegacyUiMode}" IsChecked="{Binding LegacyUiMode}" Margin="0,5"/>
-                        <CheckBox Content="{x:Static res:Strings.Checkbox_UseFolderSuffix}" IsChecked="{Binding UseFolderSuffix}" Margin="0,5"/>
-                        <CheckBox Content="{x:Static res:Strings.Checkbox_ShowTooltips}" IsChecked="{Binding ShowTooltips}" Margin="0,5"/>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-            
-            <!-- UI Options Tab -->
-            <TabItem Header="{x:Static res:Strings.Tab_UIOptions}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="10">
-                        <TextBlock Text="{x:Static res:Strings.Section_ImageDisplaySize}" Style="{StaticResource SectionHeaderStyle}"/>
-                        
-                        <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="{x:Static res:Strings.Label_ImageWidth}" Style="{StaticResource LabelStyle}"/>
-                            <TextBox Text="{Binding DisplayImageWidth}" Width="100"/>
-                            <TextBlock Text="{x:Static res:Strings.Default_120}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
-                        </StackPanel>
-                        
-                        <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="{x:Static res:Strings.Label_ImageHeight}" Style="{StaticResource LabelStyle}"/>
-                            <TextBox Text="{Binding DisplayImageHeight}" Width="100"/>
-                            <TextBlock Text="{x:Static res:Strings.Default_90}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
-                        </StackPanel>
-                        
-                        <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="{x:Static res:Strings.Label_NirDisplayWidth}" Style="{StaticResource LabelStyle}"/>
-                            <TextBox Text="{Binding NirDisplayWidth}" Width="100"/>
-                            <TextBlock Text="{x:Static res:Strings.Default_120}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
-                        </StackPanel>
-                        
-                        <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="{x:Static res:Strings.Label_NirDisplayHeight}" Style="{StaticResource LabelStyle}"/>
-                            <TextBox Text="{Binding NirDisplayHeight}" Width="100"/>
-                            <TextBlock Text="{x:Static res:Strings.Default_90}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
-                        </StackPanel>
-                        
-                        <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="{x:Static res:Strings.Label_RowHeight}" Style="{StaticResource LabelStyle}"/>
-                            <TextBox Text="{Binding DataGridRowHeight}" Width="100"/>
-                            <TextBlock Text="{x:Static res:Strings.Default_100}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
-                        </StackPanel>
-
-                        <TextBlock Text="{x:Static res:Strings.Section_NirGraphOptions}" Style="{StaticResource SectionHeaderStyle}"/>
-                        <CheckBox Content="{x:Static res:Strings.Checkbox_EnableNirGraph}" IsChecked="{Binding EnableNirGraph}" Margin="0,5"/>
-                        
-                        <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="{x:Static res:Strings.Label_GraphGenWidth}" Style="{StaticResource LabelStyle}"/>
-                            <TextBox Text="{Binding NirThumbnailWidth}" Width="100"/>
-                            <TextBlock Text="{x:Static res:Strings.Helper_ImageGenerationSize}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
-                        </StackPanel>
-
-                        <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="{x:Static res:Strings.Label_GraphGenHeight}" Style="{StaticResource LabelStyle}"/>
-                            <TextBox Text="{Binding NirThumbnailHeight}" Width="100"/>
-                            <TextBlock Text="{x:Static res:Strings.Helper_ImageGenerationSize}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
-                        </StackPanel>
-
-                        <TextBlock Text="{x:Static res:Strings.Section_UIDisplayOptions}" Style="{StaticResource SectionHeaderStyle}"/>
-                        <CheckBox Content="{x:Static res:Strings.Checkbox_LegacyUiMode}" IsChecked="{Binding LegacyUiMode}" Margin="0,5"/>
-                        <CheckBox Content="{x:Static res:Strings.Checkbox_ShowTooltips}" IsChecked="{Binding ShowTooltips}" Margin="0,5"/>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-            
             <!-- Data Sequence Tab -->
             <TabItem Header="{x:Static res:Strings.Tab_DataSequence}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -303,6 +226,77 @@
                             <LineBreak/>
                             <Run Text="{x:Static res:Strings.Help_UncheckedItems}"/>
                         </TextBlock>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            
+            <!-- UI Options Tab -->
+            <TabItem Header="{x:Static res:Strings.Tab_UIOptions}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="{x:Static res:Strings.Section_ImageDisplaySize}" Style="{StaticResource SectionHeaderStyle}"/>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="{x:Static res:Strings.Label_ImageWidth}" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding DisplayImageWidth}" Width="100"/>
+                            <TextBlock Text="{x:Static res:Strings.Default_120}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="{x:Static res:Strings.Label_ImageHeight}" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding DisplayImageHeight}" Width="100"/>
+                            <TextBlock Text="{x:Static res:Strings.Default_90}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
+                        
+                        
+
+
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="Font Size" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding DisplayFontSize}" Width="100"/>
+                            <TextBlock Text="(Default: 10)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
+
+                        <TextBlock Text="{x:Static res:Strings.Section_NirGraphOptions}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_EnableNirGraph}" IsChecked="{Binding EnableNirGraph}" Margin="0,5"/>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="{x:Static res:Strings.Label_GraphGenWidth}" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding NirThumbnailWidth}" Width="100"/>
+                            <TextBlock Text="{x:Static res:Strings.Helper_ImageGenerationSize}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="{x:Static res:Strings.Label_GraphGenHeight}" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding NirThumbnailHeight}" Width="100"/>
+                            <TextBlock Text="{x:Static res:Strings.Helper_ImageGenerationSize}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
+
+                        <TextBlock Text="{x:Static res:Strings.Section_UIDisplayOptions}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_LegacyUiMode}" IsChecked="{Binding LegacyUiMode}" Margin="0,5"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_ShowTooltips}" IsChecked="{Binding ShowTooltips}" Margin="0,5"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            
+            <!-- Advanced Tab -->
+            <TabItem Header="{x:Static res:Strings.Tab_Advanced}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="10">
+                        <TextBlock Text="일반카메라 옵션" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_UseFolderSuffix}" IsChecked="{Binding UseFolderSuffix}" Margin="0,5"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_UseCameraSubfolderNormal}" IsChecked="{Binding UseCameraSubfolderNormal}" Margin="0,5"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_UseCameraSubfolderNormal2}" IsChecked="{Binding UseCameraSubfolderNormal2}" Margin="0,5"/>
+                        
+                        <TextBlock Text="{x:Static res:Strings.Section_ImageProcessing}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="{x:Static res:Strings.Checkbox_EnableDiskCache}" IsChecked="{Binding UseDiskCache}" Margin="0,5"/>
+                        
+                        <TextBlock Text="로그 설정" Style="{StaticResource SectionHeaderStyle}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="로그 보관 기간 (일):" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding LogRetentionDays}" Width="100"/>
+                            <TextBlock Text="(기본값: 30일)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

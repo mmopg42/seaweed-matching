@@ -13,7 +13,7 @@ public class MatchingStatistics
     /// <summary>
     /// Gets the match rate as a percentage (0-100).
     /// </summary>
-    public double MatchRate => TotalGroups > 0 ? (double)WithNir / TotalGroups * 100 : 0;
+
 
     /// <summary>
     /// Statistics for Line 1 (separated mode).
@@ -54,7 +54,7 @@ public class MatchingStatistics
 
     public override string ToString()
     {
-        return $"Total: {TotalGroups}, With NIR: {WithNir}, Without NIR: {WithoutNir}, Failed: {Failed}, Match Rate: {MatchRate:F1}%";
+        return $"Total: {TotalGroups}, With NIR: {WithNir}, Without NIR: {WithoutNir}, Failed: {Failed}";
     }
 }
 
@@ -71,7 +71,7 @@ public class LineStatistics
     /// <summary>
     /// Gets the match rate as a percentage (0-100).
     /// </summary>
-    public double MatchRate => TotalGroups > 0 ? (double)WithNir / TotalGroups * 100 : 0;
+
 
     public LineStatistics()
     {
@@ -102,6 +102,6 @@ public class LineStatistics
 
     public override string ToString()
     {
-        return $"Total: {TotalGroups}, With NIR: {WithNir}, Without NIR: {WithoutNir}, Failed: {Failed}, Match Rate: {MatchRate:F1}%";
+        return $"Total: {TotalGroups}, With NIR: {WithNir}, Without NIR: {WithoutNir}, Failed: {Failed}";
     }
 }

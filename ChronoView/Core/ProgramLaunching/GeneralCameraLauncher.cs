@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using ChronoView.Models;
+using ChronoView.Core.Configuration;
 
 namespace ChronoView.Core.ProgramLaunching;
 
@@ -14,16 +15,16 @@ namespace ChronoView.Core.ProgramLaunching;
 public class GeneralCameraLauncher : IDisposable
 {
     private readonly ILogger<GeneralCameraLauncher> _logger;
-    private readonly ApplicationConfiguration _config;
+    private readonly IConfigurationManager _configManager;
     private Process? _process;
     private CancellationTokenSource? _monitorCts;
 
     public GeneralCameraLauncher(
         ILogger<GeneralCameraLauncher> logger,
-        ApplicationConfiguration config)
+        IConfigurationManager configManager)
     {
         _logger = logger;
-        _config = config;
+        _configManager = configManager;
     }
 
     /// <summary>
@@ -44,8 +45,9 @@ public class GeneralCameraLauncher : IDisposable
     {
         try
         {
+            var config = _configManager.LoadConfiguration<ApplicationConfiguration>();
             var programName = "General Camera";
-            var programPath = _config?.ExternalProgramSettings?.GeneralCameraProgramPath ?? string.Empty;
+            var programPath = config?.ExternalProgramSettings?.GeneralCameraProgramPath ?? string.Empty;
             
             _logger.LogInformation("Attempting to launch {ProgramName}", programName);
 

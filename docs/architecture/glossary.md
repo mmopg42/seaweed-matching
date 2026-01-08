@@ -1,6 +1,6 @@
 ---
-Owner: Development Team
-Last Updated: 2025-12-15
+Owner: ChronoView Team
+Last Updated: 2025-01-05
 Purpose: Single Source of Truth for naming conventions
 ---
 
@@ -26,64 +26,140 @@ grep -rn "term_name" docs/architecture/
 
 ---
 
-## Classes & Interfaces
+## Classes
 
 | Official Name | Description | Defined In |
 |---------------|-------------|------------|
-| `MonitoringOrchestrator` | Orchestrates file monitoring workflows | `module_monitoring_orchestrator.md` |
-| `IMonitoringOrchestrator` | Interface for MonitoringOrchestrator | `module_monitoring_orchestrator.md` |
-| `FileGroupMatcherService` | Implements file grouping algorithm | `module_file_group_matcher.md` |
-| `IFileGroupMatcher` | Interface for file matching algorithm | `module_file_group_matcher.md` |
-| `FileGroup` | Model representing a group of matched files | `ChronoView.Models` |
-| `IFileWatcher` | Interface for file system monitoring | `ChronoView.Core.FileWatching` |
-| `UnmatchedFiles` | Input structure for file matcher | `ChronoView.Core.FileMatching` |
-| `ApplicationConfiguration` | Main application configuration model | `ChronoView.Models` |
-| `FileWatcherOptions` | Configuration options for file watcher | `ChronoView.Core.FileWatching` |
-| `FileWatcherService` | Hybrid file monitoring service implementation | `ChronoView.Core.FileWatching` |
-| `FileMatchingEngine` | Standalone matching engine with pure logic (stateless, framework-agnostic) | `module_file_matching_engine.md` |
-| `NirSpectrumFilter` | NIR spectrum filtering using 5-criteria scoring system | `ChronoView.Core.Nir` |
-| `CriteriaResult` | Individual criterion evaluation result with value, threshold, and pass/fail status | `ChronoView.Core.Nir` |
-| `FilterResult` | Result of NIR spectrum analysis with detailed scoring information | `ChronoView.Core.Nir` |
+| `FileGroup` | Core data structure representing a matched set of files from different cameras (general, NIR, NIR2) | `Models/FileGroup.cs` |
+| `UnmatchedFiles` | Collection of files that haven't been matched into groups yet, organized by folder type | `Models/UnmatchedFiles.cs` |
+| `DataSequenceSettings` | Configuration for file naming patterns and sequence detection rules | `Models/DataSequenceSettings.cs` |
+| `DataSequencePresets` | Predefined sequence configurations for common camera setups | `Models/DataSequencePresets.cs` |
+| `ImageMetadata` | Metadata extracted from image files including dimensions, timestamp, and file path | `Models/ImageMetadata.cs` |
+| `NirSpectrum` | NIR spectroscopy data structure containing wavelength and intensity value pairs | `Models/NirSpectrum.cs` |
+| `ApplicationConfiguration` | Application-wide settings and user preferences | `Models/ApplicationConfiguration.cs` |
+| `MonitoringOrchestrator` | Service that coordinates the file monitoring workflow between FileWatcher, FileMatcher, and GroupManager | `Core/FileWatching/MonitoringOrchestrator.cs` |
+| `FileMatchingEngine` | Service responsible for matching files into groups based on timestamps and naming patterns | `Core/FileMatching/FileMatchingEngine.cs` |
+| `FileGroupMatcherService` | Service that implements file group matching logic | `Core/FileMatching/FileGroupMatcherService.cs` |
+| `ConfigurationManager` | Service for loading, saving, and managing application configuration | `Core/Configuration/ConfigurationManager.cs` |
+| `FileWatcherService` | Service for monitoring file system changes in real-time using FileSystemWatcher | `Core/FileWatching/FileWatcherService.cs` |
+| `AbnormalDetectorService` | Service for detecting anomalies in file groups using statistical analysis (Z-score) | `Core/Analytics/AbnormalDetectorService.cs` |
+| `StatisticsService` | Service for collecting and calculating file matching statistics | `Core/Analytics/StatisticsService.cs` |
+| `ImageProcessingService` | Service for loading, caching, and processing images asynchronously | `Core/ImageProcessing/ImageProcessingService.cs` |
+| `FileOperationService` | Service for coordinating file operations (move, copy, delete) | `Core/FileOperations/FileOperationService.cs` |
+| `DeleteService` | Service for safely deleting files with bucket organization | `Core/FileOperations/DeleteService.cs` |
+| `MoveService` | Service for moving files with conflict resolution | `Core/FileOperations/MoveService.cs` |
+| `PathManagementService` | Service for managing file paths and directory structures | `Core/FileOperations/PathManagementService.cs` |
+| `FileGroupOperator` | Service for performing operations on entire file groups | `Core/FileOperations/FileGroupOperator.cs` |
+| `EventProcessor` | Service for processing file system events with priority queuing | `Core/FileWatching/EventProcessor.cs` |
+| `GroupManager` | Service for creating and managing file groups based on matching criteria | `Core/FileWatching/GroupManager.cs` |
+| `ImageCaptureService` | Service for capturing images from file system events | `Core/FileWatching/ImageCaptureService.cs` |
+| `InitialScanner` | Service for performing initial file system scan on startup | `Core/FileWatching/InitialScanner.cs` |
+| `FolderTimestampCache` | Cache for storing folder modification timestamps to optimize scanning | `Core/FileWatching/FolderTimestampCache.cs` |
+| `PriorityEventChannel` | Channel for managing file system events with priority ordering | `Core/FileWatching/PriorityEventChannel.cs` |
+| `EventPriority` | Enum defining priority levels for file system events | `Core/FileWatching/EventPriority.cs` |
+| `FileWatcherOptions` | Configuration options for FileWatcherService | `Core/FileWatching/FileWatcherOptions.cs` |
+| `LruCache` | Least Recently Used cache implementation for image caching | `Core/ImageProcessing/LruCache.cs` |
+| `NirSpectrumParser` | Parser for NIR spectroscopy data files | `Core/NIR/NirSpectrumParser.cs` |
+| `NirGraphGenerator` | Generator for creating NIR spectrum graphs | `Core/NIR/NirGraphGenerator.cs` |
+| `NirSpectrumFilter` | Filter for processing and cleaning NIR spectrum data | `Core/NIR/NirSpectrumFilter.cs` |
+| `SpcTxtNirFileResolver` | Resolver for SPC and TXT format NIR files | `Core/NIR/SpcTxtNirFileResolver.cs` |
+| `LocalizationManager` | Manager for multi-language support and resource strings | `Core/Localization/LocalizationManager.cs` |
+| `GeneralCameraLauncher` | Launcher for general camera capture programs | `Core/ProgramLaunching/GeneralCameraLauncher.cs` |
+| `NirCameraLauncher` | Launcher for NIR camera capture programs | `Core/ProgramLaunching/NirCameraLauncher.cs` |
+| `Nir2CameraLauncher` | Launcher for secondary NIR camera capture programs | `Core/ProgramLaunching/Nir2CameraLauncher.cs` |
+| `FileCountStatistics` | Statistics model for file counts by type | `Core/Analytics/FileCountStatistics.cs` |
+| `MatchingStatistics` | Statistics model for file matching metrics | `Core/Analytics/MatchingStatistics.cs` |
+| `DashboardViewModel` | ViewModel for the main dashboard view displaying file groups | `UI/ViewModels/DashboardViewModel.cs` |
+| `FileGroupViewModel` | ViewModel representing a single file group in the UI | `UI/ViewModels/FileGroupViewModel.cs` |
+| `FileOperationViewModel` | ViewModel for file operation controls | `UI/ViewModels/FileOperationViewModel.cs` |
+| `SystemControlViewModel` | ViewModel for system monitoring and control | `UI/ViewModels/SystemControlViewModel.cs` |
+| `MainWindowViewModel` | ViewModel for the main application window | `UI/ViewModels/MainWindowViewModel.cs` |
+| `SettingsDialogViewModel` | ViewModel for application settings dialog | `UI/ViewModels/SettingsDialogViewModel.cs` |
+| `SetupWindowViewModel` | ViewModel for initial setup window | `UI/ViewModels/SetupWindowViewModel.cs` |
+| `DetailPreviewViewModel` | ViewModel for detailed file preview | `UI/ViewModels/DetailPreviewViewModel.cs` |
+| `DataSequenceItemViewModel` | ViewModel for individual data sequence items | `UI/ViewModels/DataSequenceItemViewModel.cs` |
+| `FileGroupMediaLoader` | Service for loading media files for file groups | `UI/ViewModels/FileGroupMediaLoader.cs` |
+| `ViewModelBase` | Base class for all ViewModels implementing INotifyPropertyChanged | `UI/ViewModels/ViewModelBase.cs` |
+| `RelayCommand` | ICommand implementation for ViewModel command binding | `UI/ViewModels/RelayCommand.cs` |
+| `LogMessage` | Model representing a log message in the UI | `UI/ViewModels/LogMessage.cs` |
+| `UILoggerProvider` | Custom logger provider that outputs to UI components | `Infrastructure/Logging/UILoggerProvider.cs` |
+| `BoolToVisibilityConverter` | Converts boolean values to WPF Visibility enum | `Converters/BoolToVisibilityConverter.cs` |
+| `NullToVisibilityConverter` | Converts null values to WPF Visibility enum | `Converters/NullToVisibilityConverter.cs` |
+| `FileNamingHelper` | Helper class for file naming pattern operations | `Helpers/FileNamingHelper.cs` |
+| `PlaceholderImageHelper` | Helper class for generating placeholder images | `Helpers/PlaceholderImageHelper.cs` |
+| `ResourceHelper` | Helper class for loading application resources | `Helpers/ResourceHelper.cs` |
+| `DragSelectBehavior` | Attached behavior for drag-to-select functionality in DataGrid | `UI/Behaviors/DragSelectBehavior.cs` |
+| `DataSequenceSettingsValidation` | Validation class for DataSequenceSettings | `Tests/DataSequenceSettingsValidation.cs` |
 
-> **Naming Convention**: Use `PascalCase` for classes and interfaces.
+> **Naming Convention**: Use `PascalCase` for all class names.
 
 ---
 
-## Methods & Functions
+## Interfaces
 
-| Official Name | Signature | Description | Defined In |
-|---------------|-----------|-------------|------------|
-| `CreateOrUpdateGroupAsync` | `(string filePath, FileType fileType) -> Task<FileGroup?>` | Creates new group or updates existing based on file | `module_monitoring_orchestrator.md` |
-| `CreateUnmatchedFilesForSingleFile` | `(string filePath, FileType fileType) -> UnmatchedFiles?` | Converts single file to UnmatchedFiles structure | `module_monitoring_orchestrator.md` |
-| `FindMatchingExistingGroup` | `(FileGroup newGroup) -> FileGroup?` | Finds existing group matching new group | `module_monitoring_orchestrator.md` |
-| `MergeGroups` | `(FileGroup existingGroup, FileGroup newGroup) -> void` | Merges new group data into existing group | `module_monitoring_orchestrator.md` |
-| `PerformInitialScanAsync` | `(CancellationToken) -> Task<OrchestrationResult>` | Performs initial file scan | `module_monitoring_orchestrator.md` |
-| `ProcessFileEventsAsync` | `(List<FileSystemEventArgs>) -> Task<List<FileGroup>>` | Processes file system events | `module_monitoring_orchestrator.md` |
-| `MatchFilesAsync` | `(UnmatchedFiles) -> Task<IEnumerable<FileGroup>>` | Core file matching algorithm | `module_file_group_matcher.md` |
-| `BuildAllGroups` | `(UnmatchedFiles) -> List<FileGroup>` | Main grouping logic (private) | `module_file_group_matcher.md` |
-| `BuildLineGroups` | `(UnmatchedFiles, int lineNumber) -> List<FileGroup>` | Per-line grouping logic (private) | `module_file_group_matcher.md` |
+| Official Name | Description | Defined In |
+|---------------|-------------|------------|
+| `IConfigurationManager` | Interface for configuration management services | `Core/Configuration/IConfigurationManager.cs` |
+| `IFileGroupMatcher` | Interface for file group matching services | `Core/FileMatching/IFileGroupMatcher.cs` |
+| `IMonitoringOrchestrator` | Interface for workflow orchestration services | `Core/FileWatching/IMonitoringOrchestrator.cs` |
+| `IFileWatcher` | Interface for file system monitoring services | `Core/FileWatching/IFileWatcher.cs` |
+| `IEventProcessor` | Interface for file system event processing | `Core/FileWatching/IEventProcessor.cs` |
+| `IGroupManager` | Interface for file group management | `Core/FileWatching/IGroupManager.cs` |
+| `IImageCaptureService` | Interface for image capture services | `Core/FileWatching/IImageCaptureService.cs` |
+| `ITimestampCache` | Interface for timestamp caching services | `Core/FileWatching/ITimestampCache.cs` |
+| `IFileOperationService` | Interface for file operation services | `Core/FileOperations/IFileOperationService.cs` |
+| `IDeleteService` | Interface for file deletion services | `Core/FileOperations/IDeleteService.cs` |
+| `IMoveService` | Interface for file moving services | `Core/FileOperations/IMoveService.cs` |
+| `IPathManagementService` | Interface for path management services | `Core/FileOperations/IPathManagementService.cs` |
+| `IFileGroupOperator` | Interface for file group operations | `Core/FileOperations/IFileGroupOperator.cs` |
+| `IImageProcessor` | Interface for image processing services | `Core/ImageProcessing/IImageProcessor.cs` |
+| `IAbnormalDetector` | Interface for anomaly detection services | `Core/Analytics/IAbnormalDetector.cs` |
+| `IStatisticsService` | Interface for statistics collection services | `Core/Analytics/IStatisticsService.cs` |
+| `INirFileResolver` | Interface for NIR file resolution services | `Core/NIR/INirFileResolver.cs` |
+| `IDashboardViewModel` | Interface for dashboard ViewModel | `UI/ViewModels/IDashboardViewModel.cs` |
+| `IFileOperationViewModel` | Interface for file operation ViewModel | `UI/ViewModels/IFileOperationViewModel.cs` |
+| `ISystemControlViewModel` | Interface for system control ViewModel | `UI/ViewModels/ISystemControlViewModel.cs` |
 
-> **Naming Convention**: Use `PascalCase` for methods, async methods end with `Async`.
+> **Naming Convention**: Use `IPascalCase` for all interface names (I prefix).
 
 ---
 
-## Variables & Properties
+## Methods (Common Patterns)
 
-| Official Name | Type | Description | Used In |
-|---------------|------|-------------|---------|
-| `_activeGroups` | `Dictionary<string, FileGroup>` | Dictionary of active file groups (thread-safe) | `module_monitoring_orchestrator.md` |
-| `_processedFiles` | `Dictionary<string, DateTime>` | Debouncing dictionary for file events | `module_monitoring_orchestrator.md` |
-| `GroupId` | `string` | Sequential identifier (regenerated on each MatchFilesAsync call) | `module_file_group_matcher.md` |
-| `NormalFolder` | `string?` | Normal folder name (STABLE identifier) | `module_file_group_matcher.md` |
-| `NirKey` | `string?` | NIR filename without extension (STABLE identifier) | `module_file_group_matcher.md` |
-| `Timestamp` | `DateTime` | Group timestamp (from matched files) | `FileGroup` model |
-| `LineNumber` | `int` | Production line number (1 or 2) | `FileGroup` model |
-| `HasNir` | `bool` | Indicates if group has NIR file | `FileGroup` model |
-| `NirFilePath` | `string?` | Path to NIR .spc file | `FileGroup` model |
-| `MainImagePath` | `string?` | Path to main image folder | `FileGroup` model |
-| `CameraFiles` | `Dictionary<string, string>` | Camera files (key: "cam1"-"cam6", value: file path) | `FileGroup` model |
+| Pattern | Example | Description |
+|---------|---------|-------------|
+| `Get*` | `GetConfiguration()` | Retrieve data or objects |
+| `Set*` | `SetConfiguration()` | Update data or objects |
+| `Load*` | `LoadConfiguration()` | Load from persistent storage |
+| `Save*` | `SaveConfiguration()` | Save to persistent storage |
+| `Create*` | `CreateFileGroup()` | Create new instances |
+| `Delete*` | `DeleteFileGroup()` | Remove instances |
+| `Update*` | `UpdateFileGroup()` | Modify existing instances |
+| `Process*` | `ProcessEvent()` | Process or transform data |
+| `Validate*` | `ValidateSettings()` | Validate data integrity |
+| `Initialize*` | `InitializeService()` | Setup or initialize |
+| `Start*` | `StartMonitoring()` | Begin an operation |
+| `Stop*` | `StopMonitoring()` | End an operation |
+| `On*` | `OnFileCreated()` | Event handlers |
+| `Can*` | `CanExecute()` | Boolean checks for commands |
+| `Is*` | `IsValid()` | Boolean property checks |
+| `Has*` | `HasChanges()` | Boolean existence checks |
 
-> **Naming Convention**: Use `_camelCase` for private fields, `PascalCase` for public properties.
+> **Naming Convention**: Use `PascalCase` for all method names (C# standard).
+
+---
+
+## Properties
+
+| Pattern | Example | Description |
+|---------|---------|-------------|
+| `Is*` | `IsEnabled` | Boolean state properties |
+| `Has*` | `HasErrors` | Boolean existence properties |
+| `Can*` | `CanSave` | Boolean capability properties |
+| Noun | `Configuration` | Object properties |
+| Noun | `FileGroups` | Collection properties (plural) |
+
+> **Naming Convention**: Use `PascalCase` for all property names.
 
 ---
 
@@ -91,50 +167,35 @@ grep -rn "term_name" docs/architecture/
 
 | Official Name | Type | Default | Description | Used In |
 |---------------|------|---------|-------------|---------|
-| `MatchingSettings.NirMatchTimeDiff` | `double` | `1.0` | NIR attachment tolerance (seconds) | `module_file_group_matcher.md` |
-| `MatchingSettings.NirTimeWindowSeconds` | `int` | `300` | **DEPRECATED** Time window for NIR file matching (seconds) - Use DataSequenceSettings instead | `impact_deprecated_matching_properties.md` |
-| `MatchingSettings.CamMatchMinDiff` | `double` | `4.0` | Camera matching minimum time difference (seconds) | `module_file_group_matcher.md` |
-| `MatchingSettings.CamMatchMaxDiff` | `double` | `6.0` | Camera matching maximum time difference (seconds) | `module_file_group_matcher.md` |
-| `MatchingSettings.CameraTimeWindowSeconds` | `int` | `2` | **DEPRECATED** Time window for camera file matching (seconds) - Use DataSequenceSettings instead | `impact_deprecated_matching_properties.md` |
-| `MatchingSettings.NormalFolderTimeWindowSeconds` | `int` | `120` | **DEPRECATED** Time window for normal folder matching (seconds) - Use DataSequenceSettings instead | `impact_deprecated_matching_properties.md` |
-| `MatchingSettings.Nir1Path` | `string` | `""` | NIR files path for Line 1 | `module_monitoring_orchestrator.md` |
-| `MatchingSettings.Nir2Path` | `string` | `""` | NIR files path for Line 2 | `module_monitoring_orchestrator.md` |
-| `MatchingSettings.Normal1Path` | `string` | `""` | Normal image folders path for Line 1 | `module_monitoring_orchestrator.md` |
-| `MatchingSettings.Normal2Path` | `string` | `""` | Normal image folders path for Line 2 | `module_monitoring_orchestrator.md` |
-| `MatchingSettings.Camera1Path` | `string` | `""` | Camera 1 files path | `module_monitoring_orchestrator.md` |
-| `MatchingSettings.Camera2Path` | `string` | `""` | Camera 2 files path | `module_monitoring_orchestrator.md` |
-| `MatchingSettings.Camera3Path` | `string` | `""` | Camera 3 files path | `module_monitoring_orchestrator.md` |
-| `MatchingSettings.Camera4Path` | `string` | `""` | Camera 4 files path | `module_monitoring_orchestrator.md` |
-| `MatchingSettings.Camera5Path` | `string` | `""` | Camera 5 files path | `module_monitoring_orchestrator.md` |
-| `MatchingSettings.Camera6Path` | `string` | `""` | Camera 6 files path | `module_monitoring_orchestrator.md` |
+| `monitoring.enabled` | `bool` | `true` | Enable/disable file monitoring | `FileWatcherService` |
+| `monitoring.interval_ms` | `int` | `1000` | File monitoring interval in milliseconds | `FileWatcherService` |
+| `matching.time_threshold_sec` | `int` | `5` | Time threshold for file matching in seconds | `FileMatchingEngine` |
+| `matching.require_all_cameras` | `bool` | `false` | Require files from all cameras for a match | `FileMatchingEngine` |
+| `paths.general_camera` | `string` | `""` | Path to general camera folder | `ConfigurationManager` |
+| `paths.nir_camera` | `string` | `""` | Path to NIR camera folder | `ConfigurationManager` |
+| `paths.nir2_camera` | `string` | `""` | Path to secondary NIR camera folder | `ConfigurationManager` |
+| `paths.output` | `string` | `""` | Path to output folder | `FileOperationService` |
+| `paths.delete_bucket` | `string` | `""` | Path to delete bucket folder | `DeleteService` |
+| `image.cache_size_mb` | `int` | `100` | Image cache size in megabytes | `ImageProcessingService` |
+| `image.thumbnail_size` | `int` | `200` | Thumbnail size in pixels | `ImageProcessingService` |
+| `ui.language` | `string` | `"en"` | UI language code | `LocalizationManager` |
+| `ui.theme` | `string` | `"light"` | UI theme (light/dark) | `MainWindowViewModel` |
+| `statistics.window_size` | `int` | `100` | Statistics rolling window size | `StatisticsService` |
+| `statistics.z_score_threshold` | `double` | `3.0` | Z-score threshold for anomaly detection | `AbnormalDetectorService` |
 
-> **Naming Convention**: Use `PascalCase.PascalCase` for nested config properties.
-
----
-
-## Enumerations
-
-| Official Name | Values | Description | Defined In |
-|---------------|--------|-------------|------------|
-| `FileType` | `Unknown`, `Nir`, `Normal`, `Camera` | Type of file being processed | `module_monitoring_orchestrator.md` |
-| `MatchingStrategy` | `DataSequenceBased`, `Sequential` | Strategy for file matching (time-based vs sequential) | `module_file_matching_engine.md` |
-
-> **Naming Convention**: Use `PascalCase` for enum names and values.
+> **Naming Convention**: Use `lowercase.dot.notation` for config keys.
 
 ---
 
-## Events
+## Environment Variables
 
-| Official Name | Args Type | Description | Defined In |
-|---------------|-----------|-------------|------------|
-| `GroupCreated` | `FileGroup` | Raised when new group is created | `module_monitoring_orchestrator.md` |
-| `GroupUpdated` | `FileGroup` | Raised when existing group is updated | `module_monitoring_orchestrator.md` |
-| `GroupRemoved` | `string` (GroupId) | Raised when group is removed | `module_monitoring_orchestrator.md` |
-| `FileGroupsCreated` | `FileGroupsCreatedEventArgs` | Batch event for multiple groups created | `module_monitoring_orchestrator.md` |
-| `FileGroupsUpdated` | `FileGroupsUpdatedEventArgs` | Batch event for multiple groups updated | `module_monitoring_orchestrator.md` |
-| `MonitoringError` | `string` (error message) | Raised when monitoring error occurs | `module_monitoring_orchestrator.md` |
+| Official Name | Description | Required | Used In |
+|---------------|-------------|----------|---------|
+| `CHRONOVIEW_CONFIG_PATH` | Override default configuration file path | No | `ConfigurationManager` |
+| `CHRONOVIEW_LOG_LEVEL` | Logging level (Debug, Info, Warning, Error) | No | `UILoggerProvider` |
+| `CHRONOVIEW_DATA_DIR` | Override default data directory | No | `ConfigurationManager` |
 
-> **Naming Convention**: Use `PascalCase`, past tense verbs (Created, Updated, Removed).
+> **Naming Convention**: Use `UPPER_SNAKE_CASE` with `CHRONOVIEW_` prefix.
 
 ---
 
@@ -142,31 +203,16 @@ grep -rn "term_name" docs/architecture/
 
 | Term | Definition | Related Docs |
 |------|------------|--------------|
-| File Group | A collection of related files (NIR, normal images, camera images) with matching timestamps | `module_monitoring_orchestrator.md` |
-| Real-time Monitoring | Continuous file system watching and immediate group creation/update | `module_monitoring_orchestrator.md` |
-| Initial Scan | One-time scan of all files at monitoring start | `module_monitoring_orchestrator.md` |
-| File Matching | Algorithm that groups files based on timestamps and types | `module_monitoring_orchestrator.md` |
-| Line Number | Production line identifier (1 or 2) determining file source | `module_monitoring_orchestrator.md` |
-| Orchestrator | Component that coordinates multiple services/workflows | `module_monitoring_orchestrator.md` |
-| Polling | Periodic file system scan to detect changes missed by real-time watcher | `module_file_watcher_service.md` |
-| Silent Baseline Scan | Initial scan of files at startup without raising events | `module_file_watcher_service.md` |
-| Match 1 | Matching strategy by NormalFolder identifier (primary stable identifier) | `module_monitoring_orchestrator.md` |
-| Match 2 | Matching strategy by NirKey identifier (secondary stable identifier) | `module_monitoring_orchestrator.md` |
-| Match 3 | Matching strategy by timestamp with tolerance and priority order | `module_monitoring_orchestrator.md` |
-| Non-Duplicate Filter | Filter that excludes groups already containing a specific data type | `module_monitoring_orchestrator.md` |
-| Standalone Matching Module | Pure matching logic extracted from service layer, independently testable | `module_file_matching_engine.md` |
-| DataSequence-Based Matching | Matching strategy using DataSequenceSettings for time-based decisions | `module_file_matching_engine.md` |
-| Sequential Matching | Fallback matching strategy with no time constraints (when DataSequenceSettings is null) | `module_file_matching_engine.md` |
-| Chip (UI) | Small, rounded rectangle displaying a label-value pair for statistics | `design_guidelines.md` |
-| Toolbar Button (UI) | Icon + label button in transparent style with hover effect | `design_guidelines.md` |
-| Panel (UI) | Container area with light gray background (`#f5f5f5`) | `design_guidelines.md` |
-| Statistics Bar (UI) | Horizontal bar displaying multiple chips with file counts or matching status | `design_guidelines.md` |
-| Abnormal (UI) | State indicating data mismatch or quality issue (highlighted in yellow) | `design_guidelines.md` |
-| y_range | Overall Y intensity range in NIR wavelength window 4500-6500nm | NIR filtering algorithm |
-| y_std | Standard deviation of Y intensities in NIR wavelength window | NIR filtering algorithm |
-| window_800_mean | Mean of Y ranges across all 800nm sliding windows | NIR filtering algorithm |
-| window_800_std | Standard deviation of Y ranges across 800nm windows | NIR filtering algorithm |
-| window_800_max | Maximum Y range found in any 800nm window | NIR filtering algorithm |
+| File Group | A matched set of files from different cameras (general, NIR, NIR2) that belong to the same capture event, identified by timestamp | `Models/FileGroup.md` |
+| Unmatched Files | Files that have been detected but not yet matched into a group, organized by folder type (general, NIR, NIR2) | `Models/UnmatchedFiles.md` |
+| Monitoring Orchestration | The coordination of file watching, matching, and group management workflows | `Core/FileWatching/MonitoringOrchestrator.md` |
+| File Matching | The process of grouping files from different cameras based on timestamps and naming patterns | `Core/FileMatching/` |
+| Bucket Organization | A file organization strategy where files are grouped into "buckets" (folders) based on criteria like date or subject | `Core/FileOperations/` |
+| NIR Spectrum | Near-Infrared spectroscopy data consisting of wavelength-intensity pairs used for material analysis | `Models/NirSpectrum.md` |
+| Data Sequence | A pattern-based file naming convention that defines how files are numbered and organized | `Models/DataSequenceSettings.md` |
+| Anomaly Detection | Statistical analysis using Z-scores to detect abnormal file groups (e.g., missing files, wrong dimensions) | `Core/Analytics/AbnormalDetectorService.md` |
+| Event Priority | A system for prioritizing file system events (High, Normal, Low) to ensure critical events are processed first | `Core/FileWatching/EventPriority.md` |
+| Timestamp Cache | A cache storing folder modification timestamps to optimize file system scanning by avoiding redundant scans | `Core/FileWatching/FolderTimestampCache.md` |
 
 ---
 
@@ -174,27 +220,15 @@ grep -rn "term_name" docs/architecture/
 
 | Deprecated | Use Instead | Reason | Deprecated Date |
 |------------|-------------|--------|-----------------|
-| `IsMatchingTimestamp` | Use `FileGroupMatcher.MatchFilesAsync` | Simple time check replaced by full matcher algorithm | 2024-12-14 |
-| `UpdateGroupWithFile` | `MergeGroups` | More descriptive name for merging operation | 2024-12-14 |
+| `FileManager` | `FileOperationService` | Renamed for clarity | 2024-12-01 |
+| `ImageLoader` | `ImageProcessingService` | Renamed to reflect broader scope | 2024-12-01 |
+| `ConfigService` | `ConfigurationManager` | Standardized naming | 2024-12-01 |
 
+---
 
 ## Changelog
 
-- 2025-12-23: Added NIR filtering algorithm terms (upgrade_nir_filtering_algorithm spec)
-  - Added `NirSpectrumFilter`, `CriteriaResult`, `FilterResult` classes
-  - Added domain concepts: y_range, y_std, window_800_mean, window_800_std, window_800_max
-  - Upgraded from simple Y-range check to 5-criteria scoring system
-- 2024-12-16: Marked deprecated matching properties (Phase 5 - refactor-matching-logic)
-  - Marked `NirTimeWindowSeconds`, `CameraTimeWindowSeconds`, `NormalFolderTimeWindowSeconds` as DEPRECATED
-  - Added reference to `impact_deprecated_matching_properties.md`
-  - All time-based matching now uses DataSequenceSettings
-- 2024-12-16: Added FileMatchingEngine terms for refactor-matching-logic spec
-  - Added `FileMatchingEngine` class
-  - Added `MatchingStrategy` enum (DataSequenceBased, Sequential)
-  - Added domain concepts: Standalone Matching Module, DataSequence-Based Matching, Sequential Matching
-- 2025-12-15: Added matching strategy terms (Match 1, Match 2, Match 3, Non-Duplicate Filter)
-- 2025-12-15: Added UI/UX design terms (Chip, Toolbar Button, Panel, Statistics Bar, Abnormal)
-- 2025-12-15: Added FileWatcherService terms (Polling, Silent Baseline Scan)
-- 2024-12-14: Initial creation with MonitoringOrchestrator terms
-  - Added classes, methods, config keys
-  - Added deprecated terms from refactoring
+- 2025-01-05: Initial glossary creation with 14 core terms
+- 2025-01-05: Added all ChronoView classes, interfaces, and domain concepts
+- 2025-01-05: Added configuration keys and environment variables
+- 2025-01-05: Added method and property naming patterns
