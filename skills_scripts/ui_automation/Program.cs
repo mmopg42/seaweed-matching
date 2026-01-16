@@ -318,6 +318,120 @@ class Program
 
         rootCommand.AddCommand(windowsCommand);
 
+        // click 명령: Toolbar 버튼 클릭
+        var clickCommand = new Command("click", "Toolbar 버튼 클릭");
+
+        // click start: Start 버튼 클릭
+        var clickStartCommand = new Command("start", "Start 버튼 클릭");
+        clickStartCommand.SetHandler(() =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[click-start] Failed: MainWindow not found");
+                return;
+            }
+
+            var result = automation.ClickStartButton(mainWindow);
+            Console.WriteLine(result ? "[click-start] Success: Start button clicked" : "[click-start] Failed: Could not click Start button");
+        });
+        clickCommand.AddCommand(clickStartCommand);
+
+        // click stop: Stop 버튼 클릭
+        var clickStopCommand = new Command("stop", "Stop 버튼 클릭");
+        clickStopCommand.SetHandler(() =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[click-stop] Failed: MainWindow not found");
+                return;
+            }
+
+            var result = automation.ClickStopButton(mainWindow);
+            Console.WriteLine(result ? "[click-stop] Success: Stop button clicked" : "[click-stop] Failed: Could not click Stop button");
+        });
+        clickCommand.AddCommand(clickStopCommand);
+
+        // click settings: Settings (Setup) 버튼 클릭
+        var clickSettingsCommand = new Command("settings", "Settings (Setup) 버튼 클릭");
+        clickSettingsCommand.SetHandler(() =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[click-settings] Failed: MainWindow not found");
+                return;
+            }
+
+            var result = automation.ClickSettingsButton(mainWindow);
+            if (result)
+            {
+                Console.WriteLine("[click-settings] Success: Settings button clicked, SetupWindow should open");
+            }
+            else
+            {
+                Console.WriteLine("[click-settings] Failed: Could not click Settings button");
+            }
+        });
+        clickCommand.AddCommand(clickSettingsCommand);
+
+        // click refresh: Refresh 버튼 클릭
+        var clickRefreshCommand = new Command("refresh", "Refresh 버튼 클릭");
+        clickRefreshCommand.SetHandler(() =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[click-refresh] Failed: MainWindow not found");
+                return;
+            }
+
+            var result = automation.ClickRefreshButton(mainWindow);
+            Console.WriteLine(result ? "[click-refresh] Success: Refresh button clicked" : "[click-refresh] Failed: Could not click Refresh button");
+        });
+        clickCommand.AddCommand(clickRefreshCommand);
+
+        // click move: Move 버튼 클릭
+        var clickMoveCommand = new Command("move", "Move 버튼 클릭");
+        clickMoveCommand.SetHandler(() =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[click-move] Failed: MainWindow not found");
+                return;
+            }
+
+            var result = automation.ClickMoveButton(mainWindow);
+            Console.WriteLine(result ? "[click-move] Success: Move button clicked" : "[click-move] Failed: Could not click Move button");
+        });
+        clickCommand.AddCommand(clickMoveCommand);
+
+        // click delete: Delete 버튼 클릭
+        var clickDeleteCommand = new Command("delete", "Delete 버튼 클릭");
+        clickDeleteCommand.SetHandler(() =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[click-delete] Failed: MainWindow not found");
+                return;
+            }
+
+            var result = automation.ClickDeleteButton(mainWindow);
+            Console.WriteLine(result ? "[click-delete] Success: Delete button clicked" : "[click-delete] Failed: Could not click Delete button");
+        });
+        clickCommand.AddCommand(clickDeleteCommand);
+
+        rootCommand.AddCommand(clickCommand);
+
         return await rootCommand.InvokeAsync(args);
     }
 }
