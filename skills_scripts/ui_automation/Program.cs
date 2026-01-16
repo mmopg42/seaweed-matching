@@ -1,5 +1,6 @@
 using System.CommandLine;
 using System.Text.Json;
+using System.Linq;
 using UiAuto = SkillsScripts.UiAutomation.UiAutomation;
 using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
 using Toolbar = SkillsScripts.UiAutomation.ChronoToolbarController;
@@ -547,6 +548,173 @@ class Program
         toolbarCommand.AddCommand(toolbarEnabledCommand);
 
         rootCommand.AddCommand(toolbarCommand);
+
+        // stats 명령: StatisticsPanel 데이터 읽기
+        var statsCommand = new Command("stats", "StatisticsPanel 데이터 읽기");
+        statsCommand.AddOption(jsonOption);
+        statsCommand.SetHandler((json) =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[stats] Failed: MainWindow not found");
+                return;
+            }
+
+            var statistics = automation.GetAllStatistics(mainWindow);
+            if (statistics == null)
+            {
+                Console.WriteLine("[stats] Failed: Could not extract statistics (StatisticsPanel not found)");
+                return;
+            }
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    source = "StatisticsPanel",
+                    statistics = statistics
+                }));
+            }
+            else
+            {
+                Console.WriteLine("[stats] Statistics from StatisticsPanel:");
+                Console.WriteLine("\n📊 File Counts:");
+                foreach (var kvp in statistics.Where(k => k.Key.StartsWith("NIR") || k.Key.StartsWith("Normal") || k.Key.StartsWith("Cam")))
+                {
+                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                }
+                Console.WriteLine("\n🔗 Matching Status:");
+                foreach (var kvp in statistics.Where(k => !k.Key.StartsWith("NIR") && !k.Key.StartsWith("Normal") && !k.Key.StartsWith("Cam") && k.Key != "일반2"))
+                {
+                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                }
+            }
+        }, jsonOption);
+        rootCommand.AddCommand(statsCommand);
+
+        // datagrid 명령: DataGrid 데이터 읽기
+        var datagridCommand = new Command("datagrid", "DataGrid 데이터 읽기");
+
+        // datagrid headers: DataGrid 헤더 읽기
+        var dgHeadersCommand = new Command("headers", "DataGrid 헤더 읽기");
+        dgHeadersCommand.AddOption(jsonOption);
+        dgHeadersCommand.SetHandler((json) =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[datagrid-headers] Failed: MainWindow not found");
+                return;
+            }
+
+            var dataGrid = automation.FindDataGrid(mainWindow);
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[datagrid-headers] Failed: DataGrid not found");
+                return;
+            }
+
+            var headers = automation.GetDataGridHeaders(dataGrid);
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    columnCount = headers.Count,
+                    columns = headers
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[datagrid-headers] Found {headers.Count} columns:");
+                foreach (var header in headers)
+                {
+                    Console.WriteLine($"  - {header}");
+                }
+            }
+        }, jsonOption);
+        datagridCommand.AddCommand(dgHeadersCommand);
+
+        // datagrid rows: 데이터 행 개수 확인
+        var dgRowsCommand = new Command("rows", "데이터 행 개수 확인");
+        dgRowsCommand.AddOption(jsonOption);
+        dgRowsCommand.SetHandler((json) =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[datagrid-rows] Failed: MainWindow not found");
+                return;
+            }
+
+            var dataGrid = automation.FindDataGrid(mainWindow);
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[datagrid-rows] Failed: DataGrid not found");
+                return;
+            }
+
+            var rowCount = automation.GetDataRowCount(dataGrid);
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    rowCount = rowCount
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[datagrid-rows] DataGrid has {rowCount} data rows");
+            }
+        }, jsonOption);
+        datagridCommand.AddCommand(dgRowsCommand);
+
+        // datagrid data: 모든 데이터 추출
+        var dgDataCommand = new Command("data", "모든 DataGrid 데이터 추출");
+        dgDataCommand.AddOption(jsonOption);
+        dgDataCommand.SetHandler((json) =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[datagrid-data] Failed: MainWindow not found");
+                return;
+            }
+
+            var allData = automation.GetAllDataGridData(mainWindow);
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    rowCount = allData.Count,
+                    data = allData
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[datagrid-data] Extracted {allData.Count} rows");
+                if (allData.Count > 0)
+                {
+                    var headers = allData[0].Keys.ToList();
+                    Console.WriteLine("  Headers: " + string.Join(", ", headers));
+                    foreach (var row in allData)
+                    {
+                        Console.WriteLine("  Row: " + string.Join(" | ", row.Values));
+                    }
+                }
+            }
+        }, jsonOption);
+        datagridCommand.AddCommand(dgDataCommand);
+
+        rootCommand.AddCommand(datagridCommand);
 
         return await rootCommand.InvokeAsync(args);
     }
