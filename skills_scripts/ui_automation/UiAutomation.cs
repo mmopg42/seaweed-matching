@@ -446,6 +446,239 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Finds a toolbar button within a window by its button text.
+        /// </summary>
+        /// <remarks>
+        /// The toolbar buttons have Name text like "시작", "중지", "설정", "새로고침", "이동", "삭제"
+        /// (from MainWindow.xaml lines 38, 46, 55, 63, 72, 78).
+        /// This method searches for Button control type within the window and filters by Name property
+        /// containing the buttonText (case-insensitive).
+        /// </remarks>
+        /// <param name="mainWindow">The Window element to search within</param>
+        /// <param name="buttonText">The button text to search for (e.g., "시작", "중지")</param>
+        /// <returns>The first matching Button element or null if not found</returns>
+        public AutomationElement? FindToolbarButton(Window? mainWindow, string buttonText)
+        {
+            if (mainWindow == null)
+            {
+                Console.WriteLine($"[UiAutomation] Cannot find button: mainWindow is null");
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(buttonText))
+            {
+                Console.WriteLine($"[UiAutomation] Cannot find button: buttonText is null or empty");
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var buttonCondition = cf.ByControlType(ControlType.Button);
+                var buttons = mainWindow.FindAllChildren(buttonCondition);
+
+                Console.WriteLine($"[UiAutomation] Searching for button containing '{buttonText}' among {buttons.Length} buttons");
+
+                foreach (var button in buttons)
+                {
+                    if (!string.IsNullOrEmpty(button.Name) &&
+                        button.Name.IndexOf(buttonText, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        Console.WriteLine($"[UiAutomation] Found button: '{button.Name}' (AutomationId: '{button.AutomationId ?? "(null)"}')");
+                        return button;
+                    }
+                }
+
+                Console.WriteLine($"[UiAutomation] No button found containing '{buttonText}'");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UiAutomation] Error finding toolbar button '{buttonText}': {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Clicks a button element using FlaUI's InvokePattern.
+        /// </summary>
+        /// <remarks>
+        /// Uses button.Patterns.Invoke.Pattern to get InvokePattern and calls pattern.Invoke().
+        /// This follows FlaUI's recommended pattern for button clicking.
+        /// </remarks>
+        /// <param name="button">The button element to click</param>
+        /// <returns>True if successful, false if button is null or click failed</returns>
+        public bool ClickButton(AutomationElement? button)
+        {
+            if (button == null)
+            {
+                Console.WriteLine("[UiAutomation] Cannot click button: button is null");
+                return false;
+            }
+
+            try
+            {
+                var buttonName = button.Name ?? "(unnamed)";
+                Console.WriteLine($"[UiAutomation] Clicking button: '{buttonName}'");
+
+                var invokePattern = button.Patterns.Invoke.Pattern;
+                if (invokePattern == null)
+                {
+                    Console.WriteLine($"[UiAutomation] Failed to get InvokePattern for button '{buttonName}'");
+                    return false;
+                }
+
+                invokePattern.Invoke();
+                Console.WriteLine($"[UiAutomation] Successfully clicked button: '{buttonName}'");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UiAutomation] Error clicking button: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Finds and clicks the Start button in the ChronoView MainWindow toolbar.
+        /// </summary>
+        /// <remarks>
+        /// The Start button is located at MainWindow.xaml line 33 with Command="{Binding StartCommand}".
+        /// Its text is "시작" (line 38). This method finds the button by text and invokes it.
+        /// </remarks>
+        /// <param name="mainWindow">The MainWindow to search within</param>
+        /// <returns>True if the Start button was found and clicked successfully, false otherwise</returns>
+        public bool ClickStartButton(Window? mainWindow)
+        {
+            Console.WriteLine("[UiAutomation] Attempting to click Start button");
+
+            var button = FindToolbarButton(mainWindow, "시작");
+            if (button == null)
+            {
+                Console.WriteLine("[UiAutomation] Start button not found");
+                return false;
+            }
+
+            return ClickButton(button);
+        }
+
+        /// <summary>
+        /// Finds and clicks the Stop button in the ChronoView MainWindow toolbar.
+        /// </summary>
+        /// <remarks>
+        /// The Stop button is located at MainWindow.xaml line 41 with Command="{Binding StopCommand}".
+        /// Its text is "중지" (line 46). This method finds the button by text and invokes it.
+        /// </remarks>
+        /// <param name="mainWindow">The MainWindow to search within</param>
+        /// <returns>True if the Stop button was found and clicked successfully, false otherwise</returns>
+        public bool ClickStopButton(Window? mainWindow)
+        {
+            Console.WriteLine("[UiAutomation] Attempting to click Stop button");
+
+            var button = FindToolbarButton(mainWindow, "중지");
+            if (button == null)
+            {
+                Console.WriteLine("[UiAutomation] Stop button not found");
+                return false;
+            }
+
+            return ClickButton(button);
+        }
+
+        /// <summary>
+        /// Finds and clicks the Settings (Setup) button in the ChronoView MainWindow toolbar.
+        /// </summary>
+        /// <remarks>
+        /// The Settings button is located at MainWindow.xaml line 50 with Click="Setup_Click".
+        /// Its text is "설정" (line 55). This method finds the button by text and invokes it.
+        /// Note: This opens SetupWindow, not SettingsDialog. SettingsDialog is opened from within SetupWindow.
+        /// </remarks>
+        /// <param name="mainWindow">The MainWindow to search within</param>
+        /// <returns>True if the Settings button was found and clicked successfully, false otherwise</returns>
+        public bool ClickSettingsButton(Window? mainWindow)
+        {
+            Console.WriteLine("[UiAutomation] Attempting to click Settings (Setup) button");
+
+            var button = FindToolbarButton(mainWindow, "설정");
+            if (button == null)
+            {
+                Console.WriteLine("[UiAutomation] Settings button not found");
+                return false;
+            }
+
+            return ClickButton(button);
+        }
+
+        /// <summary>
+        /// Finds and clicks the Refresh button in the ChronoView MainWindow toolbar.
+        /// </summary>
+        /// <remarks>
+        /// The Refresh button is located at MainWindow.xaml line 58 with Command="{Binding RefreshCommand}".
+        /// Its text is "새로고침" (line 63). This method finds the button by text and invokes it.
+        /// </remarks>
+        /// <param name="mainWindow">The MainWindow to search within</param>
+        /// <returns>True if the Refresh button was found and clicked successfully, false otherwise</returns>
+        public bool ClickRefreshButton(Window? mainWindow)
+        {
+            Console.WriteLine("[UiAutomation] Attempting to click Refresh button");
+
+            var button = FindToolbarButton(mainWindow, "새로고침");
+            if (button == null)
+            {
+                Console.WriteLine("[UiAutomation] Refresh button not found");
+                return false;
+            }
+
+            return ClickButton(button);
+        }
+
+        /// <summary>
+        /// Finds and clicks the Move button in the ChronoView MainWindow toolbar.
+        /// </summary>
+        /// <remarks>
+        /// The Move button is located at MainWindow.xaml line 67 with Command="{Binding MoveCommand}".
+        /// Its text is "이동" (line 72). This method finds the button by text and invokes it.
+        /// </remarks>
+        /// <param name="mainWindow">The MainWindow to search within</param>
+        /// <returns>True if the Move button was found and clicked successfully, false otherwise</returns>
+        public bool ClickMoveButton(Window? mainWindow)
+        {
+            Console.WriteLine("[UiAutomation] Attempting to click Move button");
+
+            var button = FindToolbarButton(mainWindow, "이동");
+            if (button == null)
+            {
+                Console.WriteLine("[UiAutomation] Move button not found");
+                return false;
+            }
+
+            return ClickButton(button);
+        }
+
+        /// <summary>
+        /// Finds and clicks the Delete button in the ChronoView MainWindow toolbar.
+        /// </summary>
+        /// <remarks>
+        /// The Delete button is located at MainWindow.xaml line 75 with Command="{Binding DeleteCommand}".
+        /// Its text is "삭제" (line 78). This method finds the button by text and invokes it.
+        /// </remarks>
+        /// <param name="mainWindow">The MainWindow to search within</param>
+        /// <returns>True if the Delete button was found and clicked successfully, false otherwise</returns>
+        public bool ClickDeleteButton(Window? mainWindow)
+        {
+            Console.WriteLine("[UiAutomation] Attempting to click Delete button");
+
+            var button = FindToolbarButton(mainWindow, "삭제");
+            if (button == null)
+            {
+                Console.WriteLine("[UiAutomation] Delete button not found");
+                return false;
+            }
+
+            return ClickButton(button);
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
