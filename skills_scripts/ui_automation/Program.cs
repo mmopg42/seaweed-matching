@@ -1753,14 +1753,17 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    line1 = line1Paths,
-                    line2 = line2Paths,
-                    output = outputPath,
-                    quarantine = quarantinePath
-                }));
+                    data = new
+                    {
+                        line1 = line1Paths,
+                        line2 = line2Paths,
+                        output = outputPath,
+                        quarantine = quarantinePath
+                    }
+                });
             }
             else
             {
@@ -1778,6 +1781,7 @@ class Program
                 Console.WriteLine($"\nOutput: {outputPath}");
                 Console.WriteLine($"Quarantine: {quarantinePath}");
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         settingsPathCommand.AddCommand(settingsPathGetAllCommand);
 
@@ -1791,13 +1795,16 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    line = "Line1",
-                    count = paths.Count,
-                    paths = paths
-                }));
+                    data = new
+                    {
+                        line = "Line1",
+                        count = paths.Count,
+                        paths = paths
+                    }
+                });
             }
             else
             {
@@ -1807,6 +1814,7 @@ class Program
                     Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         settingsPathCommand.AddCommand(settingsPathGetLine1Command);
 
@@ -1820,13 +1828,16 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    line = "Line2",
-                    count = paths.Count,
-                    paths = paths
-                }));
+                    data = new
+                    {
+                        line = "Line2",
+                        count = paths.Count,
+                        paths = paths
+                    }
+                });
             }
             else
             {
@@ -1836,6 +1847,7 @@ class Program
                     Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         settingsPathCommand.AddCommand(settingsPathGetLine2Command);
 
@@ -1849,17 +1861,21 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    pathType = "output",
-                    path = path
-                }));
+                    data = new
+                    {
+                        pathType = "output",
+                        path = path
+                    }
+                });
             }
             else
             {
                 Console.WriteLine($"[settings-dialog-path get-output] Output Path: {path}");
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         settingsPathCommand.AddCommand(settingsPathGetOutputCommand);
 
@@ -1873,17 +1889,21 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    pathType = "quarantine",
-                    path = path
-                }));
+                    data = new
+                    {
+                        pathType = "quarantine",
+                        path = path
+                    }
+                });
             }
             else
             {
                 Console.WriteLine($"[settings-dialog-path get-quarantine] Quarantine Path: {path}");
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         settingsPathCommand.AddCommand(settingsPathGetQuarantineCommand);
 
@@ -1959,17 +1979,21 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    checkbox = name,
-                    isChecked = state
-                }));
+                    data = new
+                    {
+                        checkbox = name,
+                        isChecked = state
+                    }
+                });
             }
             else
             {
                 Console.WriteLine($"[settings-dialog-checkbox get] '{name}': {(state ? "Checked" : "Unchecked")}");
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, checkboxNameArgument, jsonOption);
         settingsCheckboxCommand.AddCommand(checkboxGetCommand);
 
@@ -1982,7 +2006,16 @@ class Program
         {
             using var controller = new Settings();
             var result = controller.SetCheckBoxState(null, name, value);
-            Console.WriteLine(result ? $"[settings-dialog-checkbox set] Success: '{name}' set to {value}" : $"[settings-dialog-checkbox set] Failed: Could not set '{name}'");
+            if (result)
+            {
+                Console.WriteLine($"[settings-dialog-checkbox set] Success: '{name}' set to {value}");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine($"[settings-dialog-checkbox set] Failed: Could not set '{name}'");
+                Environment.Exit(EXIT_ERROR);
+            }
         }, checkboxNameArgument, checkboxValueArgument);
         settingsCheckboxCommand.AddCommand(checkboxSetCommand);
 
@@ -1996,13 +2029,16 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    source = "AdvancedTab",
-                    count = settings.Count,
-                    settings = settings
-                }));
+                    data = new
+                    {
+                        source = "AdvancedTab",
+                        count = settings.Count,
+                        settings = settings
+                    }
+                });
             }
             else
             {
@@ -2012,6 +2048,7 @@ class Program
                     Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         settingsCheckboxCommand.AddCommand(checkboxListCommand);
 
@@ -2132,12 +2169,15 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    count = selectedRows.Count,
-                    selectedRows = selectedRows
-                }));
+                    data = new
+                    {
+                        count = selectedRows.Count,
+                        selectedRows = selectedRows
+                    }
+                });
             }
             else
             {
@@ -2147,6 +2187,7 @@ class Program
                     Console.WriteLine($"  - Row {index}");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         fileOpsCommand.AddCommand(fileOpsSelectedCommand);
 
@@ -2164,7 +2205,16 @@ class Program
         {
             using var controller = new FileOps();
             var result = controller.SelectAndMoveRows(rows);
-            Console.WriteLine(result ? $"[file-ops-move rows] Success: Moved {rows.Length} row(s)" : $"[file-ops-move rows] Failed: Could not move rows");
+            if (result)
+            {
+                Console.WriteLine($"[file-ops-move rows] Success: Moved {rows.Length} row(s)");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine($"[file-ops-move rows] Failed: Could not move rows");
+                Environment.Exit(EXIT_ERROR);
+            }
         }, rowsOption);
         fileOpsMoveCommand.AddCommand(moveRowsCommand);
 
@@ -2254,16 +2304,21 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = result,
-                    action = "confirm-dialog"
-                }));
+                    data = new
+                    {
+                        action = "confirm-dialog",
+                        confirmed = result
+                    }
+                });
             }
             else
             {
                 Console.WriteLine(result ? "[file-ops-confirm] Success: Confirmation dialog handled" : "[file-ops-confirm] Failed: Could not handle confirmation dialog");
             }
+            Environment.Exit(result ? EXIT_SUCCESS : EXIT_ERROR);
         }, jsonOption);
         fileOpsCommand.AddCommand(fileOpsConfirmCommand);
 
@@ -2282,17 +2337,21 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = result,
-                    groupId = groupId,
-                    verified = result
-                }));
+                    data = new
+                    {
+                        groupId = groupId,
+                        verified = result
+                    }
+                });
             }
             else
             {
                 Console.WriteLine(result ? $"[file-ops-verify deleted] Success: GroupId '{groupId}' has been deleted" : $"[file-ops-verify deleted] Failed: GroupId '{groupId}' still exists");
             }
+            Environment.Exit(result ? EXIT_SUCCESS : EXIT_ERROR);
         }, groupIdArgument, jsonOption);
         fileOpsVerifyCommand.AddCommand(verifyDeletedCommand);
 
@@ -2310,19 +2369,23 @@ class Program
             if (json)
             {
                 var currentCount = controller.GetDataRowCountAfterOperation();
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = result,
-                    originalCount = originalCount,
-                    currentCount = currentCount,
-                    changed = result
-                }));
+                    data = new
+                    {
+                        originalCount = originalCount,
+                        currentCount = currentCount,
+                        changed = result
+                    }
+                });
             }
             else
             {
                 var currentCount = controller.GetDataRowCountAfterOperation();
                 Console.WriteLine(result ? $"[file-ops-verify row-count] Success: Row count changed from {originalCount} to {currentCount}" : $"[file-ops-verify row-count] Failed: Row count did not change (still {currentCount})");
             }
+            Environment.Exit(result ? EXIT_SUCCESS : EXIT_ERROR);
         }, originalCountArgument, timeoutOption, jsonOption);
         fileOpsVerifyCommand.AddCommand(rowCountWaitCommand);
 
