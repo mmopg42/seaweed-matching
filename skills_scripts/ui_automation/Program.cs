@@ -1543,6 +1543,124 @@ class Program
 
         settingsDialogCommand.AddCommand(settingsPathCommand);
 
+        // settings-dialog checkbox: CheckBox 제어
+        var settingsCheckboxCommand = new Command("checkbox", "SettingsDialog CheckBox 제어");
+
+        // settings-dialog checkbox get: CheckBox 상태 읽기
+        var checkboxNameArgument = new Argument<string>("name", "CheckBox 이름 (use_folder_suffix, use_disk_cache, etc.)");
+        var checkboxGetCommand = new Command("get", "CheckBox 상태 읽기");
+        checkboxGetCommand.AddArgument(checkboxNameArgument);
+        checkboxGetCommand.AddOption(jsonOption);
+        checkboxGetCommand.SetHandler((name, json) =>
+        {
+            using var controller = new Settings();
+            var state = controller.GetCheckBoxState(null, name);
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    checkbox = name,
+                    isChecked = state
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[settings-dialog-checkbox get] '{name}': {(state ? "Checked" : "Unchecked")}");
+            }
+        }, checkboxNameArgument, jsonOption);
+        settingsCheckboxCommand.AddCommand(checkboxGetCommand);
+
+        // settings-dialog checkbox set: CheckBox 상태 설정
+        var checkboxValueArgument = new Argument<bool>("value", "CheckBox 값 (true/false)");
+        var checkboxSetCommand = new Command("set", "CheckBox 상태 설정");
+        checkboxSetCommand.AddArgument(checkboxNameArgument);
+        checkboxSetCommand.AddArgument(checkboxValueArgument);
+        checkboxSetCommand.SetHandler((name, value) =>
+        {
+            using var controller = new Settings();
+            var result = controller.SetCheckBoxState(null, name, value);
+            Console.WriteLine(result ? $"[settings-dialog-checkbox set] Success: '{name}' set to {value}" : $"[settings-dialog-checkbox set] Failed: Could not set '{name}'");
+        }, checkboxNameArgument, checkboxValueArgument);
+        settingsCheckboxCommand.AddCommand(checkboxSetCommand);
+
+        // settings-dialog checkbox list: 모든 CheckBox 상태 목록
+        var checkboxListCommand = new Command("list", "모든 CheckBox 상태 목록 (Advanced tab)");
+        checkboxListCommand.AddOption(jsonOption);
+        checkboxListCommand.SetHandler((json) =>
+        {
+            using var controller = new Settings();
+            var settings = controller.GetAdvancedSettings();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    source = "AdvancedTab",
+                    count = settings.Count,
+                    settings = settings
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[settings-dialog-checkbox list] Found {settings.Count} setting(s):");
+                foreach (var kvp in settings)
+                {
+                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                }
+            }
+        }, jsonOption);
+        settingsCheckboxCommand.AddCommand(checkboxListCommand);
+
+        settingsDialogCommand.AddCommand(settingsCheckboxCommand);
+
+        // settings-dialog action: Dialog 동작 버튼 제어
+        var settingsActionCommand = new Command("action", "SettingsDialog 동작 버튼 제어");
+
+        // settings-dialog action save: Save/OK 버튼 클릭
+        var actionSaveCommand = new Command("save", "Save/OK 버튼 클릭 (dialog closes)");
+        actionSaveCommand.SetHandler(() =>
+        {
+            using var controller = new Settings();
+            var result = controller.ClickSaveButton();
+            Console.WriteLine(result ? "[settings-dialog-action save] Success: Dialog saved and closed" : "[settings-dialog-action save] Failed: Could not click Save button or dialog did not close");
+        });
+        settingsActionCommand.AddCommand(actionSaveCommand);
+
+        // settings-dialog action apply: Apply 버튼 클릭
+        var actionApplyCommand = new Command("apply", "Apply 버튼 클릭 (dialog stays open)");
+        actionApplyCommand.SetHandler(() =>
+        {
+            using var controller = new Settings();
+            var result = controller.ClickApplyButton();
+            Console.WriteLine(result ? "[settings-dialog-action apply] Success: Apply button clicked" : "[settings-dialog-action apply] Failed: Could not click Apply button");
+        });
+        settingsActionCommand.AddCommand(actionApplyCommand);
+
+        // settings-dialog action cancel: Cancel 버튼 클릭
+        var actionCancelCommand = new Command("cancel", "Cancel 버튼 클릭 (dialog closes)");
+        actionCancelCommand.SetHandler(() =>
+        {
+            using var controller = new Settings();
+            var result = controller.ClickCancelButton();
+            Console.WriteLine(result ? "[settings-dialog-action cancel] Success: Dialog cancelled and closed" : "[settings-dialog-action cancel] Failed: Could not click Cancel button or dialog did not close");
+        });
+        settingsActionCommand.AddCommand(actionCancelCommand);
+
+        // settings-dialog action reset: Reset/Defaults 버튼 클릭
+        var actionResetCommand = new Command("reset", "Reset/Defaults 버튼 클릭 (dialog stays open)");
+        actionResetCommand.SetHandler(() =>
+        {
+            using var controller = new Settings();
+            var result = controller.ClickResetButton();
+            Console.WriteLine(result ? "[settings-dialog-action reset] Success: Reset button clicked" : "[settings-dialog-action reset] Failed: Could not click Reset button");
+        });
+        settingsActionCommand.AddCommand(actionResetCommand);
+
+        settingsDialogCommand.AddCommand(settingsActionCommand);
+
         rootCommand.AddCommand(settingsDialogCommand);
 
         return await rootCommand.InvokeAsync(args);
