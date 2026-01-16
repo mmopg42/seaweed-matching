@@ -437,6 +437,15 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Gets the underlying UIA3Automation instance for use with ChronoWindowFinder.
+        /// </summary>
+        /// <returns>The UIA3Automation instance</returns>
+        public UIA3Automation GetAutomation()
+        {
+            return _automation;
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
