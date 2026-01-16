@@ -1,4 +1,5 @@
 using System.CommandLine;
+using UiAuto = SkillsScripts.UiAutomation.UiAutomation;
 
 namespace UiAutomation;
 
@@ -11,12 +12,22 @@ class Program
     {
         var rootCommand = new RootCommand("Windows UI Automation - FlaUI 5.x 기반 CLI 도구");
 
+        // detect 명령: ChronoView MainWindow 감지 및 정보 출력
+        var detectCommand = new Command("detect", "ChronoView MainWindow 감지 및 속성 출력");
+        detectCommand.SetHandler(() =>
+        {
+            using var automation = new UiAuto();
+            automation.PrintMainWindowInfo();
+        });
+        rootCommand.AddCommand(detectCommand);
+
         // list 명령: 모든 윈도우 나열
         var listCommand = new Command("list", "모든 윈도우 나열");
         listCommand.SetHandler(() =>
         {
-            Console.WriteLine("Listing all windows...");
-            // TODO: FlaUI를 사용한 윈도우 목록 구현
+            using var automation = new UiAuto();
+            var windows = automation.FindAllChronoViewWindows();
+            Console.WriteLine($"Found {windows.Count} ChronoView window(s)");
         });
         rootCommand.AddCommand(listCommand);
 
@@ -35,15 +46,35 @@ class Program
         findCommand.AddOption(processOption);
         findCommand.SetHandler((title, process) =>
         {
+            using var automation = new UiAuto();
+
             if (!string.IsNullOrEmpty(title))
             {
                 Console.WriteLine($"Finding window by title: {title}");
-                // TODO: FlaUI를 사용한 제목 검색 구현
+                var window = automation.FindWindowByTitle(title, substring: true);
+                if (window != null)
+                {
+                    Console.WriteLine($"Found: '{window.Name}'");
+                    automation.GetWindowProperties(window);
+                }
+                else
+                {
+                    Console.WriteLine("Window not found");
+                }
             }
             else if (!string.IsNullOrEmpty(process))
             {
                 Console.WriteLine($"Finding window by process: {process}");
-                // TODO: FlaUI를 사용한 프로세스 검색 구현
+                var window = automation.FindWindowByProcess(process);
+                if (window != null)
+                {
+                    Console.WriteLine($"Found: '{window.Name}'");
+                    automation.GetWindowProperties(window);
+                }
+                else
+                {
+                    Console.WriteLine("Window not found");
+                }
             }
             else
             {
