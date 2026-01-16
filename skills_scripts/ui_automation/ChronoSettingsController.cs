@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using FlaUI.Core;
@@ -404,6 +405,206 @@ namespace SkillsScripts.UiAutomation
             }
 
             Console.WriteLine(info);
+        }
+
+        /// <summary>
+        /// Selects a tab in the SettingsDialog TabControl by tab name.
+        /// </summary>
+        /// <remarks>
+        /// Finds the TabControl, then searches for TabItem with Header (Name) containing tabName.
+        /// Uses SelectionItemPattern.Select() to activate the tab.
+        /// Supports bilingual tab headers (English first, Korean fallback).
+        ///
+        /// Tab names in SettingsDialog.xaml:
+        /// - "Paths" / "경로"
+        /// - "Data Sequence" / "데이터 순서"
+        /// - "UI Options" / "UI 옵션"
+        /// - "Advanced" / "고급"
+        /// - "External Programs" / "외부 프로그램"
+        /// </remarks>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <param name="tabName">The tab name to search for (substring match)</param>
+        /// <returns>True if the tab was selected successfully, false otherwise</returns>
+        public bool SelectTab(Window? dialog, string tabName)
+        {
+            dialog ??= FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot select tab: SettingsDialog not found");
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(tabName))
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot select tab: tabName is null or empty");
+                return false;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                // Find TabControl
+                var tabControl = dialog.FindFirstDescendant(cf.ByControlType(ControlType.Tab));
+                if (tabControl == null)
+                {
+                    Console.WriteLine("[ChronoSettingsController] TabControl not found in SettingsDialog");
+                    return false;
+                }
+
+                Console.WriteLine($"[ChronoSettingsController] Searching for tab containing '{tabName}'");
+
+                // Find all TabItem children
+                var tabItems = tabControl.FindAllChildren(cf.ByControlType(ControlType.TabItem));
+
+                // Search for matching tab
+                AutomationElement? targetTab = null;
+                foreach (var tabItem in tabItems)
+                {
+                    if (!string.IsNullOrEmpty(tabItem.Name) &&
+                        tabItem.Name.IndexOf(tabName, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        targetTab = tabItem;
+                        Console.WriteLine($"[ChronoSettingsController] Found tab: '{tabItem.Name}'");
+                        break;
+                    }
+                }
+
+                if (targetTab == null)
+                {
+                    Console.WriteLine($"[ChronoSettingsController] Tab '{tabName}' not found");
+                    Console.WriteLine($"[ChronoSettingsController] Available tabs: {string.Join(", ", GetAvailableTabNames(tabItems))}");
+                    return false;
+                }
+
+                // Use SelectionItemPattern to select the tab
+                var selectionPattern = targetTab.Patterns.SelectionItem.Pattern;
+                if (selectionPattern == null)
+                {
+                    Console.WriteLine($"[ChronoSettingsController] SelectionItemPattern not available for tab '{tabName}'");
+                    return false;
+                }
+
+                selectionPattern.Select();
+                Console.WriteLine($"[ChronoSettingsController] Successfully selected tab: '{targetTab.Name}'");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Error selecting tab '{tabName}': {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets the name of the currently selected tab in the SettingsDialog.
+        /// </summary>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <returns>The name of the selected tab, or empty string if not found</returns>
+        public string GetSelectedTab(Window? dialog)
+        {
+            dialog ??= FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot get selected tab: SettingsDialog not found");
+                return string.Empty;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                // Find TabControl
+                var tabControl = dialog.FindFirstDescendant(cf.ByControlType(ControlType.Tab));
+                if (tabControl == null)
+                {
+                    Console.WriteLine("[ChronoSettingsController] TabControl not found in SettingsDialog");
+                    return string.Empty;
+                }
+
+                // Find selected TabItem using SelectionItemPattern.IsSelected property
+                var tabItems = tabControl.FindAllChildren(cf.ByControlType(ControlType.TabItem));
+                foreach (var tabItem in tabItems)
+                {
+                    var selectionPattern = tabItem.Patterns.SelectionItem.Pattern;
+                    if (selectionPattern != null && selectionPattern.IsSelected.Value)
+                    {
+                        Console.WriteLine($"[ChronoSettingsController] Selected tab: '{tabItem.Name}'");
+                        return tabItem.Name ?? string.Empty;
+                    }
+                }
+
+                Console.WriteLine("[ChronoSettingsController] No tab is currently selected");
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Error getting selected tab: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Selects the Paths tab (경로) in the SettingsDialog.
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SelectPathsTab()
+        {
+            return SelectTab(null, "Paths") || SelectTab(null, "경로");
+        }
+
+        /// <summary>
+        /// Selects the Data Sequence tab (데이터 순서) in the SettingsDialog.
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SelectDataSequenceTab()
+        {
+            return SelectTab(null, "Data Sequence") || SelectTab(null, "데이터 순서");
+        }
+
+        /// <summary>
+        /// Selects the UI Options tab (UI 옵션) in the SettingsDialog.
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SelectUiOptionsTab()
+        {
+            return SelectTab(null, "UI Options") || SelectTab(null, "UI 옵션");
+        }
+
+        /// <summary>
+        /// Selects the Advanced tab (고급) in the SettingsDialog.
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SelectAdvancedTab()
+        {
+            return SelectTab(null, "Advanced") || SelectTab(null, "고급");
+        }
+
+        /// <summary>
+        /// Selects the External Programs tab (외부 프로그램) in the SettingsDialog.
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SelectExternalProgramsTab()
+        {
+            return SelectTab(null, "External Programs") || SelectTab(null, "외부 프로그램");
+        }
+
+        /// <summary>
+        /// Gets the names of all available tabs.
+        /// </summary>
+        /// <param name="tabItems">Array of TabItem elements</param>
+        /// <returns>List of tab names</returns>
+        private List<string> GetAvailableTabNames(AutomationElement[] tabItems)
+        {
+            var names = new List<string>();
+            foreach (var tab in tabItems)
+            {
+                if (!string.IsNullOrEmpty(tab.Name))
+                {
+                    names.Add(tab.Name);
+                }
+            }
+            return names;
         }
 
         /// <summary>
