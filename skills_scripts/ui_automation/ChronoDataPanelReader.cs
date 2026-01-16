@@ -553,6 +553,398 @@ namespace SkillsScripts.UiAutomation
 
         #endregion
 
+        #region LogPanel
+
+        /// <summary>
+        /// Finds the LogPanel within the ChronoView MainWindow.
+        /// </summary>
+        /// <remarks>
+        /// The LogPanel is a UserControl (LogPanel.xaml).
+        /// It contains LogDataGrid with columns: Severity, Time, Source, Message.
+        /// Also contains SearchBox, LevelFilter, AutoScrollCheckBox, and action buttons.
+        /// </remarks>
+        /// <returns>The LogPanel AutomationElement if found, null otherwise</returns>
+        public AutomationElement? FindLogPanel()
+        {
+            var mainWindow = FindMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] Cannot find LogPanel: MainWindow not found");
+                return null;
+            }
+
+            return FindLogPanel(mainWindow);
+        }
+
+        /// <summary>
+        /// Finds the LogPanel within a specific window.
+        /// </summary>
+        /// <param name="window">The window to search within</param>
+        /// <returns>The LogPanel AutomationElement if found, null otherwise</returns>
+        public AutomationElement? FindLogPanel(Window window)
+        {
+            if (window == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] Cannot find LogPanel: window is null");
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                // Try to find by Name containing "LogPanel"
+                var nameCondition = cf.ByControlType(ControlType.Custom)
+                    .And(cf.ByName("LogPanel", PropertyConditionFlags.IgnoreCase));
+                var panel = window.FindFirstDescendant(nameCondition);
+
+                if (panel != null)
+                {
+                    Console.WriteLine("[ChronoDataPanelReader] Found LogPanel by Name");
+                    return panel;
+                }
+
+                // Fallback: search all Custom controls and match by ClassName
+                var allElements = window.FindAllChildren(cf.ByControlType(ControlType.Custom));
+                foreach (var element in allElements)
+                {
+                    if (!string.IsNullOrEmpty(element.ClassName) &&
+                        element.ClassName.IndexOf("LogPanel", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        Console.WriteLine($"[ChronoDataPanelReader] Found LogPanel by ClassName: '{element.ClassName}'");
+                        return element;
+                    }
+                }
+
+                Console.WriteLine("[ChronoDataPanelReader] LogPanel not found");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoDataPanelReader] Error finding LogPanel: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Finds the LogDataGrid within the LogPanel.
+        /// </summary>
+        /// <param name="logPanel">The LogPanel element</param>
+        /// <returns>The LogDataGrid AutomationElement if found, null otherwise</returns>
+        public AutomationElement? FindLogDataGrid(AutomationElement logPanel)
+        {
+            if (logPanel == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] Cannot find LogDataGrid: logPanel is null");
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                // Try to find by Name "LogDataGrid"
+                var nameCondition = cf.ByControlType(ControlType.DataGrid)
+                    .And(cf.ByName("LogDataGrid", PropertyConditionFlags.IgnoreCase));
+                var dataGrid = logPanel.FindFirstDescendant(nameCondition);
+
+                if (dataGrid != null)
+                {
+                    Console.WriteLine("[ChronoDataPanelReader] Found LogDataGrid by Name");
+                    return dataGrid;
+                }
+
+                // Fallback: find any DataGrid in LogPanel
+                var gridCondition = cf.ByControlType(ControlType.DataGrid);
+                dataGrid = logPanel.FindFirstDescendant(gridCondition);
+
+                if (dataGrid != null)
+                {
+                    Console.WriteLine($"[ChronoDataPanelReader] Found LogDataGrid (Name: '{dataGrid.Name ?? "(unnamed)"}')");
+                    return dataGrid;
+                }
+
+                Console.WriteLine("[ChronoDataPanelReader] LogDataGrid not found");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoDataPanelReader] Error finding LogDataGrid: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of log rows in the LogDataGrid.
+        /// </summary>
+        /// <param name="logPanel">The LogPanel element</param>
+        /// <returns>Number of log rows, or 0 if not found</returns>
+        public int GetLogRowCount(AutomationElement logPanel)
+        {
+            if (logPanel == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] Cannot get log row count: logPanel is null");
+                return 0;
+            }
+
+            var dataGrid = FindLogDataGrid(logPanel);
+            if (dataGrid == null)
+            {
+                return 0;
+            }
+
+            return GetLogRowCountFromDataGrid(dataGrid);
+        }
+
+        /// <summary>
+        /// Gets the number of log rows from a specific DataGrid.
+        /// </summary>
+        /// <param name="dataGrid">The DataGrid element</param>
+        /// <returns>Number of log rows, or 0 if not found</returns>
+        private int GetLogRowCountFromDataGrid(AutomationElement dataGrid)
+        {
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] Cannot get row count: dataGrid is null");
+                return 0;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var rows = dataGrid.FindAllChildren(cf.ByControlType(ControlType.DataItem));
+
+                Console.WriteLine($"[ChronoDataPanelReader] LogDataGrid has {rows.Length} log rows");
+                return rows.Length;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoDataPanelReader] Error getting log row count: {ex.Message}");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets the column headers from the LogDataGrid.
+        /// </summary>
+        /// <param name="logPanel">The LogPanel element</param>
+        /// <returns>List of column header names, or empty list if not found</returns>
+        public List<string> GetLogHeaders(AutomationElement logPanel)
+        {
+            var headers = new List<string>();
+
+            if (logPanel == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] Cannot get log headers: logPanel is null");
+                return headers;
+            }
+
+            var dataGrid = FindLogDataGrid(logPanel);
+            if (dataGrid == null)
+            {
+                return headers;
+            }
+
+            return GetLogHeadersFromDataGrid(dataGrid);
+        }
+
+        /// <summary>
+        /// Gets the column headers from a specific LogDataGrid.
+        /// </summary>
+        /// <param name="dataGrid">The DataGrid element</param>
+        /// <returns>List of column header names, or empty list if not found</returns>
+        private List<string> GetLogHeadersFromDataGrid(AutomationElement dataGrid)
+        {
+            var headers = new List<string>();
+
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] Cannot get log headers: dataGrid is null");
+                return headers;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var headerCondition = cf.ByControlType(ControlType.Header);
+                var header = dataGrid.FindFirstDescendant(headerCondition);
+
+                if (header == null)
+                {
+                    Console.WriteLine("[ChronoDataPanelReader] LogDataGrid Header not found");
+                    return headers;
+                }
+
+                var headerItems = header.FindAllChildren(cf.ByControlType(ControlType.HeaderItem));
+
+                Console.WriteLine($"[ChronoDataPanelReader] Found {headerItems.Length} log header columns");
+
+                foreach (var item in headerItems)
+                {
+                    var name = item.Name ?? "(unnamed)";
+                    headers.Add(name);
+                    Console.WriteLine($"[ChronoDataPanelReader] Log Header: '{name}'");
+                }
+
+                return headers;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoDataPanelReader] Error getting log headers: {ex.Message}");
+                return headers;
+            }
+        }
+
+        /// <summary>
+        /// Gets a single log message from the LogDataGrid by row index.
+        /// </summary>
+        /// <param name="logPanel">The LogPanel element</param>
+        /// <param name="rowIndex">Zero-based row index</param>
+        /// <returns>Dictionary with Severity, Time, Source, Message, or empty dict if not found</returns>
+        public Dictionary<string, string> GetLogMessage(AutomationElement logPanel, int rowIndex)
+        {
+            var logMessage = new Dictionary<string, string>();
+
+            if (logPanel == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] Cannot get log message: logPanel is null");
+                return logMessage;
+            }
+
+            var dataGrid = FindLogDataGrid(logPanel);
+            if (dataGrid == null)
+            {
+                return logMessage;
+            }
+
+            return GetLogMessageFromDataGrid(dataGrid, rowIndex);
+        }
+
+        /// <summary>
+        /// Gets a single log message from a specific DataGrid by row index.
+        /// </summary>
+        /// <param name="dataGrid">The DataGrid element</param>
+        /// <param name="rowIndex">Zero-based row index</param>
+        /// <returns>Dictionary with Severity, Time, Source, Message, or empty dict if not found</returns>
+        private Dictionary<string, string> GetLogMessageFromDataGrid(AutomationElement dataGrid, int rowIndex)
+        {
+            var logMessage = new Dictionary<string, string>();
+
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] Cannot get log message: dataGrid is null");
+                return logMessage;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var rows = dataGrid.FindAllChildren(cf.ByControlType(ControlType.DataItem));
+
+                if (rowIndex < 0 || rowIndex >= rows.Length)
+                {
+                    Console.WriteLine($"[ChronoDataPanelReader] Row index {rowIndex} out of range (0-{rows.Length - 1})");
+                    return logMessage;
+                }
+
+                var rowElement = rows[rowIndex];
+                var cells = rowElement.FindAllChildren(cf.ByControlType(ControlType.Text));
+
+                // Expected columns: Severity, Time, Source, Message
+                var columnNames = new[] { "Severity", "Time", "Source", "Message" };
+
+                for (int i = 0; i < Math.Min(cells.Length, columnNames.Length); i++)
+                {
+                    logMessage[columnNames[i]] = cells[i].Name ?? "";
+                    Console.WriteLine($"[ChronoDataPanelReader] Log row {rowIndex}, col {i} ({columnNames[i]}): '{cells[i].Name ?? "(null)"}'");
+                }
+
+                return logMessage;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoDataPanelReader] Error getting log message: {ex.Message}");
+                return logMessage;
+            }
+        }
+
+        /// <summary>
+        /// Gets all log messages from the LogDataGrid.
+        /// </summary>
+        /// <returns>List of dictionaries representing log messages, or empty list if not found</returns>
+        public List<Dictionary<string, string>> GetAllLogMessages()
+        {
+            var mainWindow = FindMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] Cannot get all log messages: MainWindow not found");
+                return new List<Dictionary<string, string>>();
+            }
+
+            return GetAllLogMessages(mainWindow);
+        }
+
+        /// <summary>
+        /// Gets all log messages from a specific window's LogDataGrid.
+        /// </summary>
+        /// <param name="window">The window containing the LogPanel</param>
+        /// <returns>List of dictionaries representing log messages, or empty list if not found</returns>
+        public List<Dictionary<string, string>> GetAllLogMessages(Window window)
+        {
+            var allMessages = new List<Dictionary<string, string>>();
+
+            if (window == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] Cannot get all log messages: window is null");
+                return allMessages;
+            }
+
+            var logPanel = FindLogPanel(window);
+            if (logPanel == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] LogPanel not found");
+                return allMessages;
+            }
+
+            var dataGrid = FindLogDataGrid(logPanel);
+            if (dataGrid == null)
+            {
+                return allMessages;
+            }
+
+            var headers = GetLogHeadersFromDataGrid(dataGrid);
+            if (headers.Count == 0)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] No headers found, cannot extract log messages");
+                return allMessages;
+            }
+
+            var cf = _automation.ConditionFactory;
+            var rows = dataGrid.FindAllChildren(cf.ByControlType(ControlType.DataItem));
+
+            Console.WriteLine($"[ChronoDataPanelReader] Extracting {rows.Length} log messages");
+
+            foreach (var row in rows)
+            {
+                var logMessage = new Dictionary<string, string>();
+                var cells = row.FindAllChildren(cf.ByControlType(ControlType.Text));
+
+                for (int i = 0; i < Math.Min(cells.Length, headers.Count); i++)
+                {
+                    var key = headers[i];
+                    var value = cells[i].Name ?? "";
+                    logMessage[key] = value;
+                }
+
+                allMessages.Add(logMessage);
+            }
+
+            Console.WriteLine($"[ChronoDataPanelReader] Extracted {allMessages.Count} log messages with {headers.Count} columns each");
+            return allMessages;
+        }
+
+        #endregion
+
         /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
