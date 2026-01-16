@@ -138,6 +138,90 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Lists all child elements of an automation element in a hierarchical format.
+        /// Useful for inspecting UI structure during development.
+        /// </summary>
+        /// <param name="parent">The parent automation element</param>
+        /// <param name="maxDepth">Maximum depth to traverse (default: 3)</param>
+        /// <param name="currentDepth">Current depth in recursion (internal use)</param>
+        /// <param name="indent">Indentation string for current level (internal use)</param>
+        public void ListElements(AutomationElement? parent, int maxDepth = 3, int currentDepth = 0, string indent = "")
+        {
+            if (parent == null)
+            {
+                Console.WriteLine("[UiAutomation] Parent element is null");
+                return;
+            }
+
+            // Base element info
+            if (currentDepth == 0)
+            {
+                Console.WriteLine($"[UiAutomation] UI Tree for '{parent.Name ?? "(unnamed)"}' (max depth: {maxDepth}):");
+                PrintElementInfo(parent, indent);
+            }
+
+            // Check max depth
+            if (currentDepth >= maxDepth)
+            {
+                return;
+            }
+
+            // Find children
+            AutomationElement[] children;
+            try
+            {
+                children = parent.FindAllChildren();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{indent}  [Error reading children: {ex.Message}]");
+                return;
+            }
+
+            if (children.Length == 0)
+            {
+                Console.WriteLine($"{indent}  (No children)");
+                return;
+            }
+
+            // Print each child
+            foreach (var child in children)
+            {
+                PrintElementInfo(child, indent + "  ");
+
+                // Recursively traverse child elements
+                ListElements(child, maxDepth, currentDepth + 1, indent + "  ");
+            }
+        }
+
+        /// <summary>
+        /// Prints information about an automation element.
+        /// </summary>
+        private void PrintElementInfo(AutomationElement element, string indent)
+        {
+            var controlType = element.ControlType.ToString();
+            var name = element.Name ?? "(unnamed)";
+            var automationId = element.AutomationId ?? "";
+            var className = element.ClassName ?? "";
+
+            var info = $"{indent}[{controlType}]";
+            if (!string.IsNullOrEmpty(name))
+            {
+                info += $" Name: '{name}'";
+            }
+            if (!string.IsNullOrEmpty(automationId))
+            {
+                info += $" AutomationId: '{automationId}'";
+            }
+            if (!string.IsNullOrEmpty(className))
+            {
+                info += $" Class: '{className}'";
+            }
+
+            Console.WriteLine(info);
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
