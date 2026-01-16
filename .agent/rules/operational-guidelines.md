@@ -39,7 +39,7 @@ This rule is **non-negotiable**. Format consistency enables review, automation, 
 
 ```
 IF docs/spec/{task}/01_requirements.md EXISTS
-AND docs/spec/{task}/05_tasks.md DOES NOT EXIST
+AND docs/spec/{task}/06_tasks.md DOES NOT EXIST
 THEN code modification is PROHIBITED for that task
 ```
 
@@ -85,19 +85,22 @@ START
   ├─► "Writing 01_requirements.md"
   │     └─► Read: docs/templates/TEMPLATE_REQUIREMENTS.md
   │
-  ├─► "Writing 02_research.md"
+  ├─► "Writing 02_analysis.md"
+  │     └─► Read: docs/templates/TEMPLATE_ANALYSIS.md
+  │
+  ├─► "Writing 03_research.md"
   │     └─► Read: docs/templates/TEMPLATE_RESEARCH.md
   │
-  ├─► "Writing 03_plan.md"
+  ├─► "Writing 04_plan.md"
   │     └─► Read: docs/templates/TEMPLATE_PLAN.md
   │
-  ├─► "Writing 04_design.md"
+  ├─► "Writing 05_design.md"
   │     └─► Read: docs/templates/TEMPLATE_DESIGN.md
   │
-  ├─► "Writing 05_tasks.md"
+  ├─► "Writing 06_tasks.md"
   │     └─► Read: docs/templates/TEMPLATE_TASKS.md
   │
-  ├─► "Writing 06_report.md"
+  ├─► "Writing 07_report.md"
   │     └─► Read: docs/templates/TEMPLATE_REPORT.md
   │
   ├─► "Creating/updating architecture docs"
@@ -130,13 +133,13 @@ START
 ### 3.2 Spec Document Sequence
 
 ```
-01_requirements → [02_research] → 03_plan → 04_design → 05_tasks
-                   (optional)                              │
-                                                           ▼
-                                              [CODE MODIFICATION UNLOCKED]
-                                                           │
-                                                           ▼
-                                                     06_report
+01_requirements → 02_analysis → [03_research] → 04_plan → 05_design → 06_tasks
+                   (MANDATORY)    (optional)                               │
+                                                                           ▼
+                                                              [CODE MODIFICATION UNLOCKED]
+                                                                           │
+                                                                           ▼
+                                                                     07_report
 ```
 
 ### 3.3 Approval Rules
@@ -154,7 +157,7 @@ Before ANY code modification (including small fixes), complete these 3 checks:
 ```markdown
 ### Pre-flight Checklist
 1. [ ] **Architecture docs exist?** → Check `docs/architecture/` for relevant modules
-2. [ ] **Spec-Lock clear?** → Verify no blocking spec (01 exists but 05 doesn't)
+2. [ ] **Spec-Lock clear?** → Verify no blocking spec (01 exists but 06 doesn't)
 3. [ ] **Impact scope identified?** → List affected files/modules (1 line minimum)
 ```
 
@@ -202,11 +205,12 @@ docs/templates/
 ├── SPEC_WORKFLOW.md           # When & how to use spec system
 ├── ARCHITECTURE_DOCS.md       # Architecture doc guidelines
 ├── TEMPLATE_REQUIREMENTS.md   # 01_requirements.md template
-├── TEMPLATE_RESEARCH.md       # 02_research.md template
-├── TEMPLATE_PLAN.md           # 03_plan.md template
-├── TEMPLATE_DESIGN.md         # 04_design.md template
-├── TEMPLATE_TASKS.md          # 05_tasks.md template
-└── TEMPLATE_REPORT.md         # 06_report.md template
+├── TEMPLATE_ANALYSIS.md       # 02_analysis.md template (MANDATORY)
+├── TEMPLATE_RESEARCH.md       # 03_research.md template
+├── TEMPLATE_PLAN.md           # 04_plan.md template
+├── TEMPLATE_DESIGN.md         # 05_design.md template
+├── TEMPLATE_TASKS.md          # 06_tasks.md template
+└── TEMPLATE_REPORT.md         # 07_report.md template
 ```
 
 ### Project Documentation
@@ -220,11 +224,12 @@ docs/
 └── spec/                     # Task-specific specs
     └── {task_name}/          # One folder per task
         ├── 01_requirements.md
-        ├── 02_research.md    # Optional
-        ├── 03_plan.md
-        ├── 04_design.md
-        ├── 05_tasks.md
-        └── 06_report.md
+        ├── 02_analysis.md    # MANDATORY
+        ├── 03_research.md    # Optional
+        ├── 04_plan.md
+        ├── 05_design.md
+        ├── 06_tasks.md
+        └── 07_report.md
 ```
 
 ---

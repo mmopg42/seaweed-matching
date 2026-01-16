@@ -18,6 +18,7 @@ public class ImageProcessingService : IImageProcessor
     private readonly ILogger<ImageProcessingService> _logger;
     private readonly ImageSettings _settings;
     private readonly LruCache<string, byte[]> _thumbnailCache;
+    private readonly LruCache<string, (int Width, int Height)> _thumbnailDimensionsCache;
     private readonly LruCache<string, ImageMetadata> _metadataCache;
     // Limit concurrent processing to prevent thread pool starvation
     // Use ProcessorCount * 2 as a reasonable baseline for mixed I/O and CPU work
@@ -31,6 +32,7 @@ public class ImageProcessingService : IImageProcessor
         // Initialize LRU caches with configured size
         var maxCacheSize = _settings.MaxCacheSizeMB * 1024 * 1024; // Convert MB to bytes
         _thumbnailCache = new LruCache<string, byte[]>(maxCacheSize);
+        _thumbnailDimensionsCache = new LruCache<string, (int Width, int Height)>(maxCacheSize / 50); // Very small overhead
         _metadataCache = new LruCache<string, ImageMetadata>(maxCacheSize / 10); // Metadata is much smaller
 
         _logger.LogInformation("ImageProcessingService initialized with cache size: {CacheSizeMB}MB, Concurrency: {Limit}", 
@@ -114,6 +116,90 @@ public class ImageProcessingService : IImageProcessor
     }
 
     /// <summary>
+    /// Generates a thumbnail image and returns original dimensions in a single pass.
+    /// </summary>
+    public async Task<ThumbnailWithDimensionsResult> GenerateThumbnailWithDimensionsAsync(
+        string imagePath, int width, int height, CancellationToken cancellationToken = default, bool throwOnError = false)
+    {
+        if (string.IsNullOrWhiteSpace(imagePath))
+            throw new ArgumentException("Image path cannot be null or empty", nameof(imagePath));
+
+        if (width <= 0 || height <= 0)
+            throw new ArgumentException("Width and height must be positive values");
+
+        if (!File.Exists(imagePath))
+        {
+            if (throwOnError) throw new FileNotFoundException("Image file not found", imagePath);
+            _logger.LogWarning("Image file not found: {ImagePath}", imagePath);
+            return new ThumbnailWithDimensionsResult(GetPlaceholderImage(width, height), 0, 0);
+        }
+
+        // Check cache first
+        var cacheKey = $"{imagePath}_{width}x{height}";
+        if (_settings.EnableCaching && 
+            _thumbnailCache.TryGet(cacheKey, out var cachedThumbnail) &&
+            _thumbnailDimensionsCache.TryGet(cacheKey, out var cachedDimensions))
+        {
+            _logger.LogDebug("Thumbnail+Dimensions cache hit for: {ImagePath}", imagePath);
+            var thumb = cachedThumbnail ?? GetPlaceholderImage(width, height);
+            return new ThumbnailWithDimensionsResult(thumb, cachedDimensions.Width, cachedDimensions.Height);
+        }
+
+        try
+        {
+            await _processingSemaphore.WaitAsync(cancellationToken);
+
+            try
+            {
+                var result = await Task.Run(async () =>
+                {
+                    using var fileStream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    using var image = await SixLabors.ImageSharp.Image.LoadAsync(fileStream, cancellationToken);
+                    
+                    var originalWidth = image.Width;
+                    var originalHeight = image.Height;
+
+                    // Resize image
+                    image.Mutate(x => x.Resize(new ResizeOptions
+                    {
+                        Size = new SixLabors.ImageSharp.Size(width, height),
+                        Mode = ResizeMode.Max
+                    }));
+
+                    using var ms = new MemoryStream();
+                    var encoder = new JpegEncoder { Quality = _settings.ThumbnailQuality };
+                    await image.SaveAsync(ms, encoder, cancellationToken);
+                    var thumbnailBytes = ms.ToArray();
+
+                    return new ThumbnailWithDimensionsResult(thumbnailBytes, originalWidth, originalHeight);
+                }, cancellationToken);
+
+                // Cache the result
+                if (_settings.EnableCaching)
+                {
+                    _thumbnailCache.Add(cacheKey, result.ThumbnailBytes);
+                    _thumbnailDimensionsCache.Add(cacheKey, (result.OriginalWidth, result.OriginalHeight));
+                }
+
+                _logger.LogDebug("Generated thumbnail with dimensions for: {ImagePath} ({OriginalW}x{OriginalH})", 
+                    imagePath, result.OriginalWidth, result.OriginalHeight);
+                
+                return result;
+            }
+            finally
+            {
+                _processingSemaphore.Release();
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            if (throwOnError) throw;
+            _logger.LogError(ex, "Error generating thumbnail with dimensions for: {ImagePath}", imagePath);
+            return new ThumbnailWithDimensionsResult(GetPlaceholderImage(width, height), 0, 0);
+        }
+    }
+
+    /// <summary>
     /// Extracts image metadata asynchronously.
     /// </summary>
     public async Task<ImageMetadata> GetImageMetadataAsync(string imagePath, CancellationToken cancellationToken = default)
@@ -158,9 +244,7 @@ public class ImageProcessingService : IImageProcessor
                         FileSize = fileInfo.Length,
                         Format = image.Metadata.DecodedImageFormat?.Name ?? "Unknown",
                         FilePath = imagePath,
-                        IsAbnormal = false,
-                        ZScoreWidth = 0,
-                        ZScoreHeight = 0
+                        IsAbnormal = false
                     };
                 }, cancellationToken);
 
@@ -225,6 +309,7 @@ public class ImageProcessingService : IImageProcessor
     public void ClearCache()
     {
         _thumbnailCache.Clear();
+        _thumbnailDimensionsCache.Clear();
         _metadataCache.Clear();
         _logger.LogInformation("Image caches cleared");
     }
@@ -234,7 +319,7 @@ public class ImageProcessingService : IImageProcessor
     /// </summary>
     public long GetCacheSizeBytes()
     {
-        return _thumbnailCache.GetSizeBytes() + _metadataCache.GetSizeBytes();
+        return _thumbnailCache.GetSizeBytes() + _thumbnailDimensionsCache.GetSizeBytes() + _metadataCache.GetSizeBytes();
     }
 
     private ImageMetadata CreateErrorMetadata(string imagePath)
@@ -247,9 +332,32 @@ public class ImageProcessingService : IImageProcessor
             FileSize = 0,
             Format = "Error",
             FilePath = imagePath,
-            IsAbnormal = false,
-            ZScoreWidth = 0,
-            ZScoreHeight = 0
+            IsAbnormal = false
         };
+    }
+
+    /// <summary>
+    /// Gets image dimensions without loading the full image (header-only read).
+    /// </summary>
+    /// <param name="imagePath">Path to the image file.</param>
+    /// <returns>Tuple of (Width, Height). Returns (0, 0) if file not found or error.</returns>
+    public (int Width, int Height) GetImageDimensions(string imagePath)
+    {
+        if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath))
+        {
+            return (0, 0);
+        }
+
+        try
+        {
+            using var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var info = SixLabors.ImageSharp.Image.Identify(stream);
+            return (info.Width, info.Height);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to identify image dimensions for: {ImagePath}", imagePath);
+            return (0, 0);
+        }
     }
 }

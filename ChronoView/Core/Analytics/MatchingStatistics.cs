@@ -15,6 +15,7 @@ public class MatchingStatistics
     /// </summary>
 
 
+
     /// <summary>
     /// Statistics for Line 1 (separated mode).
     /// </summary>
@@ -71,6 +72,7 @@ public class LineStatistics
     /// <summary>
     /// Gets the match rate as a percentage (0-100).
     /// </summary>
+
 
 
     public LineStatistics()

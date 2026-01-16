@@ -30,6 +30,12 @@ namespace ChronoView.Models
         public List<DataSequenceItem> Sequence { get; set; } = new List<DataSequenceItem>();
 
         /// <summary>
+        /// If true, Cam2/Cam3 use Cam1 (and Cam5/6 use Cam4) as the timestamp reference
+        /// instead of the immediately preceding sequence item.
+        /// </summary>
+        public bool CompareToReferenceCamera { get; set; } = false;
+
+        /// <summary>
         /// Get configuration item for a specific data type
         /// </summary>
         public DataSequenceItem? GetByType(DataType type)

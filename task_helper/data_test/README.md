@@ -2,11 +2,40 @@
 
 실제 데이터 생성 타이밍을 재현하여 ChronoView 모니터링을 테스트하기 위한 시뮬레이터입니다.
 
+## 간단 매뉴얼
+
+### 1) 실행
+- 스크립트: `python data_simulator.py`
+- EXE: `dist/DataSimulator.exe`
+
+### 2) 기본 모드(실데이터 이동)
+1. Source 폴더 지정
+2. Target 폴더 지정
+3. `Start Line1 Simulation` 또는 `Start Line2 Simulation` 클릭
+4. 완료 후 필요 시 `Reset` 실행
+
+### 3) 더미 모드(실데이터 없음)
+1. `더미 데이터 생성` 체크
+2. Target 폴더만 지정
+3. `Start Line1 Simulation` 또는 `Start Line2 Simulation` 클릭
+4. 더미 파일은 타겟 폴더에서 직접 삭제 가능
+
+### 4) 리셋
+- `Reset`은 타겟/이동/휴지통 폴더를 정리하고 원본 복원(실데이터 모드)
+- 더미 모드는 파일 생성 방식이라 필요 시 타겟 폴더 직접 삭제 권장
+
+### 5) 빌드(파이인스톨러)
+```bash
+cd task_helper/data_test
+pyinstaller DataSimulator.spec
+```
+
 ## 기능
 
 - 소스 폴더의 모든 파일/폴더에서 타임스탬프 추출
 - 추출된 타임스탬프 순서대로 정렬
 - **타임스탬프 순서대로 파일 이동** (같은 드라이브 = 즉각 rename)
+- **더미 데이터 생성 모드**: 실제 데이터 없이 검은색 더미 이미지로 시뮬레이션 (EXE 패키징 시 유용)
 - Reset 기능으로 원본 위치로 복원 가능
 - 폴더 구조 유지
 - GUI로 간편한 조작
@@ -40,6 +69,20 @@ python data_simulator.py
 1. `Start Simulation` 버튼 클릭
 2. 5초 카운트다운 후 시작
 3. 각 파일/폴더가 타임스탬프 순서대로 복사됨
+
+### 3-1. 더미 데이터 모드 (실제 데이터 없이 테스트)
+더미 모드는 실제 데이터가 없는 환경에서도 시뮬레이션을 실행할 수 있는 기능입니다.
+
+**더미 모드 사용:**
+1. `더미 데이터 생성` 체크박스 활성화
+2. **타겟 폴더만 설정** (Source 폴더는 불필요)
+3. `Start Line1 Simulation` 또는 `Start Line2 Simulation` 클릭
+4. 검은색 더미 이미지가 타임스탬프 순서대로 생성됨
+
+**주의사항:**
+- 더미 모드에서는 실제 파일 이동이 아닌 더미 파일 생성이므로 Reset 기능이 제한적입니다
+- 더미 모드로 생성된 파일은 타겟 폴더에서 직접 삭제해야 합니다
+- `dummy_profile.json`, `dummy_manifest.json` 파일은 레포에 포함되어 EXE 패키징 시 자동으로 포함됩니다
 
 ### 4. 초기화
 - `Reset Target Folder` 버튼: 타겟 폴더의 모든 내용 삭제 (재테스트용)

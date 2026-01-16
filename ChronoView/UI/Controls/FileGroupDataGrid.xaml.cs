@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using ChronoView.Core.Configuration;
 using ChronoView.Models;
 using ChronoView.UI.ViewModels;
@@ -31,9 +33,17 @@ public partial class FileGroupDataGrid : System.Windows.Controls.UserControl
         set => SetValue(LineNumberProperty, value);
     }
 
+    // Sticky scroll state tracking
+    private ScrollViewer? _scrollViewer;
+    private bool _isUserAtBottom = true;
+    private bool _hasPerformedInitialAutoScroll;
+    private const double ScrollTolerance = 2.0;
+
     public FileGroupDataGrid()
     {
         InitializeComponent();
+        Loaded += OnControlLoaded;
+        Unloaded += OnControlUnloaded;
     }
 
     private static void OnLineNumberChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -47,6 +57,77 @@ public partial class FileGroupDataGrid : System.Windows.Controls.UserControl
     private void UserControl_Loaded(object sender, RoutedEventArgs e)
     {
         RefreshColumns();
+    }
+
+    private void OnControlLoaded(object sender, RoutedEventArgs e)
+    {
+        // Find ScrollViewer in visual tree and subscribe to ScrollChanged
+        _scrollViewer = GetVisualChild<ScrollViewer>(MainDataGrid);
+        if (_scrollViewer != null)
+        {
+            _scrollViewer.ScrollChanged += OnScrollChanged;
+        }
+    }
+
+    private void OnControlUnloaded(object sender, RoutedEventArgs e)
+    {
+        // Unsubscribe to prevent memory leaks
+        if (_scrollViewer != null)
+        {
+            _scrollViewer.ScrollChanged -= OnScrollChanged;
+            _scrollViewer = null;
+        }
+    }
+
+    private void OnScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (MainDataGrid == null || MainDataGrid.Items.Count == 0)
+        {
+            _hasPerformedInitialAutoScroll = false;
+            _isUserAtBottom = true;
+            return;
+        }
+
+        // Check if viewport is at the bottom
+        bool atBottom = (e.VerticalOffset + e.ViewportHeight) >= (e.ExtentHeight - ScrollTolerance);
+
+        // Only update user intent when content size hasn't changed (user is scrolling)
+        if (e.ExtentHeightChange == 0)
+        {
+            _isUserAtBottom = atBottom;
+        }
+        // When content grows (new items added), preserve previous state
+
+        if (!_hasPerformedInitialAutoScroll && _scrollViewer != null && _scrollViewer.ScrollableHeight > 0 && _isUserAtBottom)
+        {
+            _hasPerformedInitialAutoScroll = true;
+            MainDataGrid.ScrollIntoView(MainDataGrid.Items[^1]);
+        }
+    }
+
+    /// <summary>
+    /// Finds a child element of the specified type in the visual tree.
+    /// </summary>
+    private static T? GetVisualChild<T>(DependencyObject? parent) where T : DependencyObject
+    {
+        if (parent == null) return null;
+
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T typedChild)
+            {
+                return typedChild;
+            }
+
+            var result = GetVisualChild<T>(child);
+            if (result != null)
+            {
+                return result;
+            }
+        }
+
+        return null;
     }
 
     public void RefreshColumns()
@@ -111,6 +192,8 @@ public partial class FileGroupDataGrid : System.Windows.Controls.UserControl
     {
         string? resourceKey = null;
 
+        DataType headerDataType = dataType;
+
         if (lineNumber == 1)
         {
             resourceKey = dataType switch
@@ -125,6 +208,11 @@ public partial class FileGroupDataGrid : System.Windows.Controls.UserControl
         }
         else if (lineNumber == 2)
         {
+            // Line 2 maps Cam1/2/3 types to Cam4/5/6 headers and templates
+            if (dataType == DataType.Cam1) headerDataType = DataType.Cam4;
+            else if (dataType == DataType.Cam2) headerDataType = DataType.Cam5;
+            else if (dataType == DataType.Cam3) headerDataType = DataType.Cam6;
+
             resourceKey = dataType switch
             {
                 DataType.Normal => "NormalFileTemplate",
@@ -138,14 +226,30 @@ public partial class FileGroupDataGrid : System.Windows.Controls.UserControl
 
         if (string.IsNullOrEmpty(resourceKey)) return null;
 
+        // 헤더를 가운데 정렬하기 위해 스타일을 생성한다.
+        var headerStyle = new Style(typeof(DataGridColumnHeader));
+        headerStyle.Setters.Add(new Setter(DataGridColumnHeader.HorizontalContentAlignmentProperty, System.Windows.HorizontalAlignment.Center));
+
         var column = new DataGridTemplateColumn
         {
-            Header = Core.Localization.LocalizationManager.GetColumnHeader(dataType),
+            Header = Core.Localization.LocalizationManager.GetColumnHeader(headerDataType),
             Width = new DataGridLength(1, DataGridLengthUnitType.Star),
-            CellTemplate = (DataTemplate)FindResource(resourceKey)
+            CellTemplate = (DataTemplate)FindResource(resourceKey),
+            HeaderStyle = headerStyle
         };
 
         return column;
+    }
+
+    private void OnRowCheckboxPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        // CheckBox 클릭 시 바인딩된 항목 선택 상태를 토글하고 이벤트 중복 처리를 방지한다.
+        if (sender is not System.Windows.Controls.CheckBox checkBox) return;
+        if (checkBox.DataContext is not FileGroupViewModel item) return;
+
+        item.IsSelected = !item.IsSelected;
+        checkBox.IsChecked = item.IsSelected;
+        e.Handled = true;
     }
 
     private void SelectAllCheckBox_Checked(object sender, RoutedEventArgs e)
@@ -170,11 +274,17 @@ public partial class FileGroupDataGrid : System.Windows.Controls.UserControl
     }
 
     /// <summary>
-    /// DataGrid를 마지막 항목까지 스크롤합니다. 항목이 없거나 DataGrid가 없으면 무시합니다.
+    /// DataGrid를 마지막 항목까지 스크롤합니다. 
+    /// 사용자가 스크롤을 올려놓은 상태라면 자동 스크롤하지 않습니다.
     /// </summary>
     public void ScrollToBottom()
     {
         if (MainDataGrid == null || MainDataGrid.Items.Count == 0) return;
-        MainDataGrid.ScrollIntoView(MainDataGrid.Items[^1]);
+
+        // Only scroll if user was at the bottom before this update
+        if (_isUserAtBottom)
+        {
+            MainDataGrid.ScrollIntoView(MainDataGrid.Items[^1]);
+        }
     }
 }

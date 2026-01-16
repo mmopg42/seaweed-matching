@@ -20,23 +20,21 @@
               SelectionMode="Extended"
               SelectionUnit="FullRow"
               Style="{StaticResource FileGroupDataGridStyle}"
-              RowStyle="{StaticResource FileGroupRowStyle}"
               RowHeight="{Binding DataContext.DataGridRowHeight, RelativeSource={RelativeSource AncestorType=Window}}"
               SelectionChanged="DataGrid_SelectionChanged">
-        
+
+        <!-- TwoWay binding for DataGridRow.IsSelected <-> FileGroupViewModel.IsSelected -->
+        <DataGrid.ItemContainerStyle>
+            <Style TargetType="DataGridRow" BasedOn="{StaticResource FileGroupRowStyle}">
+                <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            </Style>
+        </DataGrid.ItemContainerStyle>
+
         <i:Interaction.Behaviors>
             <behaviors:DragSelectBehavior/>
         </i:Interaction.Behaviors>
 
-        <DataGrid.InputBindings>
-             <!-- Bind Double Click to OpenDetailViewCommand on the ViewModel -->
-             <!-- Note: Ancestor Binding is tricky depending on where the Command lives. 
-                  If MainViewModel is the DataContext of the Window, and this UserControl inherits it... 
-                  we verify logic later. -->
-             <MouseBinding Gesture="LeftDoubleClick" 
-                           Command="{Binding DataContext.OpenDetailViewCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                           CommandParameter="{Binding ElementName=MainDataGrid, Path=SelectedItem}"/>
-        </DataGrid.InputBindings>
+        <!-- Detail overlay (double-click) removed: keep image click preview bindings in SharedResources.xaml -->
 
         <DataGrid.Columns>
             <!-- Checkbox Column (Static) -->
@@ -50,16 +48,27 @@
                                   Unchecked="SelectAllCheckBox_Unchecked"/>
                     </DataTemplate>
                 </DataGridTemplateColumn.HeaderTemplate>
+                <DataGridTemplateColumn.HeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                    </Style>
+                </DataGridTemplateColumn.HeaderStyle>
                 <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>
-                        <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <CheckBox IsChecked="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  PreviewMouseLeftButtonDown="OnRowCheckboxPreviewMouseDown"/>
                     </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
 
             <!-- Index Column (Static) -->
             <DataGridTextColumn Header="{x:Static res:Strings.Column_Index}" Width="80" Binding="{Binding GroupId}" IsReadOnly="True">
+                <DataGridTextColumn.HeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                    </Style>
+                </DataGridTextColumn.HeaderStyle>
                 <DataGridTextColumn.ElementStyle>
                     <Style TargetType="TextBlock">
                         <Setter Property="HorizontalAlignment" Value="Center"/>
@@ -70,8 +79,14 @@
 
             <!-- Status Column (Static) -->
             <DataGridTextColumn Header="{x:Static res:Strings.Column_Status}" Width="100" Binding="{Binding StatusText}" IsReadOnly="True">
+                <DataGridTextColumn.HeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                    </Style>
+                </DataGridTextColumn.HeaderStyle>
                 <DataGridTextColumn.ElementStyle>
                     <Style TargetType="TextBlock">
+                        <Setter Property="HorizontalAlignment" Value="Center"/>
                         <Setter Property="VerticalAlignment" Value="Center"/>
                     </Style>
                 </DataGridTextColumn.ElementStyle>

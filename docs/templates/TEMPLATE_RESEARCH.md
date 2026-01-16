@@ -1,4 +1,4 @@
-# Template: Research Document (02_research.md)
+# Template: Research Document (03_research.md)
 
 > **Purpose**: Document investigation findings before making architecture decisions.  
 > **Core Question**: "무엇을 알아냈나?" (What did we discover?)  
@@ -54,7 +54,7 @@ End with concrete recommendations that feed into `03_plan.md`.
 Task: [Task Name]
 Created: [YYYY-MM-DD]
 Status: Draft | Approved
-Depends On: 01_requirements.md
+Depends On: 01_requirements.md, 02_analysis.md
 ---
 
 # [Task Name] - Research Findings
@@ -223,7 +223,7 @@ Depends On: 01_requirements.md
 - [ ] Recommendations are actionable
 - [ ] Risks identified
 
-**Next Step**: 03_plan.md
+**Next Step**: 04_plan.md
 ```
 
 ---
@@ -453,7 +453,7 @@ None - all questions resolved.
 
 ---
 
-**Next Step**: 03_plan.md
+**Next Step**: 04_plan.md
 ```
 
 ---
@@ -479,10 +479,10 @@ None - all questions resolved.
 
 ---
 이 Research 문서를 검토해 주세요.
-승인하시면 다음 단계(03_plan.md)로 진행하겠습니다.
+승인하시면 다음 단계(04_plan.md)로 진행하겠습니다.
 수정이 필요하면 말씀해 주세요.
 ```
 
 ---
 
-**Next**: `03_plan.md` (Architecture Plan)
+**Next**: `04_plan.md` (Architecture Plan)

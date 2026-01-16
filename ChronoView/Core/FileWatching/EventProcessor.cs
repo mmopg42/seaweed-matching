@@ -22,12 +22,14 @@ namespace ChronoView.Core.FileWatching
         private CancellationTokenSource? _workerCts;
         private Func<FileSystemEventArgs, int, CancellationToken, Task>? _handler;
         
+        private readonly ApplicationConfiguration _config;
         private readonly Dictionary<string, DateTime> _processedFiles = new();
         private readonly object _debounceLock = new();
 
-        public EventProcessor(ILogger<EventProcessor> logger)
+        public EventProcessor(ILogger<EventProcessor> logger, ApplicationConfiguration config)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
         public void Start(int maxWorkers, Func<FileSystemEventArgs, int, CancellationToken, Task> eventHandler)
@@ -112,7 +114,11 @@ namespace ChronoView.Core.FileWatching
                 
                 if (_processedFiles.TryGetValue(checkPath, out var lastProcessed))
                 {
-                    if ((DateTime.UtcNow - lastProcessed).TotalSeconds < 2)
+                    // Use configured polling interval as debounce window
+                    // Convert ms to seconds
+                    double debounceSeconds = _config.WorkflowSettings.PollingIntervalMs / 1000.0;
+                    
+                    if ((DateTime.UtcNow - lastProcessed).TotalSeconds < debounceSeconds)
                     {
                         return true;
                     }

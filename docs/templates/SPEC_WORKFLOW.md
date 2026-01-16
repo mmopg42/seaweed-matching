@@ -7,7 +7,7 @@
 
 ## 1. What is the Spec System?
 
-The Spec System is a **6-document workflow** that transforms a vague idea into a concrete implementation plan. It ensures:
+The Spec System is a **7-document workflow** that transforms a vague idea into a concrete implementation plan. It ensures:
 
 - Requirements are understood before coding
 - Architecture decisions are explicit and reviewed
@@ -48,17 +48,18 @@ The Spec System is a **6-document workflow** that transforms a vague idea into a
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  01_requirements.md  ───► [Approval] ───►                       │
-│  02_research.md      ───► [Approval] ───►  (OPTIONAL)           │
-│  03_plan.md          ───► [Approval] ───►                       │
-│  04_design.md        ───► [Approval] ───►                       │
-│  05_tasks.md         ───► [Approval] ───►                       │
+│  02_analysis.md      ───► [Approval] ───►  (MANDATORY)          │
+│  03_research.md      ───► [Approval] ───►  (OPTIONAL)           │
+│  04_plan.md          ───► [Approval] ───►                       │
+│  05_design.md        ───► [Approval] ───►                       │
+│  06_tasks.md         ───► [Approval] ───►                       │
 │                                                                 │
 │  ════════════════════════════════════════                       │
 │  CODE MODIFICATION UNLOCKED                                     │
 │  ════════════════════════════════════════                       │
 │                                                                 │
 │  [Implementation]    ───►                                       │
-│  06_report.md        ───► COMPLETE (All docs frozen)            │
+│  07_report.md        ───► COMPLETE (All docs frozen)            │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -70,26 +71,29 @@ The Spec System is a **6-document workflow** that transforms a vague idea into a
 | # | Document | Core Question | Output |
 |---|----------|---------------|--------|
 | 01 | requirements | "What must we achieve?" | Goals, success criteria, constraints |
-| 02 | research | "What did we discover?" | Investigation findings, recommendations |
-| 03 | plan | "What structure will we build?" | Components, interfaces, data flow |
-| 04 | design | "How will the code work?" | Pseudo-code, error handling, state |
-| 05 | tasks | "In what order do we implement?" | Ordered checklist with verification |
-| 06 | report | "What did we actually do?" | Final record of implementation |
+| 02 | analysis | "How does it work now?" | Code audit, legacy logic, constraints |
+| 03 | research | "What can we use?" | External tech, libraries, algorithms |
+| 04 | plan | "What structure will we build?" | Components, interfaces, data flow |
+| 05 | design | "How will the code work?" | Pseudo-code, error handling, state |
+| 06 | tasks | "In what order do we implement?" | Ordered checklist with verification |
+| 07 | report | "What did we actually do?" | Final record of implementation |
 
 ### Abstraction Levels
 
 ```
 01_requirements  ─────►  HIGH (Goal-level)
        │
-02_research      ─────►  Investigation
+02_analysis      ─────►  Audit (Internal Reality)
        │
-03_plan          ─────►  Architecture (WHAT components, HOW they connect)
+03_research      ─────►  Investigation (External Possibility)
        │
-04_design        ─────►  Implementation (HOW code works internally)
+04_plan          ─────►  Architecture (WHAT components, HOW they connect)
        │
-05_tasks         ─────►  Execution (WHAT order to build)
+05_design        ─────►  Implementation (HOW code works internally)
        │
-06_report        ─────►  Record (WHAT was done)
+06_tasks         ─────►  Execution (WHAT order to build)
+       │
+07_report        ─────►  Record (WHAT was done)
 ```
 
 ---
@@ -100,16 +104,16 @@ The Spec System is a **6-document workflow** that transforms a vague idea into a
 
 ```
 IF   docs/spec/{task}/01_requirements.md EXISTS
-AND  docs/spec/{task}/05_tasks.md DOES NOT EXIST
+AND  docs/spec/{task}/06_tasks.md DOES NOT EXIST
 THEN code modification is PROHIBITED for that task
 ```
 
 | Folder State | Code Modification |
 |--------------|-------------------|
 | No `01_requirements.md` | ✅ Allowed (no spec in progress) |
-| `01_requirements.md` exists, no `05_tasks.md` | ❌ **PROHIBITED** |
-| `05_tasks.md` exists | ✅ Allowed (planning complete) |
-| `06_report.md` exists | ✅ Allowed (spec frozen) |
+| `01_requirements.md` exists, no `06_tasks.md` | ❌ **PROHIBITED** |
+| `06_tasks.md` exists | ✅ Allowed (planning complete) |
+| `07_report.md` exists | ✅ Allowed (spec frozen) |
 
 ### 5.2 Approval Gates
 
@@ -124,11 +128,11 @@ THEN code modification is PROHIBITED for that task
 
 - Complete one document at a time
 - Each document depends on previous ones
-- Do not skip ahead (except 02_research which is optional)
+- Do not skip ahead (02_analysis is MANDATORY, 03_research is OPTIONAL)
 
 ### 5.4 Frozen Rule
 
-> Once `06_report.md` is marked Complete, ALL spec documents are **FROZEN**.
+> Once `07_report.md` is marked Complete, ALL spec documents are **FROZEN**.
 
 - No modifications to any document in that spec folder
 - New work requires a **new spec task folder**
@@ -140,7 +144,7 @@ THEN code modification is PROHIBITED for that task
 
 This is a common confusion point. Here's how to distinguish:
 
-| Aspect | 03_plan.md | 04_design.md |
+| Aspect | 04_plan.md | 05_design.md |
 |--------|------------|--------------|
 | **Abstraction** | High-level | Low-level |
 | **Focus** | WHAT to build | HOW it works internally |
@@ -152,14 +156,14 @@ This is a common confusion point. Here's how to distinguish:
 
 ### Example
 
-**In 03_plan.md**:
+**In 04_plan.md**:
 ```
 ConfigLoader reads YAML files and provides settings to other modules.
 Interface: load(path: string) -> Config
 Must handle missing files gracefully.
 ```
 
-**In 04_design.md**:
+**In 05_design.md**:
 ```
 function load(path):
     // Step 1: Validate path
@@ -186,7 +190,7 @@ function load(path):
 
 ---
 
-## 7. Optional Document: Research (02_research.md)
+## 7. Optional Document: Research (03_research.md)
 
 ### When to Skip
 
@@ -235,9 +239,9 @@ User says any of:
 ### After Implementation
 
 ```markdown
-1. [ ] All tasks in `05_tasks.md` checked off
+1. [ ] All tasks in `06_tasks.md` checked off
 2. [ ] Tests pass (or verification commands provided)
-3. [ ] Write `06_report.md`
+3. [ ] Write `07_report.md`
 4. [ ] Update `docs/architecture/` if needed
 ```
 
@@ -248,11 +252,12 @@ User says any of:
 ```
 docs/spec/{task_name}/
 ├── 01_requirements.md    # Goals, constraints, success criteria
-├── 02_research.md        # Investigation findings (OPTIONAL)
-├── 03_plan.md            # Architecture, components, interfaces
-├── 04_design.md          # Detailed logic, pseudo-code, error handling
-├── 05_tasks.md           # Implementation checklist
-└── 06_report.md          # Final implementation record
+├── 02_analysis.md        # Code coverage, audit, legacy logic (MANDATORY)
+├── 03_research.md        # Investigation findings (OPTIONAL)
+├── 04_plan.md            # Architecture, components, interfaces
+├── 05_design.md          # Detailed logic, pseudo-code, error handling
+├── 06_tasks.md           # Implementation checklist
+└── 07_report.md          # Final implementation record
 ```
 
 ### Naming Convention
@@ -270,6 +275,7 @@ docs/spec/{task_name}/
 ```
 docs/templates/
 ├── TEMPLATE_REQUIREMENTS.md
+├── TEMPLATE_ANALYSIS.md
 ├── TEMPLATE_RESEARCH.md
 ├── TEMPLATE_PLAN.md
 ├── TEMPLATE_DESIGN.md
@@ -293,7 +299,7 @@ docs/templates/
 | Action | What to Do |
 |--------|------------|
 | Start new feature | Create spec folder → Begin with 01_requirements |
-| Check if spec-locked | `ls docs/spec/{task}/05_tasks.md` |
+| Check if spec-locked | `ls docs/spec/{task}/06_tasks.md` |
 | Skip research | User says "리서치 생략" or "skip research" |
 | Skip approvals | User says "승인 생략" or "skip approvals" |
 

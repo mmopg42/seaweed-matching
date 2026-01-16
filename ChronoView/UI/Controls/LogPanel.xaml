@@ -48,9 +48,9 @@
                     <ComboBox x:Name="LevelFilter" Width="100"
                               SelectionChanged="LevelFilter_SelectionChanged"
                               ToolTip="{x:Static res:Strings.Tooltip_FilterLevel}">
-                        <ComboBoxItem Content="{x:Static res:Strings.Status_All}" IsSelected="True" Tag="{x:Null}"/>
+                        <ComboBoxItem Content="{x:Static res:Strings.Status_All}" Tag="{x:Null}"/>
                         <ComboBoxItem Content="{x:Static res:Strings.Status_Debug}" Tag="Debug"/>
-                        <ComboBoxItem Content="{x:Static res:Strings.Status_Info}" Tag="Info"/>
+                        <ComboBoxItem Content="{x:Static res:Strings.Status_Info}" IsSelected="True" Tag="Info"/>
                         <ComboBoxItem Content="{x:Static res:Strings.Status_Warning}" Tag="Warning"/>
                         <ComboBoxItem Content="{x:Static res:Strings.Status_Error}" Tag="Error"/>
                     </ComboBox>

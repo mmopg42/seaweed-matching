@@ -7,6 +7,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    
+    <!-- 배포 설정 -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Product>ChronoView</Product>
+    <Company>Seaweed</Company>
+    <Copyright>Copyright © 2026</Copyright>
+    
+    <!-- 아이콘 설정 (파일이 존재하는 경우) -->
+    <ApplicationIcon Condition="Exists('..\app_icon.ico')">..\app_icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

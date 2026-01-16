@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ChronoView.Core.FileMatching;
 using ChronoView.Models;
+using ChronoView.Tests.TestHelpers;
 using FsCheck;
 using FsCheck.Xunit;
 using Xunit;
@@ -28,8 +29,8 @@ namespace ChronoView.Tests.Core.FileMatching
             var unmatchedFiles = GenerateUnmatchedFilesWithCount(3);
             
             // Arrange
-            var matcher1 = new FileGroupMatcherService();
-            var matcher2 = new FileGroupMatcherService();
+            var matcher1 = FileMatchingTestHelper.CreateMatcher();
+            var matcher2 = FileMatchingTestHelper.CreateMatcher();
 
             // Act
             // Act
@@ -56,7 +57,7 @@ namespace ChronoView.Tests.Core.FileMatching
             var unmatchedFiles = GenerateUnmatchedFilesWithCount(3);
             
             // Arrange
-            var matcher = new FileGroupMatcherService();
+            var matcher = FileMatchingTestHelper.CreateMatcher();
             var config = matcher.Configuration;
 
             // Act
@@ -94,7 +95,7 @@ namespace ChronoView.Tests.Core.FileMatching
             var unmatchedFiles = GenerateUnmatchedFilesWithCount(5);
             
             // Arrange
-            var matcher = new FileGroupMatcherService();
+            var matcher = FileMatchingTestHelper.CreateMatcher();
 
             // Act
             // Act
@@ -117,7 +118,7 @@ namespace ChronoView.Tests.Core.FileMatching
             var unmatchedFiles = GenerateUnmatchedFilesWithCount(4);
             
             // Arrange
-            var matcher = new FileGroupMatcherService();
+            var matcher = FileMatchingTestHelper.CreateMatcher();
 
             // Act
             // Act
@@ -141,7 +142,7 @@ namespace ChronoView.Tests.Core.FileMatching
             var unmatchedFiles = GenerateUnmatchedFilesWithCount(3);
             
             // Arrange
-            var matcher = new FileGroupMatcherService();
+            var matcher = FileMatchingTestHelper.CreateMatcher();
 
             // Act
             // Act

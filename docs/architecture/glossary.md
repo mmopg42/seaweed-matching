@@ -1,6 +1,6 @@
 ---
 Owner: ChronoView Team
-Last Updated: 2025-01-05
+Last Updated: 2026-01-14
 Purpose: Single Source of Truth for naming conventions
 ---
 
@@ -42,7 +42,7 @@ grep -rn "term_name" docs/architecture/
 | `FileGroupMatcherService` | Service that implements file group matching logic | `Core/FileMatching/FileGroupMatcherService.cs` |
 | `ConfigurationManager` | Service for loading, saving, and managing application configuration | `Core/Configuration/ConfigurationManager.cs` |
 | `FileWatcherService` | Service for monitoring file system changes in real-time using FileSystemWatcher | `Core/FileWatching/FileWatcherService.cs` |
-| `AbnormalDetectorService` | Service for detecting anomalies in file groups using statistical analysis (Z-score) | `Core/Analytics/AbnormalDetectorService.cs` |
+| `AbnormalDetectorService` | Service for detecting anomalies in file groups using **aspect ratio deviation** against per-context history (median baseline) | `Core/Analytics/AbnormalDetectorService.cs` |
 | `StatisticsService` | Service for collecting and calculating file matching statistics | `Core/Analytics/StatisticsService.cs` |
 | `ImageProcessingService` | Service for loading, caching, and processing images asynchronously | `Core/ImageProcessing/ImageProcessingService.cs` |
 | `FileOperationService` | Service for coordinating file operations (move, copy, delete) | `Core/FileOperations/FileOperationService.cs` |
@@ -90,8 +90,12 @@ grep -rn "term_name" docs/architecture/
 | `ResourceHelper` | Helper class for loading application resources | `Helpers/ResourceHelper.cs` |
 | `DragSelectBehavior` | Attached behavior for drag-to-select functionality in DataGrid | `UI/Behaviors/DragSelectBehavior.cs` |
 | `DataSequenceSettingsValidation` | Validation class for DataSequenceSettings | `Tests/DataSequenceSettingsValidation.cs` |
+| `LineMoveSettings` | Per-line move settings model containing SampleName, MoveNir, and MoveAllData for Line1/Line2 specific configurations | `Models/LineMoveSettings.cs` |
+| `SampleMoveSettingsTemplateSelector` | DataTemplateSelector for dynamically switching move settings UI based on active tab (Line1/Line2/Combined) | `UI/Controls/SampleMoveSettingsTemplateSelector.cs` |
 
 > **Naming Convention**: Use `PascalCase` for all class names.
+
+| `PathHelper` | Static helper for accessing application paths in contexts where DI is not available (e.g., UserControls) | `Core/Configuration/PathHelper.cs` |
 
 ---
 
@@ -161,6 +165,9 @@ grep -rn "term_name" docs/architecture/
 
 > **Naming Convention**: Use `PascalCase` for all property names.
 
+| `LogsDirectory` | `Logs` | The directory path where log files are stored |
+| `HistoryFilePath` | `abnormal_history.json` | The full path to the abnormal detection history file |
+
 ---
 
 ## Configuration Keys
@@ -181,7 +188,9 @@ grep -rn "term_name" docs/architecture/
 | `ui.language` | `string` | `"en"` | UI language code | `LocalizationManager` |
 | `ui.theme` | `string` | `"light"` | UI theme (light/dark) | `MainWindowViewModel` |
 | `statistics.window_size` | `int` | `100` | Statistics rolling window size | `StatisticsService` |
-| `statistics.z_score_threshold` | `double` | `3.0` | Z-score threshold for anomaly detection | `AbnormalDetectorService` |
+| `matching.enable_abnormal_detection` | `bool` | `true` | Enable/disable abnormal detection (UI indicator) | `AbnormalDetectorService` |
+| `matching.abnormal_detection_window_size` | `int` | `40` | History window size (per context) used for abnormal detection baseline | `AbnormalDetectorService` |
+| `matching.abnormal_ratio_threshold` | `double` | `0.3` | Abnormal if \(|(W/H) - median(W/H)| > threshold\) | `AbnormalDetectorService` |
 
 > **Naming Convention**: Use `lowercase.dot.notation` for config keys.
 
@@ -210,7 +219,7 @@ grep -rn "term_name" docs/architecture/
 | Bucket Organization | A file organization strategy where files are grouped into "buckets" (folders) based on criteria like date or subject | `Core/FileOperations/` |
 | NIR Spectrum | Near-Infrared spectroscopy data consisting of wavelength-intensity pairs used for material analysis | `Models/NirSpectrum.md` |
 | Data Sequence | A pattern-based file naming convention that defines how files are numbered and organized | `Models/DataSequenceSettings.md` |
-| Anomaly Detection | Statistical analysis using Z-scores to detect abnormal file groups (e.g., missing files, wrong dimensions) | `Core/Analytics/AbnormalDetectorService.md` |
+| Anomaly Detection | Detect abnormal file groups by **aspect ratio deviation** (current \(W/H\) vs median baseline per context). Used for UI warning/triage (not file matching). | `Core/Analytics/AbnormalDetectorService.md` |
 | Event Priority | A system for prioritizing file system events (High, Normal, Low) to ensure critical events are processed first | `Core/FileWatching/EventPriority.md` |
 | Timestamp Cache | A cache storing folder modification timestamps to optimize file system scanning by avoiding redundant scans | `Core/FileWatching/FolderTimestampCache.md` |
 
@@ -232,3 +241,4 @@ grep -rn "term_name" docs/architecture/
 - 2025-01-05: Added all ChronoView classes, interfaces, and domain concepts
 - 2025-01-05: Added configuration keys and environment variables
 - 2025-01-05: Added method and property naming patterns
+- 2026-01-14: Updated abnormal detection terminology/config keys to match current ratio-based implementation (removed Z-score references)

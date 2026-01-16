@@ -18,7 +18,7 @@ namespace ChronoView.Core.FileWatching
         /// <summary>
         /// Handle capture of stitched images before they are moved by ML program
         /// </summary>
-        Task HandleStitchedImageCaptureAsync(string imagePath, int workerId, Action<FileGroup> onGroupUpdated);
+        Task<bool> HandleStitchedImageCaptureAsync(string imagePath, int workerId, Action<FileGroup> onGroupUpdated);
 
         /// <summary>
         /// Get cached image by group ID

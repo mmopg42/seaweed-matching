@@ -74,7 +74,7 @@ namespace ChronoView.Core.FileWatching
             return capturedImage;
         }
 
-        public async Task HandleStitchedImageCaptureAsync(string imagePath, int workerId, Action<FileGroup> onGroupUpdated)
+        public async Task<bool> HandleStitchedImageCaptureAsync(string imagePath, int workerId, Action<FileGroup> onGroupUpdated)
         {
             _logger.LogInformation("🏁 Worker {WorkerId} racing to capture image: {Path}", workerId, imagePath);
             
@@ -85,7 +85,7 @@ namespace ChronoView.Core.FileWatching
                 if (string.IsNullOrEmpty(folderPath))
                 {
                     _logger.LogWarning("Could not determine parent folder for: {Path}", imagePath);
-                    return;
+                    return false;
                 }
 
                 // ⚡ Load image into memory IMMEDIATELY (race condition critical!)
@@ -94,7 +94,7 @@ namespace ChronoView.Core.FileWatching
                 if (capturedImage == null)
                 {
                     _logger.LogError("❌ Failed to capture image after 3 attempts: {Path}", imagePath);
-                    return;
+                    return false;
                 }
                 
                 _logger.LogInformation("✅ Image captured for group matching: {Path}", Path.GetFileName(imagePath));
@@ -123,10 +123,13 @@ namespace ChronoView.Core.FileWatching
                     // Cache by folder path temporarily (group might be created soon)
                     _imageCaptureCache[folderPath] = capturedImage;
                 }
+                
+                return true;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to handle stitched image capture: {Path}", imagePath);
+                return false;
             }
         }
 

@@ -515,9 +515,7 @@ public class DataModelTests
             Format = "JPEG",
             FilePath = "/path/to/image.jpg",
             CreatedAt = timestamp,
-            IsAbnormal = false,
-            ZScoreWidth = 1.5,
-            ZScoreHeight = 1.2
+            IsAbnormal = false
         };
 
         var metadata2 = new ImageMetadata
@@ -528,9 +526,7 @@ public class DataModelTests
             Format = "JPEG",
             FilePath = "/path/to/image.jpg",
             CreatedAt = timestamp,
-            IsAbnormal = false,
-            ZScoreWidth = 1.5,
-            ZScoreHeight = 1.2
+            IsAbnormal = false
         };
 
         // Act & Assert
@@ -550,9 +546,7 @@ public class DataModelTests
             Format = "JPEG",
             FilePath = "/path/to/image.jpg",
             CreatedAt = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc),
-            IsAbnormal = true,
-            ZScoreWidth = 2.5,
-            ZScoreHeight = 2.3
+            IsAbnormal = true
         };
 
         // Act

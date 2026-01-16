@@ -22,7 +22,7 @@ ChronoView is a WPF-based file monitoring and management application designed fo
 - Real-time file system monitoring
 - Automatic file matching and grouping by timestamp
 - Multi-camera support (General, NIR, NIR2)
-- Statistical anomaly detection
+- Anomaly detection (aspect ratio deviation vs per-context median baseline)
 - Batch file operations with conflict resolution
 - NIR spectrum visualization
 

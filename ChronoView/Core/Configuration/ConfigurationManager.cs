@@ -18,6 +18,9 @@ public class ConfigurationManager : IConfigurationManager
     public string AppDataDirectory { get; }
     public string ConfigurationFilePath { get; }
 
+    public string LogsDirectory => Path.Combine(AppDataDirectory, "Logs");
+    public string HistoryFilePath => Path.Combine(AppDataDirectory, "abnormal_history.json");
+
     public event EventHandler<ConfigurationChangedEventArgs>? ConfigurationChanged;
 
     /// <summary>
@@ -25,7 +28,7 @@ public class ConfigurationManager : IConfigurationManager
     /// </summary>
     /// <param name="appName">Application name for directory creation.</param>
     /// <param name="appAuthor">Application author for directory creation.</param>
-    public ConfigurationManager(string appName = "ChronoView", string appAuthor = "ChronoView")
+    public ConfigurationManager(string appName = "ChronoView", string appAuthor = "prische")
     {
         _appName = appName;
         _appAuthor = appAuthor;
@@ -88,7 +91,8 @@ public class ConfigurationManager : IConfigurationManager
 
         try
         {
-            await using var stream = File.OpenRead(ConfigurationFilePath);
+            // Use FileShare.ReadWrite to prevent locking conflicts when event handlers reload during save
+            await using var stream = new FileStream(ConfigurationFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             var config = await JsonSerializer.DeserializeAsync<T>(stream, _jsonOptions).ConfigureAwait(false);
             return config ?? new T();
         }
@@ -114,7 +118,8 @@ public class ConfigurationManager : IConfigurationManager
 
         try
         {
-            using var stream = File.OpenRead(ConfigurationFilePath);
+            // Use FileShare.ReadWrite to prevent locking conflicts when event handlers reload during save
+            using var stream = new FileStream(ConfigurationFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             var config = JsonSerializer.Deserialize<T>(stream, _jsonOptions);
             return config ?? new T();
         }
@@ -143,10 +148,13 @@ public class ConfigurationManager : IConfigurationManager
             // Validate configuration before saving
             ValidateConfiguration(configuration);
 
-            await using var stream = File.Create(ConfigurationFilePath);
-            await JsonSerializer.SerializeAsync(stream, configuration, _jsonOptions).ConfigureAwait(false);
-
-            // Raise configuration changed event
+            // Write file and ensure stream is closed before firing event
+            await using (var stream = File.Create(ConfigurationFilePath))
+            {
+                await JsonSerializer.SerializeAsync(stream, configuration, _jsonOptions).ConfigureAwait(false);
+            }
+            
+            // Raise configuration changed event AFTER stream is closed
             ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(typeof(T)));
         }
         catch (JsonException ex)
@@ -174,10 +182,13 @@ public class ConfigurationManager : IConfigurationManager
             // Validate configuration before saving
             ValidateConfiguration(configuration);
 
-            using var stream = File.Create(ConfigurationFilePath);
-            JsonSerializer.Serialize(stream, configuration, _jsonOptions);
-
-            // Raise configuration changed event
+            // Write file and ensure stream is closed before firing event
+            using (var stream = File.Create(ConfigurationFilePath))
+            {
+                JsonSerializer.Serialize(stream, configuration, _jsonOptions);
+            }
+            
+            // Raise configuration changed event AFTER stream is closed
             ConfigurationChanged?.Invoke(this, new ConfigurationChangedEventArgs(typeof(T)));
         }
         catch (JsonException ex)
@@ -223,11 +234,7 @@ public class ConfigurationManager : IConfigurationManager
                 throw new ConfigurationValidationException("ThumbnailQuality must be between 1 and 100");
         }
 
-        if (config.MatchingSettings != null)
-        {
-            if (config.MatchingSettings.ZScoreThreshold <= 0)
-                throw new ConfigurationValidationException("ZScoreThreshold must be positive");
-        }
+        // MatchingSettings validation removed - legacy ZScoreThreshold no longer exists
 
         // Validate DataSequenceSettings if present
         if (config.DataSequenceSettings != null)

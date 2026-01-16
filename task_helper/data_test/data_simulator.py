@@ -6,20 +6,49 @@ at precise timestamp intervals for ChronoView testing.
 """
 
 import os
+import sys
 import re
 import time
 import json
+import random
+import statistics
 import threading
+import shutil
 import subprocess
+from collections import deque
 from datetime import datetime
+import uuid
 import tkinter as tk
 from tkinter import ttk, filedialog, scrolledtext, messagebox
+
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except Exception:
+    PIL_AVAILABLE = False
 
 
 class DataSimulator:
     def __init__(self):
-        self.config_dir = r"C:\workspace\seaweed\gui_kiro\task_helper\data_test"
+        # Get script directory for relative paths (works with EXE packaging)
+        if getattr(sys, 'frozen', False):
+            # Running as compiled EXE
+            self.script_dir = os.path.dirname(sys.executable)
+        else:
+            # Running as script
+            self.script_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Config directory: use script_dir for EXE, or original path for script
+        if getattr(sys, 'frozen', False):
+            self.config_dir = self.script_dir
+        else:
+            self.config_dir = r"C:\workspace\seaweed\gui_kiro\task_helper\data_test"
         self.config_file = os.path.join(self.config_dir, "simulator_config.json")
+        
+        # Dummy cache files (support PyInstaller onefile via _MEIPASS)
+        resource_dir = getattr(sys, '_MEIPASS', self.script_dir)
+        self.dummy_profile_file = os.path.join(resource_dir, "dummy_profile.json")
+        self.dummy_manifest_file = os.path.join(resource_dir, "dummy_manifest.json")
 
         # Default values
         self.original_base = ""  # Original folder (for reset source)
@@ -31,6 +60,20 @@ class DataSimulator:
         self.is_running = False
         self.simulation_thread = None
         self.moved_items = []  # Track moved items for reset (target → source mapping)
+        self.generate_outliers = False
+        self.split_normal_folders = False
+        self.delay_normal_creation = False
+        self.use_dummy_data = False  # Dummy mode flag
+        self.outlier_window_size = 100
+        self.outlier_min_samples = 30
+        self.outlier_z_threshold = 3.0
+        self.normal_image_count = 0
+        self._normal_widths = deque(maxlen=self.outlier_window_size)
+        self._normal_heights = deque(maxlen=self.outlier_window_size)
+        self._outlier_warning_logged = False
+        self._outlier_warning_logged = False
+        self._outlier_lock = threading.Lock()
+        self.current_simulation_id = None
 
         # Load saved configuration
         self.load_config()
@@ -47,6 +90,10 @@ class DataSimulator:
                     self.target_base = config.get('target_base', self.target_base)
                     self.move_folder = config.get('move_folder', self.move_folder)
                     self.trash_folder = config.get('trash_folder', self.trash_folder)
+                    self.generate_outliers = config.get('generate_outliers', self.generate_outliers)
+                    self.split_normal_folders = config.get('split_normal_folders', self.split_normal_folders)
+                    self.delay_normal_creation = config.get('delay_normal_creation', self.delay_normal_creation)
+                    self.use_dummy_data = config.get('use_dummy_data', self.use_dummy_data)
         except Exception as e:
             print(f"Failed to load config: {e}")
 
@@ -142,7 +189,7 @@ class DataSimulator:
         """Scan Line1 data folders (normal/*_0, nir, cam1-3)"""
         items = []
 
-        # Scan NIR folder - goes to target/nir/
+        # Scan NIR folder - goes to target/nir1/
         nir_path = os.path.join(source_folder, 'nir')
         if os.path.exists(nir_path):
             for file_name in os.listdir(nir_path):
@@ -152,14 +199,16 @@ class DataSimulator:
                         items.append({
                             'name': file_name,
                             'source': os.path.join(nir_path, file_name),
-                            'relative_path': os.path.join('nir', file_name),
+                            'relative_path': os.path.join('nir1', file_name),  # nir1 for Line1
                             'timestamp': timestamp,
-                            'type': 'nir_file'
+                            'type': 'nir1_file'
                         })
 
         # Scan normal folder - only _0 folders for Line1
         normal_path = os.path.join(source_folder, 'normal')
         if os.path.exists(normal_path):
+            # Line1 now always goes to normal1 for consistency with user request
+            normal_target_root = 'normal1'
             for folder_name in os.listdir(normal_path):
                 if folder_name.endswith('_0'):  # Line1 scans only _0 folders
                     folder_path = os.path.join(normal_path, folder_name)
@@ -169,7 +218,7 @@ class DataSimulator:
                             items.append({
                                 'name': folder_name,
                                 'source': folder_path,
-                                'relative_path': os.path.join('normal', folder_name),
+                                'relative_path': os.path.join(normal_target_root, folder_name),
                                 'timestamp': timestamp,
                                 'type': 'normal_folder'
                             })
@@ -191,6 +240,8 @@ class DataSimulator:
                             })
 
         # Sort by timestamp
+        items.sort(key=lambda x: x['timestamp'])
+        return items
         items.sort(key=lambda x: x['timestamp'])
         return items
 
@@ -216,6 +267,7 @@ class DataSimulator:
         # Scan normal folder - _0 folders are renamed to _1 for Line2
         normal_path = os.path.join(source_folder, 'normal')
         if os.path.exists(normal_path):
+            normal_target_root = 'normal2' if self.split_normal_folders else 'normal'
             for folder_name in os.listdir(normal_path):
                 if folder_name.endswith('_0'):  # Source has _0 folders
                     folder_path = os.path.join(normal_path, folder_name)
@@ -227,7 +279,7 @@ class DataSimulator:
                             items.append({
                                 'name': folder_name,
                                 'source': folder_path,
-                                'relative_path': os.path.join('normal', target_folder_name),  # _1 folder in target
+                                'relative_path': os.path.join(normal_target_root, target_folder_name),  # _1 folder in target
                                 'timestamp': timestamp,
                                 'type': 'normal_folder_line2'
                             })
@@ -253,6 +305,423 @@ class DataSimulator:
         items.sort(key=lambda x: x['timestamp'])
         return items
 
+    def reset_outlier_state(self):
+        with self._outlier_lock:
+            self.normal_image_count = 0
+            self._normal_widths.clear()
+            self._normal_heights.clear()
+            self._outlier_warning_logged = False
+
+    def _get_dummy_profile_path(self):
+        """Get path to dummy profile JSON file"""
+        return self.dummy_profile_file
+
+    def _get_dummy_manifest_path(self):
+        """Get path to dummy manifest JSON file"""
+        return self.dummy_manifest_file
+
+    def load_dummy_profile(self):
+        """Load dummy profile (image sizes) from JSON file"""
+        try:
+            profile_path = self._get_dummy_profile_path()
+            if os.path.exists(profile_path):
+                with open(profile_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            else:
+                return None
+        except Exception as e:
+            print(f"Failed to load dummy profile: {e}")
+            return None
+
+    def load_dummy_manifest(self):
+        """Load dummy manifest (timestamp-based item list) from JSON file"""
+        try:
+            manifest_path = self._get_dummy_manifest_path()
+            if os.path.exists(manifest_path):
+                with open(manifest_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    # Convert timestamp strings back to datetime objects
+                    for item in data.get('items', []):
+                        if 'timestamp' in item and isinstance(item['timestamp'], str):
+                            item['timestamp'] = datetime.fromisoformat(item['timestamp'])
+                    return data
+            else:
+                return None
+        except Exception as e:
+            print(f"Failed to load dummy manifest: {e}")
+            return None
+
+    def build_dummy_cache_from_reference(self, reference_path, log_callback=None):
+        """Build dummy cache files from reference data folder"""
+        try:
+            if not os.path.exists(reference_path):
+                if log_callback:
+                    log_callback(f"ERROR: Reference path does not exist: {reference_path}")
+                return False
+
+            if log_callback:
+                log_callback(f"Scanning reference data: {reference_path}")
+
+            # Scan reference data to build manifest
+            items = self.scan_line1_data(reference_path)
+            if not items:
+                if log_callback:
+                    log_callback("ERROR: No data found in reference folder!")
+                return False
+
+            # Extract image sizes from first normal folder
+            profile = {
+                'normal_stitched_original': {'width': 1920, 'height': 1080},  # Default
+                'cam1': {'width': 1920, 'height': 1080},  # Default
+                'cam2': {'width': 1920, 'height': 1080},  # Default
+                'cam3': {'width': 1920, 'height': 1080}   # Default
+            }
+
+            # Find first normal folder and extract stitched_original.png size
+            for item in items:
+                if item['type'] == 'normal_folder':
+                    normal_folder = item['source']
+                    stitched_path = os.path.join(normal_folder, 'stitched_original.png')
+                    if os.path.exists(stitched_path):
+                        size = self._load_image_size(stitched_path, None)
+                        if size:
+                            profile['normal_stitched_original'] = {'width': size[0], 'height': size[1]}
+                            if log_callback:
+                                log_callback(f"Found normal image size: {size[0]}x{size[1]}")
+                        break
+
+            # Find first cam files and extract sizes
+            for item in items:
+                if item['type'] == 'cam_file':
+                    cam_path = item['source']
+                    if os.path.exists(cam_path):
+                        size = self._load_image_size(cam_path, None)
+                        if size:
+                            # Determine which cam (1, 2, or 3)
+                            cam_num = None
+                            for idx in range(1, 4):
+                                if f'cam{idx}' in cam_path:
+                                    cam_num = idx
+                                    break
+                            if cam_num:
+                                profile[f'cam{cam_num}'] = {'width': size[0], 'height': size[1]}
+                                if log_callback:
+                                    log_callback(f"Found cam{cam_num} image size: {size[0]}x{size[1]}")
+                        # Only need one sample per cam
+                        if all(f'cam{i}' in profile and profile[f'cam{i}']['width'] != 1920 for i in range(1, 4)):
+                            break
+
+            # Save profile
+            profile_path = self._get_dummy_profile_path()
+            with open(profile_path, 'w', encoding='utf-8') as f:
+                json.dump(profile, f, indent=2, ensure_ascii=False)
+            if log_callback:
+                log_callback(f"Saved dummy profile: {profile_path}")
+
+            # Build manifest (convert timestamps to ISO format strings for JSON)
+            manifest_items = []
+            for item in items:
+                manifest_item = {
+                    'name': item['name'],
+                    'relative_path': item['relative_path'],
+                    'timestamp': item['timestamp'].isoformat(),
+                    'type': item['type']
+                }
+                manifest_items.append(manifest_item)
+
+            manifest = {
+                'items': manifest_items,
+                'reference_path': reference_path,
+                'generated_at': datetime.now().isoformat()
+            }
+
+            # Save manifest
+            manifest_path = self._get_dummy_manifest_path()
+            with open(manifest_path, 'w', encoding='utf-8') as f:
+                json.dump(manifest, f, indent=2, ensure_ascii=False)
+            if log_callback:
+                log_callback(f"Saved dummy manifest: {manifest_path} ({len(manifest_items)} items)")
+
+            return True
+
+        except Exception as e:
+            if log_callback:
+                log_callback(f"ERROR building dummy cache: {e}")
+            return False
+
+    def _create_dummy_image(self, image_path, width, height, log_callback=None):
+        """Create a black dummy image at specified path"""
+        if not PIL_AVAILABLE:
+            if log_callback:
+                log_callback(f"ERROR: PIL not available, cannot create dummy image: {image_path}")
+            return False
+        try:
+            # Create black image
+            img = Image.new('RGB', (width, height), color='black')
+            img.save(image_path)
+            return True
+        except Exception as e:
+            if log_callback:
+                log_callback(f"ERROR creating dummy image {image_path}: {e}")
+            return False
+
+    def _create_dummy_nir_file(self, file_path, log_callback=None):
+        """Create a dummy NIR text file"""
+        try:
+            # Create minimal dummy content
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write("# Dummy NIR data file\n")
+            return True
+        except Exception as e:
+            if log_callback:
+                log_callback(f"ERROR creating dummy NIR file {file_path}: {e}")
+            return False
+
+    def _clear_folder_contents(self, folder_path, log_callback=None):
+        """Remove all contents inside a folder (leave the folder itself)."""
+        if not os.path.exists(folder_path):
+            return
+        try:
+            for root, dirs, files in os.walk(folder_path, topdown=False):
+                for file_name in files:
+                    file_path = os.path.join(root, file_name)
+                    try:
+                        os.remove(file_path)
+                    except Exception as e:
+                        if log_callback:
+                            log_callback(f"[DUMMY] Failed to delete file {file_path}: {e}")
+                for dir_name in dirs:
+                    dir_path = os.path.join(root, dir_name)
+                    try:
+                        os.rmdir(dir_path)
+                    except Exception as e:
+                        if log_callback:
+                            log_callback(f"[DUMMY] Failed to delete dir {dir_path}: {e}")
+        except Exception as e:
+            if log_callback:
+                log_callback(f"[DUMMY] Failed to clear folder {folder_path}: {e}")
+
+    def _load_image_size(self, image_path, log_callback):
+        if not PIL_AVAILABLE:
+            if log_callback and not self._outlier_warning_logged:
+                log_callback("WARN: Pillow not available; outlier generation disabled.")
+                self._outlier_warning_logged = True
+            return None
+        try:
+            with Image.open(image_path) as img:
+                return img.size
+        except Exception as e:
+            if log_callback:
+                log_callback(f"[OUTLIER] Failed to read image size: {image_path} - {e}")
+            return None
+
+    def _calculate_outlier_dimension(self, mean_value, std_value, current_value, shrink=False):
+        # Range: 0.2x ~ 2x, but exclude 0.7x ~ 1.3x (too similar to original)
+        # Valid ranges: 0.2 ~ 0.7 (shrink) or 1.3 ~ 2.0 (grow)
+        if shrink:
+            min_ratio = 0.2
+            max_ratio = 0.7
+        else:
+            min_ratio = 1.3
+            max_ratio = 2.0
+
+        min_outlier = int(current_value * min_ratio)
+        max_outlier = int(current_value * max_ratio)
+
+        if std_value <= 0:
+            if shrink:
+                outlier_value = current_value * min_ratio  # Use minimum (0.2x)
+            else:
+                outlier_value = current_value * max_ratio  # Use maximum (2x)
+        else:
+            if shrink:
+                # Shrink: subtract from mean
+                outlier_value = mean_value - (self.outlier_z_threshold + 1) * std_value
+            else:
+                # Grow: add to mean
+                outlier_value = mean_value + (self.outlier_z_threshold + 1) * std_value
+
+        # Ensure outlier stays within valid range
+        return max(min_outlier, min(int(round(outlier_value)), max_outlier))
+
+    def _resize_image(self, image_path, new_width, new_height, log_callback):
+        try:
+            with Image.open(image_path) as img:
+                resized = img.resize((new_width, new_height), Image.BILINEAR)
+                resized.save(image_path)
+            return True
+        except PermissionError:
+            if log_callback:
+                log_callback(f"[OUTLIER] Skipped resize (permission denied): {image_path}")
+            return False
+        except Exception as e:
+            if log_callback:
+                log_callback(f"[OUTLIER] Failed to resize image: {image_path} - {e}")
+            return False
+
+    def maybe_generate_outlier(self, normal_folder_path, log_callback):
+        if not self.generate_outliers:
+            return
+
+        with self._outlier_lock:
+            image_path = os.path.join(normal_folder_path, "stitched_original.png")
+            if not os.path.exists(image_path):
+                return
+
+            size = self._load_image_size(image_path, log_callback)
+            if not size:
+                return
+
+            width, height = size
+            self.normal_image_count += 1
+
+            history_ready = len(self._normal_widths) >= (self.outlier_min_samples - 1)
+            should_attempt = (
+                self.normal_image_count >= self.outlier_min_samples
+                and history_ready
+                and random.random() < 0.5
+            )
+
+            if should_attempt:
+                # Randomly choose: width or height
+                change_width = random.choice([True, False])
+                # Randomly choose: grow or shrink
+                shrink = random.choice([True, False])
+
+                if change_width:
+                    mean_width = statistics.mean(self._normal_widths)
+                    std_width = statistics.pstdev(self._normal_widths) if len(self._normal_widths) > 1 else 0.0
+                    new_width = self._calculate_outlier_dimension(mean_width, std_width, width, shrink)
+                    new_height = height  # Keep original height
+                else:
+                    mean_height = statistics.mean(self._normal_heights)
+                    std_height = statistics.pstdev(self._normal_heights) if len(self._normal_heights) > 1 else 0.0
+                    new_width = width  # Keep original width
+                    new_height = self._calculate_outlier_dimension(mean_height, std_height, height, shrink)
+
+                if (new_width, new_height) != (width, height):
+                    direction = "shrink" if shrink else "grow"
+                    axis = "width" if change_width else "height"
+                    if self._resize_image(image_path, new_width, new_height, log_callback):
+                        if log_callback:
+                            log_callback(
+                                f"[OUTLIER] {os.path.basename(normal_folder_path)} "
+                                f"stitched_original.png {width}x{height} -> {new_width}x{new_height} ({axis} {direction})"
+                            )
+                        width, height = new_width, new_height
+
+            self._normal_widths.append(width)
+            self._normal_heights.append(height)
+
+    def _get_delayed_normal_staging_path(self, target_path):
+        relative_path = os.path.relpath(target_path, self.target_base)
+        return os.path.join(self.target_base, "_delay_normal", relative_path)
+
+    def _move_folder_contents(self, source_folder, target_folder, log_callback):
+        moved = 0
+        failed = 0
+
+        if not os.path.exists(source_folder):
+            return moved, failed
+
+        try:
+            for entry in os.listdir(source_folder):
+                source_path = os.path.join(source_folder, entry)
+                target_path = os.path.join(target_folder, entry)
+                try:
+                    os.rename(source_path, target_path)
+                    moved += 1
+                except Exception as e:
+                    failed += 1
+                    if log_callback:
+                        log_callback(f"[DELAY] Failed to move {entry}: {str(e)}")
+        except Exception as e:
+            failed += 1
+            if log_callback:
+                log_callback(f"[DELAY] Failed to read delayed folder: {str(e)}")
+
+        try:
+            os.rmdir(source_folder)
+        except Exception:
+            pass
+
+        return moved, failed
+
+    def _schedule_delayed_normal_creation(self, source_path, target_path, line_label, log_callback):
+        delay_seconds = random.randint(10, 40)
+        staging_path = self._get_delayed_normal_staging_path(target_path)
+        
+        # Cleanup staging if exists (leftover from previous run or incomplete reset)
+        if os.path.exists(staging_path):
+            try:
+                if os.path.isdir(staging_path):
+                    shutil.rmtree(staging_path)
+                else:
+                    os.remove(staging_path)
+            except Exception as e:
+                if log_callback:
+                     log_callback(f"[{line_label}] WARN: Cleanup stale staging {staging_path}: {e}")
+
+        os.makedirs(os.path.dirname(staging_path), exist_ok=True)
+        os.rename(source_path, staging_path)
+        os.makedirs(target_path, exist_ok=True)
+
+        current_sim_id = self.current_simulation_id
+
+        def worker():
+            try:
+                time.sleep(delay_seconds)
+                # Validation: check if simulation is still valid
+                if self.current_simulation_id != current_sim_id:
+                     if log_callback:
+                        log_callback(f"[{line_label}] [DELAY] Cancelled (simulation restarted): {os.path.basename(target_path)}")
+                     return
+
+                moved, failed = self._move_folder_contents(staging_path, target_path, log_callback)
+                if log_callback:
+                    log_callback(
+                        f"[{line_label}] [DELAY] {os.path.basename(target_path)} "
+                        f"files created after {delay_seconds}s ({moved} moved, {failed} failed)"
+                    )
+                self.maybe_generate_outlier(target_path, log_callback)
+            except Exception as e:
+                if log_callback:
+                    log_callback(
+                        f"[{line_label}] [DELAY] Failed to create files for "
+                        f"{os.path.basename(target_path)}: {str(e)}"
+                    )
+
+        threading.Thread(target=worker, daemon=True).start()
+        return delay_seconds
+
+    def _schedule_delayed_dummy_normal_creation(self, target_path, width, height, line_label, log_callback):
+        """Delay creation of dummy normal image to mimic delayed normal creation."""
+        delay_seconds = random.randint(10, 40)
+        current_sim_id = self.current_simulation_id
+
+        def worker():
+            try:
+                time.sleep(delay_seconds)
+                # Validation: check if simulation is still valid
+                if self.current_simulation_id != current_sim_id:
+                    if log_callback:
+                        log_callback(f"[{line_label}] [DUMMY][DELAY] Cancelled (simulation restarted): {os.path.basename(target_path)}")
+                    return
+
+                stitched_path = os.path.join(target_path, "stitched_original.png")
+                self._create_dummy_image(stitched_path, width, height, log_callback)
+                if log_callback:
+                    log_callback(
+                        f"[{line_label}] [DUMMY][DELAY] files created after {delay_seconds}s: "
+                        f"{os.path.basename(target_path)}"
+                    )
+            except Exception as e:
+                if log_callback:
+                    log_callback(f"[{line_label}] [DUMMY][DELAY] Failed to create files for {os.path.basename(target_path)}: {str(e)}")
+
+        threading.Thread(target=worker, daemon=True).start()
+        return delay_seconds
+
     def run_simulation(self, log_callback, progress_callback, complete_callback):
         """Run the simulation by moving files at exact timestamps (deprecated - use run_line1_simulation)"""
         # For backward compatibility, use Line1 simulation
@@ -266,20 +735,39 @@ class DataSimulator:
                 complete_callback()
                 return
 
-            if not self.source_line1:
-                log_callback("ERROR: Source Line1 folder not set!")
-                complete_callback()
-                return
+            # Dummy mode: skip source check and load from cache
+            if self.use_dummy_data:
+                log_callback("[LINE1] [DUMMY MODE] Using dummy data cache")
+                manifest_data = self.load_dummy_manifest()
+                if not manifest_data:
+                    log_callback("ERROR: Dummy manifest not found! Please build cache first.")
+                    complete_callback()
+                    return
+                items = manifest_data.get('items', [])
+                if not items:
+                    log_callback("ERROR: No items in dummy manifest!")
+                    complete_callback()
+                    return
+                log_callback(f"[LINE1] [DUMMY MODE] Loaded {len(items)} items from cache")
+            else:
+                if not self.source_line1:
+                    log_callback("ERROR: Source Line1 folder not set!")
+                    complete_callback()
+                    return
 
-            log_callback(f"[LINE1] Scanning source folders: {self.source_line1}")
-            items = self.scan_line1_data(self.source_line1)
+                self.reset_outlier_state()
 
-            if not items:
-                log_callback("ERROR: No Line1 data found in source folders!")
-                complete_callback()
-                return
+                log_callback(f"[LINE1] Scanning source folders: {self.source_line1}")
+                items = self.scan_line1_data(self.source_line1)
 
-            log_callback(f"[LINE1] Found {len(items)} items to move")
+                if not items:
+                    log_callback("ERROR: No Line1 data found in source folders!")
+                    complete_callback()
+                    return
+
+                log_callback(f"[LINE1] Found {len(items)} items to move")
+
+            self.reset_outlier_state()
 
             # Get the first timestamp as reference (t0)
             t0 = items[0]['timestamp']
@@ -320,9 +808,8 @@ class DataSimulator:
                         log_callback("Simulation stopped by user")
                         break
 
-                # Move file/folder to target (instant rename on same drive)
+                # Move file/folder to target (instant rename on same drive) or create dummy
                 try:
-                    source_path = os.path.normpath(item['source'])
                     target_path = os.path.normpath(os.path.join(self.target_base, item['relative_path']))
 
                     # Create parent directory if needed
@@ -330,20 +817,96 @@ class DataSimulator:
                     if parent_dir:
                         os.makedirs(parent_dir, exist_ok=True)
 
-                    # Move using os.rename (fastest on same drive)
                     actual_time = time.time()
-                    os.rename(source_path, target_path)
-                    move_time = time.time() - actual_time
+                    delay_seconds = None
+                    move_time = 0
 
-                    # Track for reset
-                    self.moved_items.append({
-                        'target': target_path,
-                        'source': source_path
-                    })
+                    if self.use_dummy_data:
+                        # Dummy mode: create dummy files instead of moving
+                        if item['type'] == 'normal_folder':
+                            # Create normal folder with stitched_original.png
+                            os.makedirs(target_path, exist_ok=True)
+                            # Ensure only dummy files exist
+                            self._clear_folder_contents(target_path, log_callback)
+                            profile = self.load_dummy_profile()
+                            img_size = {'width': 1920, 'height': 1080}
+                            if profile:
+                                img_size = profile.get('normal_stitched_original', img_size)
+                            if self.delay_normal_creation:
+                                delay_seconds = self._schedule_delayed_dummy_normal_creation(
+                                    target_path,
+                                    img_size['width'],
+                                    img_size['height'],
+                                    "LINE1",
+                                    log_callback
+                                )
+                            else:
+                                stitched_path = os.path.join(target_path, 'stitched_original.png')
+                                self._create_dummy_image(stitched_path, img_size['width'], img_size['height'], log_callback)
+                            move_time = time.time() - actual_time
+                        elif item['type'] == 'cam_file':
+                            # Create dummy cam BMP file
+                            profile = self.load_dummy_profile()
+                            cam_num = None
+                            for idx in range(1, 4):
+                                if f'cam{idx}' in item['relative_path']:
+                                    cam_num = idx
+                                    break
+                            if profile and cam_num:
+                                img_size = profile.get(f'cam{cam_num}', {'width': 1920, 'height': 1080})
+                                self._create_dummy_image(target_path, img_size['width'], img_size['height'], log_callback)
+                            else:
+                                self._create_dummy_image(target_path, 1920, 1080, log_callback)
+                            move_time = time.time() - actual_time
+                        elif item['type'] == 'nir1_file':
+                            # Create dummy NIR text file
+                            self._create_dummy_nir_file(target_path, log_callback)
+                            move_time = time.time() - actual_time
+                        else:
+                            move_time = time.time() - actual_time
+
+                        # Track for reset (no source in dummy mode)
+                        self.moved_items.append({
+                            'target': target_path,
+                            'source': None  # No source in dummy mode
+                        })
+                    else:
+                        # Normal mode: move actual files
+                        source_path = os.path.normpath(item['source'])
+                        if item['type'] == 'normal_folder' and self.delay_normal_creation:
+                            delay_seconds = self._schedule_delayed_normal_creation(
+                                source_path,
+                                target_path,
+                                "LINE1",
+                                log_callback
+                            )
+                            move_time = time.time() - actual_time
+                        else:
+                            os.rename(source_path, target_path)
+                            move_time = time.time() - actual_time
+
+                        # Track for reset
+                        self.moved_items.append({
+                            'target': target_path,
+                            'source': source_path
+                        })
+
+                        if item['type'] == 'normal_folder' and not self.delay_normal_creation:
+                            self.maybe_generate_outlier(target_path, log_callback)
 
                     elapsed = actual_time - start_real_time
                     current_time_str = datetime.now().strftime('%H:%M:%S')
-                    log_callback(f"✓ [LINE1] [{current_time_str}] [T+{elapsed:.1f}s] Moved in {move_time:.4f}s: {item['name']}")
+                    action_word = "Created" if self.use_dummy_data else "Moved"
+                    if delay_seconds is None:
+                        log_callback(
+                            f"✓ [LINE1] [{current_time_str}] [T+{elapsed:.1f}s] "
+                            f"{action_word} in {move_time:.4f}s: {item['name']}"
+                        )
+                    else:
+                        log_callback(
+                            f"✓ [LINE1] [{current_time_str}] [T+{elapsed:.1f}s] "
+                            f"Created folder in {move_time:.4f}s (files delayed {delay_seconds}s): {item['name']}"
+                        )
 
                 except Exception as e:
                     log_callback(f"✗ [LINE1] Error moving {item['name']}: {str(e)}")
@@ -354,7 +917,8 @@ class DataSimulator:
                     progress_callback(progress)
 
             if self.is_running:
-                log_callback(f"[LINE1] Simulation completed! {len(self.moved_items)} items moved.")
+                action_word = "created" if self.use_dummy_data else "moved"
+                log_callback(f"[LINE1] Simulation completed! {len(self.moved_items)} items {action_word}.")
 
         except Exception as e:
             log_callback(f"[LINE1] ERROR: {str(e)}")
@@ -370,20 +934,69 @@ class DataSimulator:
                 complete_callback()
                 return
 
-            if not self.source_line2:
-                log_callback("ERROR: Source Line2 folder not set!")
-                complete_callback()
-                return
+            # Dummy mode: skip source check and load from cache (convert Line1 manifest to Line2)
+            if self.use_dummy_data:
+                log_callback("[LINE2] [DUMMY MODE] Using dummy data cache")
+                manifest_data = self.load_dummy_manifest()
+                if not manifest_data:
+                    log_callback("ERROR: Dummy manifest not found! Please build cache first.")
+                    complete_callback()
+                    return
+                # Convert Line1 items to Line2 format
+                line1_items = manifest_data.get('items', [])
+                items = []
+                for item in line1_items:
+                    # Convert Line1 to Line2 mapping
+                    if item['type'] == 'nir1_file':
+                        # nir1 -> nir2
+                        new_item = item.copy()
+                        new_item['relative_path'] = item['relative_path'].replace('nir1', 'nir2')
+                        new_item['type'] = 'nir2_file'
+                        items.append(new_item)
+                    elif item['type'] == 'normal_folder':
+                        # normal1 -> normal2 (or normal if not split)
+                        new_item = item.copy()
+                        if self.split_normal_folders:
+                            new_item['relative_path'] = item['relative_path'].replace('normal1', 'normal2')
+                        else:
+                            new_item['relative_path'] = item['relative_path'].replace('normal1', 'normal')
+                        new_item['name'] = item['name'].replace('_0', '_1')
+                        new_item['relative_path'] = new_item['relative_path'].replace('_0', '_1')
+                        new_item['type'] = 'normal_folder_line2'
+                        items.append(new_item)
+                    elif item['type'] == 'cam_file':
+                        # cam1-3 -> cam4-6
+                        new_item = item.copy()
+                        for idx in range(1, 4):
+                            if f'cam{idx}' in item['relative_path']:
+                                new_item['relative_path'] = item['relative_path'].replace(f'cam{idx}', f'cam{idx+3}')
+                                new_item['type'] = 'cam_file_line2'
+                                items.append(new_item)
+                                break
+                if not items:
+                    log_callback("ERROR: No items in dummy manifest!")
+                    complete_callback()
+                    return
+                log_callback(f"[LINE2] [DUMMY MODE] Loaded {len(items)} items from cache (converted from Line1)")
+            else:
+                if not self.source_line2:
+                    log_callback("ERROR: Source Line2 folder not set!")
+                    complete_callback()
+                    return
 
-            log_callback(f"[LINE2] Scanning source folders: {self.source_line2}")
-            items = self.scan_line2_data(self.source_line2)
+                self.reset_outlier_state()
 
-            if not items:
-                log_callback("ERROR: No Line2 data found in source folders!")
-                complete_callback()
-                return
+                log_callback(f"[LINE2] Scanning source folders: {self.source_line2}")
+                items = self.scan_line2_data(self.source_line2)
 
-            log_callback(f"[LINE2] Found {len(items)} items to move")
+                if not items:
+                    log_callback("ERROR: No Line2 data found in source folders!")
+                    complete_callback()
+                    return
+
+                log_callback(f"[LINE2] Found {len(items)} items to move")
+
+            self.reset_outlier_state()
 
             # Get the first timestamp as reference (t0)
             t0 = items[0]['timestamp']
@@ -424,9 +1037,8 @@ class DataSimulator:
                         log_callback("[LINE2] Simulation stopped by user")
                         break
 
-                # Move file/folder to target (instant rename on same drive)
+                # Move file/folder to target (instant rename on same drive) or create dummy
                 try:
-                    source_path = os.path.normpath(item['source'])
                     target_path = os.path.normpath(os.path.join(self.target_base, item['relative_path']))
 
                     # Create parent directory if needed
@@ -434,20 +1046,97 @@ class DataSimulator:
                     if parent_dir:
                         os.makedirs(parent_dir, exist_ok=True)
 
-                    # Move using os.rename (fastest on same drive)
                     actual_time = time.time()
-                    os.rename(source_path, target_path)
-                    move_time = time.time() - actual_time
+                    delay_seconds = None
+                    move_time = 0
 
-                    # Track for reset
-                    self.moved_items.append({
-                        'target': target_path,
-                        'source': source_path
-                    })
+                    if self.use_dummy_data:
+                        # Dummy mode: create dummy files instead of moving
+                        if item['type'] == 'normal_folder_line2':
+                            # Create normal folder with stitched_original.png
+                            os.makedirs(target_path, exist_ok=True)
+                            # Ensure only dummy files exist
+                            self._clear_folder_contents(target_path, log_callback)
+                            profile = self.load_dummy_profile()
+                            img_size = {'width': 1920, 'height': 1080}
+                            if profile:
+                                img_size = profile.get('normal_stitched_original', img_size)
+                            if self.delay_normal_creation:
+                                delay_seconds = self._schedule_delayed_dummy_normal_creation(
+                                    target_path,
+                                    img_size['width'],
+                                    img_size['height'],
+                                    "LINE2",
+                                    log_callback
+                                )
+                            else:
+                                stitched_path = os.path.join(target_path, 'stitched_original.png')
+                                self._create_dummy_image(stitched_path, img_size['width'], img_size['height'], log_callback)
+                            move_time = time.time() - actual_time
+                        elif item['type'] == 'cam_file_line2':
+                            # Create dummy cam BMP file
+                            profile = self.load_dummy_profile()
+                            cam_num = None
+                            for idx in range(4, 7):
+                                if f'cam{idx}' in item['relative_path']:
+                                    # Map cam4-6 back to cam1-3 for profile lookup
+                                    cam_num = idx - 3
+                                    break
+                            if profile and cam_num:
+                                img_size = profile.get(f'cam{cam_num}', {'width': 1920, 'height': 1080})
+                                self._create_dummy_image(target_path, img_size['width'], img_size['height'], log_callback)
+                            else:
+                                self._create_dummy_image(target_path, 1920, 1080, log_callback)
+                            move_time = time.time() - actual_time
+                        elif item['type'] == 'nir2_file':
+                            # Create dummy NIR text file
+                            self._create_dummy_nir_file(target_path, log_callback)
+                            move_time = time.time() - actual_time
+                        else:
+                            move_time = time.time() - actual_time
+
+                        # Track for reset (no source in dummy mode)
+                        self.moved_items.append({
+                            'target': target_path,
+                            'source': None  # No source in dummy mode
+                        })
+                    else:
+                        # Normal mode: move actual files
+                        source_path = os.path.normpath(item['source'])
+                        if item['type'] == 'normal_folder_line2' and self.delay_normal_creation:
+                            delay_seconds = self._schedule_delayed_normal_creation(
+                                source_path,
+                                target_path,
+                                "LINE2",
+                                log_callback
+                            )
+                            move_time = time.time() - actual_time
+                        else:
+                            os.rename(source_path, target_path)
+                            move_time = time.time() - actual_time
+
+                        # Track for reset
+                        self.moved_items.append({
+                            'target': target_path,
+                            'source': source_path
+                        })
+
+                        if item['type'] == 'normal_folder_line2' and not self.delay_normal_creation:
+                            self.maybe_generate_outlier(target_path, log_callback)
 
                     elapsed = actual_time - start_real_time
                     current_time_str = datetime.now().strftime('%H:%M:%S')
-                    log_callback(f"✓ [LINE2] [{current_time_str}] [T+{elapsed:.1f}s] Moved in {move_time:.4f}s: {item['name']}")
+                    action_word = "Created" if self.use_dummy_data else "Moved"
+                    if delay_seconds is None:
+                        log_callback(
+                            f"✓ [LINE2] [{current_time_str}] [T+{elapsed:.1f}s] "
+                            f"{action_word} in {move_time:.4f}s: {item['name']}"
+                        )
+                    else:
+                        log_callback(
+                            f"✓ [LINE2] [{current_time_str}] [T+{elapsed:.1f}s] "
+                            f"Created folder in {move_time:.4f}s (files delayed {delay_seconds}s): {item['name']}"
+                        )
 
                 except Exception as e:
                     log_callback(f"✗ [LINE2] Error moving {item['name']}: {str(e)}")
@@ -458,7 +1147,8 @@ class DataSimulator:
                     progress_callback(progress)
 
             if self.is_running:
-                log_callback(f"[LINE2] Simulation completed! {len(self.moved_items)} items moved.")
+                action_word = "created" if self.use_dummy_data else "moved"
+                log_callback(f"[LINE2] Simulation completed! {len(self.moved_items)} items {action_word}.")
 
         except Exception as e:
             log_callback(f"[LINE2] ERROR: {str(e)}")
@@ -477,7 +1167,10 @@ class DataSimulator:
             log_callback("Simulation already running!")
             return
 
+            return
+
         self.is_running = True
+        self.current_simulation_id = str(uuid.uuid4())
         self.simulation_thread = threading.Thread(
             target=self.run_line1_simulation,
             args=(log_callback, progress_callback, complete_callback),
@@ -491,7 +1184,10 @@ class DataSimulator:
             log_callback("Simulation already running!")
             return
 
+            return
+
         self.is_running = True
+        self.current_simulation_id = str(uuid.uuid4())
         self.simulation_thread = threading.Thread(
             target=self.run_line2_simulation,
             args=(log_callback, progress_callback, complete_callback),
@@ -521,7 +1217,7 @@ class SimulatorGUI:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(6, weight=1)  # Log area should expand
+        main_frame.rowconfigure(7, weight=1)  # Log area should expand
 
         # Original folder
         ttk.Label(main_frame, text="Original Folder:").grid(row=0, column=0, sticky=tk.W, pady=5)
@@ -571,19 +1267,59 @@ class SimulatorGUI:
         ttk.Button(main_frame, text="Browse", command=self.browse_trash).grid(row=5, column=2, pady=5)
         ttk.Button(main_frame, text="Open", command=self.open_trash_folder).grid(row=5, column=3, pady=5, padx=(5, 0))
 
+        # Outlier generation + normal folder split + delayed creation
+        options_frame = ttk.Frame(main_frame)
+        options_frame.grid(row=6, column=1, columnspan=2, sticky=tk.W, pady=5, padx=5)
+
+        self.split_normal_var = tk.BooleanVar(value=self.simulator.split_normal_folders)
+        self.split_normal_check = ttk.Checkbutton(
+            options_frame,
+            text="normal 폴더 분리",
+            variable=self.split_normal_var,
+            command=self.toggle_split_normal
+        )
+        self.split_normal_check.pack(side=tk.LEFT)
+
+        self.delay_var = tk.BooleanVar(value=self.simulator.delay_normal_creation)
+        self.delay_check = ttk.Checkbutton(
+            options_frame,
+            text="지연 생성",
+            variable=self.delay_var,
+            command=self.toggle_delay_creation
+        )
+        self.delay_check.pack(side=tk.LEFT, padx=(15, 0))
+
+        self.outlier_var = tk.BooleanVar(value=self.simulator.generate_outliers)
+        self.outlier_check = ttk.Checkbutton(
+            options_frame,
+            text="이상치 생성 (stitched_original.png)",
+            variable=self.outlier_var,
+            command=self.toggle_outlier
+        )
+        self.outlier_check.pack(side=tk.LEFT, padx=(15, 0))
+
+        self.dummy_var = tk.BooleanVar(value=self.simulator.use_dummy_data)
+        self.dummy_check = ttk.Checkbutton(
+            options_frame,
+            text="더미 데이터 생성",
+            variable=self.dummy_var,
+            command=self.toggle_dummy
+        )
+        self.dummy_check.pack(side=tk.LEFT, padx=(15, 0))
+
         # Log area
-        ttk.Label(main_frame, text="Log:").grid(row=6, column=0, sticky=(tk.W, tk.N), pady=5)
+        ttk.Label(main_frame, text="Log:").grid(row=7, column=0, sticky=(tk.W, tk.N), pady=5)
         self.log_text = scrolledtext.ScrolledText(main_frame, width=80, height=25, wrap=tk.WORD)
-        self.log_text.grid(row=6, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5)
+        self.log_text.grid(row=7, column=1, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5)
 
         # Progress bar
-        ttk.Label(main_frame, text="Progress:").grid(row=7, column=0, sticky=tk.W, pady=5)
+        ttk.Label(main_frame, text="Progress:").grid(row=8, column=0, sticky=tk.W, pady=5)
         self.progress = ttk.Progressbar(main_frame, length=400, mode='determinate')
-        self.progress.grid(row=7, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=5)
+        self.progress.grid(row=8, column=1, columnspan=2, sticky=(tk.W, tk.E), pady=5)
 
         # Control buttons
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=8, column=0, columnspan=3, pady=10)
+        button_frame.grid(row=9, column=0, columnspan=3, pady=10)
 
         self.start_line1_button = ttk.Button(button_frame, text="Start Line1 Simulation", command=self.start_line1_simulation)
         self.start_line1_button.pack(side=tk.LEFT, padx=5)
@@ -644,6 +1380,22 @@ class SimulatorGUI:
             self.trash_entry.insert(0, folder)
             self.simulator.trash_folder = folder
             self.simulator.save_config()
+
+    def toggle_outlier(self):
+        self.simulator.generate_outliers = bool(self.outlier_var.get())
+        self.simulator.save_config()
+
+    def toggle_delay_creation(self):
+        self.simulator.delay_normal_creation = bool(self.delay_var.get())
+        self.simulator.save_config()
+
+    def toggle_split_normal(self):
+        self.simulator.split_normal_folders = bool(self.split_normal_var.get())
+        self.simulator.save_config()
+
+    def toggle_dummy(self):
+        self.simulator.use_dummy_data = bool(self.dummy_var.get())
+        self.simulator.save_config()
 
     def open_original_folder(self):
         """Open original folder in Windows Explorer"""
@@ -735,6 +1487,10 @@ class SimulatorGUI:
         self.simulator.target_base = self.target_entry.get()
         self.simulator.move_folder = self.move_entry.get()
         self.simulator.trash_folder = self.trash_entry.get()
+        self.simulator.generate_outliers = bool(self.outlier_var.get())
+        self.simulator.delay_normal_creation = bool(self.delay_var.get())
+        self.simulator.split_normal_folders = bool(self.split_normal_var.get())
+        self.simulator.use_dummy_data = bool(self.dummy_var.get())
 
         # Save configuration
         self.simulator.save_config()
@@ -743,7 +1499,8 @@ class SimulatorGUI:
             messagebox.showerror("Error", "Please set target folder!")
             return
 
-        if not self.simulator.source_line1:
+        # In dummy mode, source folder is not required
+        if not self.simulator.use_dummy_data and not self.simulator.source_line1:
             messagebox.showerror("Error", "Please set Source Line1 folder!")
             return
 
@@ -771,15 +1528,19 @@ class SimulatorGUI:
         self.simulator.target_base = self.target_entry.get()
         self.simulator.move_folder = self.move_entry.get()
         self.simulator.trash_folder = self.trash_entry.get()
+        self.simulator.generate_outliers = bool(self.outlier_var.get())
+        self.simulator.delay_normal_creation = bool(self.delay_var.get())
+        self.simulator.split_normal_folders = bool(self.split_normal_var.get())
+        self.simulator.use_dummy_data = bool(self.dummy_var.get())
 
         # Save configuration
         self.simulator.save_config()
-
         if not self.simulator.target_base:
             messagebox.showerror("Error", "Please set target folder!")
             return
 
-        if not self.simulator.source_line2:
+        # In dummy mode, source folder is not required
+        if not self.simulator.use_dummy_data and not self.simulator.source_line2:
             messagebox.showerror("Error", "Please set Source Line2 folder!")
             return
 
@@ -836,33 +1597,35 @@ class SimulatorGUI:
 
         items = []
 
-        # Scan NIR files in target
-        target_nir = os.path.join(self.simulator.target_base, 'nir')
-        source_nir = os.path.join(self.simulator.source_base, 'nir')
-        if os.path.exists(target_nir):
-            for file_name in os.listdir(target_nir):
-                if file_name.endswith('.spc') or file_name.endswith('.txt'):
-                    target_path = os.path.join(target_nir, file_name)
-                    source_path = os.path.join(source_nir, file_name)
-                    items.append({
-                        'target': target_path,
-                        'source': source_path
-                    })
-                    self.log(f"Found NIR file: {file_name}")
+        # Scan NIR files in target (nir, nir1, nir2)
+        for nir_dir in ['nir', 'nir1', 'nir2']:
+            target_nir = os.path.join(self.simulator.target_base, nir_dir)
+            source_nir = os.path.join(self.simulator.source_base, 'nir')
+            if os.path.exists(target_nir):
+                for file_name in os.listdir(target_nir):
+                    if file_name.endswith('.spc') or file_name.endswith('.txt'):
+                        target_path = os.path.join(target_nir, file_name)
+                        source_path = os.path.join(source_nir, file_name)
+                        items.append({
+                            'target': target_path,
+                            'source': source_path
+                        })
+                        self.log(f"Found {nir_dir} file: {file_name}")
 
-        # Scan normal folders in target
-        target_normal = os.path.join(self.simulator.target_base, 'normal')
-        source_normal = os.path.join(self.simulator.source_base, 'normal')
-        if os.path.exists(target_normal):
-            for folder_name in os.listdir(target_normal):
-                folder_path = os.path.join(target_normal, folder_name)
-                if os.path.isdir(folder_path):
-                    source_path = os.path.join(source_normal, folder_name)
-                    items.append({
-                        'target': folder_path,
-                        'source': source_path
-                    })
-                    self.log(f"Found normal folder: {folder_name}")
+        # Scan normal folders in target (normal, normal1, normal2)
+        for norm_dir in ['normal', 'normal1', 'normal2']:
+            target_normal = os.path.join(self.simulator.target_base, norm_dir)
+            source_normal = os.path.join(self.simulator.source_base, 'normal')
+            if os.path.exists(target_normal):
+                for folder_name in os.listdir(target_normal):
+                    folder_path = os.path.join(target_normal, folder_name)
+                    if os.path.isdir(folder_path):
+                        source_path = os.path.join(source_normal, folder_name)
+                        items.append({
+                            'target': folder_path,
+                            'source': source_path
+                        })
+                        self.log(f"Found {norm_dir} folder: {folder_name}")
 
         # Scan camera files in target
         for cam_idx in range(1, 7):
@@ -881,6 +1644,7 @@ class SimulatorGUI:
 
         self.log(f"Total items found in target: {len(items)}")
         return items
+
 
     def copy_folder_recursive(self, src, dst):
         """Recursively copy folder contents, skipping duplicates"""
@@ -974,46 +1738,67 @@ class SimulatorGUI:
         self.simulator.target_base = self.target_entry.get()
         self.simulator.move_folder = self.move_entry.get()
         self.simulator.trash_folder = self.trash_entry.get()
+        self.simulator.split_normal_folders = bool(self.split_normal_var.get())
+        self.simulator.delay_normal_creation = bool(self.delay_var.get())
+        self.simulator.use_dummy_data = bool(self.dummy_var.get())
+        # Invalidate any pending delayed dummy workers and stop running simulation
+        self.simulator.is_running = False
+        self.simulator.current_simulation_id = str(uuid.uuid4())
 
         # Save configuration
         self.simulator.save_config()
 
-        # Validate required paths
-        if not self.simulator.original_base:
-            messagebox.showerror("Error", "Please set original folder!")
-            return
+        # Validate required paths (skip original/source in dummy mode)
+        if not self.simulator.use_dummy_data:
+            if not self.simulator.original_base:
+                messagebox.showerror("Error", "Please set original folder!")
+                return
 
-        if not self.simulator.source_line1:
-            messagebox.showerror("Error", "Please set Source Line1 folder!")
-            return
+            if not self.simulator.source_line1:
+                messagebox.showerror("Error", "Please set Source Line1 folder!")
+                return
 
-        if not self.simulator.source_line2:
-            messagebox.showerror("Error", "Please set Source Line2 folder!")
-            return
+            if not self.simulator.source_line2:
+                messagebox.showerror("Error", "Please set Source Line2 folder!")
+                return
 
-        if not os.path.exists(self.simulator.original_base):
-            messagebox.showerror("Error", f"Original folder does not exist:\n{self.simulator.original_base}")
-            return
+            if not os.path.exists(self.simulator.original_base):
+                messagebox.showerror("Error", f"Original folder does not exist:\n{self.simulator.original_base}")
+                return
 
         # Log current paths
         self.log("="*60)
-        self.log(f"Original folder: {self.simulator.original_base}")
-        self.log(f"Source Line1 folder: {self.simulator.source_line1}")
-        self.log(f"Source Line2 folder: {self.simulator.source_line2}")
+        if not self.simulator.use_dummy_data:
+            self.log(f"Original folder: {self.simulator.original_base}")
+            self.log(f"Source Line1 folder: {self.simulator.source_line1}")
+            self.log(f"Source Line2 folder: {self.simulator.source_line2}")
+        else:
+            self.log("Dummy mode: original/source folders are ignored")
         self.log(f"Target folder: {self.simulator.target_base}")
         self.log(f"Move folder: {self.simulator.move_folder}")
         self.log(f"Trash folder: {self.simulator.trash_folder}")
         self.log("="*60)
 
         # Confirm reset operation
-        result = messagebox.askyesno(
-            "Confirm Reset",
-            "This will:\n"
-            "1. Copy contents from Original folder to Source Line1 folder (skip duplicates)\n"
-            "2. Copy contents from Original folder to Source Line2 folder (skip duplicates)\n"
-            "3. Delete contents of Target, Move, and Trash folders\n\n"
-            "Continue?"
-        )
+        cleanup_scope = "Target, Move, and Trash folders"
+        if self.simulator.split_normal_folders:
+            cleanup_scope = "Target normal/normal1/normal2/cam1-6, Move, and Trash folders"
+        if self.simulator.use_dummy_data:
+            result = messagebox.askyesno(
+                "Confirm Reset",
+                "Dummy mode reset will:\n"
+                f"- Delete contents of {cleanup_scope}\n\n"
+                "Continue?"
+            )
+        else:
+            result = messagebox.askyesno(
+                "Confirm Reset",
+                "This will:\n"
+                "1. Copy contents from Original folder to Source Line1 folder (skip duplicates)\n"
+                "2. Copy contents from Original folder to Source Line2 folder (skip duplicates)\n"
+                f"3. Delete contents of {cleanup_scope}\n\n"
+                "Continue?"
+            )
 
         if not result:
             return
@@ -1025,26 +1810,50 @@ class SimulatorGUI:
         try:
             total_steps = 5  # Copy original->line1, copy original->line2, delete target, delete move, delete trash
             current_step = 0
+            if self.simulator.use_dummy_data:
+                total_steps = 3  # delete target, delete move, delete trash
+            else:
+                # Step 1: Copy original folder to source line1 folder
+                self.log("Step 1: Copying original folder to Source Line1...")
+                copied, skipped = self.copy_folder_recursive(self.simulator.original_base, self.simulator.source_line1)
+                self.log(f"Line1 copy complete: {copied} copied, {skipped} skipped")
+                current_step += 1
+                self.update_progress((current_step / total_steps) * 100)
 
-            # Step 1: Copy original folder to source line1 folder
-            self.log("Step 1: Copying original folder to Source Line1...")
-            copied, skipped = self.copy_folder_recursive(self.simulator.original_base, self.simulator.source_line1)
-            self.log(f"Line1 copy complete: {copied} copied, {skipped} skipped")
-            current_step += 1
-            self.update_progress((current_step / total_steps) * 100)
-
-            # Step 2: Copy original folder to source line2 folder
-            self.log("Step 2: Copying original folder to Source Line2...")
-            copied, skipped = self.copy_folder_recursive(self.simulator.original_base, self.simulator.source_line2)
-            self.log(f"Line2 copy complete: {copied} copied, {skipped} skipped")
-            current_step += 1
-            self.update_progress((current_step / total_steps) * 100)
+                # Step 2: Copy original folder to source line2 folder
+                self.log("Step 2: Copying original folder to Source Line2...")
+                copied, skipped = self.copy_folder_recursive(self.simulator.original_base, self.simulator.source_line2)
+                self.log(f"Line2 copy complete: {copied} copied, {skipped} skipped")
+                current_step += 1
+                self.update_progress((current_step / total_steps) * 100)
 
             # Step 3: Delete target folder contents
             if self.simulator.target_base:
-                self.log("Step 3: Deleting target folder contents...")
-                deleted, failed = self.delete_folder_contents(self.simulator.target_base)
-                self.log(f"Target cleanup: {deleted} deleted, {failed} failed")
+                self.log("Step 3: Deleting target normal/normal1/normal2, nir/nir1/nir2, and cam1-6 contents...")
+                
+                # List of subfolders to clean up
+                subfolders = [
+                    'normal', 'normal1', 'normal2',
+                    'nir', 'nir1', 'nir2',
+                    '_delay_normal'
+                ]
+                for i in range(1, 7):
+                    subfolders.append(f'cam{i}')
+                
+                for sub in subfolders:
+                    sub_path = os.path.join(self.simulator.target_base, sub)
+                    if os.path.exists(sub_path):
+                        if sub == '_delay_normal':
+                            try:
+                                import shutil
+                                shutil.rmtree(sub_path)
+                                self.log(f"Target {sub} cleanup: Removed tree")
+                            except Exception as e:
+                                self.log(f"Target {sub} cleanup failed: {e}")
+                        else:
+                            deleted, failed = self.delete_folder_contents(sub_path)
+                            if deleted > 0 or failed > 0:
+                                self.log(f"Target {sub} cleanup: {deleted} deleted, {failed} failed")
             else:
                 self.log("Step 3: Target folder not set, skipping")
             current_step += 1

@@ -51,8 +51,9 @@ public class ImageLoadingCancellationPropertyTests
                 It.IsAny<string>(), 
                 It.IsAny<int>(), 
                 It.IsAny<int>(), 
-                It.IsAny<CancellationToken>()))
-            .Returns(async (string path, int w, int h, CancellationToken ct) =>
+                It.IsAny<CancellationToken>(),
+                It.IsAny<bool>()))
+            .Returns(async (string path, int w, int h, CancellationToken ct, bool throwOnError) =>
             {
                 try
                 {
@@ -67,7 +68,7 @@ public class ImageLoadingCancellationPropertyTests
                 }
             });
 
-        var viewModel = new FileGroupViewModel(fileGroup, mockImageProcessor.Object);
+        var viewModel = new FileGroupViewModel(fileGroup, mockImageProcessor.Object, orchestrator: null, abnormalDetector: null, configuration: null, logger: null, uiLog: null);
 
         // Act - Start loading thumbnails (don't await - let it run in background)
         var loadTask = viewModel.LoadThumbnailsAsync();
@@ -117,10 +118,11 @@ public class ImageLoadingCancellationPropertyTests
                 It.IsAny<string>(), 
                 It.IsAny<int>(), 
                 It.IsAny<int>(), 
-                It.IsAny<CancellationToken>()))
+                It.IsAny<CancellationToken>(),
+                It.IsAny<bool>()))
             .ReturnsAsync(new byte[] { 0xFF, 0xD8, 0xFF });
 
-        var viewModel = new FileGroupViewModel(fileGroup, mockImageProcessor.Object);
+        var viewModel = new FileGroupViewModel(fileGroup, mockImageProcessor.Object, orchestrator: null, abnormalDetector: null, configuration: null, logger: null, uiLog: null);
 
         // Act - Call LoadThumbnailsAsync multiple times
         var tasks = new List<Task>();
@@ -182,7 +184,7 @@ public class ImageLoadingCancellationPropertyTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<byte>());
 
-        var viewModel = new FileGroupViewModel(fileGroup, mockImageProcessor.Object);
+        var viewModel = new FileGroupViewModel(fileGroup, mockImageProcessor.Object, orchestrator: null, abnormalDetector: null, configuration: null, logger: null, uiLog: null);
 
         // Act & Assert - Should complete without throwing
         var loadTask = viewModel.LoadThumbnailsAsync();
@@ -229,7 +231,7 @@ public class ImageLoadingCancellationPropertyTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new byte[] { 0xFF, 0xD8, 0xFF });
 
-        var viewModel = new FileGroupViewModel(fileGroup, mockImageProcessor.Object);
+        var viewModel = new FileGroupViewModel(fileGroup, mockImageProcessor.Object, orchestrator: null, abnormalDetector: null, configuration: null, logger: null, uiLog: null);
 
         // Act - Load thumbnails and wait for completion
         var loadTask = viewModel.LoadThumbnailsAsync();
@@ -278,7 +280,7 @@ public class ImageLoadingCancellationPropertyTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new byte[] { 0xFF, 0xD8, 0xFF });
 
-        var viewModel = new FileGroupViewModel(fileGroup, mockImageProcessor.Object);
+        var viewModel = new FileGroupViewModel(fileGroup, mockImageProcessor.Object, orchestrator: null, abnormalDetector: null, configuration: null, logger: null, uiLog: null);
 
         // Start loading
         var loadTask = viewModel.LoadThumbnailsAsync();

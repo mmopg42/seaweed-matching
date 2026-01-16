@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
+using ChronoView.Core.Localization;
 using ChronoView.Models;
 using ChronoView.UI.ViewModels;
 using ChronoView.UI.Views;
@@ -125,7 +126,8 @@ public partial class MainWindow : Window
         if (result == true)
         {
             _logger.LogInformation("Settings saved");
-            _viewModel.AddLogMessage(LogSeverity.Info, "System", "Settings saved successfully");
+            var message = LocalizationManager.GetString("Log_Info_Settings_Saved");
+            _viewModel.AddLogMessage(LogSeverity.Info, "System", message);
         }
         else
         {
@@ -158,34 +160,19 @@ public partial class MainWindow : Window
             _viewModel.StopCommand.Execute(null);
             System.Threading.Thread.Sleep(500); // Brief pause
             _viewModel.StartCommand.Execute(null);
-            _viewModel.AddLogMessage(LogSeverity.Info, "System", "Settings applied and monitoring restarted");
+            var restartMessage = LocalizationManager.GetString("Log_Info_Monitoring_Refreshing");
+            _viewModel.AddLogMessage(LogSeverity.Info, "System", restartMessage);
         }
         else
         {
             // If not monitoring, just reload NIR graphs
             _viewModel.ReloadNirGraphThumbnails();
-            _viewModel.AddLogMessage(LogSeverity.Info, "System", "Display settings applied");
+            var displayMessage = LocalizationManager.GetString("Log_Info_DisplaySettings_Applied");
+            _viewModel.AddLogMessage(LogSeverity.Info, "System", displayMessage);
         }
     }
 
-    private void FileGroupRow_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        if (sender is System.Windows.Controls.DataGridRow row)
-        {
-            _logger.LogInformation("Row DoubleClick detected. DataContext type: {Type}", row.DataContext?.GetType().Name ?? "null");
-            
-            if (row.DataContext is FileGroupViewModel group && _viewModel != null)
-            {
-                _logger.LogInformation("Executing OpenDetailViewCommand for group: {GroupId}", group.GroupId);
-                _viewModel.OpenDetailViewCommand.Execute(group);
-                e.Handled = true;
-            }
-            else
-            {
-                 _logger.LogWarning("Row DataContext is not FileGroupViewModel or ViewModel is null");
-            }
-        }
-    }
+
 
     private void OnLine1GroupsChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using ChronoView.Core.Configuration;
 using ChronoView.Core.FileWatching;
 using ChronoView.Core.FileMatching;
+using ChronoView.Core.GroupIdGeneration;
 using ChronoView.Core.ImageProcessing;
 using ChronoView.Core.Analytics;
 using ChronoView.Core.Nir;
@@ -29,6 +30,11 @@ public partial class App : Application
     /// Gets the service provider for dependency injection
     /// </summary>
     public IServiceProvider Services => _serviceProvider ?? throw new InvalidOperationException("Service provider not initialized");
+
+    /// <summary>
+    /// Global session start time to ensure log files share the same timestamp
+    /// </summary>
+    public static readonly DateTime SessionStartTime = DateTime.Now;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -155,7 +161,8 @@ public partial class App : Application
         // Write to a separate panic log file in case regular logging fails
         try 
         {
-            File.AppendAllText("critical_error.log", $"{DateTime.Now}: [{source}] {errorMessage}\n\n");
+            var criticalLogFile = PathHelper.GetSessionLogFilePath("ChronoView_Critical");
+            File.AppendAllText(criticalLogFile, $"{DateTime.Now}: [{source}] {errorMessage}\n\n");
         }
         catch { /* ignored as we are in a critical state */ }
 
@@ -176,27 +183,15 @@ public partial class App : Application
             configure.SetMinimumLevel(LogLevel.Debug);  // Changed from Information to Debug for detailed logging
             
             // 개발용 로그 파일 저장 추가
-            var logDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "ChronoView",
-                "Logs");
-            Directory.CreateDirectory(logDir);
-            
-            // 날짜 폴더 생성 (App.xaml.cs의 책임)
-            var startTime = DateTime.Now;
-            var dateFolder = Path.Combine(logDir, startTime.ToString("yyyyMMdd"));
-            Directory.CreateDirectory(dateFolder);
-
-            // 완전한 로그 파일 경로 생성 (날짜 폴더 포함 + 시작 시간 포함)
-            var logFile = Path.Combine(dateFolder, $"ChronoView_Debug_{startTime:yyyyMMdd_HHmmss}.log");
+            var startTime = PathHelper.SessionStartTime;
+            var logFile = PathHelper.GetSessionLogFilePath("ChronoView_Debug");
             
             // 세션 시작 시간 기록 (파일이 새로 생성될 때만)
             if (!File.Exists(logFile) || new FileInfo(logFile).Length == 0)
             {
-                var sessionStartTime = DateTime.Now;
                 var separator = new string('=', 80);
                 var sessionHeader = $"\n{separator}\n" +
-                                   $"Session Started: {sessionStartTime:yyyy-MM-dd HH:mm:ss}\n" +
+                                   $"Session Started: {startTime:yyyy-MM-dd HH:mm:ss}\n" +
                                    $"{separator}\n\n";
                 File.AppendAllText(logFile, sessionHeader);
             }
@@ -217,17 +212,28 @@ public partial class App : Application
         });
 
         // Core Services (Singleton - maintain state across application lifetime)
-        services.AddSingleton<IConfigurationManager, ConfigurationManager>();
+        services.AddSingleton<IConfigurationManager>(sp => new ConfigurationManager("ChronoView", "prische"));
         services.AddSingleton<ITimestampCache>(sp =>
         {
             var config = sp.GetRequiredService<ApplicationConfiguration>();
             int ttl = config.WorkflowSettings?.FolderTimestampCacheTTL ?? 300;
             return new FolderTimestampCache(ttl, sp.GetService<ILogger<FolderTimestampCache>>());
         });
+        
+        // Group ID Generator (Strategy Pattern - depends on UseLineSpecificGroupId setting)
+        services.AddSingleton<IGroupIdGenerator>(sp =>
+        {
+            var config = sp.GetRequiredService<ApplicationConfiguration>();
+            return config.WorkflowSettings.UseLineSpecificGroupId
+                ? new LineBasedGroupIdGenerator()
+                : new GlobalGroupIdGenerator();
+        });
+        
         services.AddSingleton<IGroupManager, GroupManager>();
         services.AddSingleton<IFileWatcher, FileWatcherService>();
         services.AddSingleton<IFileGroupMatcher>(sp =>
             new FileGroupMatcherService(
+                sp.GetRequiredService<IGroupIdGenerator>(),
                 sp.GetService<ILogger<FileGroupMatcherService>>()));
         services.AddSingleton<INirFileResolver, SpcTxtNirFileResolver>();
         services.AddSingleton<IInitialScanner, InitialScanner>();
@@ -244,15 +250,24 @@ public partial class App : Application
                 sp.GetRequiredService<ITimestampCache>(),
                 sp.GetRequiredService<IInitialScanner>(),
                 sp.GetRequiredService<IGroupManager>(),
-                sp.GetRequiredService<IImageCaptureService>(), // NEW: ImageCaptureService injection
-                sp.GetRequiredService<IEventProcessor>(), // NEW: IEventProcessor injection
+                sp.GetRequiredService<IImageCaptureService>(),
+                sp.GetRequiredService<IEventProcessor>(),
+                sp.GetRequiredService<IConfigurationManager>(),
+                sp.GetRequiredService<IAbnormalDetector>(),
                 (severity, category, message) => 
                 {
                     var logPanel = App.Current.MainWindow?.FindName("LogPanel") as FrameworkElement;
                     // ... simplified for now, orchestrated through events is better
                 }
             ));
-        services.AddSingleton<IAbnormalDetector, AbnormalDetectorService>();
+        
+        // Abnormal Detection Services
+        services.AddSingleton<AbnormalHistoryManager>();
+        services.AddSingleton<IAbnormalDetector, AbnormalDetectorService>(sp => 
+            new AbnormalDetectorService(
+                sp.GetRequiredService<IConfigurationManager>(),
+                sp.GetRequiredService<AbnormalHistoryManager>(),
+                sp.GetService<ILogger<AbnormalDetectorService>>()));
 
         // File Operation Services (Transient - new instance per operation)
         services.AddSingleton<IFileGroupOperator, FileGroupOperator>();
@@ -265,6 +280,7 @@ public partial class App : Application
         services.AddSingleton<GeneralCameraLauncher>();
         services.AddSingleton<NirCameraLauncher>();
         services.AddSingleton<Nir2CameraLauncher>();
+        services.AddSingleton<NirFilteringService>();
 
         // ViewModels (Transient - new instance per view)
         services.AddTransient<MainWindowViewModel>();

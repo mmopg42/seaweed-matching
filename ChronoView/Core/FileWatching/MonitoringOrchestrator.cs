@@ -6,7 +6,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
+using ChronoView.Core.Analytics;
+using ChronoView.Core.Configuration;
 using ChronoView.Core.FileMatching;
+using ChronoView.Core.Localization;
 using ChronoView.Core.Nir;
 using ChronoView.Models;
 using Microsoft.Extensions.Logging;
@@ -29,6 +32,8 @@ namespace ChronoView.Core.FileWatching
         private readonly IGroupManager _groupManager;
         private readonly IImageCaptureService _imageCache;
         private readonly IEventProcessor _eventProcessor;
+        private readonly IConfigurationManager _configManager;
+        private readonly IAbnormalDetector _abnormalDetector;
         private Action<LogSeverity, string, string>? _uiLog;
         
         private const int NirPendingTimeoutSeconds = 10;
@@ -52,6 +57,8 @@ namespace ChronoView.Core.FileWatching
             IGroupManager groupManager,
             IImageCaptureService imageCache,
             IEventProcessor eventProcessor,
+            IConfigurationManager configManager,
+            IAbnormalDetector abnormalDetector,
             Action<LogSeverity, string, string>? uiLog = null)
         {
             _fileGroupMatcher = fileGroupMatcher ?? throw new ArgumentNullException(nameof(fileGroupMatcher));
@@ -63,6 +70,8 @@ namespace ChronoView.Core.FileWatching
             _groupManager = groupManager ?? throw new ArgumentNullException(nameof(groupManager));
             _imageCache = imageCache ?? throw new ArgumentNullException(nameof(imageCache));
             _eventProcessor = eventProcessor ?? throw new ArgumentNullException(nameof(eventProcessor));
+            _configManager = configManager ?? throw new ArgumentNullException(nameof(configManager));
+            _abnormalDetector = abnormalDetector ?? throw new ArgumentNullException(nameof(abnormalDetector));
             _uiLog = uiLog;
 
             // Wire up GroupManager events
@@ -79,8 +88,8 @@ namespace ChronoView.Core.FileWatching
                 OnGroupUpdated(g);
             };
             _groupManager.GroupRemoved += (s, id) => OnGroupRemoved(id);
-            // Forward GroupManager logs to UI
-            _groupManager.Log += msg => _uiLog?.Invoke(LogSeverity.Info, "GroupManager", msg);
+            // Forward GroupManager logs to UI (preserve severity)
+            _groupManager.Log += (sev, msg) => _uiLog?.Invoke(sev, "GroupManager", msg);
         }
 
         public async Task StartAsync(ApplicationConfiguration config)
@@ -132,13 +141,14 @@ namespace ChronoView.Core.FileWatching
                     var orderedSequence = config.DataSequenceSettings.Sequence
                         .Where(i => i.Enabled)
                         .OrderBy(i => i.Order)
-                        .Select(i => $"{i.Type}(Order:{i.Order})")
+                        .Select(i => $"{i.Type}(Order:{i.Order}, {i.MinDelaySeconds}-{i.MaxDelaySeconds}s)")
                         .ToList();
                     
                     var sequenceStr = string.Join(" → ", orderedSequence);
                     
                     _logger.LogInformation("Data Sequence Order: {Sequence}", sequenceStr);
-                    _uiLog?.Invoke(LogSeverity.Info, "System", $"데이터 시퀀스 순서: {sequenceStr}");
+                    var message = LocalizationManager.GetString("Log_Info_DataSequenceOrder", sequenceStr);
+                    _uiLog?.Invoke(LogSeverity.Info, "System", message);
                 }
 
                 // Perform initial scan
@@ -177,11 +187,12 @@ namespace ChronoView.Core.FileWatching
                     await _fileWatcher.StartWatchingAsync(watchPaths, new FileWatcherOptions 
                     {
                         EnablePolling = config.WorkflowSettings.EnablePolling,
-                        PollingIntervalMs = config.WorkflowSettings.PollingIntervalMs
+                        DataSequenceSettings = config.DataSequenceSettings
                     });
                     
                     _logger.LogInformation("File watcher started. Watching {Count} paths", watchPaths.Count);
-                    _uiLog?.Invoke(LogSeverity.Info, "FileWatcher", $"감시 중인 경로: {watchPaths.Count}개");
+                    var watchMessage = LocalizationManager.GetString("Log_Info_WatchingPaths", watchPaths.Count);
+                    _uiLog?.Invoke(LogSeverity.Info, "System", watchMessage);
                 }
                 else
                 {
@@ -250,9 +261,11 @@ namespace ChronoView.Core.FileWatching
                 string processPath = eventArgs.FullPath;
 
                 // ⚡ FAST CAPTURE: Check if this is stitched_original.png
+                bool captureSuccess = true;
                 if (FileNamingHelper.IsStitchedImage(eventArgs.FullPath))
                 {
-                    await _imageCache.HandleStitchedImageCaptureAsync(eventArgs.FullPath, workerId, OnGroupUpdated);
+                    _logger.LogInformation("Fast Capture triggered for {Path}", eventArgs.FullPath);
+                    captureSuccess = await _imageCache.HandleStitchedImageCaptureAsync(eventArgs.FullPath, workerId, OnGroupUpdated);
                     
                     // If it's a stitched image, the "real" path we care about for grouping is the parent folder
                     var parentFolder = Path.GetDirectoryName(eventArgs.FullPath);
@@ -274,8 +287,9 @@ namespace ChronoView.Core.FileWatching
                 {
                     case WatcherChangeTypes.Created:
                     case WatcherChangeTypes.Changed:
+                    case WatcherChangeTypes.Renamed:
                         // Create or update group (thread-safe)
-                        FileGroup? group = await CreateOrUpdateGroupAsync(processPath, fileType);
+                        FileGroup? group = await CreateOrUpdateGroupAsync(processPath, fileType, captureSuccess);
                         
                         if (group != null)
                         {
@@ -300,30 +314,108 @@ namespace ChronoView.Core.FileWatching
             _uiLog = uiLog;
         }
 
+        #region Refresh Logic - Deep Reset
+
+        /// <summary>
+        /// Collects all configured watch paths from the application configuration.
+        /// </summary>
+        private IEnumerable<string> GetWatchPaths(ApplicationConfiguration config)
+        {
+            var paths = new List<string>();
+            var s = config.MatchingSettings;
+            
+            if (s == null) return paths;
+
+            if (!string.IsNullOrEmpty(s.Nir1Path)) paths.Add(s.Nir1Path);
+            if (!string.IsNullOrEmpty(s.Normal1Path)) paths.Add(s.Normal1Path);
+            if (!string.IsNullOrEmpty(s.Nir2Path)) paths.Add(s.Nir2Path);
+            if (!string.IsNullOrEmpty(s.Normal2Path)) paths.Add(s.Normal2Path);
+            
+            string[] cams = { s.Camera1Path, s.Camera2Path, s.Camera3Path, s.Camera4Path, s.Camera5Path, s.Camera6Path };
+            foreach (var p in cams) 
+            {
+                if (!string.IsNullOrEmpty(p)) paths.Add(p);
+            }
+            
+            return paths.Distinct().Where(p => !string.IsNullOrWhiteSpace(p));
+        }
+
+        public event EventHandler? MonitoringStateReset;
+
+        /// <summary>
+        /// Core reset and scan logic shared by StartAsync and RefreshAsync.
+        /// </summary>
+        private async Task<IEnumerable<string>> CoreResetAndScanAsync(CancellationToken ct)
+        {
+            // 1. Reset all stateful services
+            _groupManager.ResetState();
+            _fileGroupMatcher.ResetState();
+            _folderTimestamps.Clear();
+            _imageCache.Clear();
+            _abnormalDetector.Reset();
+            
+            // FIRE EVENT: Signal UI to clear all data
+            MonitoringStateReset?.Invoke(this, EventArgs.Empty);
+            
+            // 2. Perform fresh scan
+            var result = await PerformInitialScanAsync(ct);
+            
+            if (!result.Success)
+            {
+                throw new InvalidOperationException($"Scan failed: {string.Join(", ", result.Errors)}");
+            }
+            
+            // 3. Return all known files for injection
+            return _groupManager.GetAllProcessedFilePaths();
+        }
+
         public async Task RefreshAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                _logger.LogInformation("Refreshing file groups");
-                
-                // Clear existing groups
-                _groupManager.Clear();
-                _folderTimestamps.Clear();
-                _imageCache.Clear();
-                // _eventProcessor.Reset(); // EventProcessor state is managed internally now
+                _logger.LogInformation("=== DEEP REFRESH START ===");
+                var refreshMessage = LocalizationManager.GetString("Log_Info_Refresh_Start");
+                _uiLog?.Invoke(LogSeverity.Info, "System", refreshMessage);
 
-                // Reset FileGroupMatcher state (group counter and consumed NIR keys)
-                _fileGroupMatcher.ResetState();
+                // 1. Stop everything
+                await _eventProcessor.StopAsync();
+                _fileWatcher.FileChanged -= OnFileChanged;
+                await _fileWatcher.StopWatchingAsync();
+                _logger.LogInformation("Stopped monitoring services for refresh");
 
-                // Perform new scan (works whether monitoring is active or not)
-                var result = await PerformInitialScanAsync(cancellationToken);
+                // 2. Reload Config explicitly
+                _currentConfig = _configManager.LoadConfiguration<ApplicationConfiguration>();
+                _logger.LogInformation("Configuration reloaded from disk");
                 
-                if (!result.Success)
+                // 3. Re-configure Matcher with new settings
+                _fileGroupMatcher.Configuration = new MatchingConfiguration
                 {
-                    OnMonitoringError($"Refresh failed: {string.Join(", ", result.Errors)}");
-                }
-
-                _logger.LogInformation("Refresh completed");
+                    Nir1Path = _currentConfig.MatchingSettings.Nir1Path,
+                    Normal1Path = _currentConfig.MatchingSettings.Normal1Path,
+                    Nir2Path = _currentConfig.MatchingSettings.Nir2Path,
+                    Normal2Path = _currentConfig.MatchingSettings.Normal2Path,
+                    Camera1Path = _currentConfig.MatchingSettings.Camera1Path,
+                    Camera2Path = _currentConfig.MatchingSettings.Camera2Path,
+                    Camera3Path = _currentConfig.MatchingSettings.Camera3Path,
+                    Camera4Path = _currentConfig.MatchingSettings.Camera4Path,
+                    Camera5Path = _currentConfig.MatchingSettings.Camera5Path,
+                    Camera6Path = _currentConfig.MatchingSettings.Camera6Path,
+                    DataSequenceSettings = _currentConfig.DataSequenceSettings,
+                    UseCameraSubfolderNormal = _currentConfig.MatchingSettings.UseCameraSubfolderNormal,
+                    UseCameraSubfolderNormal2 = _currentConfig.MatchingSettings.UseCameraSubfolderNormal2,
+                    UseFolderSuffix = _currentConfig.MatchingSettings.UseFolderSuffix
+                };
+                
+                // 4. Core Reset & Scan (Shared logic)
+                var knownFiles = await CoreResetAndScanAsync(cancellationToken); 
+                
+                // 5. DO NOT restart watcher - Refresh means "sync and stop"
+                // Unlike StartAsync, RefreshAsync is a read-only sync operation
+                _isMonitoring = false;
+                
+                _logger.LogInformation("=== DEEP REFRESH COMPLETE (Monitoring STOPPED) ===");
+                var completeMessage = LocalizationManager.GetString("Log_Info_Refresh_Complete");
+                _uiLog?.Invoke(LogSeverity.Info, "System", completeMessage);
             }
             catch (Exception ex)
             {
@@ -332,6 +424,8 @@ namespace ChronoView.Core.FileWatching
                 throw;
             }
         }
+
+        #endregion
 
         public async Task<OrchestrationResult> PerformInitialScanAsync(CancellationToken cancellationToken = default)
         {
@@ -505,10 +599,10 @@ namespace ChronoView.Core.FileWatching
         /// Create new group or update existing group based on file type and timestamp matching
         /// Now uses FileGroupMatcher for consistency with initial scan
         /// </summary>
-        private async Task<FileGroup?> CreateOrUpdateGroupAsync(string filePath, FileType fileType)
+        private async Task<FileGroup?> CreateOrUpdateGroupAsync(string filePath, FileType fileType, bool captureSuccess = true)
         {
             if (_currentConfig == null) return null;
-            return await _groupManager.CreateOrUpdateGroupAsync(filePath, fileType, _currentConfig);
+            return await _groupManager.CreateOrUpdateGroupAsync(filePath, fileType, _currentConfig, captureSuccess);
         }
 
         #endregion

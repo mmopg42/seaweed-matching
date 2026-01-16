@@ -44,6 +44,16 @@ public interface IConfigurationManager
     string ConfigurationFilePath { get; }
 
     /// <summary>
+    /// Gets the directory path where log files are stored.
+    /// </summary>
+    string LogsDirectory { get; }
+
+    /// <summary>
+    /// Gets the full path to the abnormal history file.
+    /// </summary>
+    string HistoryFilePath { get; }
+
+    /// <summary>
     /// Event raised when configuration changes are saved.
     /// </summary>
     event EventHandler<ConfigurationChangedEventArgs>? ConfigurationChanged;

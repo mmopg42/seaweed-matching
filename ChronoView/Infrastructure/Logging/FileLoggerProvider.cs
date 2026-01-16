@@ -70,24 +70,12 @@ namespace ChronoView.Infrastructure.Logging
             {
                 lock (_fileLock)
                 {
-                    // 전달받은 경로에서 기본 로그 디렉토리 추출
-                    // 예: "C:\Users\...\AppData\ChronoView\Logs\20250115\ChronoView_Debug_20250115.log"
-                    //     -> "C:\Users\...\AppData\ChronoView\Logs"
-                    var baseLogDir = Path.GetDirectoryName(Path.GetDirectoryName(_logFilePath));
-                    var fileName = Path.GetFileName(_logFilePath);
-                    
-                    // 파일명에서 기본 이름 추출 (ChronoView_Debug)
-                    var baseName = fileName.Substring(0, fileName.LastIndexOf('_'));
-                    
-                    // 오늘 날짜 폴더 경로 생성
-                    var today = DateTime.Now.ToString("yyyyMMdd");
-                    var todayDateFolder = Path.Combine(baseLogDir ?? "", today);
-                    
-                    // 오늘 날짜 폴더가 없으면 생성 (날짜 변경 시 자동 대응)
-                    Directory.CreateDirectory(todayDateFolder);
-                    
-                    // 오늘 날짜의 로그 파일 경로 생성
-                    var todayLogFile = Path.Combine(todayDateFolder, $"{baseName}_{today}.log");
+                    // Ensure the directory exists (safety measure)
+                    var logDir = Path.GetDirectoryName(_logFilePath);
+                    if (!string.IsNullOrEmpty(logDir))
+                    {
+                        Directory.CreateDirectory(logDir);
+                    }
                     
                     var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
                     var level = logLevel.ToString().ToUpper().PadRight(5);
@@ -100,7 +88,7 @@ namespace ChronoView.Infrastructure.Logging
                         logEntry += $"{Environment.NewLine}{exception}";
                     }
                     
-                    File.AppendAllText(todayLogFile, logEntry + Environment.NewLine);
+                    File.AppendAllText(_logFilePath, logEntry + Environment.NewLine);
                 }
             }
             catch

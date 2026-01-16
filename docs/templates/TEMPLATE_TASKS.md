@@ -1,4 +1,4 @@
-# Template: Tasks Document (05_tasks.md)
+# Template: Tasks Document (06_tasks.md)
 
 > **Purpose**: Provide ordered implementation checklist with verification steps.  
 > **Core Question**: "무슨 순서로 구현하나?" (In what order do we implement?)  
@@ -45,7 +45,7 @@ Update checkboxes and completion log as you work.
 Task: [Task Name]
 Created: [YYYY-MM-DD]
 Status: In Progress | Complete
-Depends On: 04_design.md
+Depends On: 05_design.md
 ---
 
 # [Task Name] - Implementation Tasks
@@ -267,10 +267,9 @@ go vet ./...
 - [ ] All tasks completed
 - [ ] All verifications pass
 - [ ] Success criteria met
-- [ ] Ready for 06_report.md
+- [ ] Ready for 07_report.md
 
-**Next Step**: 06_report.md
-```
+**Next Step**: 07_report.md
 
 ---
 
@@ -355,7 +354,7 @@ If a task will take more than an hour, split it into smaller tasks.
 Task: pdf_upload_feature
 Created: 2024-01-15
 Status: In Progress
-Depends On: 04_design.md
+Depends On: 05_design.md
 ---
 
 # PDF Upload Feature - Implementation Tasks
@@ -539,7 +538,7 @@ pytest tests/test_file_validator.py -v
 
 ---
 
-**Next Step**: Complete remaining tasks, then 06_report.md
+**Next Step**: Complete remaining tasks, then 07_report.md
 ```
 
 ---
@@ -547,7 +546,7 @@ pytest tests/test_file_validator.py -v
 ## 8. Checklist Before Starting Implementation
 
 ```markdown
-- [ ] 04_design.md is approved
+- [ ] 05_design.md is approved
 - [ ] All tasks have verification steps
 - [ ] Tasks are ordered by dependency
 - [ ] No task is larger than 1 hour
@@ -572,4 +571,4 @@ This document typically doesn't need approval before starting—its existence un
 
 ---
 
-**Next**: Implementation, then `06_report.md`
+**Next**: Implementation, then `07_report.md`

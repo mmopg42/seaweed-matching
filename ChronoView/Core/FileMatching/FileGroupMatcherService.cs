@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
+using ChronoView.Core.GroupIdGeneration;
 using ChronoView.Models;
 using ChronoView.UI.ViewModels;
 using Microsoft.Extensions.Logging;
@@ -15,15 +16,17 @@ namespace ChronoView.Core.FileMatching
     /// </summary>
     public class FileGroupMatcherService : IFileGroupMatcher
     {
-    private readonly HashSet<string> _consumedNirKeys;
-    private int _groupCounter;
-    private readonly ILogger<FileGroupMatcherService>? _logger;
-    private Action<LogSeverity, string, string>? _uiLog;
+        private readonly HashSet<string> _consumedNirKeys;
+        private int _groupCounter;
+        private readonly ILogger<FileGroupMatcherService>? _logger;
+        private readonly IGroupIdGenerator _idGenerator;
+        private Action<LogSeverity, string, string>? _uiLog;
 
         public MatchingConfiguration Configuration { get; set; }
 
-        public FileGroupMatcherService(ILogger<FileGroupMatcherService>? logger = null)
+        public FileGroupMatcherService(IGroupIdGenerator idGenerator, ILogger<FileGroupMatcherService>? logger = null)
         {
+            _idGenerator = idGenerator ?? throw new ArgumentNullException(nameof(idGenerator));
             _consumedNirKeys = new HashSet<string>();
             _groupCounter = 0;
             Configuration = new MatchingConfiguration();
@@ -51,6 +54,7 @@ namespace ChronoView.Core.FileMatching
         {
             _consumedNirKeys.Clear();
             _groupCounter = 0;
+            _idGenerator.Reset();
         }
 
         public void AddConsumedNirKey(string nirKey)
@@ -70,6 +74,7 @@ namespace ChronoView.Core.FileMatching
                     unmatchedFiles,
                     Configuration.DataSequenceSettings,
                     _consumedNirKeys,
+                    _idGenerator,
                     _logger,
                     _uiLog);
 

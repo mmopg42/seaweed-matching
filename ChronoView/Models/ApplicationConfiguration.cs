@@ -9,7 +9,7 @@ public class ApplicationConfiguration
     /// Base path for automatic path generation (e.g., "D:/Data").
     /// Used by PathManagementService.GeneratePathsFromDate().
     /// </summary>
-    public string BasePath { get; set; } = "D:/Data";
+    public string BasePath { get; set; } = "";
 
     /// <summary>
     /// Folder paths for monitoring and file operations.
@@ -60,12 +60,12 @@ public class ImageSettings
     /// <summary>
     /// Thumbnail width in pixels.
     /// </summary>
-    public int ThumbnailWidth { get; set; } = 200;
+    public int ThumbnailWidth { get; set; } = 120;
 
     /// <summary>
     /// Thumbnail height in pixels.
     /// </summary>
-    public int ThumbnailHeight { get; set; } = 150;
+    public int ThumbnailHeight { get; set; } = 90;
 
     /// <summary>
     /// JPEG quality for thumbnails (1-100).
@@ -115,9 +115,17 @@ public class MatchingSettings
     public bool EnableAbnormalDetection { get; set; } = true;
 
     /// <summary>
-    /// Z-score threshold for abnormal detection.
+    /// Absolute ratio difference threshold for abnormal detection.
+    /// If |CurrentRatio - MedianRatio| > Threshold, flag as abnormal.
+    /// Default: 0.3 (e.g., detects 1.33 vs 1.0 ratio difference).
     /// </summary>
-    public double ZScoreThreshold { get; set; } = 2.0;
+    public double AbnormalRatioThreshold { get; set; } = 0.1;
+
+    /// <summary>
+    /// Window size for abnormal detection history (per context).
+    /// Default: 40 samples.
+    /// </summary>
+    public int AbnormalDetectionWindowSize { get; set; } = 40;
 
     /// <summary>
     /// Support multiple monitoring lines.
@@ -141,20 +149,36 @@ public class MatchingSettings
 
     /// <summary>
     /// Maximum number of NIR-containing groups to move.
+    /// DEPRECATED: Use Line1Settings.MoveNir or Line2Settings.MoveNir instead.
     /// null = move all, 0 = exclude NIR groups, N = move max N NIR groups.
     /// </summary>
+    [Obsolete("Use Line1Settings.MoveNir or Line2Settings.MoveNir instead")]
     public int? MoveNir { get; set; } = null;
 
     /// <summary>
     /// Maximum number of total groups to move.
+    /// DEPRECATED: Use Line1Settings.MoveAllData or Line2Settings.MoveAllData instead.
     /// null = move all, 0 = skip move operation, N = move max N groups.
     /// </summary>
+    [Obsolete("Use Line1Settings.MoveAllData or Line2Settings.MoveAllData instead")]
     public int? MoveAllData { get; set; } = null;
 
     /// <summary>
     /// Sample name/subject for file operations.
+    /// DEPRECATED: Use Line1Settings.SampleName or Line2Settings.SampleName instead.
     /// </summary>
+    [Obsolete("Use Line1Settings.SampleName or Line2Settings.SampleName instead")]
     public string? SampleName { get; set; } = null;
+
+    /// <summary>
+    /// Line 1 specific sample move settings.
+    /// </summary>
+    public LineMoveSettings Line1Settings { get; set; } = new();
+
+    /// <summary>
+    /// Line 2 specific sample move settings.
+    /// </summary>
+    public LineMoveSettings Line2Settings { get; set; } = new();
 
     /// <summary>
     /// Use camera subfolder for Normal1 path.
@@ -166,9 +190,11 @@ public class MatchingSettings
     /// \u003c/summary\u003e
     public bool UseCameraSubfolderNormal2 { get; set; } = false;
 
-    /// \u003csummary\u003e
-    /// Use folder suffix in matching.
-    /// \u003c/summary\u003e
+    /// <summary>
+    /// Use folder suffix (_0/_1) to determine line number.
+    /// When true: Folders must end with _0 (Line 1) or _1 (Line 2).
+    /// When false: Line is determined by parent path (Normal1Path vs Normal2Path).
+    /// </summary>
     public bool UseFolderSuffix { get; set; } = false;
 
     // ============================================================
@@ -182,7 +208,8 @@ public class MatchingSettings
 
     /// <summary>
     /// Normal1 path for Line 1 monitoring.
-    /// Contains folders with _0 suffix (e.g., 20251204_143052_0/).
+    /// When UseFolderSuffix=true: Expects folders ending with _0 suffix.
+    /// When UseFolderSuffix=false: All folders in this path are treated as Line 1.
     /// </summary>
     public string Normal1Path { get; set; } = "";
 
@@ -212,7 +239,8 @@ public class MatchingSettings
 
     /// <summary>
     /// Normal2 path for Line 2 monitoring.
-    /// Contains folders with _1 suffix (e.g., 20251204_143052_1/).
+    /// When UseFolderSuffix=true: Expects folders ending with _1 suffix.
+    /// When UseFolderSuffix=false: All folders in this path are treated as Line 2.
     /// </summary>
     public string Normal2Path { get; set; } = "";
 
@@ -354,7 +382,7 @@ public class WorkflowSettings
     /// <summary>
     /// Polling interval in milliseconds.
     /// </summary>
-    public int PollingIntervalMs { get; set; } = 2000;
+    public int PollingIntervalMs { get; set; } = 200;
 
     /// <summary>
     /// Enable parallel event processing for improved throughput.
@@ -374,6 +402,13 @@ public class WorkflowSettings
     /// Default is 30 days. Set to 0 or less to disable.
     /// </summary>
     public int LogRetentionDays { get; set; } = 30;
+
+    /// <summary>
+    /// Use line-specific group ID sequences.
+    /// When true: Line 1 uses group_1_001, group_1_002... Line 2 uses group_2_001...
+    /// When false: Global sequence (group_001, group_002...) shared across lines.
+    /// </summary>
+    public bool UseLineSpecificGroupId { get; set; } = true;
 }
 
 /// <summary>
@@ -432,10 +467,7 @@ public class UISettings
     /// </summary>
     public int DataGridRowHeight { get; set; } = 100;
 
-    /// <summary>
-    /// Enable legacy UI mode.
-    /// </summary>
-    public bool LegacyUiMode { get; set; } = false;
+
 
     /// <summary>
     /// Show tooltips on hover.
@@ -445,12 +477,12 @@ public class UISettings
     /// <summary>
     /// NIR graph thumbnail width (pixels).
     /// </summary>
-    public int NirThumbnailWidth { get; set; } = 200;
+    public int NirThumbnailWidth { get; set; } = 120;
 
     /// <summary>
     /// NIR graph thumbnail height (pixels).
     /// </summary>
-    public int NirThumbnailHeight{ get; set; } = 150;
+    public int NirThumbnailHeight{ get; set; } = 90;
 
     /// <summary>
     /// NIR graph display width in DataGrid (pixels).
@@ -499,4 +531,29 @@ public class ExternalProgramSettings
     /// Destination path for NIR files that pass the filter criteria.
     /// </summary>
     public string Nir2FilterDestinationPath { get; set; } = "";
+}
+
+/// <summary>
+/// Per-line sample move settings.
+/// Contains settings for sample naming and move limits specific to each production line.
+/// </summary>
+public class LineMoveSettings
+{
+    /// <summary>
+    /// Sample name/subject for this line's file operations.
+    /// Used as folder name when moving files.
+    /// </summary>
+    public string? SampleName { get; set; } = null;
+
+    /// <summary>
+    /// Maximum number of NIR-containing groups to move for this line.
+    /// null = move all, 0 = exclude NIR groups, N = move max N NIR groups.
+    /// </summary>
+    public int? MoveNir { get; set; } = null;
+
+    /// <summary>
+    /// Maximum number of total groups to move for this line.
+    /// null = move all, 0 = skip move operation, N = move max N groups.
+    /// </summary>
+    public int? MoveAllData { get; set; } = null;
 }

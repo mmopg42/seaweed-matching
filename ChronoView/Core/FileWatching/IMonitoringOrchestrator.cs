@@ -47,6 +47,12 @@ namespace ChronoView.Core.FileWatching
         void SetUILog(Action<LogSeverity, string, string>? uiLog);
 
         /// <summary>
+        /// Fired when the monitoring state is fundamentally reset (e.g. during Refresh).
+        /// UI should subscribe to this to clear all data.
+        /// </summary>
+        event EventHandler MonitoringStateReset;
+
+        /// <summary>
         /// Event raised when a new file group is created
         /// </summary>
         event EventHandler<FileGroup> GroupCreated;

@@ -1,0 +1,18 @@
+{
+  "normal_stitched_original": {
+    "width": 1896,
+    "height": 2128
+  },
+  "cam1": {
+    "width": 850,
+    "height": 1000
+  },
+  "cam2": {
+    "width": 2048,
+    "height": 2300
+  },
+  "cam3": {
+    "width": 2048,
+    "height": 2300
+  }
+}

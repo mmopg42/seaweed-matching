@@ -66,32 +66,32 @@ public class ConfigurationCompletenessPropertyTests
         int nirWindow,
         int cameraWindow,
         int normalWindow,
-        double zScore,
+        double abnormalRatioThreshold,
         bool multiLine)
     {
         // Filter out invalid double values (NaN, Infinity)
-        if (double.IsNaN(zScore) || double.IsInfinity(zScore))
-            zScore = 2.0;
+        if (double.IsNaN(abnormalRatioThreshold) || double.IsInfinity(abnormalRatioThreshold))
+            abnormalRatioThreshold = 0.3;
 
         // Constrain to valid ranges
         nirWindow = Math.Clamp(nirWindow, 10, 3600);
         cameraWindow = Math.Clamp(cameraWindow, 10, 600);
         normalWindow = Math.Clamp(normalWindow, 10, 600);
-        zScore = Math.Clamp(zScore, 1.0, 5.0);
+        abnormalRatioThreshold = Math.Clamp(abnormalRatioThreshold, 0.01, 5.0);
 
         var settings = new MatchingSettings
         {
             NirTimeWindowSeconds = nirWindow,
             CameraTimeWindowSeconds = cameraWindow,
             NormalFolderTimeWindowSeconds = normalWindow,
-            ZScoreThreshold = zScore,
+            AbnormalRatioThreshold = abnormalRatioThreshold,
             LineMode = multiLine ? "separated" : "integrated"
         };
 
         Assert.True(settings.NirTimeWindowSeconds >= 0);
         Assert.True(settings.CameraTimeWindowSeconds >= 0);
         Assert.True(settings.NormalFolderTimeWindowSeconds >= 0);
-        Assert.True(settings.ZScoreThreshold > 0);
+        Assert.True(settings.AbnormalRatioThreshold > 0);
         Assert.True(settings.LineMode == "integrated" || settings.LineMode == "separated");
     }
 
@@ -193,7 +193,7 @@ public class ConfigurationCompletenessPropertyTests
             {
                 NirTimeWindowSeconds = -100, // Invalid
                 CameraTimeWindowSeconds = 60,
-                ZScoreThreshold = 2.0
+                AbnormalRatioThreshold = 0.3
             }
         };
 

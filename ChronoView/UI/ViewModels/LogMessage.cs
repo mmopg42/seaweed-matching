@@ -36,6 +36,11 @@ public class LogMessage
     public string Description => Message;
 
     /// <summary>
+    /// Production line number for filtering (1=Line1, 2=Line2, null=System/Common).
+    /// </summary>
+    public int? LineNumber { get; set; }
+
+    /// <summary>
     /// Creates a new log message.
     /// </summary>
     public LogMessage()

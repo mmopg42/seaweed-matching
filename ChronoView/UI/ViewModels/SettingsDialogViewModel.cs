@@ -48,7 +48,7 @@ public class SettingsDialogViewModel : ViewModelBase
     // All time-based matching is now controlled by DataSequenceSettings in the Sequence tab
 
     // Advanced options - UI
-    private bool _legacyUiMode;
+
     private bool _useFolderSuffix;
     private bool _showTooltips = true;
     private int _displayImageWidth = 120;
@@ -68,9 +68,26 @@ public class SettingsDialogViewModel : ViewModelBase
     // Log retention
     private int _logRetentionDays = 30;
 
+    // Group management
+    private bool _useLineSpecificGroupId = false;
+
+    // Abnormal Detection settings
+    private double _abnormalRatioThreshold = 0.3;
+    private int _abnormalDetectionWindowSize = 10;
+
+    // Data Sequence settings
     // Data Sequence settings
     private ObservableCollection<DataSequenceItemViewModel> _sequenceItems = new();
     private List<DataSequenceItemViewModel> _originalSequence = new(); // For cancel
+
+    // Tab Selection
+    private int _selectedTabIndex = 0;
+
+    public int SelectedTabIndex
+    {
+        get => _selectedTabIndex;
+        set => SetProperty(ref _selectedTabIndex, value);
+    }
 
     public SettingsDialogViewModel(
         IConfigurationManager configurationManager,
@@ -89,6 +106,7 @@ public class SettingsDialogViewModel : ViewModelBase
         BrowsePathCommand = new RelayCommand<string>(ExecuteBrowsePath);
         OpenFolderCommand = new RelayCommand<string>(ExecuteOpenFolder);
         BrowseExeCommand = new RelayCommand<string>(ExecuteBrowseExe);
+        ResetToDefaultsCommand = new RelayCommand(ExecuteResetToDefaults);
 
         // Load configuration
         LoadFromConfiguration();
@@ -216,11 +234,7 @@ public class SettingsDialogViewModel : ViewModelBase
     // All time-based matching properties removed - use Sequence tab for configuration
 
     // UI options
-    public bool LegacyUiMode
-    {
-        get => _legacyUiMode;
-        set => SetProperty(ref _legacyUiMode, value);
-    }
+
 
     public bool UseFolderSuffix
     {
@@ -296,11 +310,44 @@ public class SettingsDialogViewModel : ViewModelBase
         set => SetProperty(ref _isSeparatedMode, value);
     }
 
+    // Group management
+    public bool UseLineSpecificGroupId
+    {
+        get => _useLineSpecificGroupId;
+        set => SetProperty(ref _useLineSpecificGroupId, value);
+    }
+
+    // Abnormal Detection settings
+    public double AbnormalRatioThreshold
+    {
+        get => _abnormalRatioThreshold;
+        set => SetProperty(ref _abnormalRatioThreshold, value);
+    }
+
+    public int AbnormalDetectionWindowSize
+    {
+        get => _abnormalDetectionWindowSize;
+        set => SetProperty(ref _abnormalDetectionWindowSize, value);
+    }
+
     // Data Sequence settings
     public ObservableCollection<DataSequenceItemViewModel> SequenceItems
     {
         get => _sequenceItems;
         set => SetProperty(ref _sequenceItems, value);
+    }
+
+    public bool CompareToReferenceCamera
+    {
+        get => _configuration.DataSequenceSettings.CompareToReferenceCamera;
+        set
+        {
+            if (_configuration.DataSequenceSettings.CompareToReferenceCamera != value)
+            {
+                _configuration.DataSequenceSettings.CompareToReferenceCamera = value;
+                OnPropertyChanged();
+            }
+        }
     }
 
     #endregion
@@ -353,6 +400,7 @@ public class SettingsDialogViewModel : ViewModelBase
     public ICommand BrowsePathCommand { get; }
     public ICommand OpenFolderCommand { get; }
     public ICommand BrowseExeCommand { get; }
+    public ICommand ResetToDefaultsCommand { get; }
 
     /// <summary>
     /// Event raised when the dialog should be closed.
@@ -539,6 +587,61 @@ public class SettingsDialogViewModel : ViewModelBase
         }
     }
 
+    private void ExecuteResetToDefaults()
+    {
+        // 1. Save current path values before reset
+        var savedPaths = new
+        {
+            NirPath = this.NirPath,
+            Nir2Path = this.Nir2Path,
+            NormalPath = this.NormalPath,
+            Normal2Path = this.Normal2Path,
+            Camera1Path = this.Camera1Path,
+            Camera2Path = this.Camera2Path,
+            Camera3Path = this.Camera3Path,
+            Camera4Path = this.Camera4Path,
+            Camera5Path = this.Camera5Path,
+            Camera6Path = this.Camera6Path,
+            OutputPath = this.OutputPath,
+            DeleteQuarantinePath = this.DeleteQuarantinePath,
+            GeneralCameraProgramPath = this.GeneralCameraProgramPath,
+            Nir1ProgramPath = this.Nir1ProgramPath,
+            Nir2ProgramPath = this.Nir2ProgramPath,
+            Nir2FilterMonitorPath = this.Nir2FilterMonitorPath,
+            Nir2FilterDestinationPath = this.Nir2FilterDestinationPath
+        };
+        
+        // 2. Get default configuration and replace local instance
+        var defaultConfig = DefaultConfiguration.GetDefault();
+        _configuration = defaultConfig;
+        
+        // 3. Reload ViewModel properties from new configuration (resets all values)
+        LoadFromConfiguration();
+        
+        // 4. Restore saved paths
+        NirPath = savedPaths.NirPath;
+        Nir2Path = savedPaths.Nir2Path;
+        NormalPath = savedPaths.NormalPath;
+        Normal2Path = savedPaths.Normal2Path;
+        Camera1Path = savedPaths.Camera1Path;
+        Camera2Path = savedPaths.Camera2Path;
+        Camera3Path = savedPaths.Camera3Path;
+        Camera4Path = savedPaths.Camera4Path;
+        Camera5Path = savedPaths.Camera5Path;
+        Camera6Path = savedPaths.Camera6Path;
+        OutputPath = savedPaths.OutputPath;
+        DeleteQuarantinePath = savedPaths.DeleteQuarantinePath;
+        GeneralCameraProgramPath = savedPaths.GeneralCameraProgramPath;
+        Nir1ProgramPath = savedPaths.Nir1ProgramPath;
+        Nir2ProgramPath = savedPaths.Nir2ProgramPath;
+        Nir2FilterMonitorPath = savedPaths.Nir2FilterMonitorPath;
+        Nir2FilterDestinationPath = savedPaths.Nir2FilterDestinationPath;
+        
+        _logger.LogInformation("Configuration reset to defaults (paths preserved).");
+        WpfMessageBox.Show("Settings have been reset to default values.\nPath settings have been preserved.", 
+                           "Defaults Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
     #endregion
 
     #region Configuration Management
@@ -566,11 +669,6 @@ public class SettingsDialogViewModel : ViewModelBase
 
         // Quarantine path (soft delete)
         DeleteQuarantinePath = _configuration.WorkflowSettings.DeleteQuarantinePath;
-        if (string.IsNullOrWhiteSpace(DeleteQuarantinePath))
-        {
-            var basePath = string.IsNullOrWhiteSpace(_configuration.BasePath) ? "D:/Data" : _configuration.BasePath;
-            DeleteQuarantinePath = Path.Combine(basePath, "Trash");
-        }
 
         // Load advanced options
         UseDiskCache = _configuration.ImageSettings.EnableCaching;
@@ -591,7 +689,7 @@ public class SettingsDialogViewModel : ViewModelBase
         DisplayImageWidth = _configuration.UISettings.DisplayImageWidth;
         DisplayImageWidth = _configuration.UISettings.DisplayImageWidth;
         DisplayImageHeight = _configuration.UISettings.DisplayImageHeight;
-        LegacyUiMode = _configuration.UISettings.LegacyUiMode;
+
         ShowTooltips = _configuration.UISettings.ShowTooltips;
 
         // Load NIR graph settings
@@ -612,8 +710,18 @@ public class SettingsDialogViewModel : ViewModelBase
         Nir2FilterMonitorPath = _configuration.ExternalProgramSettings.Nir2FilterMonitorPath;
         Nir2FilterDestinationPath = _configuration.ExternalProgramSettings.Nir2FilterDestinationPath;
 
+        // Auto-update date in monitor path if pattern exists
+        Nir2FilterMonitorPath = UpdatePathWithCurrentDate(Nir2FilterMonitorPath);
+
         // Load Log retention settings
         LogRetentionDays = _configuration.WorkflowSettings.LogRetentionDays;
+
+        // Load Group management settings
+        UseLineSpecificGroupId = _configuration.WorkflowSettings.UseLineSpecificGroupId;
+
+        // Load Abnormal Detection settings
+        AbnormalRatioThreshold = _configuration.MatchingSettings.AbnormalRatioThreshold;
+        AbnormalDetectionWindowSize = _configuration.MatchingSettings.AbnormalDetectionWindowSize;
     }
 
     /// <summary>
@@ -666,7 +774,7 @@ public class SettingsDialogViewModel : ViewModelBase
         // Save UI settings
         _configuration.UISettings.DisplayImageWidth = DisplayImageWidth;
         _configuration.UISettings.DisplayImageHeight = DisplayImageHeight;
-        _configuration.UISettings.LegacyUiMode = LegacyUiMode;
+
         _configuration.UISettings.ShowTooltips = ShowTooltips;
 
         // Save NIR graph settings
@@ -689,6 +797,13 @@ public class SettingsDialogViewModel : ViewModelBase
 
         // Save Log retention settings
         _configuration.WorkflowSettings.LogRetentionDays = LogRetentionDays;
+
+        // Save Group management settings
+        _configuration.WorkflowSettings.UseLineSpecificGroupId = UseLineSpecificGroupId;
+
+        // Save Abnormal Detection settings
+        _configuration.MatchingSettings.AbnormalRatioThreshold = AbnormalRatioThreshold;
+        _configuration.MatchingSettings.AbnormalDetectionWindowSize = AbnormalDetectionWindowSize;
 
         // Persist to disk
         try 
@@ -759,20 +874,21 @@ public class SettingsDialogViewModel : ViewModelBase
     /// </summary>
     private void SaveSequenceSettings()
     {
-        var sequenceSettings = new DataSequenceSettings
+        // Build new sequence list from ViewModel
+        var newSequence = SequenceItems.Select(vm => new DataSequenceItem
         {
-            Sequence = SequenceItems.Select(vm => new DataSequenceItem
-            {
-                Type = vm.Type,
-                Order = vm.Order,
-                MinDelaySeconds = vm.MinDelay,
-                MaxDelaySeconds = vm.MaxDelay,
-                Enabled = vm.Enabled
-            }).ToList()
-        };
+            Type = vm.Type,
+            Order = vm.Order,
+            MinDelaySeconds = vm.MinDelay,
+            MaxDelaySeconds = vm.MaxDelay,
+            Enabled = vm.Enabled
+        }).ToList();
+
+        // Update existing object (preserves other properties like CompareToReferenceCamera)
+        _configuration.DataSequenceSettings.Sequence = newSequence;
 
         // Validate
-        if (!sequenceSettings.Validate(out var errors))
+        if (!_configuration.DataSequenceSettings.Validate(out var errors))
         {
             var errorMessage = string.Join("\n", errors);
             _logger.LogWarning("Data sequence validation failed: {Errors}", errorMessage);
@@ -780,9 +896,37 @@ public class SettingsDialogViewModel : ViewModelBase
             return;
         }
 
-        _configuration.DataSequenceSettings = sequenceSettings;
         _logger.LogInformation("Data sequence settings saved");
     }
+
+    /// <summary>
+    /// Updates the date portion of the path to current date if it matches the pattern YYYY/MM/DD using Regex.
+    /// </summary>
+    private string UpdatePathWithCurrentDate(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return path;
+
+        try
+        {
+            // Pattern: YYYY/MM/DD or YYYY\MM\DD
+            var regex = new System.Text.RegularExpressions.Regex(@"\d{4}[\\/]\d{2}[\\/]\d{2}");
+            var match = regex.Match(path);
+
+            if (match.Success)
+            {
+                // Use double backslash in verbatim string - it becomes a single literal backslash in format output
+                var currentDate = DateTime.Now.ToString(@"yyyy\\MM\\dd"); 
+                return regex.Replace(path, currentDate);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error auto-updating date in path: {Path}", path);
+        }
+
+        return path;
+    }
+
 
     /// <summary>
     /// Apply a preset configuration

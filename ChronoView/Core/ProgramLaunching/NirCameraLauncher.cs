@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using ChronoView.Models;
 using ChronoView.Core.Configuration;
+using ChronoView.Helpers;
 
 namespace ChronoView.Core.ProgramLaunching;
 
@@ -39,7 +40,70 @@ public class NirCameraLauncher : IDisposable
     public bool IsActive => _process != null && !_process.HasExited;
 
     /// <summary>
-    /// NIR Camera 1 프로그램 실행
+    /// 현재 관리 중인 프로세스 객체
+    /// </summary>
+    public Process? CurrentProcess => _process;
+
+    /// <summary>
+    /// 현재 설정된 경로의 프로그램이 실행 중인지 확인하고 상태 동기화
+    /// </summary>
+    public async Task CheckStatusAsync()
+    {
+        try
+        {
+            var config = _configManager.LoadConfiguration<ApplicationConfiguration>();
+            var programPath = config?.ExternalProgramSettings?.Nir1ProgramPath;
+
+            if (string.IsNullOrWhiteSpace(programPath))
+            {
+                StatusChanged?.Invoke(this, false);
+                return;
+            }
+
+            var existingProcess = await Task.Run(() => WindowActivationHelper.FindExistingProcess(programPath));
+            
+            if (existingProcess != null && !existingProcess.HasExited)
+            {
+                _process = existingProcess;
+                _logger.LogInformation("NIR Camera 1 process detected during sync (PID: {ProcessId})", _process.Id);
+                StatusChanged?.Invoke(this, true);
+                StartMonitoring();
+            }
+            else
+            {
+                StatusChanged?.Invoke(this, false);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to check status for NIR Camera 1");
+        }
+    }
+
+    /// <summary>
+    /// 프로그램 종료
+    /// </summary>
+    public async Task TerminateAsync()
+    {
+        if (_process == null || _process.HasExited)
+            return;
+
+        try
+        {
+            _logger.LogInformation("Terminating NIR Camera 1 (PID: {ProcessId})", _process.Id);
+            _process.Kill(true); // Recursive kill
+            await _process.WaitForExitAsync();
+            StatusChanged?.Invoke(this, false);
+            _logger.LogInformation("NIR Camera 1 terminated by user");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to terminate NIR Camera 1");
+        }
+    }
+
+    /// <summary>
+    /// NIR Camera 1 프로그램 실행 또는 이미 실행 중인 경우 활성화
     /// </summary>
     /// <returns>성공 여부와 메시지를 포함한 결과</returns>
     public async Task<(bool Success, string Message)> LaunchAsync()
@@ -68,7 +132,19 @@ public class NirCameraLauncher : IDisposable
                 return (false, msg);
             }
 
-            // 프로그램 실행 (Normal 윈도우 상태로)
+            // 이미 실행 중인 프로세스 검색
+            var existingProcess = WindowActivationHelper.FindExistingProcess(programPath);
+            if (existingProcess != null && !existingProcess.HasExited)
+            {
+                _process = existingProcess;
+                _logger.LogInformation("Existing {ProgramName} process found (PID: {ProcessId}), activating...", programName, existingProcess.Id);
+                WindowActivationHelper.ActivateProcessWindow(_process);
+                StatusChanged?.Invoke(this, true);
+                StartMonitoring();
+                return (true, $"{programName} activated");
+            }
+
+            // 실행 중이 아니면 새로 실행
             var process = await Task.Run(() =>
             {
                 var startInfo = new ProcessStartInfo
@@ -82,6 +158,9 @@ public class NirCameraLauncher : IDisposable
             if (process != null)
             {
                 _process = process;
+
+                // Wait for window to appear (hybrid: detection + min delay)
+                await _process.WaitForWindowAsync(minDurationMs: 1000, timeoutMs: 10000);
 
                 // 상태를 Active로 변경
                 StatusChanged?.Invoke(this, true);

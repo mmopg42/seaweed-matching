@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ChronoView.Core.FileMatching;
 using ChronoView.Models;
+using ChronoView.Tests.TestHelpers;
 using Xunit;
 
 namespace ChronoView.Tests.Core.FileMatching
@@ -64,7 +65,7 @@ namespace ChronoView.Tests.Core.FileMatching
             }
             unmatchedFiles.NormalFolders["normal2"] = normalFolders2;
 
-            var matcher = new FileGroupMatcherService();
+            var matcher = FileMatchingTestHelper.CreateMatcher();
 
             // Act
             // Act
@@ -121,7 +122,7 @@ namespace ChronoView.Tests.Core.FileMatching
                 { $"C{line2Time.AddSeconds(5):yyyyMMdd_HHmmss}", $@"C:\test\normal2\C{line2Time.AddSeconds(5):yyyyMMdd_HHmmss}" }
             };
 
-            var matcher = new FileGroupMatcherService();
+            var matcher = FileMatchingTestHelper.CreateMatcher();
 
             // Act
             // Act
@@ -179,7 +180,7 @@ namespace ChronoView.Tests.Core.FileMatching
                 }
             };
 
-            var matcher = new FileGroupMatcherService();
+            var matcher = FileMatchingTestHelper.CreateMatcher();
 
             // Act
             // Act
@@ -241,7 +242,7 @@ namespace ChronoView.Tests.Core.FileMatching
                 { $"C{line2Time:yyyyMMdd_HHmmss}", $@"C:\test\normal2\C{line2Time:yyyyMMdd_HHmmss}" }
             };
 
-            var matcher = new FileGroupMatcherService();
+            var matcher = FileMatchingTestHelper.CreateMatcher();
 
             // Act
             // Act
@@ -283,7 +284,7 @@ namespace ChronoView.Tests.Core.FileMatching
             unmatchedFiles.NirFiles["nir2"] = new Dictionary<string, string>();
             unmatchedFiles.NormalFolders["normal2"] = new Dictionary<string, string>();
 
-            var matcher = new FileGroupMatcherService();
+            var matcher = FileMatchingTestHelper.CreateMatcher();
 
             // Act
             // Act
@@ -317,7 +318,7 @@ namespace ChronoView.Tests.Core.FileMatching
                 { $"C{baseTime.AddSeconds(30):yyyyMMdd_HHmmss}", $@"C:\test\normal2\C{baseTime.AddSeconds(30):yyyyMMdd_HHmmss}" }
             };
 
-            var matcher = new FileGroupMatcherService();
+            var matcher = FileMatchingTestHelper.CreateMatcher();
 
             // Act
             // Act

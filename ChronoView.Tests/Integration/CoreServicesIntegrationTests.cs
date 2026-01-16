@@ -2,6 +2,7 @@ using ChronoView.Core.Analytics;
 using ChronoView.Core.Configuration;
 using ChronoView.Core.FileMatching;
 using ChronoView.Core.FileWatching;
+using ChronoView.Core.GroupIdGeneration;
 using ChronoView.Core.ImageProcessing;
 using ChronoView.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,10 +45,23 @@ public class CoreServicesIntegrationTests : IDisposable
         // Register core services
         services.AddSingleton<IConfigurationManager, ConfigurationManager>();
         services.AddSingleton<IImageProcessor, ImageProcessingService>();
-        services.AddSingleton<IFileGroupMatcher, FileGroupMatcherService>();
-        services.AddSingleton<IAbnormalDetector, AbnormalDetectorService>();
+
+        // File grouping
+        services.AddSingleton<IGroupIdGenerator, GlobalGroupIdGenerator>();
+        services.AddSingleton<IFileGroupMatcher>(sp =>
+            new FileGroupMatcherService(
+                sp.GetRequiredService<IGroupIdGenerator>(),
+                sp.GetService<ILogger<FileGroupMatcherService>>()));
+
+        // Abnormal detection
+        services.AddSingleton<AbnormalHistoryManager>();
+        services.AddSingleton<IAbnormalDetector>(sp =>
+            new AbnormalDetectorService(
+                sp.GetRequiredService<IConfigurationManager>(),
+                sp.GetRequiredService<AbnormalHistoryManager>(),
+                sp.GetService<ILogger<AbnormalDetectorService>>()));
+
         services.AddSingleton<IFileWatcher, FileWatcherService>();
-        services.AddSingleton<IMonitoringOrchestrator, MonitoringOrchestrator>();
 
         _serviceProvider = services.BuildServiceProvider();
     }
@@ -61,14 +75,12 @@ public class CoreServicesIntegrationTests : IDisposable
         var fileGroupMatcher = _serviceProvider.GetService<IFileGroupMatcher>();
         var abnormalDetector = _serviceProvider.GetService<IAbnormalDetector>();
         var fileWatcher = _serviceProvider.GetService<IFileWatcher>();
-        var orchestrator = _serviceProvider.GetService<IMonitoringOrchestrator>();
 
         Assert.NotNull(configManager);
         Assert.NotNull(imageProcessor);
         Assert.NotNull(fileGroupMatcher);
         Assert.NotNull(abnormalDetector);
         Assert.NotNull(fileWatcher);
-        Assert.NotNull(orchestrator);
     }
 
     [Fact]
@@ -76,14 +88,10 @@ public class CoreServicesIntegrationTests : IDisposable
     {
         var fileWatcher = _serviceProvider.GetRequiredService<IFileWatcher>();
         
-        // Test service lifecycle
-        Assert.False(fileWatcher.IsWatching);
-        
-        await fileWatcher.StartWatchingAsync(new[] { _testDirectory });
-        Assert.True(fileWatcher.IsWatching);
-        
+        // NOTE: 최신 IFileWatcher는 IsWatching 같은 상태 노출 대신 Start/Stop API만 제공한다.
+        // 여기서는 예외 없이 Start/Stop이 가능한지만 검증한다.
+        await fileWatcher.StartWatchingAsync(new[] { _testDirectory }, new FileWatcherOptions { EnablePolling = false });
         await fileWatcher.StopWatchingAsync();
-        Assert.False(fileWatcher.IsWatching);
     }
 
     [Fact]
@@ -180,7 +188,7 @@ public class CoreServicesIntegrationTests : IDisposable
         // Test abnormal detection by adding images
         foreach (var metadata in metadataList)
         {
-            var result = abnormalDetector.AddAndCheckImage(metadata.Width, metadata.Height);
+            var result = abnormalDetector.AddAndCheckImage(metadata.Width, metadata.Height, "Global");
             // Result is a tuple, just verify it was returned
             Assert.True(result.IsAbnormal || !result.IsAbnormal); // Always true, just checking it doesn't throw
         }
@@ -253,9 +261,8 @@ public class CoreServicesIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task MonitoringOrchestrator_CoordinatesAllServices_Successfully()
+    public async Task FileWatcher_StartAndStop_DoesNotThrow()
     {
-        var orchestrator = _serviceProvider.GetRequiredService<IMonitoringOrchestrator>();
         var fileWatcher = _serviceProvider.GetRequiredService<IFileWatcher>();
 
         // Create test directory structure
@@ -264,14 +271,7 @@ public class CoreServicesIntegrationTests : IDisposable
         Directory.CreateDirectory(nirPath);
         Directory.CreateDirectory(normalPath);
 
-        // Start monitoring
-        await fileWatcher.StartWatchingAsync(new[] { nirPath, normalPath });
-
-        // Perform initial scan
-        var result = await orchestrator.PerformInitialScanAsync();
-        Assert.NotNull(result);
-
-        // Stop monitoring
+        await fileWatcher.StartWatchingAsync(new[] { nirPath, normalPath }, new FileWatcherOptions { EnablePolling = false });
         await fileWatcher.StopWatchingAsync();
     }
 

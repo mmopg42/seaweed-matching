@@ -10,6 +10,7 @@ using ChronoView.Models;
 using ChronoView.Core.Configuration;
 using ChronoView.Core.ProgramLaunching;
 using ChronoView.Core.Nir;
+using ChronoView.Core.Localization;
 
 namespace ChronoView.UI.ViewModels;
 
@@ -25,11 +26,10 @@ public class SetupWindowViewModel : ViewModelBase
     private readonly GeneralCameraLauncher? _generalCameraLauncher;
     private readonly NirCameraLauncher? _nirCameraLauncher;
     private readonly Nir2CameraLauncher? _nir2CameraLauncher;
+    private readonly NirFilteringService? _nirFilteringService;
     
-    private string _statusMessage = string.Empty;
-    private Visibility _statusVisibility = Visibility.Collapsed;
-    private string _nir2FilteringStatus = "Deactivated";
-    private System.Windows.Media.Brush _nir2FilteringForeground = new SolidColorBrush(Colors.Red);
+    private string _nir2FilteringStatus = LocalizationManager.GetString("Status_Deactivated");
+    private bool _isNir2FilteringBusy;
 
     public SetupWindowViewModel()
     {
@@ -37,9 +37,12 @@ public class SetupWindowViewModel : ViewModelBase
         LaunchGeneralCameraCommand = new RelayCommand(async () => await ExecuteGeneralCameraLaunchAsync());
         LaunchNir1CameraCommand = new RelayCommand(async () => await ExecuteNir1CameraLaunchAsync());
         LaunchNir2CameraCommand = new RelayCommand(async () => await ExecuteNir2CameraLaunchAsync());
-        ToggleNirFilteringCommand = new RelayCommand(async () => await ExecuteToggleNirFilteringAsync());
+        ToggleNirFilteringCommand = new RelayCommand(async () => await ExecuteToggleNirFilteringAsync(), () => !IsNir2FilteringBusy);
         StartCommand = new RelayCommand(OnStart);
         OpenSettingsCommand = new RelayCommand(OnOpenSettings);
+
+        // Design-time friendly default
+        UpdateNir2FilteringStatus();
     }
 
     public SetupWindowViewModel(
@@ -48,7 +51,8 @@ public class SetupWindowViewModel : ViewModelBase
         IServiceProvider serviceProvider,
         GeneralCameraLauncher generalCameraLauncher,
         NirCameraLauncher nirCameraLauncher,
-        Nir2CameraLauncher nir2CameraLauncher)
+        Nir2CameraLauncher nir2CameraLauncher,
+        NirFilteringService nirFilteringService)
     {
         _logger = logger;
         _config = config;
@@ -56,17 +60,29 @@ public class SetupWindowViewModel : ViewModelBase
         _generalCameraLauncher = generalCameraLauncher;
         _nirCameraLauncher = nirCameraLauncher;
         _nir2CameraLauncher = nir2CameraLauncher;
+        _nirFilteringService = nirFilteringService;
 
         _logger.LogInformation("SetupWindowViewModel constructor called");
 
         LaunchGeneralCameraCommand = new RelayCommand(async () => await ExecuteGeneralCameraLaunchAsync());
         LaunchNir1CameraCommand = new RelayCommand(async () => await ExecuteNir1CameraLaunchAsync());
         LaunchNir2CameraCommand = new RelayCommand(async () => await ExecuteNir2CameraLaunchAsync());
-        ToggleNirFilteringCommand = new RelayCommand(async () => await ExecuteToggleNirFilteringAsync());
+        ToggleNirFilteringCommand = new RelayCommand(async () => await ExecuteToggleNirFilteringAsync(), () => !IsNir2FilteringBusy);
         StartCommand = new RelayCommand(OnStart);
         OpenSettingsCommand = new RelayCommand(OnOpenSettings);
 
+
         _logger.LogInformation("SetupWindowViewModel initialized successfully");
+
+        // Keep UI in sync with service state (and clear busy flag on external state changes)
+        _nirFilteringService.StatusChanged += (_, __) =>
+        {
+            IsNir2FilteringBusy = false;
+            UpdateNir2FilteringStatus();
+        };
+
+        // Sync initial UI state with service
+        UpdateNir2FilteringStatus();
     }
 
 
@@ -80,111 +96,65 @@ public class SetupWindowViewModel : ViewModelBase
 
     public bool StartClicked { get; private set; }
 
-    public string StatusMessage
-    {
-        get => _statusMessage;
-        set => SetProperty(ref _statusMessage, value);
-    }
-
-    public Visibility StatusVisibility
-    {
-        get => _statusVisibility;
-        set => SetProperty(ref _statusVisibility, value);
-    }
-
     public string Nir2FilteringStatus
     {
         get => _nir2FilteringStatus;
         set => SetProperty(ref _nir2FilteringStatus, value);
     }
 
-    public System.Windows.Media.Brush Nir2FilteringForeground
+    public bool IsNir2FilteringBusy
     {
-        get => _nir2FilteringForeground;
-        set => SetProperty(ref _nir2FilteringForeground, value);
+        get => _isNir2FilteringBusy;
+        private set
+        {
+            if (SetProperty(ref _isNir2FilteringBusy, value))
+            {
+                // Ensure button enabled state updates immediately
+                (ToggleNirFilteringCommand as RelayCommand)?.RaiseCanExecuteChanged();
+            }
+        }
     }
 
     private async Task ExecuteGeneralCameraLaunchAsync()
     {
         if (_generalCameraLauncher == null)
         {
-            ShowStatus("General Camera launcher not initialized");
+            _logger?.LogWarning("General Camera launcher not initialized");
             return;
         }
 
-        ShowStatus("Launching General Camera...");
-        
         var (success, message) = await _generalCameraLauncher.LaunchAsync();
-        
-        ShowStatus(message);
-        
-        // 3초 후 자동 숨김 (성공한 경우만)
-        if (success)
-        {
-            await Task.Delay(3000);
-            if (StatusMessage == message)
-            {
-                StatusVisibility = Visibility.Collapsed;
-            }
-        }
+
+        if (success) _logger?.LogInformation("General camera launch: {Message}", message);
+        else _logger?.LogWarning("General camera launch failed: {Message}", message);
     }
 
     private async Task ExecuteNir1CameraLaunchAsync()
     {
         if (_nirCameraLauncher == null)
         {
-            ShowStatus("NIR Camera 1 launcher not initialized");
+            _logger?.LogWarning("NIR Camera 1 launcher not initialized");
             return;
         }
 
-        ShowStatus("Launching NIR Camera 1...");
-        
         var (success, message) = await _nirCameraLauncher.LaunchAsync();
-        
-        ShowStatus(message);
-        
-        // 3초 후 자동 숨김 (성공한 경우만)
-        if (success)
-        {
-            await Task.Delay(3000);
-            if (StatusMessage == message)
-            {
-                StatusVisibility = Visibility.Collapsed;
-            }
-        }
+
+        if (success) _logger?.LogInformation("NIR Camera 1 launch: {Message}", message);
+        else _logger?.LogWarning("NIR Camera 1 launch failed: {Message}", message);
     }
 
     private async Task ExecuteNir2CameraLaunchAsync()
     {
         if (_nir2CameraLauncher == null)
         {
-            ShowStatus("NIR Camera 2 launcher not initialized");
+            _logger?.LogWarning("NIR Camera 2 launcher not initialized");
             return;
         }
 
-        ShowStatus("Launching NIR Camera 2...");
-        
         var (success, message) = await _nir2CameraLauncher.LaunchAsync();
-        
-        ShowStatus(message);
-        
-        // 3초 후 자동 숨김 (성공한 경우만)
-        if (success)
-        {
-            await Task.Delay(3000);
-            if (StatusMessage == message)
-            {
-                StatusVisibility = Visibility.Collapsed;
-            }
-        }
-    }
 
-
-
-    private void ShowStatus(string message)
-    {
-        StatusMessage = message;
-        StatusVisibility = Visibility.Visible;
+        if (success) _logger?.LogInformation("NIR Camera 2 launch: {Message}", message);
+        else _logger?.LogWarning("NIR Camera 2 launch failed: {Message}", message);
     }
 
     private void OnStart()
@@ -205,35 +175,34 @@ public class SetupWindowViewModel : ViewModelBase
 
     private async Task ExecuteToggleNirFilteringAsync()
     {
-        if (_nir2CameraLauncher == null)
+        if (_nirFilteringService == null)
         {
-            ShowStatus("NIR2 Camera launcher not initialized");
+            _logger?.LogWarning("NIR Filtering Service not initialized");
             return;
         }
 
         try
         {
-            if (_nir2CameraLauncher.IsFilteringActive)
+            if (IsNir2FilteringBusy)
+                return;
+
+            if (_nirFilteringService.IsFilteringActive)
             {
                 // 필터링 중지
-                _nir2CameraLauncher.StopFiltering();
-                ShowStatus("NIR filtering stopped");
+                _nirFilteringService.StopFiltering();
+                UpdateNir2FilteringStatus();
             }
             else
             {
                 // 필터링 시작
-                ShowStatus("Starting NIR filtering...");
-                var (success, message) = await _nir2CameraLauncher.StartFilteringAsync();
-                ShowStatus(message);
-                
-                if (success)
-                {
-                    await Task.Delay(2000);
-                    if (StatusMessage == message)
-                    {
-                        StatusVisibility = Visibility.Collapsed;
-                    }
-                }
+                IsNir2FilteringBusy = true;
+                UpdateNir2FilteringStatus();
+                var (success, message) = await _nirFilteringService.StartFilteringAsync();
+
+                if (success) _logger?.LogInformation("NIR filtering started: {Message}", message);
+                else _logger?.LogWarning("NIR filtering start failed: {Message}", message);
+
+                IsNir2FilteringBusy = false;
             }
             
             // 상태 업데이트
@@ -242,28 +211,26 @@ public class SetupWindowViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to toggle NIR filtering");
-            ShowStatus($"Error toggling NIR filtering: {ex.Message}");
+            IsNir2FilteringBusy = false;
+            UpdateNir2FilteringStatus();
         }
     }
 
     private void UpdateNir2FilteringStatus()
     {
-        if (_nir2CameraLauncher == null)
+        if (_nirFilteringService == null)
             return;
 
-        var greenBrush = new SolidColorBrush(Colors.Green);
-        var redBrush = new SolidColorBrush(Colors.Red);
+        // 3-state display: Deactivated / Processing / Activated (text stays white per UI design)
+        if (IsNir2FilteringBusy)
+        {
+            Nir2FilteringStatus = LocalizationManager.GetString("Status_Processing");
+            return;
+        }
 
-        if (_nir2CameraLauncher.IsFilteringActive)
-        {
-            Nir2FilteringStatus = "Activated";
-            Nir2FilteringForeground = greenBrush;
-        }
-        else
-        {
-            Nir2FilteringStatus = "Deactivated";
-            Nir2FilteringForeground = redBrush;
-        }
+        Nir2FilteringStatus = _nirFilteringService.IsFilteringActive
+            ? LocalizationManager.GetString("Status_Activated")
+            : LocalizationManager.GetString("Status_Deactivated");
     }
 
     private void OnOpenSettings()
@@ -281,7 +248,10 @@ public class SetupWindowViewModel : ViewModelBase
             // Create SettingsDialogViewModel using DI
             var configManager = _serviceProvider.GetRequiredService<IConfigurationManager>();
             var settingsLogger = _serviceProvider.GetRequiredService<ILogger<SettingsDialogViewModel>>();
-            var viewModel = new SettingsDialogViewModel(configManager, settingsLogger);
+            var viewModel = new SettingsDialogViewModel(configManager, settingsLogger)
+            {
+                SelectedTabIndex = 4 // Open "External Programs" tab by default from Setup screen
+            };
 
             var settingsDialog = new Views.SettingsDialog(viewModel);
             settingsDialog.Owner = System.Windows.Application.Current.Windows.OfType<Window>()
@@ -293,7 +263,6 @@ public class SetupWindowViewModel : ViewModelBase
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Failed to open settings dialog");
-            ShowStatus($"Error opening settings: {ex.Message}");
         }
     }
 }

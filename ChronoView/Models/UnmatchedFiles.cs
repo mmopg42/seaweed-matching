@@ -8,13 +8,13 @@ namespace ChronoView.Models;
 public class UnmatchedFiles : IEquatable<UnmatchedFiles>
 {
     /// <summary>
-    /// NIR files awaiting matching, organized by line (nir, nir2), then keyed by NIR identifier.
+    /// NIR files awaiting matching, organized by line (nir1, nir2), then keyed by NIR identifier.
     /// </summary>
     [JsonPropertyName("nir_files")]
     public Dictionary<string, Dictionary<string, string>> NirFiles { get; set; } = new();
 
     /// <summary>
-    /// Normal folders awaiting matching, organized by line (normal, normal2), then keyed by folder identifier.
+    /// Normal folders awaiting matching, organized by line (normal1, normal2), then keyed by folder identifier.
     /// </summary>
     [JsonPropertyName("normal_folders")]
     public Dictionary<string, Dictionary<string, string>> NormalFolders { get; set; } = new();

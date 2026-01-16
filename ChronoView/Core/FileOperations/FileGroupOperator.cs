@@ -43,7 +43,14 @@ public class FileGroupOperator : IFileGroupOperator
                 var role = schema == PathSchema.MoveSchema ? "Nir" : (group.LineNumber == 1 ? "nir1" : "nir2");
                 var destDir = BuildPath(targetBase, group, role, schema, subject);
                 _logger.LogInformation("Moving NIR files to: {Dest}", destDir);
-                foreach (var file in GetNirFileSet(group.NirFilePath)) await MoveFileAtomicAsync(file, Path.Combine(destDir, Path.GetFileName(file)), movedItems, ct);
+                foreach (var file in GetNirFileSet(group.NirFilePath)) {
+                    // Camera 파일과 동일한 패턴: 존재 확인 후 이동
+                    if (string.IsNullOrEmpty(file) || !File.Exists(file)) {
+                        _logger.LogWarning("NIR file not found, skipping: {File}", file);
+                        continue;
+                    }
+                    await MoveFileAtomicAsync(file, Path.Combine(destDir, Path.GetFileName(file)), movedItems, ct);
+                }
             }
             foreach (var cam in group.CameraFiles) {
                 if (string.IsNullOrEmpty(cam.Value) || !File.Exists(cam.Value)) continue;
@@ -65,26 +72,42 @@ public class FileGroupOperator : IFileGroupOperator
     {
         var result = new OperationResult();
         var movedItems = new List<(string source, string dest, bool isDirectory)>();
+        _logger.LogInformation("DeleteComponentsAsync started: GroupId={GroupId}, Components={Components}, QuarantinePath={QuarantinePath}", group.GroupId, string.Join(",", components), quarantinePath);
         try {
             foreach (var comp in components) {
                 if (comp == "Normal" && !string.IsNullOrEmpty(group.NormalFolder) && Directory.Exists(group.NormalFolder)) {
                     var role = group.LineNumber == 1 ? "일반1" : "일반2";
                     var folderName = Path.GetFileName(group.NormalFolder);
-                    await MoveDirectoryAtomicAsync(group.NormalFolder, BuildPath(quarantinePath, group, role, PathSchema.QuarantineSchema, subject, folderName), movedItems, ct);
+                    var destPath = BuildPath(quarantinePath, group, role, PathSchema.QuarantineSchema, subject, folderName);
+                    _logger.LogDebug("Moving Normal folder: {Src} -> {Dest}", group.NormalFolder, destPath);
+                    await MoveDirectoryAtomicAsync(group.NormalFolder, destPath, movedItems, ct);
                 } else if (comp == "Nir" && group.HasNir && !string.IsNullOrEmpty(group.NirFilePath)) {
                     var role = group.LineNumber == 1 ? "nir1" : "nir2";
                     var destDir = BuildPath(quarantinePath, group, role, PathSchema.QuarantineSchema, subject);
-                    foreach (var file in GetNirFileSet(group.NirFilePath)) await MoveFileAtomicAsync(file, Path.Combine(destDir, Path.GetFileName(file)), movedItems, ct);
+                    foreach (var file in GetNirFileSet(group.NirFilePath)) {
+                        // Camera 파일과 동일한 패턴: 존재 확인 후 이동
+                        if (string.IsNullOrEmpty(file) || !File.Exists(file)) {
+                            _logger.LogWarning("NIR file not found during delete, skipping: {File}", file);
+                            continue;
+                        }
+                        var destFile = Path.Combine(destDir, Path.GetFileName(file));
+                        _logger.LogDebug("Moving NIR file: {Src} -> {Dest}", file, destFile);
+                        await MoveFileAtomicAsync(file, destFile, movedItems, ct);
+                    }
                 } else if (comp.StartsWith("Cam", StringComparison.OrdinalIgnoreCase)) {
                     var camKey = comp.ToLower();
                     if (group.CameraFiles.TryGetValue(camKey, out var path) && File.Exists(path)) {
                         var destDir = BuildPath(quarantinePath, group, camKey, PathSchema.QuarantineSchema, subject);
-                        await MoveFileAtomicAsync(path, Path.Combine(destDir, Path.GetFileName(path)), movedItems, ct);
+                        var destFile = Path.Combine(destDir, Path.GetFileName(path));
+                        _logger.LogDebug("Moving Camera file ({Cam}): {Src} -> {Dest}", camKey, path, destFile);
+                        await MoveFileAtomicAsync(path, destFile, movedItems, ct);
                     }
                 }
             }
             result.Success = true;
+            _logger.LogInformation("DeleteComponentsAsync completed: {Count} items moved to quarantine", movedItems.Count);
         } catch (Exception ex) {
+            _logger.LogError(ex, "DeleteComponentsAsync failed, rolling back {Count} items", movedItems.Count);
             await RollbackAsync(movedItems);
             result.Success = false; result.ErrorMessage = ex.Message;
         }
@@ -183,11 +206,22 @@ public class FileGroupOperator : IFileGroupOperator
         // Ensure parent directory exists
         var parentDir = Path.GetDirectoryName(dest);
         if (!string.IsNullOrEmpty(parentDir)) Directory.CreateDirectory(parentDir);
-        
-        // Move entire directory at once (atomic if on same volume)
+
+        // Check if cross-volume move (Directory.Move doesn't work across volumes)
+        var srcRoot = Path.GetPathRoot(src);
+        var destRoot = Path.GetPathRoot(dest);
+        var isCrossVolume = !string.Equals(srcRoot, destRoot, StringComparison.OrdinalIgnoreCase);
+
         await Task.Run(() => {
-            if (Directory.Exists(dest)) {
-                // If destination exists, merge by moving contents
+            if (isCrossVolume)
+            {
+                // Cross-volume: use copy + delete
+                CopyDirectoryRecursive(src, dest);
+                Directory.Delete(src, true);
+            }
+            else if (Directory.Exists(dest))
+            {
+                // Same volume but destination exists: merge by moving contents
                 foreach (var file in Directory.GetFiles(src)) {
                     var destFile = Path.Combine(dest, Path.GetFileName(file));
                     File.Copy(file, destFile, true);
@@ -198,12 +232,30 @@ public class FileGroupOperator : IFileGroupOperator
                     Directory.Move(subDir, destSubDir);
                 }
                 Directory.Delete(src);
-            } else {
+            }
+            else
+            {
+                // Same volume, destination doesn't exist: atomic move
                 Directory.Move(src, dest);
             }
         }, ct);
         tracking.Add((src, dest, true));
-        _logger.LogInformation("Moved directory: {Src} -> {Dest}", src, dest);
+        _logger.LogInformation("Moved directory: {Src} -> {Dest} (CrossVolume={CrossVolume})", src, dest, isCrossVolume);
+    }
+
+    private static void CopyDirectoryRecursive(string src, string dest)
+    {
+        Directory.CreateDirectory(dest);
+        foreach (var file in Directory.GetFiles(src))
+        {
+            var destFile = Path.Combine(dest, Path.GetFileName(file));
+            File.Copy(file, destFile, true);
+        }
+        foreach (var subDir in Directory.GetDirectories(src))
+        {
+            var destSubDir = Path.Combine(dest, Path.GetFileName(subDir));
+            CopyDirectoryRecursive(subDir, destSubDir);
+        }
     }
 
     private async Task RollbackAsync(List<(string source, string dest, bool isDirectory)> items)

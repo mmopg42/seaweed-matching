@@ -1,5 +1,6 @@
 using ChronoView.Models;
 using ChronoView.Core.ImageProcessing;
+using ChronoView.Core.Localization;
 using ChronoView.Core.Analytics;
 using ChronoView.Core.Nir;
 using ChronoView.Helpers;
@@ -20,8 +21,10 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 {
     private readonly FileGroup _fileGroup;
     private readonly FileGroupMediaLoader _mediaLoader;
+    private readonly IImageProcessor? _imageProcessor;
     private readonly IAbnormalDetector? _abnormalDetector;
     private readonly ILogger<FileGroupViewModel>? _logger;
+    private readonly Action<LogSeverity, string, string>? _uiLog;
     
     private bool _isSelected;
     private bool _isAbnormal;
@@ -29,15 +32,54 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     private bool _disposed;
 
     #region Partial Selection Properties
-    private bool _isNormalSelected; public bool IsNormalSelected { get => _isNormalSelected; set => SetProperty(ref _isNormalSelected, value); }
-    private bool _isNirSelected; public bool IsNirSelected { get => _isNirSelected; set => SetProperty(ref _isNirSelected, value); }
-    private bool _isCam1Selected; public bool IsCam1Selected { get => _isCam1Selected; set => SetProperty(ref _isCam1Selected, value); }
-    private bool _isCam2Selected; public bool IsCam2Selected { get => _isCam2Selected; set => SetProperty(ref _isCam2Selected, value); }
-    private bool _isCam3Selected; public bool IsCam3Selected { get => _isCam3Selected; set => SetProperty(ref _isCam3Selected, value); }
-    private bool _isCam4Selected; public bool IsCam4Selected { get => _isCam4Selected; set => SetProperty(ref _isCam4Selected, value); }
-    private bool _isCam5Selected; public bool IsCam5Selected { get => _isCam5Selected; set => SetProperty(ref _isCam5Selected, value); }
-    private bool _isCam6Selected; public bool IsCam6Selected { get => _isCam6Selected; set => SetProperty(ref _isCam6Selected, value); }
+    private bool _isNormalSelected; 
+    public bool IsNormalSelected { get => _isNormalSelected; set { if (SetProperty(ref _isNormalSelected, value)) NotifySelectionComputed(); } }
+    private bool _isNirSelected; 
+    public bool IsNirSelected { get => _isNirSelected; set { if (SetProperty(ref _isNirSelected, value)) NotifySelectionComputed(); } }
+    private bool _isCam1Selected; 
+    public bool IsCam1Selected { get => _isCam1Selected; set { if (SetProperty(ref _isCam1Selected, value)) NotifySelectionComputed(); } }
+    private bool _isCam2Selected; 
+    public bool IsCam2Selected { get => _isCam2Selected; set { if (SetProperty(ref _isCam2Selected, value)) NotifySelectionComputed(); } }
+    private bool _isCam3Selected; 
+    public bool IsCam3Selected { get => _isCam3Selected; set { if (SetProperty(ref _isCam3Selected, value)) NotifySelectionComputed(); } }
+    private bool _isCam4Selected; 
+    public bool IsCam4Selected { get => _isCam4Selected; set { if (SetProperty(ref _isCam4Selected, value)) NotifySelectionComputed(); } }
+    private bool _isCam5Selected; 
+    public bool IsCam5Selected { get => _isCam5Selected; set { if (SetProperty(ref _isCam5Selected, value)) NotifySelectionComputed(); } }
+    private bool _isCam6Selected; 
+    public bool IsCam6Selected { get => _isCam6Selected; set { if (SetProperty(ref _isCam6Selected, value)) NotifySelectionComputed(); } }
+
+    // UI state: any checkbox checked (for button enable/disable)
     public bool IsAnyPartialSelected => IsNormalSelected || IsNirSelected || IsCam1Selected || IsCam2Selected || IsCam3Selected || IsCam4Selected || IsCam5Selected || IsCam6Selected;
+
+    // Delete logic: at least one component with actual data is selected
+    public bool HasAnySelectedComponent =>
+        (IsNormalSelected && !string.IsNullOrEmpty(NormalFolder)) ||
+        (IsNirSelected && HasNir) ||
+        (IsCam1Selected && Camera1ImagePath != null) ||
+        (IsCam2Selected && Camera2ImagePath != null) ||
+        (IsCam3Selected && Camera3ImagePath != null) ||
+        (IsCam4Selected && Camera4ImagePath != null) ||
+        (IsCam5Selected && Camera5ImagePath != null) ||
+        (IsCam6Selected && Camera6ImagePath != null);
+
+    // Classification: all available components are selected
+    public bool IsFullySelected =>
+        (string.IsNullOrEmpty(NormalFolder) || IsNormalSelected) &&
+        (!HasNir || IsNirSelected) &&
+        (Camera1ImagePath == null || IsCam1Selected) &&
+        (Camera2ImagePath == null || IsCam2Selected) &&
+        (Camera3ImagePath == null || IsCam3Selected) &&
+        (Camera4ImagePath == null || IsCam4Selected) &&
+        (Camera5ImagePath == null || IsCam5Selected) &&
+        (Camera6ImagePath == null || IsCam6Selected);
+
+    private void NotifySelectionComputed()
+    {
+        OnPropertyChanged(nameof(IsAnyPartialSelected));
+        OnPropertyChanged(nameof(HasAnySelectedComponent));
+        OnPropertyChanged(nameof(IsFullySelected));
+    }
     #endregion
 
     public string? MainImagePath { get; private set; }
@@ -63,7 +105,28 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 
     #region Label Properties
     public string NormalLabel => !string.IsNullOrEmpty(NormalFolder) ? Path.GetFileName(NormalFolder) : "";
-    public string NormalImageSizeLabel => GetNormalImageSize();
+    
+    private int _cachedWidth;
+    private int _cachedHeight;
+    private double? _cachedRatioDiff;
+
+    public string NormalImageSizeLabel 
+    {
+        get
+        {
+            if (_cachedWidth > 0 && _cachedHeight > 0)
+            {
+                var baseLabel = $"{_cachedWidth}x{_cachedHeight}";
+                if (_cachedRatioDiff.HasValue)
+                {
+                    return $"{baseLabel} (Diff: {_cachedRatioDiff.Value:F2})";
+                }
+                return baseLabel;
+            }
+            return GetNormalImageSize(); // Fallback
+        }
+    }
+
     public string NirLabel => !string.IsNullOrEmpty(NirKey) ? NirKey : "";
     public string Camera1Label => GetCameraLabel(1);
     public string Camera2Label => GetCameraLabel(2);
@@ -90,11 +153,22 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
 
     public FileGroupViewModel(FileGroup fileGroup, IImageProcessor imageProcessor, IMonitoringOrchestrator? orchestrator, IAbnormalDetector? abnormalDetector, ChronoView.Models.ApplicationConfiguration? configuration, ILogger<FileGroupViewModel>? logger, Action<LogSeverity, string, string>? uiLog)
     {
-        _fileGroup = fileGroup; _abnormalDetector = abnormalDetector; _logger = logger;
+        _fileGroup = fileGroup; _imageProcessor = imageProcessor; _abnormalDetector = abnormalDetector; _logger = logger; _uiLog = uiLog;
         _mediaLoader = new FileGroupMediaLoader(fileGroup, imageProcessor, orchestrator, configuration, logger, uiLog);
-        _mediaLoader.PropertyChanged += (s, e) => OnPropertyChanged(e.PropertyName);
+        _mediaLoader.PropertyChanged += (s, e) => 
+        {
+            OnPropertyChanged(e.PropertyName);
+            
+            // NEW: Calculate Diff only when LoadedInfo is available (single SSoT)
+            // This replaces the old CheckAbnormalStatus() ratio check
+            if (e.PropertyName == nameof(_mediaLoader.MainImageLoadedInfo) &&
+                _mediaLoader.MainImageLoadedInfo != null)
+            {
+                CalculateAbnormalStatusFromLoadedInfo(_mediaLoader.MainImageLoadedInfo);
+            }
+        };
         InitializeImagePaths();
-        CheckAbnormalStatus();
+        CheckAbnormalStatus(); // Checks NIR status only (fast). Ratio check is now event-driven.
     }
 
     public FileGroup Model => _fileGroup;
@@ -115,19 +189,173 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     }
 
     public bool IsAbnormal { get => _isAbnormal || Status == GroupStatus.Abnormal; private set { if (SetProperty(ref _isAbnormal, value)) OnPropertyChanged(nameof(StatusText)); } }
-    public bool IsSelected { get => _isSelected; set { if (SetProperty(ref _isSelected, value)) { IsNormalSelected = IsNirSelected = IsCam1Selected = IsCam2Selected = IsCam3Selected = IsCam4Selected = IsCam5Selected = IsCam6Selected = value; } } }
+    public bool IsSelected { get => _isSelected; set { if (SetProperty(ref _isSelected, value)) { IsNormalSelected = IsNirSelected = IsCam1Selected = IsCam2Selected = IsCam3Selected = IsCam4Selected = IsCam5Selected = IsCam6Selected = value; NotifySelectionComputed(); } } }
 
-    public async Task LoadThumbnailsAsync() => await _mediaLoader.LoadThumbnailsAsync();
+    public async Task LoadThumbnailsAsync()
+    {
+        await _mediaLoader.LoadThumbnailsAsync();
+        TryCalculateDiffFromDimensionsFallback();
+    }
     public async Task ReloadNirGraphAsync(ChronoView.Models.ApplicationConfiguration config) => await _mediaLoader.ReloadNirGraphAsync(config);
 
     public void Refresh() { InitializeImagePaths(); CheckAbnormalStatus(); OnPropertyChanged(string.Empty); }
-    private void InitializeImagePaths() { if (_fileGroup.HasNir) NirImagePath = _fileGroup.NirFilePath; MainImagePath = !string.IsNullOrEmpty(_fileGroup.MainImagePath) ? _fileGroup.MainImagePath : (string.IsNullOrEmpty(_fileGroup.NormalFolder) ? null : Path.Combine(_fileGroup.NormalFolder, "stitched_original.png")); }
+    private void InitializeImagePaths() 
+    { 
+        if (_fileGroup.HasNir) NirImagePath = _fileGroup.NirFilePath; 
+
+        if (!string.IsNullOrEmpty(_fileGroup.MainImagePath))
+        {
+            MainImagePath = _fileGroup.MainImagePath;
+        }
+        else if (!string.IsNullOrEmpty(_fileGroup.NormalFolder))
+        {
+             var stitchedPath = Path.Combine(_fileGroup.NormalFolder, "stitched_original.png");
+             MainImagePath = stitchedPath;
+             
+             if (!File.Exists(stitchedPath))
+             {
+                 var message = LocalizationManager.GetString("Log_Warn_ImageMissing", _fileGroup.NormalFolder);
+                 _uiLog?.Invoke(LogSeverity.Warning, "ImageLoader", message);
+             }
+        }
+        else
+        {
+            MainImagePath = null;
+        }
+    }
     private string? GetCameraImagePath(int num) => _fileGroup.CameraFiles.TryGetValue($"cam{num}", out var path) ? path : null;
-    private void CheckAbnormalStatus() { if (_abnormalDetector == null) return; try { IsAbnormal = _abnormalDetector.IsGroupAbnormal(_fileGroup); _abnormalReason = IsAbnormal ? "Detected" : null; } catch { IsAbnormal = false; } }
+    private void CheckAbnormalStatus() 
+    { 
+        if (_abnormalDetector == null) return;
+        
+        try 
+        { 
+            // 1. NIR-only group check (existing logic, fast metadata check)
+            if (_abnormalDetector.IsGroupAbnormal(_fileGroup))
+            {
+                IsAbnormal = true;
+                _abnormalReason = "NIR-only group";
+                return;
+            }
+
+            // Ratio check is removed from here to prevent file locking/race conditions.
+            // It is now performed in CalculateAbnormalStatusFromLoadedInfo triggered by media load.
+
+            // If not NIR abnormal, reset status (unless Ratio check sets it later)
+            // Note: If we had a previous ratio error, it should be cleared if we re-check? 
+            // Actually, if we re-check strictly via this method, we might reset IsAbnormal.
+            // But IsAbnormal logic requires coordination.
+            // For now, assume this method handles static group abnormalities.
+            // If Ratio Abnormality was set, this method might clear it if we just do IsAbnormal = false at end.
+            // So we should be careful. 
+            // However, IsAbnormal property is set by this method. 
+            // If we want to preserve Ratio abnormality, we need to check _cachedRatioDiff or similar.
+            // But typically CheckAbnormalStatus is called on init or refresh.
+            // If we Refresh(), we reset everything.
+            
+            IsAbnormal = false;
+            _abnormalReason = null;
+        } 
+        catch (Exception ex) 
+        { 
+            _logger?.LogError(ex, "Failed to check abnormal status for group {GroupId}", GroupId);
+            IsAbnormal = false; 
+        } 
+    }
+
+    private void TryCalculateDiffFromDimensionsFallback()
+    {
+        // If main image info was not produced (thumbnail load failure), try header-only dimensions.
+        if (_mediaLoader.MainImageLoadedInfo != null) return;
+        if (string.IsNullOrEmpty(MainImagePath)) return;
+
+        try
+        {
+            var (width, height) = _imageProcessor.GetImageDimensions(MainImagePath);
+            if (width <= 0 || height <= 0) return;
+
+            var info = new MainImageLoadedInfo(
+                GroupId,
+                DateTime.UtcNow.Ticks,
+                width,
+                height,
+                null,
+                MainImagePath,
+                DateTime.UtcNow);
+
+            CalculateAbnormalStatusFromLoadedInfo(info);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Failed to calculate diff from dimensions fallback: {Path}", MainImagePath);
+        }
+    }
+
+    private void CalculateAbnormalStatusFromLoadedInfo(MainImageLoadedInfo info)
+    {
+        // Stale guard: verify this info belongs to this group
+        if (info.GroupId != GroupId) return;
+
+        if (_abnormalDetector == null || info.OriginalWidth <= 0 || info.OriginalHeight <= 0)
+        {
+            // If dimensions are invalid/missing, we can't calculate diff.
+            // Just update cached dimensions for display if valid.
+            if (info.OriginalWidth > 0 && info.OriginalHeight > 0)
+            {
+                _cachedWidth = info.OriginalWidth;
+                _cachedHeight = info.OriginalHeight;
+                OnPropertyChanged(nameof(NormalImageSizeLabel));
+            }
+            return;
+        }
+
+        // Cache dimensions (for UI display)
+        _cachedWidth = info.OriginalWidth;
+        _cachedHeight = info.OriginalHeight;
+
+        try
+        {
+            var context = AbnormalDetectorService.ExtractContext(_fileGroup.NormalFolder);
+            var (isAbnormal, ratioDiff) = _abnormalDetector.AddAndCheckImage(
+                info.OriginalWidth, info.OriginalHeight, context);
+
+            // Cache ratio diff
+            _cachedRatioDiff = ratioDiff;
+
+            // Update UI
+            OnPropertyChanged(nameof(NormalImageSizeLabel));
+
+            if (isAbnormal)
+            {
+                IsAbnormal = true;
+                _abnormalReason = $"Abnormal Ratio (Diff: {ratioDiff:F3})";
+                _logger?.LogWarning("Group {GroupId} detected as abnormal: {Reason}",
+                    GroupId, _abnormalReason);
+            }
+            else
+            {
+                // If previously abnormal due to ratio, clear it?
+                // But CheckAbnormalStatus might have cleared it already.
+                // If checks are cumulative, we should handle it.
+                // Current logic: CheckAbnormalStatus runs first (clears), then this runs (sets).
+                // If CheckAbnormalStatus runs LATER (e.g. some other trigger), it clears.
+                // But CheckAbnormalStatus is mainly Init/Refresh.
+                // This event happens after Init.
+                // So this will overwrite the IsAbnormal state correctly.
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Failed to analyze image dimensions for abnormal detection: {Path}", info.FilePath);
+        }
+    }
     public void Dispose() { if (_disposed) return; _mediaLoader.Dispose(); _disposed = true; }
 
     public List<string> GetSelectedComponents()
     {
+        // intersection rule: if row is not selected, return nothing
+        if (!IsSelected) return new List<string>();
+
         var comps = new List<string>();
         if (IsNormalSelected && !string.IsNullOrEmpty(NormalFolder)) comps.Add("Normal");
         if (IsNirSelected && HasNir) comps.Add("Nir");
@@ -138,6 +366,35 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
         if (IsCam5Selected && Camera5ImagePath != null) comps.Add("Cam5");
         if (IsCam6Selected && Camera6ImagePath != null) comps.Add("Cam6");
         return comps;
+    }
+
+    /// <summary>
+    /// Returns selected components with their file/folder names for detailed logging.
+    /// Format: "ComponentName: FileName" pairs.
+    /// </summary>
+    public List<string> GetSelectedComponentDetails()
+    {
+        // intersection rule: if row is not selected, return nothing
+        if (!IsSelected) return new List<string>();
+
+        var details = new List<string>();
+        if (IsNormalSelected && !string.IsNullOrEmpty(NormalFolder)) 
+            details.Add($"Normal: {Path.GetFileName(NormalFolder)}");
+        if (IsNirSelected && HasNir && !string.IsNullOrEmpty(NirImagePath)) 
+            details.Add($"Nir: {Path.GetFileName(NirImagePath)}");
+        if (IsCam1Selected && Camera1ImagePath != null) 
+            details.Add($"Cam1: {Path.GetFileName(Camera1ImagePath)}");
+        if (IsCam2Selected && Camera2ImagePath != null) 
+            details.Add($"Cam2: {Path.GetFileName(Camera2ImagePath)}");
+        if (IsCam3Selected && Camera3ImagePath != null) 
+            details.Add($"Cam3: {Path.GetFileName(Camera3ImagePath)}");
+        if (IsCam4Selected && Camera4ImagePath != null) 
+            details.Add($"Cam4: {Path.GetFileName(Camera4ImagePath)}");
+        if (IsCam5Selected && Camera5ImagePath != null) 
+            details.Add($"Cam5: {Path.GetFileName(Camera5ImagePath)}");
+        if (IsCam6Selected && Camera6ImagePath != null) 
+            details.Add($"Cam6: {Path.GetFileName(Camera6ImagePath)}");
+        return details;
     }
 
     public bool HasAnyRemainingData() =>

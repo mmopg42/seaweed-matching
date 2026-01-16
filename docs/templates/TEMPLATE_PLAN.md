@@ -1,4 +1,4 @@
-# Template: Plan Document (03_plan.md)
+# Template: Plan Document (04_plan.md)
 
 > **Purpose**: Define WHAT components to build and HOW they connect.  
 > **Core Question**: "어떤 구조로 만들까?" (What structure will we build?)  
@@ -8,7 +8,7 @@
 
 ## 1. Plan vs Design: Critical Distinction
 
-| Aspect | 03_plan.md (This doc) | 04_design.md (Next doc) |
+| Aspect | 04_plan.md (This doc) | 05_design.md (Next doc) | |
 |--------|----------------------|-------------------------|
 | **Abstraction** | High-level | Low-level |
 | **Focus** | WHAT to build | HOW it works internally |
@@ -20,7 +20,7 @@
 
 ### Rule of Thumb
 
-If you're writing pseudo-code or step-by-step logic, it belongs in **04_design.md**, not here.
+If you're writing pseudo-code or step-by-step logic, it belongs in **05_design.md**, not here.
 
 ---
 
@@ -52,7 +52,7 @@ Document WHY you chose each approach, especially when alternatives exist.
 Task: [Task Name]
 Created: [YYYY-MM-DD]
 Status: Draft | Approved
-Depends On: 01_requirements.md[, 02_research.md]
+Depends On: 01_requirements.md, 02_analysis.md[, 03_research.md]
 ---
 
 # [Task Name] - Implementation Plan
@@ -287,7 +287,7 @@ class ComponentName:
 - [x] [Resolved question] → [Answer]
 - [ ] [Open question - must resolve before design]
 
-> **Rule**: All questions must be resolved before moving to 04_design.md
+> **Rule**: All questions must be resolved before moving to 05_design.md
 
 ---
 
@@ -299,7 +299,7 @@ class ComponentName:
 - [ ] Glossary terms identified
 - [ ] All open questions resolved
 
-**Next Step**: 04_design.md
+**Next Step**: 05_design.md
 ```
 
 ---
@@ -363,7 +363,7 @@ This prevents "why did we do it this way?" questions later.
 |---------|---------|-----|
 | Missing traceability | Requirements may be forgotten | Fill Section 0 first |
 | Too much detail | Belongs in design doc | Keep to signatures and structure |
-| Pseudo-code in plan | Wrong abstraction level | Move to 04_design.md |
+| Pseudo-code in plan | Wrong abstraction level | Move to 05_design.md |
 | No decision rationale | Can't understand choices later | Document WHY, not just WHAT |
 | Undefined terms | Naming conflicts | Check glossary first |
 | Unresolved questions | Blocks design phase | Resolve all before approval |
@@ -377,7 +377,7 @@ This prevents "why did we do it this way?" questions later.
 Task: pdf_upload_feature
 Created: 2024-01-15
 Status: Draft
-Depends On: 01_requirements.md, 02_research.md
+Depends On: 01_requirements.md, 02_analysis.md, 03_research.md
 ---
 
 # PDF Upload Feature - Implementation Plan
@@ -610,7 +610,7 @@ function UploadProgress(props: UploadProgressProps): JSX.Element
 
 ---
 
-**Next Step**: 04_design.md
+**Next Step**: 05_design.md
 ```
 
 ---
@@ -637,10 +637,10 @@ function UploadProgress(props: UploadProgressProps): JSX.Element
 
 ---
 이 Plan 문서를 검토해 주세요.
-승인하시면 다음 단계(04_design.md)로 진행하겠습니다.
+승인하시면 다음 단계(05_design.md)로 진행하겠습니다.
 수정이 필요하면 말씀해 주세요.
 ```
 
 ---
 
-**Next**: `04_design.md` (Detailed Design)
+**Next**: `05_design.md` (Detailed Design)

@@ -1,198 +1,149 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using ChronoView.Core.Analytics;
-using ChronoView.Core.FileMatching;
 using ChronoView.Models;
 using Xunit;
 
 namespace ChronoView.Tests.Core.Analytics
 {
     /// <summary>
-    /// **Feature: python-gui-to-csharp-migration, Property 12: Abnormal Condition Detection Consistency**
-    /// **Validates: Requirements 5.3**
-    /// 
-    /// Property: For any input data, the z-score algorithms and abnormal condition detection 
-    /// should produce consistent results.
+    /// 레거시(z-score/percent) 기반 테스트를 최신 ratio-diff 기반 AbnormalDetectorService에 맞춰 업데이트.
+    /// 메인 코드는 변경하지 않고 테스트만 최신 동작을 검증한다.
     /// </summary>
     public class AbnormalConditionDetectionPropertyTests
     {
-        /// <summary>
-        /// Property: Z-score calculation should be consistent for the same input
-        /// </summary>
         [Fact]
-        public void ZScoreCalculationShouldBeConsistent()
+        public void RatioDiffDetection_ShouldBeConsistent_ForSameInputSequence()
         {
-            // Arrange
-            var detector1 = new AbnormalDetectorService(windowSize: 100, minSamples: 10, threshold: 3.0);
-            var detector2 = new AbnormalDetectorService(windowSize: 100, minSamples: 10, threshold: 3.0);
+            var detector1 = new AbnormalDetectorService(windowSize: 50, minSamples: 5, threshold: 0.2);
+            var detector2 = new AbnormalDetectorService(windowSize: 50, minSamples: 5, threshold: 0.2);
+            const string context = "Line1_Cam1";
 
-            // Add same sequence of images to both detectors
-            var testData = new List<(int width, int height)>
+            var testData = new List<(int w, int h)>
             {
+                // Warm-up (baseline ratio ~ 1.777...)
+                (1920, 1080), (1920, 1080), (1920, 1080), (1920, 1080), (1920, 1080),
+                // Now detection enabled
                 (1920, 1080),
-                (1920, 1080),
-                (1920, 1080),
-                (1920, 1080),
-                (1920, 1080),
-                (1920, 1080),
-                (1920, 1080),
-                (1920, 1080),
-                (1920, 1080),
-                (1920, 1080),
-                (1920, 1080), // 11th sample - now we have enough for detection
-                (2400, 1350)  // This should be detected as abnormal
+                // Outlier (ratio 1.5) -> diff ~ 0.277...
+                (3000, 2000),
             };
 
-            // Act
-            (bool isAbnormal1, double? zWidth1, double? zHeight1) = (false, null, null);
-            (bool isAbnormal2, double? zWidth2, double? zHeight2) = (false, null, null);
+            (bool a1, double? d1) = (false, null);
+            (bool a2, double? d2) = (false, null);
 
-            foreach (var (width, height) in testData)
+            foreach (var (w, h) in testData)
             {
-                var result1 = detector1.AddAndCheckImage(width, height);
-                var result2 = detector2.AddAndCheckImage(width, height);
-                
-                isAbnormal1 = result1.IsAbnormal;
-                zWidth1 = result1.ZScoreWidth;
-                zHeight1 = result1.ZScoreHeight;
-                
-                isAbnormal2 = result2.IsAbnormal;
-                zWidth2 = result2.ZScoreWidth;
-                zHeight2 = result2.ZScoreHeight;
+                (a1, d1) = detector1.AddAndCheckImage(w, h, context);
+                (a2, d2) = detector2.AddAndCheckImage(w, h, context);
             }
 
-            // Assert - both detectors should produce identical results
-            Assert.Equal(isAbnormal1, isAbnormal2);
-            if (zWidth1.HasValue && zWidth2.HasValue)
-            {
-                Assert.Equal(zWidth1.Value, zWidth2.Value, precision: 6);
-            }
-            if (zHeight1.HasValue && zHeight2.HasValue)
-            {
-                Assert.Equal(zHeight1.Value, zHeight2.Value, precision: 6);
-            }
+            Assert.Equal(a1, a2);
+            Assert.Equal(d1, d2);
         }
 
-        /// <summary>
-        /// Property: Abnormal detection should trigger when z-score exceeds threshold
-        /// </summary>
         [Fact]
-        public void AbnormalDetectionShouldTriggerOnHighZScore()
+        public void AbnormalDetection_ShouldTrigger_WhenRatioDiffExceedsThreshold()
         {
-            // Arrange
-            var detector = new AbnormalDetectorService(windowSize: 100, minSamples: 10, threshold: 3.0);
+            var detector = new AbnormalDetectorService(windowSize: 50, minSamples: 5, threshold: 0.2);
+            const string context = "Line2_Cam6";
 
-            // Add baseline data with small variations (to avoid std dev = 0)
-            var baselineData = new List<(int width, int height)>
+            // Build baseline
+            for (int i = 0; i < 5; i++)
             {
-                (1920, 1080),
-                (1918, 1078),
-                (1922, 1082),
-                (1920, 1080),
-                (1919, 1079),
-                (1921, 1081),
-                (1920, 1080),
-                (1920, 1080),
-                (1918, 1078),
-                (1922, 1082),
-                (1920, 1080),
-                (1919, 1081),
-                (1920, 1080),
-                (1921, 1079),
-                (1918, 1082)
-            };
-
-            foreach (var (width, height) in baselineData)
-            {
-                detector.AddAndCheckImage(width, height);
+                var warm = detector.AddAndCheckImage(1920, 1080, context);
+                Assert.False(warm.IsAbnormal);
             }
 
-            // Act - add significantly different image
-            var result = detector.AddAndCheckImage(3000, 2000);
-
-            // Assert - should be detected as abnormal
-            Assert.True(result.IsAbnormal, "Significantly different image should be detected as abnormal");
-            Assert.True(result.ZScoreWidth.HasValue, "Z-score width should be calculated");
-            Assert.True(result.ZScoreHeight.HasValue, "Z-score height should be calculated");
-            Assert.True(Math.Abs(result.ZScoreWidth.Value) > 3.0 || Math.Abs(result.ZScoreHeight.Value) > 3.0,
-                "Z-score should exceed threshold");
+            // Outlier
+            var result = detector.AddAndCheckImage(3000, 2000, context);
+            Assert.True(result.IsAbnormal);
+            Assert.True(result.RatioDiff.HasValue);
+            Assert.True(result.RatioDiff.Value > 0.2);
         }
 
-        /// <summary>
-        /// Property: Normal variations should not trigger abnormal detection
-        /// </summary>
         [Fact]
-        public void NormalVariationsShouldNotTriggerAbnormalDetection()
+        public void NormalVariations_ShouldNotTriggerAbnormalDetection()
         {
-            // Arrange
-            var detector = new AbnormalDetectorService(windowSize: 100, minSamples: 10, threshold: 3.0);
+            var detector = new AbnormalDetectorService(windowSize: 50, minSamples: 5, threshold: 0.3);
+            const string context = "Line1_Cam2";
 
-            // Add baseline data with small variations
-            var baselineData = new List<(int width, int height)>
+            // Slight ratio variations around baseline
+            var baselineData = new List<(int w, int h)>
             {
                 (1920, 1080),
-                (1918, 1078),
-                (1922, 1082),
+                (1919, 1080),
+                (1921, 1080),
+                (1920, 1079),
+                (1920, 1081),
                 (1920, 1080),
-                (1919, 1079),
                 (1921, 1081),
-                (1920, 1080),
-                (1920, 1080),
-                (1918, 1078),
-                (1922, 1082),
-                (1920, 1080),
-                (1919, 1081) // Small variation
+                (1919, 1079),
             };
 
-            // Act
             bool anyAbnormal = false;
-            foreach (var (width, height) in baselineData)
+            foreach (var (w, h) in baselineData)
             {
-                var result = detector.AddAndCheckImage(width, height);
-                if (result.IsAbnormal)
-                {
-                    anyAbnormal = true;
-                }
+                var r = detector.AddAndCheckImage(w, h, context);
+                anyAbnormal |= r.IsAbnormal;
             }
 
-            // Assert - small variations should not be detected as abnormal
-            Assert.False(anyAbnormal, "Small variations should not trigger abnormal detection");
+            Assert.False(anyAbnormal);
         }
 
-        /// <summary>
-        /// Property: NIR-only groups should be detected as abnormal
-        /// </summary>
+        [Fact]
+        public void DetectorShouldDeferJudgmentUntilMinSamples()
+        {
+            var detector = new AbnormalDetectorService(windowSize: 50, minSamples: 5, threshold: 0.2);
+            const string context = "Global";
+
+            for (int i = 0; i < 4; i++)
+            {
+                var result = detector.AddAndCheckImage(1920, 1080, context);
+                Assert.False(result.IsAbnormal);
+                Assert.Equal(0.0, result.RatioDiff);
+            }
+        }
+
+        [Fact]
+        public void ResetShouldClearAllState()
+        {
+            var detector = new AbnormalDetectorService(windowSize: 50, minSamples: 5, threshold: 0.2);
+            const string context = "Line1_Cam3";
+
+            for (int i = 0; i < 10; i++)
+            {
+                detector.AddAndCheckImage(1920, 1080, context);
+            }
+
+            detector.Reset();
+
+            var afterReset = detector.AddAndCheckImage(1920, 1080, context);
+            Assert.False(afterReset.IsAbnormal);
+            Assert.Equal(0.0, afterReset.RatioDiff);
+        }
+
         [Fact]
         public void NirOnlyGroupsShouldBeAbnormal()
         {
-            // Arrange
             var detector = new AbnormalDetectorService();
             var nirOnlyGroup = new FileGroup
             {
                 GroupId = "group_001",
                 NirKey = "20240115_143022",
                 HasNir = true,
-                NormalFolder = "", // No normal folder
-                CameraFiles = new Dictionary<string, string>(), // No camera files
+                NormalFolder = "",
+                CameraFiles = new Dictionary<string, string>(),
                 LineNumber = 1,
                 CreatedAt = DateTime.Now
             };
 
-            // Act
-            var isAbnormal = detector.IsGroupAbnormal(nirOnlyGroup);
-
-            // Assert
-            Assert.True(isAbnormal, "NIR-only groups should be detected as abnormal");
+            Assert.True(detector.IsGroupAbnormal(nirOnlyGroup));
         }
 
-        /// <summary>
-        /// Property: Groups with camera data should not be abnormal (unless image dimensions are abnormal)
-        /// </summary>
         [Fact]
         public void GroupsWithCameraDataShouldNotBeAbnormal()
         {
-            // Arrange
             var detector = new AbnormalDetectorService();
             var normalGroup = new FileGroup
             {
@@ -200,95 +151,12 @@ namespace ChronoView.Tests.Core.Analytics
                 NirKey = "20240115_143022",
                 HasNir = true,
                 NormalFolder = "C20240115_143022",
-                CameraFiles = new Dictionary<string, string>
-                {
-                    { "cam1", @"C:\test\cam1\image.jpg" }
-                },
+                CameraFiles = new Dictionary<string, string> { { "cam1", @"C:\test\cam1\image.jpg" } },
                 LineNumber = 1,
                 CreatedAt = DateTime.Now
             };
 
-            // Act
-            var isAbnormal = detector.IsGroupAbnormal(normalGroup);
-
-            // Assert
-            Assert.False(isAbnormal, "Groups with camera data should not be abnormal");
-        }
-
-        /// <summary>
-        /// Property: Detector should defer judgment until minimum samples are collected
-        /// </summary>
-        [Fact]
-        public void DetectorShouldDeferJudgmentUntilMinSamples()
-        {
-            // Arrange
-            var detector = new AbnormalDetectorService(windowSize: 100, minSamples: 10, threshold: 3.0);
-
-            // Act - add fewer than minSamples
-            for (int i = 0; i < 9; i++)
-            {
-                var result = detector.AddAndCheckImage(1920, 1080);
-                
-                // Assert - should defer judgment
-                Assert.False(result.IsAbnormal, $"Should defer judgment at sample {i + 1}");
-                Assert.Null(result.ZScoreWidth);
-                Assert.Null(result.ZScoreHeight);
-            }
-        }
-
-        /// <summary>
-        /// Property: Sliding window should maintain size limit
-        /// </summary>
-        [Fact]
-        public void SlidingWindowShouldMaintainSizeLimit()
-        {
-            // Arrange
-            var windowSize = 20;
-            var detector = new AbnormalDetectorService(windowSize: windowSize, minSamples: 5, threshold: 3.0);
-
-            // Act - add more samples than window size with small variations
-            for (int i = 0; i < windowSize + 10; i++)
-            {
-                // Add small variations to avoid std dev = 0
-                int width = 1920 + (i % 3 - 1); // Varies between 1919-1921
-                int height = 1080 + (i % 3 - 1); // Varies between 1079-1081
-                detector.AddAndCheckImage(width, height);
-            }
-
-            // Add a significantly different image
-            var result = detector.AddAndCheckImage(3000, 2000);
-
-            // Assert - detection should still work (window is maintained)
-            Assert.True(result.IsAbnormal || !result.IsAbnormal, 
-                "Detector should continue functioning after exceeding window size");
-            Assert.True(result.ZScoreWidth.HasValue, "Z-score should be calculated");
-        }
-
-        /// <summary>
-        /// Property: Reset should clear all state
-        /// </summary>
-        [Fact]
-        public void ResetShouldClearAllState()
-        {
-            // Arrange
-            var detector = new AbnormalDetectorService(windowSize: 100, minSamples: 10, threshold: 3.0);
-
-            // Add baseline data
-            for (int i = 0; i < 15; i++)
-            {
-                detector.AddAndCheckImage(1920, 1080);
-            }
-
-            // Act - reset
-            detector.Reset();
-
-            // Add new data
-            var result = detector.AddAndCheckImage(1920, 1080);
-
-            // Assert - should defer judgment again (state was cleared)
-            Assert.False(result.IsAbnormal, "Should defer judgment after reset");
-            Assert.Null(result.ZScoreWidth);
-            Assert.Null(result.ZScoreHeight);
+            Assert.False(detector.IsGroupAbnormal(normalGroup));
         }
     }
 }

@@ -21,7 +21,7 @@ namespace ChronoView.Models
                         Type = DataType.Normal,
                         Order = 1,
                         MinDelaySeconds = 0,
-                        MaxDelaySeconds = 0,
+                        MaxDelaySeconds = 1,
                         Enabled = true
                     },
                     new DataSequenceItem
@@ -140,23 +140,23 @@ namespace ChronoView.Models
                     },
                     new DataSequenceItem
                     {
-                        Type = DataType.Cam3,
+                        Type = DataType.Cam1,
                         Order = 3,
-                        MinDelaySeconds = 1,
-                        MaxDelaySeconds = 2,
-                        Enabled = true
-                    },
-                    new DataSequenceItem
-                    {
-                        Type = DataType.Normal,
-                        Order = 4,
                         MinDelaySeconds = 4,
-                        MaxDelaySeconds = 6,
+                        MaxDelaySeconds = 9,
                         Enabled = true
                     },
                     new DataSequenceItem
                     {
-                        Type = DataType.NIR,
+                        Type = DataType.Cam2,
+                        Order = 4,
+                        MinDelaySeconds = 0,
+                        MaxDelaySeconds = 1,
+                        Enabled = true
+                    },
+                    new DataSequenceItem
+                    {
+                        Type = DataType.Cam3,
                         Order = 5,
                         MinDelaySeconds = 0,
                         MaxDelaySeconds = 1,

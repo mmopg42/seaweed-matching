@@ -1,12 +1,18 @@
 ﻿<Application x:Class="ChronoView.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:ChronoView">
+             xmlns:local="clr-namespace:ChronoView"
+             xmlns:converters="clr-namespace:ChronoView.UI.Converters">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Resources/SharedResources.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            
+            <converters:CameraStateToIndicatorBrushConverter x:Key="CameraStateToIndicatorBrush"/>
+            <converters:CameraStateToButtonTextConverter x:Key="CameraStateToButtonText"/>
+            <converters:CameraStateToButtonBackgroundConverter x:Key="CameraStateToButtonBackground"/>
+            <converters:CameraStateToIsEnabledConverter x:Key="CameraStateToIsEnabled"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

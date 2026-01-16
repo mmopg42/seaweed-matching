@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Korean Resources for ChronoView Log Messages -->
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- Log Messages (UI Log Panel) - Korean -->
+  <!-- Debug Level -->
+  <data name="Log_Debug_ImageCheck_NoImage" xml:space="preserve">
+    <value>[이미지체크] 이미지 없음: {0} (재처리 대기)</value>
+  </data>
+  <data name="Log_Debug_ImageCheck_Found" xml:space="preserve">
+    <value>[이미지체크] 이미지 발견!: {0} (업데이트 진행)</value>
+  </data>
+  <data name="Log_Debug_LineCheck_Normal" xml:space="preserve">
+    <value>[LineCheck] Normal 파일: {0}</value>
+  </data>
+  <data name="Log_Debug_LineCheck_Nir2Path" xml:space="preserve">
+    <value>[LineCheck] Nir2Path 확인 중: '{0}'</value>
+  </data>
+  <data name="Log_Debug_LineCheck_CamPath" xml:space="preserve">
+    <value>[LineCheck] Cam{0}Path 확인 중: '{1}'</value>
+  </data>
+  <data name="Log_Debug_LineMatches_Nir2" xml:space="preserve">
+    <value>[LineMatches] Nir2 -> Line 2 매칭됨</value>
+  </data>
+  <data name="Log_Debug_LineMatches_Cam" xml:space="preserve">
+    <value>[LineMatches] Cam{0} -> Line 2 매칭됨</value>
+  </data>
+  <data name="Log_Debug_Thumbnail_LoadSuccess" xml:space="preserve">
+    <value>[썸네일] 로드 성공: {0}</value>
+  </data>
+  <data name="Log_Debug_Thumbnail_RetrySuccess" xml:space="preserve">
+    <value>[썸네일] 재시도 성공: {0}</value>
+  </data>
+
+  <!-- Info Level -->
+  <data name="Log_Info_Eviction" xml:space="preserve">
+    <value>[Eviction] {0}: {1} -> {2} 차지, 기존 데이터 -> {3} 이동</value>
+  </data>
+  <data name="Log_Info_NewGroup" xml:space="preserve">
+    <value>[새 그룹] {0}: {1} -> {2}</value>
+  </data>
+  <data name="Log_Info_MatchExcluded_ColumnOrder" xml:space="preserve">
+    <value>[매칭제외] {0}: {1} -> {2} 제외 (사유: 컬럼순서 위반, 마지막배정: {3}, 후보: {4}@{5})</value>
+  </data>
+  <data name="Log_Info_MatchExcluded_Successor" xml:space="preserve">
+    <value>[매칭제외] {0}: {1} -> {2} 제외 (사유: {3})</value>
+  </data>
+  <data name="Log_Info_MatchExcluded_TimeWindow" xml:space="preserve">
+    <value>[매칭제외] {0}: {1} -> {2} 제외 (사유: {3}, {4})</value>
+  </data>
+  <data name="Log_Info_MatchSuccess" xml:space="preserve">
+    <value>[매칭성공] {0}: {1} -> {2} (사유: {3}, 대상: {4}, 시차: {5}초)</value>
+  </data>
+  <data name="Log_Info_MatchFailed_NoGroup" xml:space="preserve">
+    <value>[매칭실패] {0}: {1} -> 배정 실패 (사유: 조건에 맞는 그룹 없음, {2})</value>
+  </data>
+  <data name="Log_Info_DataSequenceOrder" xml:space="preserve">
+    <value>데이터 시퀀스 순서: {0}</value>
+  </data>
+  <data name="Log_Info_WatchingPaths" xml:space="preserve">
+    <value>감시 중인 경로: {0}개</value>
+  </data>
+  <data name="Log_Info_Refresh_Start" xml:space="preserve">
+    <value>새로고침 중...</value>
+  </data>
+  <data name="Log_Info_Refresh_Complete" xml:space="preserve">
+    <value>새로고침 완료 (감시 중지됨)</value>
+  </data>
+  <data name="Log_Info_Settings_Saved" xml:space="preserve">
+    <value>설정이 저장되었습니다</value>
+  </data>
+  <data name="Log_Info_DisplaySettings_Applied" xml:space="preserve">
+    <value>디스플레이 설정이 적용되었습니다</value>
+  </data>
+  <data name="Log_Info_Monitoring_Starting" xml:space="preserve">
+    <value>모니터링 시작 중...</value>
+  </data>
+  <data name="Log_Info_Monitoring_Refreshing" xml:space="preserve">
+    <value>데이터 새로고침 중...</value>
+  </data>
+  <data name="Log_Info_NirFiltering_Toggled" xml:space="preserve">
+    <value>NIR 필터링 {0}</value>
+  </data>
+  <data name="Log_Info_Camera_Terminated" xml:space="preserve">
+    <value>{0} 사용자에 의해 종료됨</value>
+  </data>
+  <data name="Log_Info_Camera_Activated" xml:space="preserve">
+    <value>{0} 활성화됨</value>
+  </data>
+  <data name="Log_Info_Camera_Launched" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="Log_Info_Move_Progress" xml:space="preserve">
+    <value>[{0}/{1}] 진행 중... (Normal: {2}, Cam: {3})</value>
+  </data>
+  <data name="Log_Info_Move_ItemProgress" xml:space="preserve">
+    <value>[{0}/{1}] {2}...</value>
+  </data>
+  <data name="Log_Info_Move_Completed" xml:space="preserve">
+    <value>이동 완료</value>
+  </data>
+  <data name="Log_Info_Move_PartialFailed" xml:space="preserve">
+    <value>이동 부분 실패</value>
+  </data>
+  <data name="Log_Info_Delete_GroupComplete" xml:space="preserve">
+    <value>그룹 {0} 전체 삭제 완료: {1}</value>
+  </data>
+  <data name="Log_Info_Delete_PartialComplete" xml:space="preserve">
+    <value>{0} 삭제: {1}</value>
+  </data>
+  <data name="Log_Info_Delete_Failed" xml:space="preserve">
+    <value>{0} 삭제 실패: {1}</value>
+  </data>
+  <data name="Log_Info_Delete_BatchSuccess" xml:space="preserve">
+    <value>{0} 그룹 삭제 완료</value>
+  </data>
+
+  <!-- Warning/Error Level -->
+  <data name="Log_Warn_ImageMissing" xml:space="preserve">
+    <value>[이미지누락] 폴더 존재하나 이미지 없음: {0}</value>
+  </data>
+  <data name="Log_Warn_LineMismatch_Fallback" xml:space="preserve">
+    <value>[LineMismatch] 경고: 파일 '{0}'이 Line 1로 대체됩니다. 설정 경로를 확인하세요!</value>
+  </data>
+  <data name="Log_Error_StartFailed" xml:space="preserve">
+    <value>시작 실패: {0}</value>
+  </data>
+  <data name="Log_Error_NirFilteringFailed" xml:space="preserve">
+    <value>NIR 필터링 실패: {0}</value>
+  </data>
+  <data name="Log_Error_CameraLaunchFailed" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="Log_Error_OutputPathNotSet" xml:space="preserve">
+    <value>출력 경로가 설정되지 않았습니다</value>
+  </data>
+  <data name="Log_Error_OutputPathCreateFailed" xml:space="preserve">
+    <value>출력 경로를 생성할 수 없습니다
+경로: {0}
+오류: {1}</value>
+  </data>
+  <data name="Log_Error_Delete_Error" xml:space="preserve">
+    <value>오류: {0}</value>
+  </data>
+</root>

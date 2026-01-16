@@ -1,4 +1,4 @@
-# Template: Design Document (04_design.md)
+# Template: Design Document (05_design.md)
 
 > **Purpose**: Define HOW each component works internally.  
 > **Core Question**: "코드가 어떻게 동작할까?" (How will the code work?)  
@@ -8,7 +8,7 @@
 
 ## 1. Plan vs Design: Reminder
 
-| In 03_plan.md | In 04_design.md (This doc) |
+| In 04_plan.md | In 05_design.md (This doc) |
 |---------------|---------------------------|
 | `function load(path) -> Config` | Full pseudo-code with steps |
 | "Retry on failure" | "Retry 3x with 1s exponential backoff" |
@@ -22,7 +22,7 @@
 
 ### Complete Pseudo-code
 
-Every public method from `03_plan.md` must have:
+Every public method from `04_plan.md` must have:
 - Step-by-step logic
 - Input validation
 - Error handling
@@ -56,7 +56,7 @@ Include test cases that verify the design works correctly.
 Task: [Task Name]
 Created: [YYYY-MM-DD]
 Status: Draft | Approved
-Depends On: 03_plan.md
+Depends On: 04_plan.md
 ---
 
 # [Task Name] - Detailed Design
@@ -65,7 +65,7 @@ Depends On: 03_plan.md
 
 ### 1.1 [Component Name]
 
-> From 03_plan.md: [One-line description]
+> From 04_plan.md: [One-line description]
 
 #### Interface (from Plan)
 
@@ -329,7 +329,7 @@ create() → initialize() → [use] → dispose()
 - [ ] Test cases defined
 - [ ] No open questions
 
-**Next Step**: 05_tasks.md
+**Next Step**: 06_tasks.md
 ```
 
 ---
@@ -411,7 +411,7 @@ Every public method should have test cases for:
 Task: pdf_upload_feature
 Created: 2024-01-15
 Status: Draft
-Depends On: 03_plan.md
+Depends On: 04_plan.md
 ---
 
 # PDF Upload Feature - Detailed Design
@@ -615,10 +615,10 @@ function UploadProgress({ progress, status, onCancel }):
 
 ---
 이 Design 문서를 검토해 주세요.
-승인하시면 다음 단계(05_tasks.md)로 진행하겠습니다.
+승인하시면 다음 단계(06_tasks.md)로 진행하겠습니다.
 수정이 필요하면 말씀해 주세요.
 ```
 
 ---
 
-**Next**: `05_tasks.md` (Task Checklist)
+**Next**: `06_tasks.md` (Task Checklist)

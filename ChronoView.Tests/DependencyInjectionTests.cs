@@ -6,6 +6,9 @@ using ChronoView.Core.FileMatching;
 using ChronoView.Core.ImageProcessing;
 using ChronoView.Core.Analytics;
 using ChronoView.Core.FileOperations;
+using ChronoView.Core.GroupIdGeneration;
+using ChronoView.Core.Nir;
+using System.Windows.Threading;
 using ChronoView.UI.ViewModels;
 using ChronoView.UI.Views;
 using ChronoView.Models;
@@ -36,27 +39,74 @@ public class DependencyInjectionTests : IDisposable
             configure.SetMinimumLevel(LogLevel.Information);
         });
 
+        // WPF Dispatcher (테스트에서는 Application.Current가 없을 수 있으므로 CurrentDispatcher 사용)
+        services.AddSingleton(sp => Dispatcher.CurrentDispatcher);
+
+        // Configuration: 테스트는 파일 I/O에 의존하지 않도록 기본 인스턴스를 사용
+        services.AddSingleton<IConfigurationManager>(sp => new ConfigurationManager("ChronoViewTest", "Test"));
+        services.AddSingleton<ApplicationConfiguration>(_ => new ApplicationConfiguration());
+
         // Configuration (Singleton - loaded once and shared)
-        services.AddSingleton(sp =>
+        // Core Services (Singleton) - App.ConfigureServices() 구성과 동기화
+        services.AddSingleton<ITimestampCache>(sp =>
         {
-            var configManager = sp.GetRequiredService<IConfigurationManager>();
-            return configManager.LoadConfigurationAsync<ApplicationConfiguration>().GetAwaiter().GetResult();
+            var config = sp.GetRequiredService<ApplicationConfiguration>();
+            var ttl = config.WorkflowSettings?.FolderTimestampCacheTTL ?? 300;
+            return new FolderTimestampCache(ttl, sp.GetService<ILogger<FolderTimestampCache>>());
         });
 
-        // Core Services (Singleton)
-        services.AddSingleton<IConfigurationManager, ConfigurationManager>();
+        services.AddSingleton<IGroupIdGenerator>(sp =>
+        {
+            var config = sp.GetRequiredService<ApplicationConfiguration>();
+            return config.WorkflowSettings.UseLineSpecificGroupId
+                ? new LineBasedGroupIdGenerator()
+                : new GlobalGroupIdGenerator();
+        });
+
+        services.AddSingleton<IGroupManager, GroupManager>();
         services.AddSingleton<IFileWatcher, FileWatcherService>();
-        services.AddSingleton<IFileGroupMatcher, FileGroupMatcherService>();
+        services.AddSingleton<IFileGroupMatcher>(sp =>
+            new FileGroupMatcherService(
+                sp.GetRequiredService<IGroupIdGenerator>(),
+                sp.GetService<ILogger<FileGroupMatcherService>>()));
+        services.AddSingleton<INirFileResolver, SpcTxtNirFileResolver>();
+        services.AddSingleton<IInitialScanner, InitialScanner>();
         services.AddSingleton<IImageProcessor, ImageProcessingService>();
+        services.AddSingleton<IImageCaptureService, ImageCaptureService>();
+        services.AddSingleton<IEventProcessor, EventProcessor>();
         services.AddSingleton<IStatisticsService, StatisticsService>();
-        services.AddSingleton<IMonitoringOrchestrator, MonitoringOrchestrator>();
+
+        // Abnormal Detection Services
+        services.AddSingleton<AbnormalHistoryManager>();
+        services.AddSingleton<IAbnormalDetector, AbnormalDetectorService>(sp =>
+            new AbnormalDetectorService(
+                sp.GetRequiredService<IConfigurationManager>(),
+                sp.GetRequiredService<AbnormalHistoryManager>(),
+                sp.GetService<ILogger<AbnormalDetectorService>>()));
+
+        services.AddSingleton<IMonitoringOrchestrator, MonitoringOrchestrator>(sp =>
+            new MonitoringOrchestrator(
+                sp.GetRequiredService<IFileGroupMatcher>(),
+                sp.GetRequiredService<IFileWatcher>(),
+                sp.GetRequiredService<ILogger<MonitoringOrchestrator>>(),
+                sp.GetRequiredService<INirFileResolver>(),
+                sp.GetRequiredService<ITimestampCache>(),
+                sp.GetRequiredService<IInitialScanner>(),
+                sp.GetRequiredService<IGroupManager>(),
+                sp.GetRequiredService<IImageCaptureService>(),
+                sp.GetRequiredService<IEventProcessor>(),
+                sp.GetRequiredService<IConfigurationManager>(),
+                sp.GetRequiredService<IAbnormalDetector>(),
+                uiLog: null));
 
         // File Operation Services (Transient)
+        services.AddSingleton<IFileGroupOperator, FileGroupOperator>();
+        services.AddTransient<IMoveService, MoveService>();
+        services.AddTransient<IDeleteService, DeleteService>();
         services.AddTransient<IFileOperationService, FileOperationService>();
         services.AddTransient<IPathManagementService, PathManagementService>();
 
         // ViewModels (Transient)
-        services.AddTransient<MainWindowViewModel>();
         services.AddTransient<SettingsDialogViewModel>();
 
         return services.BuildServiceProvider();

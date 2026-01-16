@@ -43,17 +43,7 @@ public class ImageMetadata : IEquatable<ImageMetadata>
     [JsonPropertyName("is_abnormal")]
     public bool IsAbnormal { get; set; }
 
-    /// <summary>
-    /// Z-score for width dimension (used in abnormal detection).
-    /// </summary>
-    [JsonPropertyName("z_score_width")]
-    public double ZScoreWidth { get; set; }
 
-    /// <summary>
-    /// Z-score for height dimension (used in abnormal detection).
-    /// </summary>
-    [JsonPropertyName("z_score_height")]
-    public double ZScoreHeight { get; set; }
 
     /// <summary>
     /// Full file path to the image.
@@ -107,8 +97,6 @@ public class ImageMetadata : IEquatable<ImageMetadata>
                FileSize == other.FileSize &&
                Format == other.Format &&
                IsAbnormal == other.IsAbnormal &&
-               Math.Abs(ZScoreWidth - other.ZScoreWidth) < 0.0001 &&
-               Math.Abs(ZScoreHeight - other.ZScoreHeight) < 0.0001 &&
                FilePath == other.FilePath;
     }
 
@@ -126,8 +114,6 @@ public class ImageMetadata : IEquatable<ImageMetadata>
         hash.Add(FileSize);
         hash.Add(Format);
         hash.Add(IsAbnormal);
-        hash.Add(ZScoreWidth);
-        hash.Add(ZScoreHeight);
         hash.Add(FilePath);
         return hash.ToHashCode();
     }

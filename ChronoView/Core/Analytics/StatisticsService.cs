@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Windows.Threading;
 using ChronoView.Core.Configuration;
+using ChronoView.Helpers;
 using ChronoView.Models;
 using Microsoft.Extensions.Logging;
 
@@ -226,16 +228,22 @@ public class StatisticsService : IStatisticsService, IDisposable
                 stats.Nir2Count = await CountFilesInDirectoryAsync(config.MatchingSettings.Nir2Path);
             }
 
-            // Count Normal1 folders (Line 1) - Normal paths contain directories, not files
+            // Count Normal1 folders (Line 1)
             if (!string.IsNullOrEmpty(config.MatchingSettings.Normal1Path))
             {
-                stats.NormalCount = await CountDirectoriesInDirectoryAsync(config.MatchingSettings.Normal1Path);
+                stats.NormalCount = await CountDirectoriesWithHelperAsync(
+                    config.MatchingSettings.Normal1Path, 
+                    config.MatchingSettings.UseFolderSuffix, 
+                    expectedLine: 1);
             }
 
-            // Count Normal2 folders (Line 2) - Normal paths contain directories, not files
+            // Count Normal2 folders (Line 2)
             if (!string.IsNullOrEmpty(config.MatchingSettings.Normal2Path))
             {
-                stats.Normal2Count = await CountDirectoriesInDirectoryAsync(config.MatchingSettings.Normal2Path);
+                stats.Normal2Count = await CountDirectoriesWithHelperAsync(
+                    config.MatchingSettings.Normal2Path, 
+                    config.MatchingSettings.UseFolderSuffix, 
+                    expectedLine: 2);
             }
 
             // Count individual camera files
@@ -436,7 +444,7 @@ public class StatisticsService : IStatisticsService, IDisposable
         }
     }
 
-    private async Task<int> CountDirectoriesInDirectoryAsync(string path)
+    private async Task<int> CountDirectoriesInDirectoryAsync(string path, string? suffixFilter = null)
     {
         if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
         {
@@ -446,7 +454,18 @@ public class StatisticsService : IStatisticsService, IDisposable
         try
         {
             // Use EnumerateDirectories for efficient counting of subdirectories
-            return await Task.Run(() => Directory.EnumerateDirectories(path, "*", SearchOption.TopDirectoryOnly).Count());
+            return await Task.Run(() =>
+            {
+                var directories = Directory.EnumerateDirectories(path, "*", SearchOption.TopDirectoryOnly);
+                
+                // If suffix filter is provided, only count directories ending with that suffix
+                if (!string.IsNullOrEmpty(suffixFilter))
+                {
+                    directories = directories.Where(dir => Path.GetFileName(dir).EndsWith(suffixFilter, StringComparison.Ordinal));
+                }
+                
+                return directories.Count();
+            });
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -456,6 +475,37 @@ public class StatisticsService : IStatisticsService, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error counting directories in directory: {Path}", path);
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Counts directories using NormalFolderHelper for validation.
+    /// </summary>
+    private async Task<int> CountDirectoriesWithHelperAsync(string path, bool useSuffix, int expectedLine)
+    {
+        if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+        {
+            return 0;
+        }
+
+        try
+        {
+            return await Task.Run(() =>
+            {
+                var directories = Directory.EnumerateDirectories(path, "*", SearchOption.TopDirectoryOnly);
+                return directories.Count(dir => 
+                    NormalFolderHelper.IsValidNormalFolder(Path.GetFileName(dir), useSuffix, expectedLine));
+            });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Access denied to directory: {Path}", path);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error counting directories with helper in directory: {Path}", path);
             return 0;
         }
     }

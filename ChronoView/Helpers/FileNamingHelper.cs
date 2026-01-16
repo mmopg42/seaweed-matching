@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.RegularExpressions;
+using ChronoView.Models;
 
 namespace ChronoView.Helpers
 {
@@ -159,6 +160,45 @@ namespace ChronoView.Helpers
             {
                 return null;
             }
+        }
+        /// <summary>
+        /// Automatically extracts timestamp based on detected file type
+        /// </summary>
+        public static DateTime? ExtractTimestampAuto(string path)
+        {
+            var fileName = Path.GetFileName(path);
+            if (string.IsNullOrEmpty(fileName)) return null;
+
+            if (NirFileRegex.IsMatch(fileName))
+                return ExtractTimestampFromNirFileName(fileName);
+
+            if (NormalFolderRegex.IsMatch(fileName))
+                return ExtractTimestampFromNormalFolderName(fileName);
+
+            if (CameraFileRegex.IsMatch(fileName))
+                return ExtractTimestampFromCameraFileName(fileName);
+
+            return null;
+        }
+
+        /// <summary>
+        /// Identifies the data type based on the file/folder name
+        /// </summary>
+        public static DataType? IdentifyDataType(string path)
+        {
+            var fileName = Path.GetFileName(path);
+            if (string.IsNullOrEmpty(fileName)) return null;
+
+            if (NirFileRegex.IsMatch(fileName))
+                return DataType.NIR;
+
+            if (NormalFolderRegex.IsMatch(fileName))
+                return DataType.Normal;
+
+            if (CameraFileRegex.IsMatch(fileName))
+                return DataType.Camera;
+
+            return null;
         }
     }
 }

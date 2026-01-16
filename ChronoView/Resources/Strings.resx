@@ -1,0 +1,856 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Updated to trigger Designer.cs regeneration -->
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  
+  <!-- Column Headers -->
+  <data name="Column_Normal" xml:space="preserve">
+    <value>일반카메라</value>
+  </data>
+  <data name="Column_NIR" xml:space="preserve">
+    <value>NIR</value>
+  </data>
+  <data name="Column_Cam1" xml:space="preserve">
+    <value>Cam1</value>
+  </data>
+  <data name="Column_Cam2" xml:space="preserve">
+    <value>Cam2</value>
+  </data>
+  <data name="Column_Cam3" xml:space="preserve">
+    <value>Cam3</value>
+  </data>
+  <data name="Column_Cam4" xml:space="preserve">
+    <value>Cam4</value>
+  </data>
+  <data name="Column_Cam5" xml:space="preserve">
+    <value>Cam5</value>
+  </data>
+  <data name="Column_Cam6" xml:space="preserve">
+    <value>Cam6</value>
+  </data>
+  
+  <!-- UI Labels -->
+  <data name="Label_Date" xml:space="preserve">
+    <value>날짜:</value>
+  </data>
+  <data name="Label_Sample" xml:space="preserve">
+    <value>시료:</value>
+  </data>
+  
+  <!-- Buttons -->
+  <data name="Button_AutoConfig" xml:space="preserve">
+    <value>자동 설정</value>
+  </data>
+  <data name="Button_CreateFolder" xml:space="preserve">
+    <value>폴더 생성</value>
+  </data>
+  <data name="Button_Move" xml:space="preserve">
+    <value>이동</value>
+  </data>
+  <data name="Button_Delete" xml:space="preserve">
+    <value>삭제</value>
+  </data>
+  
+  <!-- Tooltips -->
+  <data name="Tooltip_MoveSelected" xml:space="preserve">
+    <value>선택한 파일을 이동합니다</value>
+  </data>
+  <data name="Tooltip_DeleteSelected" xml:space="preserve">
+    <value>선택한 파일을 삭제합니다</value>
+  </data>
+  <data name="Tooltip_DateInput" xml:space="preserve">
+    <value>YYYYMMDD 형식</value>
+  </data>
+  <data name="Tooltip_SampleFolder" xml:space="preserve">
+    <value>시료 폴더명</value>
+  </data>
+  
+  <!-- Data Type Display Names -->
+  <data name="DataType_Normal" xml:space="preserve">
+    <value>일반</value>
+  </data>
+  <data name="DataType_NIR" xml:space="preserve">
+    <value>NIR</value>
+  </data>
+  <data name="DataType_Camera1" xml:space="preserve">
+    <value>Cam1</value>
+  </data>
+  <data name="DataType_Camera2" xml:space="preserve">
+    <value>Cam2</value>
+  </data>
+  <data name="DataType_Camera3" xml:space="preserve">
+    <value>Cam3</value>
+  </data>
+  <data name="DataType_Camera4" xml:space="preserve">
+    <value>Cam4 (라인 2)</value>
+  </data>
+  <data name="DataType_Camera5" xml:space="preserve">
+    <value>Cam5 (라인 2)</value>
+  </data>
+  <data name="DataType_Camera6" xml:space="preserve">
+    <value>Cam26 (라인 2)</value>
+  </data>
+  
+  <!-- Dialog Messages -->
+  <data name="Message_ClearLogConfirm" xml:space="preserve">
+    <value>모든 로그 메시지를 삭제하시겠습니까?</value>
+  </data>
+  <data name="Dialog_ClearLog" xml:space="preserve">
+    <value>로그 삭제</value>
+  </data>
+  <data name="Message_ExportSuccess" xml:space="preserve">
+    <value>로그가 성공적으로 내보내졌습니다:\n{0}</value>
+  </data>
+  <data name="Dialog_ExportComplete" xml:space="preserve">
+    <value>내보내기 완료</value>
+  </data>
+  <data name="Message_ExportError" xml:space="preserve">
+    <value>로그 내보내기 실패:\n{0}</value>
+  </data>
+  <data name="Dialog_ExportError" xml:space="preserve">
+    <value>내보내기 오류</value>
+  </data>
+  <data name="Message_ImageNotFound" xml:space="preserve">
+    <value>이미지 파일을 찾을 수 없습니다.</value>
+  </data>
+  <data name="Dialog_Error" xml:space="preserve">
+    <value>오류</value>
+  </data>
+  
+  <!-- Dialog Titles -->
+  <data name="Dialog_ImagePreview" xml:space="preserve">
+    <value>이미지 미리보기</value>
+  </data>
+  <data name="Dialog_Settings" xml:space="preserve">
+    <value>설정</value>
+  </data>
+  
+  <!-- File Filters -->
+  <data name="Filter_TextFiles" xml:space="preserve">
+    <value>텍스트 파일 (*.txt)|*.txt|CSV 파일 (*.csv)|*.csv|모든 파일 (*.*)|*.*</value>
+  </data>
+  
+  <!-- Camera Labels -->
+  <data name="Camera_Cam1" xml:space="preserve">
+    <value>Cam 1</value>
+  </data>
+  <data name="Camera_Cam2" xml:space="preserve">
+    <value>Cam 2</value>
+  </data>
+  <data name="Camera_Cam3" xml:space="preserve">
+    <value>Cam 3</value>
+  </data>
+  <data name="Camera_Cam4" xml:space="preserve">
+    <value>Cam 4</value>
+  </data>
+  <data name="Camera_Cam5" xml:space="preserve">
+    <value>Cam 5</value>
+  </data>
+  <data name="Camera_Cam6" xml:space="preserve">
+    <value>Cam 6</value>
+  </data>
+  
+  <!-- Menu Items -->
+  <data name="Menu_File" xml:space="preserve">
+    <value>파일</value>
+  </data>
+  <data name="Menu_View" xml:space="preserve">
+    <value>보기</value>
+  </data>
+  <data name="Menu_Tools" xml:space="preserve">
+    <value>도구</value>
+  </data>
+  <data name="Menu_Help" xml:space="preserve">
+    <value>도움말</value>
+  </data>
+  <data name="Menu_Exit" xml:space="preserve">
+    <value>종료</value>
+  </data>
+  <data name="Menu_Refresh" xml:space="preserve">
+    <value>새로고침</value>
+  </data>
+  <data name="Menu_Settings" xml:space="preserve">
+    <value>설정</value>
+  </data>
+  <data name="Menu_About" xml:space="preserve">
+    <value>정보</value>
+  </data>
+  
+  <!-- Tooltips -->
+  <data name="Tooltip_StartMonitoring" xml:space="preserve">
+    <value>모니터링 시작</value>
+  </data>
+  <data name="Tooltip_StopMonitoring" xml:space="preserve">
+    <value>모니터링 중지</value>
+  </data>
+  <data name="Tooltip_OpenSettings" xml:space="preserve">
+    <value>설정 열기</value>
+  </data>
+  <data name="Tooltip_RefreshData" xml:space="preserve">
+    <value>데이터 새로고침</value>
+  </data>
+  <data name="Tooltip_SearchLog" xml:space="preserve">
+    <value>로그 메시지 검색</value>
+  </data>
+  <data name="Tooltip_FilterLevel" xml:space="preserve">
+    <value>로그 레벨로 필터링</value>
+  </data>
+  
+  <!-- Statistics Labels -->
+  <data name="Label_FileCounts" xml:space="preserve">
+    <value>파일 개수</value>
+  </data>
+  <data name="Label_MatchingStatus" xml:space="preserve">
+    <value>매칭 상태</value>
+  </data>
+  <data name="Label_Total" xml:space="preserve">
+    <value>전체</value>
+  </data>
+  <data name="Label_WithNIR" xml:space="preserve">
+    <value>NIR 포함</value>
+  </data>
+  <data name="Label_WithoutNIR" xml:space="preserve">
+    <value>NIR 없음</value>
+  </data>
+  <data name="Label_Failed" xml:space="preserve">
+    <value>실패</value>
+  </data>
+  <data name="Label_Abnormal" xml:space="preserve">
+    <value>이상</value>
+  </data>
+  <data name="Label_NIR1" xml:space="preserve">
+    <value>NIR1</value>
+  </data>
+  <data name="Label_Normal1" xml:space="preserve">
+    <value>일반1</value>
+  </data>
+  <data name="Label_Cam1" xml:space="preserve">
+    <value>Cam1</value>
+  </data>
+  <data name="Label_Cam2" xml:space="preserve">
+    <value>Cam2</value>
+  </data>
+  <data name="Label_Cam3" xml:space="preserve">
+    <value>Cam3</value>
+  </data>
+  
+  <!-- Status -->
+  <data name="Status_Ready" xml:space="preserve">
+    <value>준비됨</value>
+  </data>
+  <data name="Status_All" xml:space="preserve">
+    <value>전체</value>
+  </data>
+  <data name="Status_Debug" xml:space="preserve">
+    <value>디버그</value>
+  </data>
+  <data name="Status_Info" xml:space="preserve">
+    <value>정보</value>
+  </data>
+  <data name="Status_Warning" xml:space="preserve">
+    <value>경고</value>
+  </data>
+  <data name="Status_Error" xml:space="preserve">
+    <value>오류</value>
+  </data>
+  
+  <!-- Log Panel -->
+  <data name="Log_MessageLog" xml:space="preserve">
+    <value>메시지 로그</value>
+  </data>
+  <data name="Log_Search" xml:space="preserve">
+    <value>검색:</value>
+  </data>
+  <data name="Log_Level" xml:space="preserve">
+    <value>레벨:</value>
+  </data>
+  <data name="Log_AutoScroll" xml:space="preserve">
+    <value>자동 스크롤</value>
+  </data>
+  <data name="Log_Clear" xml:space="preserve">
+    <value>지우기</value>
+  </data>
+  <data name="Log_Export" xml:space="preserve">
+    <value>내보내기</value>
+  </data>
+  <data name="Log_Severity" xml:space="preserve">
+    <value>심각도</value>
+  </data>
+  <data name="Log_Time" xml:space="preserve">
+    <value>시간</value>
+  </data>
+  <data name="Log_Source" xml:space="preserve">
+    <value>소스</value>
+  </data>
+  <data name="Log_Message" xml:space="preserve">
+    <value>메시지</value>
+  </data>
+  
+  <!-- Panel Headers -->
+  <data name="Panel_WorkflowControl" xml:space="preserve">
+    <value>워크플로우 제어</value>
+  </data>
+  <data name="Panel_SystemStatus" xml:space="preserve">
+    <value>시스템 상태</value>
+  </data>
+  <data name="Panel_SampleInformation" xml:space="preserve">
+    <value>시료 정보</value>
+  </data>
+  <data name="Panel_DataStatus" xml:space="preserve">
+    <value>데이터 상태</value>
+  </data>
+  <data name="Panel_CameraStatus" xml:space="preserve">
+    <value>카메라 상태</value>
+  </data>
+  <data name="Panel_SampleMoveSettings" xml:space="preserve">
+    <value>샘플 이동 설정</value>
+  </data>
+  
+  <!-- Data Grid Columns -->
+  <data name="Column_Index" xml:space="preserve">
+    <value>인덱스</value>
+  </data>
+  <data name="Column_Status" xml:space="preserve">
+    <value>상태</value>
+  </data>
+  
+  <!-- Status Labels -->
+  <data name="Status_TotalGroups" xml:space="preserve">
+    <value>전체 그룹:</value>
+  </data>
+
+  <data name="Status_Failures" xml:space="preserve">
+    <value>실패:</value>
+  </data>
+  <data name="Status_Normal" xml:space="preserve">
+    <value>일반:</value>
+  </data>
+  <data name="Status_NIR" xml:space="preserve">
+    <value>NIR:</value>
+  </data>
+  <data name="Status_NirFiltering" xml:space="preserve">
+    <value>NIR 필터링:</value>
+  </data>
+  
+  <!-- Sample Information -->
+  <data name="Sample_Name" xml:space="preserve">
+    <value>시료명:</value>
+  </data>
+  <data name="Sample_MoveNIR" xml:space="preserve">
+    <value>NIR 이동:</value>
+  </data>
+  <data name="Sample_MoveAllData" xml:space="preserve">
+    <value>전체 데이터 이동:</value>
+  </data>
+  <data name="Label_MoveSettings" xml:space="preserve">
+    <value>이동 설정</value>
+  </data>
+  
+  <!-- Error Messages -->
+  <data name="Error_Critical" xml:space="preserve">
+    <value>치명적 오류</value>
+  </data>
+  <data name="Error_CriticalMessage" xml:space="preserve">
+    <value>치명적 오류 ({0}):\n{1}\n\n자세한 내용은 critical_error.log 파일을 확인하세요.</value>
+  </data>
+  
+  <!-- Window States -->
+  <data name="WindowState_Normal" xml:space="preserve">
+    <value>일반</value>
+  </data>
+  <data name="WindowState_Maximized" xml:space="preserve">
+    <value>최대화</value>
+  </data>
+  <data name="WindowState_Minimized" xml:space="preserve">
+    <value>최소화</value>
+  </data>
+  
+  <!-- Status Text -->
+  <data name="Status_Complete" xml:space="preserve">
+    <value>✓ 완료</value>
+  </data>
+  <data name="Status_Pending" xml:space="preserve">
+    <value>⏳ 대기 중</value>
+  </data>
+  <data name="Status_Processing" xml:space="preserve">
+    <value>처리 중...</value>
+  </data>
+  <data name="Status_Moved" xml:space="preserve">
+    <value>📦 이동됨</value>
+  </data>
+  <data name="Status_GroupError" xml:space="preserve">
+    <value>✗ 오류</value>
+  </data>
+  <data name="Status_Abnormal" xml:space="preserve">
+    <value>⚠ 이상</value>
+  </data>
+  <data name="Status_AbnormalDetected" xml:space="preserve">
+    <value>⚠ 이상 (z-score 분석으로 감지됨)</value>
+  </data>
+  <data name="Status_Incomplete" xml:space="preserve">
+    <value>불완전</value>
+  </data>
+  <data name="Status_Missing" xml:space="preserve">
+    <value>누락</value>
+  </data>
+  <data name="Status_AbnormalReason" xml:space="preserve">
+    <value>z-score 분석으로 감지됨</value>
+  </data>
+  
+  <!-- Program Status -->
+  <data name="Status_Activated" xml:space="preserve">
+    <value>활성화</value>
+  </data>
+  <data name="Status_Deactivated" xml:space="preserve">
+    <value>비활성화</value>
+  </data>
+  
+  <!-- Settings Dialog - Buttons -->
+  <data name="Button_Apply" xml:space="preserve">
+    <value>적용</value>
+  </data>
+  <data name="Button_OK" xml:space="preserve">
+    <value>확인</value>
+  </data>
+  <data name="Button_Cancel" xml:space="preserve">
+    <value>취소</value>
+  </data>
+  <data name="Button_Browse" xml:space="preserve">
+    <value>찾아보기...</value>
+  </data>
+  <data name="Button_Open" xml:space="preserve">
+    <value>📁 열기</value>
+  </data>
+  
+  <!-- Settings Dialog - Tab Headers -->
+  <data name="Tab_Paths" xml:space="preserve">
+    <value>경로</value>
+  </data>
+  <data name="Tab_Advanced" xml:space="preserve">
+    <value>고급</value>
+  </data>
+  <data name="Tab_UIOptions" xml:space="preserve">
+    <value>UI 옵션</value>
+  </data>
+  <data name="Tab_DataSequence" xml:space="preserve">
+    <value>데이터 순서</value>
+  </data>
+  <data name="Tab_ExternalPrograms" xml:space="preserve">
+    <value>외부 프로그램</value>
+  </data>
+  
+  <!-- Settings Dialog - Section Headers -->
+  <data name="Section_Line1Paths" xml:space="preserve">
+    <value>라인 1 경로</value>
+  </data>
+  <data name="Section_Line2Paths" xml:space="preserve">
+    <value>라인 2 경로</value>
+  </data>
+  <data name="Section_Output" xml:space="preserve">
+    <value>출력</value>
+  </data>
+  <data name="Section_Quarantine" xml:space="preserve">
+    <value>격리 (휴지통)</value>
+  </data>
+  <data name="Section_CameraSubfolderOptions" xml:space="preserve">
+    <value>카메라 하위 폴더 옵션</value>
+  </data>
+  <data name="Section_ImageProcessing" xml:space="preserve">
+    <value>이미지 처리</value>
+  </data>
+  <data name="Section_UIOptions" xml:space="preserve">
+    <value>UI 옵션</value>
+  </data>
+  <data name="Section_ImageDisplaySize" xml:space="preserve">
+    <value>이미지 표시 크기</value>
+  </data>
+  <data name="Section_NirGraphOptions" xml:space="preserve">
+    <value>NIR 그래프 옵션</value>
+  </data>
+  <data name="Section_UIDisplayOptions" xml:space="preserve">
+    <value>UI 표시 옵션</value>
+  </data>
+  <data name="Section_DataArrivalSequence" xml:space="preserve">
+    <value>데이터 도착 순서 구성</value>
+  </data>
+  <data name="Section_ExternalProgramConfig" xml:space="preserve">
+    <value>외부 프로그램 구성</value>
+  </data>
+  <data name="Section_GeneralCameraProgram" xml:space="preserve">
+    <value>일반 카메라 프로그램</value>
+  </data>
+  <data name="Section_NirProgram1" xml:space="preserve">
+    <value>NIR 프로그램 1</value>
+  </data>
+  <data name="Section_NirProgram2" xml:space="preserve">
+    <value>NIR 프로그램 2</value>
+  </data>
+  <data name="Section_Nir2FilteringConfig" xml:space="preserve">
+    <value>NIR2 필터링 구성</value>
+  </data>
+  
+  <!-- Settings Dialog - Labels -->
+  <data name="Label_Nir1Path" xml:space="preserve">
+    <value>NIR 1 경로:</value>
+  </data>
+  <data name="Label_Normal1Path" xml:space="preserve">
+    <value>일반 1 경로:</value>
+  </data>
+  <data name="Label_Camera1Path" xml:space="preserve">
+    <value>카메라 1 경로:</value>
+  </data>
+  <data name="Label_Camera2Path" xml:space="preserve">
+    <value>카메라 2 경로:</value>
+  </data>
+  <data name="Label_Camera3Path" xml:space="preserve">
+    <value>카메라 3 경로:</value>
+  </data>
+  <data name="Label_Nir2Path" xml:space="preserve">
+    <value>NIR 2 경로:</value>
+  </data>
+  <data name="Label_Normal2Path" xml:space="preserve">
+    <value>일반 2 경로:</value>
+  </data>
+  <data name="Label_Camera4Path" xml:space="preserve">
+    <value>카메라 4 경로:</value>
+  </data>
+  <data name="Label_Camera5Path" xml:space="preserve">
+    <value>카메라 5 경로:</value>
+  </data>
+  <data name="Label_Camera6Path" xml:space="preserve">
+    <value>카메라 6 경로:</value>
+  </data>
+  <data name="Label_OutputPath" xml:space="preserve">
+    <value>출력 경로:</value>
+  </data>
+  <data name="Label_QuarantinePath" xml:space="preserve">
+    <value>격리 경로:</value>
+  </data>
+  <data name="Label_ProgramPath" xml:space="preserve">
+    <value>프로그램 경로:</value>
+  </data>
+  <data name="Label_MonitorPath" xml:space="preserve">
+    <value>모니터 경로:</value>
+  </data>
+  <data name="Label_DestinationPath" xml:space="preserve">
+    <value>대상 경로:</value>
+  </data>
+  <data name="Label_ImageWidth" xml:space="preserve">
+    <value>이미지 너비 (px):</value>
+  </data>
+  <data name="Label_ImageHeight" xml:space="preserve">
+    <value>이미지 높이 (px):</value>
+  </data>
+  <data name="Label_NirDisplayWidth" xml:space="preserve">
+    <value>NIR 표시 너비 (px):</value>
+  </data>
+  <data name="Label_NirDisplayHeight" xml:space="preserve">
+    <value>NIR 표시 높이 (px):</value>
+  </data>
+  <data name="Label_RowHeight" xml:space="preserve">
+    <value>행 높이 (px):</value>
+  </data>
+  <data name="Label_GraphGenWidth" xml:space="preserve">
+    <value>그래프 생성 너비 (px):</value>
+  </data>
+  <data name="Label_GraphGenHeight" xml:space="preserve">
+    <value>그래프 생성 높이 (px):</value>
+  </data>
+  <data name="Label_DataSequence" xml:space="preserve">
+    <value>데이터 순서 (드래그하여 재정렬):</value>
+  </data>
+  
+  <!-- Settings Dialog - Checkboxes -->
+  <data name="Checkbox_UseCameraSubfolderNormal" xml:space="preserve">
+    <value>Normal1에 카메라 하위 폴더 사용</value>
+  </data>
+  <data name="Checkbox_UseCameraSubfolderNormal2" xml:space="preserve">
+    <value>Normal2에 카메라 하위 폴더 사용</value>
+  </data>
+  <data name="Checkbox_EnableDiskCache" xml:space="preserve">
+    <value>썸네일 디스크 캐시 활성화</value>
+  </data>
+  <data name="Checkbox_LegacyUiMode" xml:space="preserve">
+    <value>레거시 UI 모드</value>
+  </data>
+  <data name="Checkbox_UseFolderSuffix" xml:space="preserve">
+    <value>폴더 접미사 사용</value>
+  </data>
+  <data name="Checkbox_ShowTooltips" xml:space="preserve">
+    <value>툴팁 표시</value>
+  </data>
+  <data name="Checkbox_EnableNirGraph" xml:space="preserve">
+    <value>NIR 그래프 활성화</value>
+  </data>
+  <data name="Checkbox_Enabled" xml:space="preserve">
+    <value>활성화</value>
+  </data>
+  
+  <!-- Settings Dialog - Default Values -->
+  <data name="Default_120" xml:space="preserve">
+    <value>(기본값: 120)</value>
+  </data>
+  <data name="Default_90" xml:space="preserve">
+    <value>(기본값: 90)</value>
+  </data>
+  <data name="Default_100" xml:space="preserve">
+    <value>(기본값: 100)</value>
+  </data>
+  
+  <!-- Settings Dialog - Helper Text -->
+  <data name="Helper_ImageGenerationSize" xml:space="preserve">
+    <value>(이미지 생성 크기)</value>
+  </data>
+  <data name="Helper_DataSequenceDescription" xml:space="preserve">
+    <value>예상되는 데이터 도착 순서와 매칭 허용 오차를 구성합니다.</value>
+  </data>
+  <data name="Helper_ExternalProgramDescription" xml:space="preserve">
+    <value>설정 창에서 해당 버튼을 클릭할 때 실행될 외부 프로그램의 경로를 구성합니다.</value>
+  </data>
+  <data name="Helper_Nir2FilteringDescription" xml:space="preserve">
+    <value>자동 NIR 스펙트럼 필터링을 위한 경로를 설정합니다.</value>
+  </data>
+  
+  <!-- Settings Dialog - Tooltips -->
+  <data name="Tooltip_OpenFolderInExplorer" xml:space="preserve">
+    <value>탐색기에서 폴더 열기</value>
+  </data>
+  <data name="Tooltip_MonitorPath" xml:space="preserve">
+    <value>새 NIR .txt 파일을 모니터링할 폴더 경로</value>
+  </data>
+  <data name="Tooltip_DestinationPath" xml:space="preserve">
+    <value>필터링된 NIR 파일을 이동할 폴더 경로</value>
+  </data>
+  
+  <!-- Settings Dialog - Data Sequence Help Text -->
+  <data name="Help_DragToReorder" xml:space="preserve">
+    <value>• ≡를 드래그하여 항목 순서 변경</value>
+  </data>
+  <data name="Help_MinDelay" xml:space="preserve">
+    <value>• 'Min'은 이전 데이터 타입 이후의 최소 시간(초)</value>
+  </data>
+  <data name="Help_MaxDelay" xml:space="preserve">
+    <value>• 'Max'는 이전 데이터 타입 이후의 최대 시간(초)</value>
+  </data>
+  <data name="Help_UncheckedItems" xml:space="preserve">
+    <value>• 체크 해제된 항목은 UI에서 숨겨집니다</value>
+  </data>
+  
+  <!-- Settings Dialog - External Programs Help Text -->
+  <data name="Help_ExternalProgramsLaunch" xml:space="preserve">
+    <value>• 설정 창에서 해당 버튼을 클릭하면 실행됩니다</value>
+  </data>
+  <data name="Help_OnlyExeSupported" xml:space="preserve">
+    <value>• .exe 파일만 지원됩니다</value>
+  </data>
+  
+  <!-- Settings Dialog - Delay Labels -->
+  <data name="Label_Min" xml:space="preserve">
+    <value>Min: </value>
+  </data>
+  <data name="Label_Max" xml:space="preserve">
+    <value>Max: </value>
+  </data>
+  <data name="Label_Seconds" xml:space="preserve">
+    <value>s</value>
+  </data>
+
+  <!-- Log Messages (UI Log Panel) - English base, Korean in Strings.ko.resx -->
+  <!-- Debug Level -->
+  <data name="Log_Debug_ImageCheck_NoImage" xml:space="preserve">
+    <value>[ImageCheck] No image: {0} (waiting for reprocess)</value>
+  </data>
+  <data name="Log_Debug_ImageCheck_Found" xml:space="preserve">
+    <value>[ImageCheck] Image found!: {0} (updating)</value>
+  </data>
+  <data name="Log_Debug_LineCheck_Normal" xml:space="preserve">
+    <value>[LineCheck] Normal file: {0}</value>
+  </data>
+  <data name="Log_Debug_LineCheck_Nir2Path" xml:space="preserve">
+    <value>[LineCheck] Checking Nir2Path '{0}'</value>
+  </data>
+  <data name="Log_Debug_LineCheck_CamPath" xml:space="preserve">
+    <value>[LineCheck] Checking Cam{0}Path '{1}'</value>
+  </data>
+  <data name="Log_Debug_LineMatches_Nir2" xml:space="preserve">
+    <value>[LineMatches] Matched Nir2 -> Line 2</value>
+  </data>
+  <data name="Log_Debug_LineMatches_Cam" xml:space="preserve">
+    <value>[LineMatches] Matched Cam{0} -> Line 2</value>
+  </data>
+  <data name="Log_Debug_Thumbnail_LoadSuccess" xml:space="preserve">
+    <value>[Thumbnail] Load success: {0}</value>
+  </data>
+  <data name="Log_Debug_Thumbnail_RetrySuccess" xml:space="preserve">
+    <value>[Thumbnail] Retry success: {0}</value>
+  </data>
+
+  <!-- Info Level -->
+  <data name="Log_Info_Eviction" xml:space="preserve">
+    <value>[Eviction] {0}: {1} -> {2} occupied, existing data -> {3} moved</value>
+  </data>
+  <data name="Log_Info_NewGroup" xml:space="preserve">
+    <value>[NewGroup] {0}: {1} -> {2}</value>
+  </data>
+  <data name="Log_Info_MatchExcluded_ColumnOrder" xml:space="preserve">
+    <value>[MatchExcluded] {0}: {1} -> {2} excluded (reason: column order violation, last assigned: {3}, candidate: {4}@{5})</value>
+  </data>
+  <data name="Log_Info_MatchExcluded_Successor" xml:space="preserve">
+    <value>[MatchExcluded] {0}: {1} -> {2} excluded (reason: {3})</value>
+  </data>
+  <data name="Log_Info_MatchExcluded_TimeWindow" xml:space="preserve">
+    <value>[MatchExcluded] {0}: {1} -> {2} excluded (reason: {3}, {4})</value>
+  </data>
+  <data name="Log_Info_MatchSuccess" xml:space="preserve">
+    <value>[MatchSuccess] {0}: {1} -> {2} (reason: {3}, target: {4}, diff: {5}s)</value>
+  </data>
+  <data name="Log_Info_MatchFailed_NoGroup" xml:space="preserve">
+    <value>[MatchFailed] {0}: {1} -> Assignment failed (reason: no matching group, {2})</value>
+  </data>
+  <data name="Log_Info_DataSequenceOrder" xml:space="preserve">
+    <value>Data sequence order: {0}</value>
+  </data>
+  <data name="Log_Info_WatchingPaths" xml:space="preserve">
+    <value>Watching paths: {0} items</value>
+  </data>
+  <data name="Log_Info_Refresh_Start" xml:space="preserve">
+    <value>Refreshing...</value>
+  </data>
+  <data name="Log_Info_Refresh_Complete" xml:space="preserve">
+    <value>Refresh complete (monitoring stopped)</value>
+  </data>
+  <data name="Log_Info_Settings_Saved" xml:space="preserve">
+    <value>Settings saved successfully</value>
+  </data>
+  <data name="Log_Info_DisplaySettings_Applied" xml:space="preserve">
+    <value>Display settings applied</value>
+  </data>
+  <data name="Log_Info_Monitoring_Starting" xml:space="preserve">
+    <value>Starting monitoring...</value>
+  </data>
+  <data name="Log_Info_Monitoring_Refreshing" xml:space="preserve">
+    <value>Refreshing data...</value>
+  </data>
+  <data name="Log_Info_NirFiltering_Toggled" xml:space="preserve">
+    <value>NIR Filtering {0}</value>
+  </data>
+  <data name="Log_Info_Camera_Terminated" xml:space="preserve">
+    <value>{0} terminated by user</value>
+  </data>
+  <data name="Log_Info_Camera_Activated" xml:space="preserve">
+    <value>{0} activated</value>
+  </data>
+  <data name="Log_Info_Camera_Launched" xml:space="preserve">
+    <value>{0}</value>
+  </data>
+  <data name="Log_Info_Move_Progress" xml:space="preserve">
+    <value>[{0}/{1}] Progress... (Normal: {2}, Cam: {3})</value>
+  </data>
+  <data name="Log_Info_Move_ItemProgress" xml:space="preserve">
+    <value>[{0}/{1}] {2}...</value>
+  </data>
+  <data name="Log_Info_Move_Completed" xml:space="preserve">
+    <value>Move completed successfully</value>
+  </data>
+  <data name="Log_Info_Move_PartialFailed" xml:space="preserve">
+    <value>Move partial/failed</value>
+  </data>
+  <data name="Log_Info_Delete_GroupComplete" xml:space="preserve">
+    <value>Group {0} fully deleted: {1}</value>
+  </data>
+  <data name="Log_Info_Delete_PartialComplete" xml:space="preserve">
+    <value>{0} deleted: {1}</value>
+  </data>
+  <data name="Log_Info_Delete_Failed" xml:space="preserve">
+    <value>{0} delete failed: {1}</value>
+  </data>
+  <data name="Log_Info_Delete_BatchSuccess" xml:space="preserve">
+    <value>{0} groups successfully deleted</value>
+  </data>
+
+  <!-- Warning/Error Level -->
+  <data name="Log_Warn_ImageMissing" xml:space="preserve">
+    <value>[ImageMissing] Folder exists but no image: {0}</value>
+  </data>
+  <data name="Log_Warn_LineMismatch_Fallback" xml:space="preserve">
+    <value>[LineMismatch] WARNING: File '{0}' falling back to Line 1. Check configuration paths!</value>
+  </data>
+  <data name="Log_Error_StartFailed" xml:space="preserve">
+    <value>Start failed: {0}</value>
+  </data>
+  <data name="Log_Error_NirFilteringFailed" xml:space="preserve">
+    <value>NIR Filtering failed: {0}</value>
+  </data>
+  <data name="Log_Error_CameraLaunchFailed" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="Log_Error_OutputPathNotSet" xml:space="preserve">
+    <value>Output path is not configured</value>
+  </data>
+  <data name="Log_Error_OutputPathCreateFailed" xml:space="preserve">
+    <value>Cannot create output path
+Path: {0}
+Error: {1}</value>
+  </data>
+  <data name="Log_Error_Delete_Error" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+</root>
+

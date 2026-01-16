@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.IO;
+using ChronoView.Core.GroupIdGeneration;
 using ChronoView.Models;
 using ChronoView.UI.ViewModels;
 using Microsoft.Extensions.Logging;
@@ -36,6 +37,7 @@ namespace ChronoView.Core.FileMatching
         /// <param name="unmatchedFiles">Files to be matched</param>
         /// <param name="dataSequenceSettings">Configuration for time-based matching (optional)</param>
         /// <param name="consumedNirKeys">Set of NIR keys already consumed (for state management)</param>
+        /// <param name="idGenerator">Group ID generator for assigning unique IDs to groups</param>
         /// <param name="logger">Optional logger for diagnostics</param>
         /// <param name="uiLog">Optional UI log action (Severity, Source, Message)</param>
         /// <returns>List of matched file groups</returns>
@@ -43,6 +45,7 @@ namespace ChronoView.Core.FileMatching
             UnmatchedFiles unmatchedFiles,
             DataSequenceSettings? dataSequenceSettings,
             HashSet<string> consumedNirKeys,
+            IGroupIdGenerator idGenerator,
             ILogger? logger = null,
             Action<LogSeverity, string, string>? uiLog = null)
         {
@@ -105,9 +108,10 @@ namespace ChronoView.Core.FileMatching
             logger?.LogInformation("[DIAGNOSTIC] Group composition: NormalOnly={NO}, NormalWithCam={NWC}, CamOnly={CO}, NirOnly={NIO}", 
                 normalOnlyCount, normalWithCamCount, camOnlyCount, nirOnlyCount);
             
-            for (int i = 0; i < groups.Count; i++)
+            // Assign Group IDs using the injected generator
+            foreach (var group in groups)
             {
-                groups[i].GroupId = $"group_{(i + 1):D3}";
+                group.GroupId = idGenerator.GenerateNextId(group.LineNumber);
             }
 
             return groups;
@@ -272,32 +276,57 @@ namespace ChronoView.Core.FileMatching
                     // Try to find matching group based on previous Order types
                     FileGroup? matchedGroup = null;
 
-                    if (order > 1)
+                    // Determine reference DataType logic
+                    DataType? targetRefType = null;
+
+                    // A. Reference Camera Logic (Cam2/3 -> Cam1)
+                    // Note: Line 2 (Cam4/5/6) is mapped to Cam1/2/3 internally, so this covers both lines.
+                    if (dataSequenceSettings.CompareToReferenceCamera)
                     {
-                        // Find reference DataType (previous Order)
-                        var prevItem = orderedTypes.FirstOrDefault(x => x.Order == order - 1);
-                        if (prevItem != null)
+                        if (dataType == DataType.Cam2 || dataType == DataType.Cam3)
                         {
-                            var prevDataType = prevItem.Type;
-                            var minDelay = dataSequenceSettings.GetMinDelay(dataType);
-                            var maxDelay = dataSequenceSettings.GetMaxDelay(dataType);
+                            // Only use Cam1 if it is enabled and strictly precedes the current item
+                            var cam1Index = orderedTypes.FindIndex(x => x.Type == DataType.Cam1);
+                            var currentIndex = orderedTypes.IndexOf(item);
 
-                            logger?.LogDebug("[MATCH] {DataType} file {File} ts={Ts:HH:mm:ss}: Looking for {PrevType} within {Min}~{Max}s",
-                                dataType, Path.GetFileName(file.Path), file.Timestamp, prevDataType, minDelay, maxDelay);
-
-                            // Find closest group with prevDataType
-                            foreach (var g in groups)
+                            if (cam1Index != -1 && cam1Index < currentIndex)
                             {
-                                if (!HasDataTypeInGroup(g, prevDataType)) continue;
-                                if (HasDataTypeInGroup(g, dataType)) continue; // Non-duplicate filter
+                                targetRefType = DataType.Cam1;
+                            }
+                        }
+                    }
 
-                                var timeDiff = (file.Timestamp - g.Timestamp).TotalSeconds;
-                                if (timeDiff >= minDelay && timeDiff <= maxDelay)
+                    // B. Fallback / Standard Logic (Nearest Preceding Item)
+                    if (targetRefType == null)
+                    {
+                        var currentIndex = orderedTypes.IndexOf(item);
+                        if (currentIndex > 0)
+                        {
+                            targetRefType = orderedTypes[currentIndex - 1].Type;
+                        }
+                    }
+
+                    if (targetRefType != null)
+                    {
+                        var prevDataType = targetRefType.Value;
+                        var minDelay = dataSequenceSettings.GetMinDelay(dataType);
+                        var maxDelay = dataSequenceSettings.GetMaxDelay(dataType);
+
+                        logger?.LogDebug("[MATCH] {DataType} file {File} ts={Ts:HH:mm:ss}: Looking for {PrevType} within {Min}~{Max}s",
+                            dataType, Path.GetFileName(file.Path), file.Timestamp, prevDataType, minDelay, maxDelay);
+
+                        // Find closest group with prevDataType
+                        foreach (var g in groups)
+                        {
+                            if (!HasDataTypeInGroup(g, prevDataType)) continue;
+                            if (HasDataTypeInGroup(g, dataType)) continue; // Non-duplicate filter
+
+                            var timeDiff = (file.Timestamp - g.Timestamp).TotalSeconds;
+                            if (timeDiff >= minDelay && timeDiff <= maxDelay)
+                            {
+                                if (matchedGroup == null || Math.Abs(timeDiff) < Math.Abs((file.Timestamp - matchedGroup.Timestamp).TotalSeconds))
                                 {
-                                    if (matchedGroup == null || Math.Abs(timeDiff) < Math.Abs((file.Timestamp - matchedGroup.Timestamp).TotalSeconds))
-                                    {
-                                        matchedGroup = g;
-                                    }
+                                    matchedGroup = g;
                                 }
                             }
                         }
@@ -911,6 +940,9 @@ namespace ChronoView.Core.FileMatching
                 DataType.Cam1 => group.CameraFiles.ContainsKey("cam1") && !string.IsNullOrEmpty(group.CameraFiles["cam1"]),
                 DataType.Cam2 => group.CameraFiles.ContainsKey("cam2") && !string.IsNullOrEmpty(group.CameraFiles["cam2"]),
                 DataType.Cam3 => group.CameraFiles.ContainsKey("cam3") && !string.IsNullOrEmpty(group.CameraFiles["cam3"]),
+                DataType.Cam4 => group.CameraFiles.ContainsKey("cam4") && !string.IsNullOrEmpty(group.CameraFiles["cam4"]),
+                DataType.Cam5 => group.CameraFiles.ContainsKey("cam5") && !string.IsNullOrEmpty(group.CameraFiles["cam5"]),
+                DataType.Cam6 => group.CameraFiles.ContainsKey("cam6") && !string.IsNullOrEmpty(group.CameraFiles["cam6"]),
                 _ => false
             };
         }

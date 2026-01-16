@@ -390,7 +390,7 @@
                                                     <TextBlock Text="⚡" FontSize="12" VerticalAlignment="Center" Margin="0,0,6,0"/>
                                                     <TextBlock VerticalAlignment="Center">
                                                         <Run Text="NIR 필터: "/>
-                                                        <Run Text="{Binding Nir2FilteringStatus, Mode=OneWay}" FontWeight="Bold"/>
+                                                        <Run Text="{Binding Nir2FilteringStatus, Mode=OneWay}" Foreground="White" FontWeight="Bold"/>
                                                     </TextBlock>
                                                 </StackPanel>
                                             </Border>
@@ -411,25 +411,6 @@
 
                     <!-- Bottom Status and Start Button -->
                     <StackPanel Grid.Row="2" Margin="0,25,0,0">
-                        <!-- Status Message (visible only when needed) -->
-                        <Border Background="#FFFEF0"
-                                BorderBrush="#FFA500"
-                                BorderThickness="1"
-                                CornerRadius="6"
-                                Padding="12,8"
-                                Margin="0,0,0,12"
-                                Visibility="{Binding StatusVisibility}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="ℹ" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding StatusMessage}"
-                                           FontFamily="Segoe UI"
-                                           FontSize="13"
-                                           Foreground="#333333"
-                                           TextWrapping="Wrap"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-
                         <!-- Start Button -->
                         <Button Command="{Binding StartCommand}"
                                 FontFamily="Segoe UI"

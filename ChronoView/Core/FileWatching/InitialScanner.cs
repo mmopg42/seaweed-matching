@@ -114,18 +114,43 @@ namespace ChronoView.Core.FileWatching
                         if (!string.IsNullOrEmpty(config.Normal1Path) && Directory.Exists(config.Normal1Path))
                         {
                             var folders = Directory.GetDirectories(config.Normal1Path);
-                            files.AddRange(folders);
+                            // Filter using NormalFolderHelper based on UseFolderSuffix setting
+                            foreach (var folder in folders)
+                            {
+                                var folderName = Path.GetFileName(folder);
+                                if (NormalFolderHelper.IsValidNormalFolder(folderName, config.UseFolderSuffix, expectedLine: 1))
+                                {
+                                    files.Add(folder);
+                                }
+                            }
                         }
                         if (!string.IsNullOrEmpty(config.Normal2Path) && Directory.Exists(config.Normal2Path))
                         {
                             var folders = Directory.GetDirectories(config.Normal2Path);
-                            files.AddRange(folders);
+                            // Filter using NormalFolderHelper based on UseFolderSuffix setting
+                            foreach (var folder in folders)
+                            {
+                                var folderName = Path.GetFileName(folder);
+                                if (NormalFolderHelper.IsValidNormalFolder(folderName, config.UseFolderSuffix, expectedLine: 2))
+                                {
+                                    files.Add(folder);
+                                }
+                            }
                         }
                         break;
 
-                    case DataType.Cam1: AddCameraFilesForScan(files, config.Camera1Path); break;
-                    case DataType.Cam2: AddCameraFilesForScan(files, config.Camera2Path); break;
-                    case DataType.Cam3: AddCameraFilesForScan(files, config.Camera3Path); break;
+                    case DataType.Cam1:
+                        AddCameraFilesForScan(files, config.Camera1Path);
+                        AddCameraFilesForScan(files, config.Camera4Path);  // Line 2
+                        break;
+                    case DataType.Cam2:
+                        AddCameraFilesForScan(files, config.Camera2Path);
+                        AddCameraFilesForScan(files, config.Camera5Path);  // Line 2
+                        break;
+                    case DataType.Cam3:
+                        AddCameraFilesForScan(files, config.Camera3Path);
+                        AddCameraFilesForScan(files, config.Camera6Path);  // Line 2
+                        break;
                     case DataType.Cam4: AddCameraFilesForScan(files, config.Camera4Path); break;
                     case DataType.Cam5: AddCameraFilesForScan(files, config.Camera5Path); break;
                     case DataType.Cam6: AddCameraFilesForScan(files, config.Camera6Path); break;

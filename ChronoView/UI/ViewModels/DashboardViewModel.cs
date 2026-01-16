@@ -35,7 +35,7 @@ public class DashboardViewModel : ViewModelBase, IDashboardViewModel
 
     private int _failures; public int Failures { get => _failures; private set => SetProperty(ref _failures, value); }
     private int _abnormalCount; public int AbnormalCount { get => _abnormalCount; private set => SetProperty(ref _abnormalCount, value); }
-    
+
     public int WithNirCount => FileGroups.Count(g => g.HasNir);
     public int WithoutNirCount => FileGroups.Count(g => !g.HasNir && g.Status != GroupStatus.Error);
     public int FailedCount => FileGroups.Count(g => g.Status == GroupStatus.Error);
@@ -86,6 +86,7 @@ public class DashboardViewModel : ViewModelBase, IDashboardViewModel
         _orchestrator.GroupCreated += OnGroupCreated;
         _orchestrator.GroupUpdated += OnGroupUpdated;
         _orchestrator.GroupRemoved += OnGroupRemoved;
+        _orchestrator.MonitoringStateReset += (s, e) => WpfApplication.Current.Dispatcher.Invoke(ClearFileGroups);
 
         _statsService.FileCountsUpdated += (s, e) => UpdateFileCountStatistics(e);
         _statsService.MatchingStatisticsUpdated += (s, e) => UpdateMatchingStatistics(e);

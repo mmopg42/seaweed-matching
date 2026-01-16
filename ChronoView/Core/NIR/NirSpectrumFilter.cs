@@ -177,12 +177,27 @@ public static class NirSpectrumFilter
         int passedCount = criteria.Count(c => c.Value.Passed);
         const int totalCount = 5;
 
-        // Determine pass/fail (threshold: 4 out of 5)
-        bool passesFilter = passedCount >= 4;
+        // Determine pass/fail (threshold: 4 out of 5 AND y_std mandatory)
+        bool yStdPassed = criteria["y_std"].Passed;
+        bool passesFilter = (passedCount >= 4) && yStdPassed;
 
-        string message = passesFilter
-            ? $"김 있음 ({passedCount}/{totalCount} 기준 통과)"
-            : $"김 없음 ({passedCount}/{totalCount} 기준만 통과)";
+        string message;
+        if (passesFilter)
+        {
+            message = $"김 있음 ({passedCount}/{totalCount} 기준 통과)";
+        }
+        else
+        {
+            if (passedCount < 4)
+            {
+                message = $"김 없음 ({passedCount}/{totalCount} 기준만 통과)";
+            }
+            else
+            {
+                // passedCount >= 4 but y_std failed
+                message = $"김 없음 (기준 {passedCount}개 통과했으나 필수 조건 y_std 미달)";
+            }
+        }
 
         return new FilterResult
         {

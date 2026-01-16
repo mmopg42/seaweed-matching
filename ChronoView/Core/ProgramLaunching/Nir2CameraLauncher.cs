@@ -5,23 +5,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using ChronoView.Models;
-using ChronoView.Core.Nir;
 using ChronoView.Core.Configuration;
+using ChronoView.Helpers;
 
 namespace ChronoView.Core.ProgramLaunching;
 
 /// <summary>
-/// NIR2 필터링 서비스: NIR spectrum 파일을 모니터링하고 필터링하여 조건에 따라 이동/삭제 처리
+/// NIR Camera 2 프로그램 실행 및 상태 추적 담당
 /// </summary>
 public class Nir2CameraLauncher : IDisposable
 {
     private readonly ILogger<Nir2CameraLauncher> _logger;
     private readonly IConfigurationManager _configManager;
+    
     private Process? _process;
     private CancellationTokenSource? _monitorCts;
-    private FileSystemWatcher? _fileWatcher;
-    private bool _isFilteringActive;
-    private string _destinationPath = string.Empty;
 
     public Nir2CameraLauncher(
         ILogger<Nir2CameraLauncher> logger,
@@ -32,22 +30,80 @@ public class Nir2CameraLauncher : IDisposable
     }
 
     /// <summary>
-    /// 필터링 활성화 상태 변경 이벤트 (프로그램 실행과 별개)
+    /// 프로그램 활성화 상태 변경 이벤트
     /// </summary>
     public event EventHandler<bool>? StatusChanged;
 
     /// <summary>
-    /// 현재 프로그램 실행 상태
+    /// 활성화 상태
     /// </summary>
     public bool IsActive => _process != null && !_process.HasExited;
 
     /// <summary>
-    /// 현재 필터링 활성화 상태
+    /// 현재 관리 중인 프로세스 객체
     /// </summary>
-    public bool IsFilteringActive => _isFilteringActive;
+    public Process? CurrentProcess => _process;
 
     /// <summary>
-    /// NIR Camera 2 프로그램 실행
+    /// 현재 설정된 경로의 프로그램이 실행 중인지 확인하고 상태 동기화
+    /// </summary>
+    public async Task CheckStatusAsync()
+    {
+        try
+        {
+            var config = _configManager.LoadConfiguration<ApplicationConfiguration>();
+            var programPath = config?.ExternalProgramSettings?.Nir2ProgramPath;
+
+            if (string.IsNullOrWhiteSpace(programPath))
+            {
+                StatusChanged?.Invoke(this, false);
+                return;
+            }
+
+            var existingProcess = await Task.Run(() => WindowActivationHelper.FindExistingProcess(programPath));
+            
+            if (existingProcess != null && !existingProcess.HasExited)
+            {
+                _process = existingProcess;
+                _logger.LogInformation("NIR Camera 2 process detected during sync (PID: {ProcessId})", _process.Id);
+                StatusChanged?.Invoke(this, true);
+                StartMonitoring();
+            }
+            else
+            {
+                StatusChanged?.Invoke(this, false);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to check status for NIR Camera 2");
+        }
+    }
+
+    /// <summary>
+    /// 프로그램 종료
+    /// </summary>
+    public async Task TerminateAsync()
+    {
+        if (_process == null || _process.HasExited)
+            return;
+
+        try
+        {
+            _logger.LogInformation("Terminating NIR Camera 2 (PID: {ProcessId})", _process.Id);
+            _process.Kill(true); // Recursive kill
+            await _process.WaitForExitAsync();
+            StatusChanged?.Invoke(this, false);
+            _logger.LogInformation("NIR Camera 2 terminated by user");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to terminate NIR Camera 2");
+        }
+    }
+
+    /// <summary>
+    /// NIR Camera 2 프로그램 실행 또는 이미 실행 중인 경우 활성화
     /// </summary>
     /// <returns>성공 여부와 메시지를 포함한 결과</returns>
     public async Task<(bool Success, string Message)> LaunchAsync()
@@ -76,8 +132,20 @@ public class Nir2CameraLauncher : IDisposable
                 return (false, msg);
             }
 
-            // 프로그램 실행
-            _process = await Task.Run(() =>
+            // 이미 실행 중인 프로세스 검색
+            var existingProcess = WindowActivationHelper.FindExistingProcess(programPath);
+            if (existingProcess != null && !existingProcess.HasExited)
+            {
+                _process = existingProcess;
+                _logger.LogInformation("Existing {ProgramName} process found (PID: {ProcessId}), activating...", programName, existingProcess.Id);
+                WindowActivationHelper.ActivateProcessWindow(_process);
+                StatusChanged?.Invoke(this, true);
+                StartMonitoring();
+                return (true, $"{programName} activated");
+            }
+
+            // 실행 중이 아니면 새로 실행
+            var process = await Task.Run(() =>
             {
                 var startInfo = new ProcessStartInfo
                 {
@@ -87,12 +155,19 @@ public class Nir2CameraLauncher : IDisposable
                 return Process.Start(startInfo);
             });
 
-            if (_process != null)
+            if (process != null)
             {
-                _logger.LogInformation("{ProgramName} launched successfully (PID: {ProcessId})", programName, _process.Id);
+                _process = process;
+
+                // Wait for window to appear (hybrid: detection + min delay)
+                await _process.WaitForWindowAsync(minDurationMs: 1000, timeoutMs: 10000);
+
+                // 상태를 Active로 변경
+                StatusChanged?.Invoke(this, true);
+                _logger.LogInformation("{ProgramName} activated (PID: {ProcessId})", programName, process.Id);
 
                 // 프로세스 종료 모니터링 시작
-                StartProcessMonitoring();
+                StartMonitoring();
             }
 
             _logger.LogInformation("{ProgramName} launched successfully from {Path}", programName, programPath);
@@ -106,231 +181,30 @@ public class Nir2CameraLauncher : IDisposable
     }
 
     /// <summary>
-    /// NIR 필터링 시작
-    /// </summary>
-    public async Task<(bool Success, string Message)> StartFilteringAsync()
-    {
-        if (_isFilteringActive)
-        {
-            return (false, "NIR filtering is already active");
-        }
-
-        try
-        {
-            var config = _configManager.LoadConfiguration<ApplicationConfiguration>();
-            var monitorPath = config?.ExternalProgramSettings?.Nir2FilterMonitorPath ?? string.Empty;
-            _destinationPath = config?.ExternalProgramSettings?.Nir2FilterDestinationPath ?? string.Empty;
-
-            // 경로 검증
-            if (string.IsNullOrWhiteSpace(monitorPath))
-            {
-                return (false, "Monitor path not configured");
-            }
-
-            if (string.IsNullOrWhiteSpace(_destinationPath))
-            {
-                return (false, "Destination path not configured");
-            }
-
-            if (!Directory.Exists(monitorPath))
-            {
-                return (false, $"Monitor path does not exist: {monitorPath}");
-            }
-
-            // Destination 폴더가 없으면 생성
-            if (!Directory.Exists(_destinationPath))
-            {
-                Directory.CreateDirectory(_destinationPath);
-                _logger.LogInformation("Created destination directory: {Path}", _destinationPath);
-            }
-
-            // FileSystemWatcher 설정
-            _monitorCts = new CancellationTokenSource();
-            _fileWatcher = new FileSystemWatcher(monitorPath)
-            {
-                Filter = "*.txt",
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.CreationTime,
-                EnableRaisingEvents = true
-            };
-
-            _fileWatcher.Created += OnFileCreated;
-
-            _isFilteringActive = true;
-            StatusChanged?.Invoke(this, true);
-
-            _logger.LogInformation("NIR filtering started - monitoring: {MonitorPath}", monitorPath);
-            
-            return await Task.FromResult((true, "NIR filtering started successfully"));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to start NIR filtering");
-            return (false, $"Error starting NIR filtering: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// NIR 필터링 중지
-    /// </summary>
-    public void StopFiltering()
-    {
-        if (!_isFilteringActive)
-        {
-            return;
-        }
-
-        try
-        {
-            if (_fileWatcher != null)
-            {
-                _fileWatcher.Created -= OnFileCreated;
-                _fileWatcher.EnableRaisingEvents = false;
-                _fileWatcher.Dispose();
-                _fileWatcher = null;
-            }
-
-            _monitorCts?.Cancel();
-            _monitorCts?.Dispose();
-            _monitorCts = null;
-
-            _isFilteringActive = false;
-            StatusChanged?.Invoke(this, false);
-
-            _logger.LogInformation("NIR filtering stopped");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error stopping NIR filtering");
-        }
-    }
-
-    /// <summary>
-    /// 새 파일 생성 이벤트 핸들러
-    /// </summary>
-    private void OnFileCreated(object sender, FileSystemEventArgs e)
-    {
-        try
-        {
-            // 파일이 완전히 쓰여질 때까지 대기
-            Task.Delay(1000).Wait();
-
-            _logger.LogInformation("New NIR file detected: {FileName}", Path.GetFileName(e.FullPath));
-
-            // 파일 처리
-            ProcessFile(e.FullPath);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error handling file creation event for {FilePath}", e.FullPath);
-        }
-    }
-
-    /// <summary>
-    /// NIR spectrum 파일 처리
-    /// </summary>
-    private void ProcessFile(string txtFilePath)
-    {
-        try
-        {
-            var fileName = Path.GetFileName(txtFilePath);
-            var folderPath = Path.GetDirectoryName(txtFilePath) ?? "";
-
-            // SPC 파일 경로 찾기 (파이썬 로직과 동일)
-            var fileBase = Path.GetFileNameWithoutExtension(txtFilePath);
-            if (fileBase.EndsWith("A", StringComparison.OrdinalIgnoreCase))
-            {
-                fileBase = fileBase.Substring(0, fileBase.Length - 1);
-            }
-            var spcFilePath = Path.Combine(folderPath, fileBase + ".spc");
-
-            // SPC 파일 존재 여부 확인
-            bool hasSpcFile = File.Exists(spcFilePath);
-
-            // NIR spectrum 분석
-            var result = NirSpectrumFilter.AnalyzeSpectrum(txtFilePath);
-
-            var destinationPath = _destinationPath;
-
-            if (result.PassesFilter)
-            {
-                // 조건 만족: 파일 이동
-                _logger.LogInformation("✓ {FileName} - {Message}", fileName, result.Message);
-                
-                // 상세 기준 정보 로깅
-                if (result.CriteriaDetails != null && result.CriteriaDetails.Count > 0)
-                {
-                    foreach (var criterion in result.CriteriaDetails)
-                    {
-                        _logger.LogInformation("  {CriterionName}: {Value:F5} (threshold: {Threshold:F5}) - {Status}", 
-                            criterion.Key, 
-                            criterion.Value.Value, 
-                            criterion.Value.Threshold,
-                            criterion.Value.Passed ? "PASS" : "FAIL");
-                    }
-                }
-
-                // TXT 파일 이동
-                var destTxtPath = Path.Combine(destinationPath, fileName);
-                File.Move(txtFilePath, destTxtPath, true);
-                _logger.LogInformation("  → Moved: {FileName} → {DestPath}", fileName, destinationPath);
-
-                // SPC 파일도 이동
-                if (hasSpcFile)
-                {
-                    var spcFileName = Path.GetFileName(spcFilePath);
-                    var destSpcPath = Path.Combine(destinationPath, spcFileName);
-                    File.Move(spcFilePath, destSpcPath, true);
-                    _logger.LogInformation("  → Paired .spc file also moved: {SpcFileName}", spcFileName);
-                }
-            }
-            else
-            {
-                // 조건 불만족: 파일 삭제
-                _logger.LogInformation("✗ {FileName} - Filter FAILED (criteria not met)", fileName);
-                
-                File.Delete(txtFilePath);
-                _logger.LogInformation("  → Deleted: {FileName}", fileName);
-
-                if (hasSpcFile)
-                {
-                    File.Delete(spcFilePath);
-                    _logger.LogInformation("  → Paired .spc file also deleted");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing NIR file: {FilePath}", txtFilePath);
-        }
-    }
-
-    /// <summary>
     /// 프로세스 종료 모니터링
     /// </summary>
-    private void StartProcessMonitoring()
+    private void StartMonitoring()
     {
-        var cts = new CancellationTokenSource();
-        
+        _monitorCts?.Cancel();
+        _monitorCts = new CancellationTokenSource();
+
         Task.Run(async () =>
         {
             try
             {
                 if (_process != null)
                 {
-                    await _process.WaitForExitAsync(cts.Token);
-                    _logger.LogInformation("NIR Camera 2 process exited");
+                    await _process.WaitForExitAsync(_monitorCts.Token);
+                    StatusChanged?.Invoke(this, false);
+                    _logger.LogInformation("NIR Camera 2 deactivated (process exited)");
                 }
             }
-            catch (OperationCanceledException)
-            {
-                // 정상적인 취소
-            }
-        }, cts.Token);
+            catch (OperationCanceledException) { }
+        }, _monitorCts.Token);
     }
 
     public void Dispose()
     {
-        StopFiltering();
         _monitorCts?.Cancel();
         _monitorCts?.Dispose();
         _process?.Dispose();

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ChronoView.Core.FileMatching;
 using ChronoView.Models;
+using ChronoView.Tests.TestHelpers;
 using Xunit;
 
 namespace ChronoView.Tests.Core.FileMatching
@@ -14,7 +15,7 @@ namespace ChronoView.Tests.Core.FileMatching
         public async Task ShouldParseNewFolderFormat()
         {
             // Arrange
-            var matcher = new FileGroupMatcherService();
+            var matcher = FileMatchingTestHelper.CreateMatcher();
             var unmatchedFiles = new UnmatchedFiles();
             
             // Format: C251204T111028_0 (YYMMDD)
@@ -48,7 +49,7 @@ namespace ChronoView.Tests.Core.FileMatching
         public async Task ShouldParseLegacyFolderFormat()
         {
             // Arrange
-            var matcher = new FileGroupMatcherService();
+            var matcher = FileMatchingTestHelper.CreateMatcher();
             var unmatchedFiles = new UnmatchedFiles();
             
             // Format: C20240115_143022

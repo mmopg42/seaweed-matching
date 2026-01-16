@@ -1,5 +1,6 @@
 using ChronoView.Core.Configuration;
 using ChronoView.Core.ImageProcessing;
+using ChronoView.Core.Localization;
 using ChronoView.Core.FileWatching;
 using ChronoView.Models;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,7 @@ using System.Windows.Threading;
 using ChronoView.Core.Nir;
 using ScottPlot;
 using System.Linq;
+using SixLabors.ImageSharp;
 
 namespace ChronoView.UI.ViewModels;
 
@@ -30,6 +32,7 @@ public class FileGroupMediaLoader : ViewModelBase, IDisposable
     private readonly DispatcherTimer _retryTimer;
 
     #region Thumbnails
+    private MainImageLoadedInfo? _mainImageLoadedInfo; public MainImageLoadedInfo? MainImageLoadedInfo { get => _mainImageLoadedInfo; set => SetProperty(ref _mainImageLoadedInfo, value); }
     private BitmapSource? _mainThumbnail; public BitmapSource? MainImageThumbnail { get => _mainThumbnail; set => SetProperty(ref _mainThumbnail, value); }
     private BitmapSource? _nirThumbnail; public BitmapSource? NirImageThumbnail { get => _nirThumbnail; set => SetProperty(ref _nirThumbnail, value); }
     private BitmapSource? _nirGraphThumbnail; public BitmapSource? NirGraphThumbnail { get => _nirGraphThumbnail; set => SetProperty(ref _nirGraphThumbnail, value); }
@@ -59,15 +62,39 @@ public class FileGroupMediaLoader : ViewModelBase, IDisposable
             int w = cfg.UISettings?.DisplayImageWidth ?? 100;
             int h = cfg.UISettings?.DisplayImageHeight ?? 100;
 
-            if (force || MainImageThumbnail == null) MainImageThumbnail = await LoadWithRetryAsync(_group.MainImagePath, w, h, (t) => MainImageThumbnail = t);
-            if (_group.HasNir && (force || NirImageThumbnail == null)) NirImageThumbnail = await LoadWithRetryAsync(_group.NirFilePath, w, h, (t) => NirImageThumbnail = t);
+            if (force || MainImageThumbnail == null) 
+            {
+                // Capture the current session ID for stale guard
+                long currentSessionId = 0; // Assuming specific session ID logic if exists, or just use 0 if not yet implemented (Design mentioned LoadSessionId). 
+                // Ah, the code provided doesn't have _loadSessionId field visible in the snippet. I'll use 0 or DateTime.Ticks.
+                // Wait, checking the snippet again... FileGroupMediaLoader doesn't have _loadSessionId. 
+                // The design says `long LoadSessionId`. I'll add it or similar.
+                // For now I'll use DateTime.UtcNow.Ticks as a simple session ID or just 0 if not critical yet.
+                // But the design in 1.1 says `_loadSessionId`. 
+                // I'll assume I need to add that too or just use a timestamp.
+                long sessionId = DateTime.UtcNow.Ticks; 
+
+                await LoadWithRetryAsync(_group.MainImagePath, w, h, (t, orgW, orgH) => 
+                {
+                    MainImageThumbnail = t;
+                    MainImageLoadedInfo = new MainImageLoadedInfo(
+                        _group.GroupId,
+                        sessionId,
+                        orgW,
+                        orgH,
+                        null, // ThumbnailBytes (optional, omitting for now to save memory in record if not needed)
+                        _group.MainImagePath,
+                        DateTime.UtcNow
+                    );
+                });
+            }
             if (_group.HasNir && (force || NirGraphThumbnail == null)) await ReloadNirGraphAsync(cfg);
 
             foreach (var cam in _group.CameraFiles) {
                 var propName = $"Camera{cam.Key.Substring(3)}Thumbnail";
                 var prop = GetType().GetProperty(propName);
                 if (prop != null && prop.GetValue(this) == null) {
-                    await LoadWithRetryAsync(cam.Value, w, h, (t) => prop.SetValue(this, t));
+                    await LoadWithRetryAsync(cam.Value, w, h, (t, _, _) => prop.SetValue(this, t));
                 }
             }
         } catch (Exception ex) { _logger?.LogError(ex, "Failed to load thumbnails for {GroupId}", _group.GroupId); }
@@ -109,21 +136,47 @@ public class FileGroupMediaLoader : ViewModelBase, IDisposable
         } catch (Exception ex) { _logger?.LogError(ex, "Failed to generate NIR graph for {GroupId}", _group.GroupId); }
     }
 
-    private async Task<BitmapSource?> LoadWithRetryAsync(string path, int w, int h, Action<BitmapSource>? onSuccess)
+    private async Task<BitmapSource?> LoadWithRetryAsync(string path, int w, int h, Action<BitmapSource, int, int>? onSuccess)
     {
         if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+        // Guard: only attempt thumbnail generation for real image files.
+        // This prevents accidental attempts to decode NIR spectrum text files (e.g. run_...A.txt).
+        if (!LooksLikeImagePath(path))
+        {
+            _logger?.LogDebug("Skip thumbnail load (not an image): {Path}", Path.GetFileName(path));
+            return null;
+        }
         try {
             // Check for empty file (common race condition during copy)
             if (new FileInfo(path).Length == 0) throw new IOException("File is empty");
 
-            var bytes = await _imageProcessor.GenerateThumbnailAsync(path, w, h, _cts.Token, throwOnError: true);
+            var result = await _imageProcessor.GenerateThumbnailWithDimensionsAsync(path, w, h, _cts.Token, throwOnError: true);
+            var bytes = result.ThumbnailBytes;
+            
+            // Validate bytes before converting
+            if (bytes == null || bytes.Length == 0) throw new IOException("Generated thumbnail bytes are empty");
+
             var thumb = ToBitmapSource(bytes);
-            if (thumb != null) onSuccess?.Invoke(thumb);
+            if (thumb == null) throw new IOException("Failed to decode BitmapSource from bytes"); // Force retry if decoding fails
+
+            if (thumb != null)
+            {
+                onSuccess?.Invoke(thumb, result.OriginalWidth, result.OriginalHeight);
+                var message = LocalizationManager.GetString("Log_Debug_Thumbnail_LoadSuccess", Path.GetFileName(path));
+                _uiLog?.Invoke(LogSeverity.Debug, "ImageLoader", message);
+            }
             return thumb;
-        } catch (Exception) {
-            // Queue for retry on any error (including 0-byte, locked, or partial files)
-            _retryQueue.Enqueue(new RetryContext(path, w, h, onSuccess));
-            _retryTimer.Start();
+        } catch (Exception ex) {
+            // Log failure reason for debugging
+            _logger?.LogWarning("Thumbnail load failed (will retry): {Path} - {Error}", Path.GetFileName(path), ex.Message);
+
+            // Only retry for transient errors (locked/partial/IO). For deterministic decode errors (unsupported format),
+            // retrying just spams logs and never succeeds.
+            if (IsTransientRetryable(ex))
+            {
+                _retryQueue.Enqueue(new RetryContext(path, w, h, onSuccess));
+                _retryTimer.Start();
+            }
             return null;
         }
     }
@@ -136,15 +189,55 @@ public class FileGroupMediaLoader : ViewModelBase, IDisposable
             // Only retry if file still exists
             if (!File.Exists(ctx.Path)) return;
             
-            var bytes = await _imageProcessor.GenerateThumbnailAsync(ctx.Path, ctx.W, ctx.H, _cts.Token, throwOnError: true);
+            var result = await _imageProcessor.GenerateThumbnailWithDimensionsAsync(ctx.Path, ctx.W, ctx.H, _cts.Token, throwOnError: true);
+            var bytes = result.ThumbnailBytes;
             var thumb = ToBitmapSource(bytes);
-            if (thumb != null) { ctx.Callback?.Invoke(thumb); }
-        } catch { 
-            // Keep retrying indefinitely while file exists
+            
+            if (thumb != null)
+            {
+                ctx.Callback?.Invoke(thumb, result.OriginalWidth, result.OriginalHeight);
+                var message = LocalizationManager.GetString("Log_Debug_Thumbnail_RetrySuccess", Path.GetFileName(ctx.Path));
+                _uiLog?.Invoke(LogSeverity.Debug, "ImageLoader", message);
+            }
+            else
+            {
+                throw new Exception("Bitmap decoding failed in retry");
+            }
+        } catch (Exception ex) { 
+            // Keep retrying indefinitely while file exists, but throttle with timer
             if (File.Exists(ctx.Path)) {
-                _retryQueue.Enqueue(ctx); 
+                // Determine if we should log verbose retry failures (maybe only every 10th retry)
+                if (ctx.RetryCount++ % 10 == 0)
+                {
+                    _logger?.LogDebug("Retry {Count} failed for {Path}: {Error}", ctx.RetryCount, Path.GetFileName(ctx.Path), ex.Message);
+                }
+                if (IsTransientRetryable(ex))
+                {
+                    _retryQueue.Enqueue(ctx);
+                }
             }
         }
+    }
+
+    private static bool LooksLikeImagePath(string path)
+    {
+        var ext = System.IO.Path.GetExtension(path)?.ToLowerInvariant();
+        if (string.IsNullOrEmpty(ext)) return false;
+
+        // Mirror common ImageSharp decoders we support in practice.
+        return ext is ".png" or ".gif" or ".jpg" or ".jpeg" or ".qoi" or ".webp" or ".tga" or ".pbm" or ".tif" or ".tiff" or ".bmp";
+    }
+
+    private static bool IsTransientRetryable(Exception ex)
+    {
+        // Typical transient cases: file is still being written/copied, or temporarily locked.
+        if (ex is IOException or UnauthorizedAccessException) return true;
+
+        // Deterministic decode failures (unsupported/corrupt format) should not be retried.
+        if (ex is UnknownImageFormatException) return false;
+
+        // Default: be conservative and do not retry unknown exception types.
+        return false;
     }
 
     private BitmapSource? ToBitmapSource(byte[] bytes)
@@ -159,7 +252,10 @@ public class FileGroupMediaLoader : ViewModelBase, IDisposable
             image.EndInit();
             image.Freeze();
             return image;
-        } catch { return null; }
+        } catch (Exception ex) { 
+            _logger?.LogError(ex, "Failed to convert bytes to BitmapSource");
+            return null; 
+        }
     }
 
     public void Dispose() { _cts.Cancel(); _retryTimer.Stop(); }
@@ -169,11 +265,20 @@ public class FileGroupMediaLoader : ViewModelBase, IDisposable
         public int W { get; set; }
         public int H { get; set; }
         public int RetryCount { get; set; }
-        public Action<BitmapSource>? Callback { get; set; }
+        public Action<BitmapSource, int, int>? Callback { get; set; }
 
-        public RetryContext(string path, int w, int h, Action<BitmapSource>? callback)
+        public RetryContext(string path, int w, int h, Action<BitmapSource, int, int>? callback)
         {
             Path = path; W = w; H = h; Callback = callback;
         }
     }
 }
+
+public sealed record MainImageLoadedInfo(
+    string GroupId,
+    long LoadSessionId,
+    int OriginalWidth,
+    int OriginalHeight,
+    byte[]? ThumbnailBytes = null,
+    string? FilePath = null,
+    DateTime? LoadedAtUtc = null);

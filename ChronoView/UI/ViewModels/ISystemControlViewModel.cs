@@ -13,10 +13,16 @@ public interface ISystemControlViewModel : IDisposable
     ICommand StartCommand { get; }
     ICommand StopCommand { get; }
     ICommand ToggleNir2FilteringCommand { get; }
+    ICommand LaunchGeneralCameraCommand { get; }
+    ICommand LaunchNir1CameraCommand { get; }
+    ICommand LaunchNir2CameraCommand { get; }
     
     bool IsMonitoring { get; }
-    string GeneralCameraStatus { get; }
-    string NirCameraStatus { get; }
+    // Camera State properties
+    CameraState GeneralCameraState { get; }
+    CameraState NirCameraState { get; }
+    CameraState Nir2CameraState { get; }
+    CameraState Nir2FilteringState { get; }
     
     Task StartMonitoringAsync();
     Task StopMonitoringAsync();

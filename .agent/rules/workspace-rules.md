@@ -2,10 +2,6 @@
 trigger: always_on
 ---
 
-AI가 요구사항을 명확하게 이해하고 코드를 작성하거나 구조를 잡을 수 있도록, 정보를 논리적인 섹션(시스템 개요, 구성, 데이터 명세)으로 나누어 정리했습니다. 정규표현식(Regex)을 사용하여 파일 형식을 명확히 정의했습니다.
-
-아래 내용을 복사해서 .md 파일로 저장하거나 AI에게 전달하시면 됩니다.
-
 Project Specification: Monitoring Dashboard System
 1. System Overview
 The goal of this project is to develop a Monitoring Dashboard Program.

@@ -1,0 +1,2646 @@
+{
+  "items": [
+    {
+      "name": "run_120251201T140542.spc",
+      "relative_path": "nir1\\run_120251201T140542.spc",
+      "timestamp": "2025-12-01T14:05:42",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140542A.txt",
+      "relative_path": "nir1\\run_120251201T140542A.txt",
+      "timestamp": "2025-12-01T14:05:42",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140543_0",
+      "relative_path": "normal1\\C251201T140543_0",
+      "timestamp": "2025-12-01T14:05:43",
+      "type": "normal_folder"
+    },
+    {
+      "name": "C251201T140545_0",
+      "relative_path": "normal1\\C251201T140545_0",
+      "timestamp": "2025-12-01T14:05:45",
+      "type": "normal_folder"
+    },
+    {
+      "name": "C251201T140546_0",
+      "relative_path": "normal1\\C251201T140546_0",
+      "timestamp": "2025-12-01T14:05:46",
+      "type": "normal_folder"
+    },
+    {
+      "name": "C251201T140548_0",
+      "relative_path": "normal1\\C251201T140548_0",
+      "timestamp": "2025-12-01T14:05:48",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140548_897.bmp",
+      "relative_path": "cam1\\20251201_140548_897.bmp",
+      "timestamp": "2025-12-01T14:05:48.897000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140549_108.bmp",
+      "relative_path": "cam3\\20251201_140549_108.bmp",
+      "timestamp": "2025-12-01T14:05:49.108000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140549_152.bmp",
+      "relative_path": "cam2\\20251201_140549_152.bmp",
+      "timestamp": "2025-12-01T14:05:49.152000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140550_0",
+      "relative_path": "normal1\\C251201T140550_0",
+      "timestamp": "2025-12-01T14:05:50",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140550_852.bmp",
+      "relative_path": "cam1\\20251201_140550_852.bmp",
+      "timestamp": "2025-12-01T14:05:50.852000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140551_063.bmp",
+      "relative_path": "cam3\\20251201_140551_063.bmp",
+      "timestamp": "2025-12-01T14:05:51.063000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140551_106.bmp",
+      "relative_path": "cam2\\20251201_140551_106.bmp",
+      "timestamp": "2025-12-01T14:05:51.106000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140552_0",
+      "relative_path": "normal1\\C251201T140552_0",
+      "timestamp": "2025-12-01T14:05:52",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140552_779.bmp",
+      "relative_path": "cam1\\20251201_140552_779.bmp",
+      "timestamp": "2025-12-01T14:05:52.779000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140552_991.bmp",
+      "relative_path": "cam3\\20251201_140552_991.bmp",
+      "timestamp": "2025-12-01T14:05:52.991000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140553_033.bmp",
+      "relative_path": "cam2\\20251201_140553_033.bmp",
+      "timestamp": "2025-12-01T14:05:53.033000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140554_0",
+      "relative_path": "normal1\\C251201T140554_0",
+      "timestamp": "2025-12-01T14:05:54",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140554_780.bmp",
+      "relative_path": "cam1\\20251201_140554_780.bmp",
+      "timestamp": "2025-12-01T14:05:54.780000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140554_992.bmp",
+      "relative_path": "cam3\\20251201_140554_992.bmp",
+      "timestamp": "2025-12-01T14:05:54.992000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140555_036.bmp",
+      "relative_path": "cam2\\20251201_140555_036.bmp",
+      "timestamp": "2025-12-01T14:05:55.036000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140556_0",
+      "relative_path": "normal1\\C251201T140556_0",
+      "timestamp": "2025-12-01T14:05:56",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140556_736.bmp",
+      "relative_path": "cam1\\20251201_140556_736.bmp",
+      "timestamp": "2025-12-01T14:05:56.736000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140556_947.bmp",
+      "relative_path": "cam3\\20251201_140556_947.bmp",
+      "timestamp": "2025-12-01T14:05:56.947000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140556_992.bmp",
+      "relative_path": "cam2\\20251201_140556_992.bmp",
+      "timestamp": "2025-12-01T14:05:56.992000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140558.spc",
+      "relative_path": "nir1\\run_120251201T140558.spc",
+      "timestamp": "2025-12-01T14:05:58",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140558A.txt",
+      "relative_path": "nir1\\run_120251201T140558A.txt",
+      "timestamp": "2025-12-01T14:05:58",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140558_0",
+      "relative_path": "normal1\\C251201T140558_0",
+      "timestamp": "2025-12-01T14:05:58",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140558_633.bmp",
+      "relative_path": "cam1\\20251201_140558_633.bmp",
+      "timestamp": "2025-12-01T14:05:58.633000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140558_845.bmp",
+      "relative_path": "cam3\\20251201_140558_845.bmp",
+      "timestamp": "2025-12-01T14:05:58.845000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140558_888.bmp",
+      "relative_path": "cam2\\20251201_140558_888.bmp",
+      "timestamp": "2025-12-01T14:05:58.888000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140600_0",
+      "relative_path": "normal1\\C251201T140600_0",
+      "timestamp": "2025-12-01T14:06:00",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140600_574.bmp",
+      "relative_path": "cam1\\20251201_140600_574.bmp",
+      "timestamp": "2025-12-01T14:06:00.574000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140600_785.bmp",
+      "relative_path": "cam3\\20251201_140600_785.bmp",
+      "timestamp": "2025-12-01T14:06:00.785000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140600_830.bmp",
+      "relative_path": "cam2\\20251201_140600_830.bmp",
+      "timestamp": "2025-12-01T14:06:00.830000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140602_0",
+      "relative_path": "normal1\\C251201T140602_0",
+      "timestamp": "2025-12-01T14:06:02",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140602_542.bmp",
+      "relative_path": "cam1\\20251201_140602_542.bmp",
+      "timestamp": "2025-12-01T14:06:02.542000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140602_757.bmp",
+      "relative_path": "cam3\\20251201_140602_757.bmp",
+      "timestamp": "2025-12-01T14:06:02.757000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140602_801.bmp",
+      "relative_path": "cam2\\20251201_140602_801.bmp",
+      "timestamp": "2025-12-01T14:06:02.801000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140604_0",
+      "relative_path": "normal1\\C251201T140604_0",
+      "timestamp": "2025-12-01T14:06:04",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140604_472.bmp",
+      "relative_path": "cam1\\20251201_140604_472.bmp",
+      "timestamp": "2025-12-01T14:06:04.472000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140604_683.bmp",
+      "relative_path": "cam3\\20251201_140604_683.bmp",
+      "timestamp": "2025-12-01T14:06:04.683000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140604_725.bmp",
+      "relative_path": "cam2\\20251201_140604_725.bmp",
+      "timestamp": "2025-12-01T14:06:04.725000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140606_0",
+      "relative_path": "normal1\\C251201T140606_0",
+      "timestamp": "2025-12-01T14:06:06",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140606_367.bmp",
+      "relative_path": "cam1\\20251201_140606_367.bmp",
+      "timestamp": "2025-12-01T14:06:06.367000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140606_579.bmp",
+      "relative_path": "cam3\\20251201_140606_579.bmp",
+      "timestamp": "2025-12-01T14:06:06.579000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140606_623.bmp",
+      "relative_path": "cam2\\20251201_140606_623.bmp",
+      "timestamp": "2025-12-01T14:06:06.623000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140608_341.bmp",
+      "relative_path": "cam1\\20251201_140608_341.bmp",
+      "timestamp": "2025-12-01T14:06:08.341000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140608_550.bmp",
+      "relative_path": "cam3\\20251201_140608_550.bmp",
+      "timestamp": "2025-12-01T14:06:08.550000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140608_592.bmp",
+      "relative_path": "cam2\\20251201_140608_592.bmp",
+      "timestamp": "2025-12-01T14:06:08.592000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140609.spc",
+      "relative_path": "nir1\\run_120251201T140609.spc",
+      "timestamp": "2025-12-01T14:06:09",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140609A.txt",
+      "relative_path": "nir1\\run_120251201T140609A.txt",
+      "timestamp": "2025-12-01T14:06:09",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140609_0",
+      "relative_path": "normal1\\C251201T140609_0",
+      "timestamp": "2025-12-01T14:06:09",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140610_309.bmp",
+      "relative_path": "cam1\\20251201_140610_309.bmp",
+      "timestamp": "2025-12-01T14:06:10.309000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140610_521.bmp",
+      "relative_path": "cam3\\20251201_140610_521.bmp",
+      "timestamp": "2025-12-01T14:06:10.521000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140610_565.bmp",
+      "relative_path": "cam2\\20251201_140610_565.bmp",
+      "timestamp": "2025-12-01T14:06:10.565000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140612_251.bmp",
+      "relative_path": "cam1\\20251201_140612_251.bmp",
+      "timestamp": "2025-12-01T14:06:12.251000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140612_463.bmp",
+      "relative_path": "cam3\\20251201_140612_463.bmp",
+      "timestamp": "2025-12-01T14:06:12.463000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140612_508.bmp",
+      "relative_path": "cam2\\20251201_140612_508.bmp",
+      "timestamp": "2025-12-01T14:06:12.508000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140615_0",
+      "relative_path": "normal1\\C251201T140615_0",
+      "timestamp": "2025-12-01T14:06:15",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140615_805.bmp",
+      "relative_path": "cam1\\20251201_140615_805.bmp",
+      "timestamp": "2025-12-01T14:06:15.805000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140616_017.bmp",
+      "relative_path": "cam3\\20251201_140616_017.bmp",
+      "timestamp": "2025-12-01T14:06:16.017000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140616_062.bmp",
+      "relative_path": "cam2\\20251201_140616_062.bmp",
+      "timestamp": "2025-12-01T14:06:16.062000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140621_391.bmp",
+      "relative_path": "cam1\\20251201_140621_391.bmp",
+      "timestamp": "2025-12-01T14:06:21.391000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140621_602.bmp",
+      "relative_path": "cam3\\20251201_140621_602.bmp",
+      "timestamp": "2025-12-01T14:06:21.602000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140621_646.bmp",
+      "relative_path": "cam2\\20251201_140621_646.bmp",
+      "timestamp": "2025-12-01T14:06:21.646000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140626_0",
+      "relative_path": "normal1\\C251201T140626_0",
+      "timestamp": "2025-12-01T14:06:26",
+      "type": "normal_folder"
+    },
+    {
+      "name": "C251201T140628_0",
+      "relative_path": "normal1\\C251201T140628_0",
+      "timestamp": "2025-12-01T14:06:28",
+      "type": "normal_folder"
+    },
+    {
+      "name": "run_120251201T140629.spc",
+      "relative_path": "nir1\\run_120251201T140629.spc",
+      "timestamp": "2025-12-01T14:06:29",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140629A.txt",
+      "relative_path": "nir1\\run_120251201T140629A.txt",
+      "timestamp": "2025-12-01T14:06:29",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140629_0",
+      "relative_path": "normal1\\C251201T140629_0",
+      "timestamp": "2025-12-01T14:06:29",
+      "type": "normal_folder"
+    },
+    {
+      "name": "C251201T140631_0",
+      "relative_path": "normal1\\C251201T140631_0",
+      "timestamp": "2025-12-01T14:06:31",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140632_186.bmp",
+      "relative_path": "cam1\\20251201_140632_186.bmp",
+      "timestamp": "2025-12-01T14:06:32.186000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140632_400.bmp",
+      "relative_path": "cam3\\20251201_140632_400.bmp",
+      "timestamp": "2025-12-01T14:06:32.400000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140632_444.bmp",
+      "relative_path": "cam2\\20251201_140632_444.bmp",
+      "timestamp": "2025-12-01T14:06:32.444000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140633_0",
+      "relative_path": "normal1\\C251201T140633_0",
+      "timestamp": "2025-12-01T14:06:33",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140633_919.bmp",
+      "relative_path": "cam1\\20251201_140633_919.bmp",
+      "timestamp": "2025-12-01T14:06:33.919000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140634.spc",
+      "relative_path": "nir1\\run_120251201T140634.spc",
+      "timestamp": "2025-12-01T14:06:34",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140634A.txt",
+      "relative_path": "nir1\\run_120251201T140634A.txt",
+      "timestamp": "2025-12-01T14:06:34",
+      "type": "nir1_file"
+    },
+    {
+      "name": "20251201_140634_130.bmp",
+      "relative_path": "cam3\\20251201_140634_130.bmp",
+      "timestamp": "2025-12-01T14:06:34.130000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140634_174.bmp",
+      "relative_path": "cam2\\20251201_140634_174.bmp",
+      "timestamp": "2025-12-01T14:06:34.174000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140635_0",
+      "relative_path": "normal1\\C251201T140635_0",
+      "timestamp": "2025-12-01T14:06:35",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140635_691.bmp",
+      "relative_path": "cam1\\20251201_140635_691.bmp",
+      "timestamp": "2025-12-01T14:06:35.691000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140635_907.bmp",
+      "relative_path": "cam3\\20251201_140635_907.bmp",
+      "timestamp": "2025-12-01T14:06:35.907000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140635_951.bmp",
+      "relative_path": "cam2\\20251201_140635_951.bmp",
+      "timestamp": "2025-12-01T14:06:35.951000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140636_0",
+      "relative_path": "normal1\\C251201T140636_0",
+      "timestamp": "2025-12-01T14:06:36",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140637_487.bmp",
+      "relative_path": "cam1\\20251201_140637_487.bmp",
+      "timestamp": "2025-12-01T14:06:37.487000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140637_699.bmp",
+      "relative_path": "cam3\\20251201_140637_699.bmp",
+      "timestamp": "2025-12-01T14:06:37.699000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140637_743.bmp",
+      "relative_path": "cam2\\20251201_140637_743.bmp",
+      "timestamp": "2025-12-01T14:06:37.743000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140638_0",
+      "relative_path": "normal1\\C251201T140638_0",
+      "timestamp": "2025-12-01T14:06:38",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140639_191.bmp",
+      "relative_path": "cam1\\20251201_140639_191.bmp",
+      "timestamp": "2025-12-01T14:06:39.191000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140639_402.bmp",
+      "relative_path": "cam3\\20251201_140639_402.bmp",
+      "timestamp": "2025-12-01T14:06:39.402000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140639_447.bmp",
+      "relative_path": "cam2\\20251201_140639_447.bmp",
+      "timestamp": "2025-12-01T14:06:39.447000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140640_0",
+      "relative_path": "normal1\\C251201T140640_0",
+      "timestamp": "2025-12-01T14:06:40",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140640_908.bmp",
+      "relative_path": "cam1\\20251201_140640_908.bmp",
+      "timestamp": "2025-12-01T14:06:40.908000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140641_118.bmp",
+      "relative_path": "cam3\\20251201_140641_118.bmp",
+      "timestamp": "2025-12-01T14:06:41.118000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140641_162.bmp",
+      "relative_path": "cam2\\20251201_140641_162.bmp",
+      "timestamp": "2025-12-01T14:06:41.162000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140642_0",
+      "relative_path": "normal1\\C251201T140642_0",
+      "timestamp": "2025-12-01T14:06:42",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140642_803.bmp",
+      "relative_path": "cam1\\20251201_140642_803.bmp",
+      "timestamp": "2025-12-01T14:06:42.803000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140643_016.bmp",
+      "relative_path": "cam3\\20251201_140643_016.bmp",
+      "timestamp": "2025-12-01T14:06:43.016000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140643_061.bmp",
+      "relative_path": "cam2\\20251201_140643_061.bmp",
+      "timestamp": "2025-12-01T14:06:43.061000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140644_621.bmp",
+      "relative_path": "cam1\\20251201_140644_621.bmp",
+      "timestamp": "2025-12-01T14:06:44.621000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140644_837.bmp",
+      "relative_path": "cam3\\20251201_140644_837.bmp",
+      "timestamp": "2025-12-01T14:06:44.837000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140644_881.bmp",
+      "relative_path": "cam2\\20251201_140644_881.bmp",
+      "timestamp": "2025-12-01T14:06:44.881000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140645_0",
+      "relative_path": "normal1\\C251201T140645_0",
+      "timestamp": "2025-12-01T14:06:45",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140646_402.bmp",
+      "relative_path": "cam1\\20251201_140646_402.bmp",
+      "timestamp": "2025-12-01T14:06:46.402000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140646_613.bmp",
+      "relative_path": "cam3\\20251201_140646_613.bmp",
+      "timestamp": "2025-12-01T14:06:46.613000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140646_657.bmp",
+      "relative_path": "cam2\\20251201_140646_657.bmp",
+      "timestamp": "2025-12-01T14:06:46.657000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140647_0",
+      "relative_path": "normal1\\C251201T140647_0",
+      "timestamp": "2025-12-01T14:06:47",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140648_046.bmp",
+      "relative_path": "cam1\\20251201_140648_046.bmp",
+      "timestamp": "2025-12-01T14:06:48.046000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140648_256.bmp",
+      "relative_path": "cam3\\20251201_140648_256.bmp",
+      "timestamp": "2025-12-01T14:06:48.256000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140648_300.bmp",
+      "relative_path": "cam2\\20251201_140648_300.bmp",
+      "timestamp": "2025-12-01T14:06:48.300000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140649.spc",
+      "relative_path": "nir1\\run_120251201T140649.spc",
+      "timestamp": "2025-12-01T14:06:49",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140649A.txt",
+      "relative_path": "nir1\\run_120251201T140649A.txt",
+      "timestamp": "2025-12-01T14:06:49",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140649_0",
+      "relative_path": "normal1\\C251201T140649_0",
+      "timestamp": "2025-12-01T14:06:49",
+      "type": "normal_folder"
+    },
+    {
+      "name": "C251201T140651_0",
+      "relative_path": "normal1\\C251201T140651_0",
+      "timestamp": "2025-12-01T14:06:51",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140651_659.bmp",
+      "relative_path": "cam1\\20251201_140651_659.bmp",
+      "timestamp": "2025-12-01T14:06:51.659000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140651_871.bmp",
+      "relative_path": "cam3\\20251201_140651_871.bmp",
+      "timestamp": "2025-12-01T14:06:51.871000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140651_916.bmp",
+      "relative_path": "cam2\\20251201_140651_916.bmp",
+      "timestamp": "2025-12-01T14:06:51.916000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140652_0",
+      "relative_path": "normal1\\C251201T140652_0",
+      "timestamp": "2025-12-01T14:06:52",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140653_391.bmp",
+      "relative_path": "cam1\\20251201_140653_391.bmp",
+      "timestamp": "2025-12-01T14:06:53.391000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140653_602.bmp",
+      "relative_path": "cam3\\20251201_140653_602.bmp",
+      "timestamp": "2025-12-01T14:06:53.602000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140653_647.bmp",
+      "relative_path": "cam2\\20251201_140653_647.bmp",
+      "timestamp": "2025-12-01T14:06:53.647000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140654_0",
+      "relative_path": "normal1\\C251201T140654_0",
+      "timestamp": "2025-12-01T14:06:54",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140655_140.bmp",
+      "relative_path": "cam1\\20251201_140655_140.bmp",
+      "timestamp": "2025-12-01T14:06:55.140000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140655_350.bmp",
+      "relative_path": "cam3\\20251201_140655_350.bmp",
+      "timestamp": "2025-12-01T14:06:55.350000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140655_394.bmp",
+      "relative_path": "cam2\\20251201_140655_394.bmp",
+      "timestamp": "2025-12-01T14:06:55.394000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140656.spc",
+      "relative_path": "nir1\\run_120251201T140656.spc",
+      "timestamp": "2025-12-01T14:06:56",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140656A.txt",
+      "relative_path": "nir1\\run_120251201T140656A.txt",
+      "timestamp": "2025-12-01T14:06:56",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140656_0",
+      "relative_path": "normal1\\C251201T140656_0",
+      "timestamp": "2025-12-01T14:06:56",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140656_870.bmp",
+      "relative_path": "cam1\\20251201_140656_870.bmp",
+      "timestamp": "2025-12-01T14:06:56.870000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140657_082.bmp",
+      "relative_path": "cam3\\20251201_140657_082.bmp",
+      "timestamp": "2025-12-01T14:06:57.082000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140657_126.bmp",
+      "relative_path": "cam2\\20251201_140657_126.bmp",
+      "timestamp": "2025-12-01T14:06:57.126000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140658.spc",
+      "relative_path": "nir1\\run_120251201T140658.spc",
+      "timestamp": "2025-12-01T14:06:58",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140658A.txt",
+      "relative_path": "nir1\\run_120251201T140658A.txt",
+      "timestamp": "2025-12-01T14:06:58",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140658_0",
+      "relative_path": "normal1\\C251201T140658_0",
+      "timestamp": "2025-12-01T14:06:58",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140658_663.bmp",
+      "relative_path": "cam1\\20251201_140658_663.bmp",
+      "timestamp": "2025-12-01T14:06:58.663000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140658_873.bmp",
+      "relative_path": "cam3\\20251201_140658_873.bmp",
+      "timestamp": "2025-12-01T14:06:58.873000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140658_917.bmp",
+      "relative_path": "cam2\\20251201_140658_917.bmp",
+      "timestamp": "2025-12-01T14:06:58.917000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140659_0",
+      "relative_path": "normal1\\C251201T140659_0",
+      "timestamp": "2025-12-01T14:06:59",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140700_364.bmp",
+      "relative_path": "cam1\\20251201_140700_364.bmp",
+      "timestamp": "2025-12-01T14:07:00.364000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140700_577.bmp",
+      "relative_path": "cam3\\20251201_140700_577.bmp",
+      "timestamp": "2025-12-01T14:07:00.577000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140700_622.bmp",
+      "relative_path": "cam2\\20251201_140700_622.bmp",
+      "timestamp": "2025-12-01T14:07:00.622000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140701_0",
+      "relative_path": "normal1\\C251201T140701_0",
+      "timestamp": "2025-12-01T14:07:01",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140702_186.bmp",
+      "relative_path": "cam1\\20251201_140702_186.bmp",
+      "timestamp": "2025-12-01T14:07:02.186000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140702_398.bmp",
+      "relative_path": "cam3\\20251201_140702_398.bmp",
+      "timestamp": "2025-12-01T14:07:02.398000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140702_441.bmp",
+      "relative_path": "cam2\\20251201_140702_441.bmp",
+      "timestamp": "2025-12-01T14:07:02.441000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140703_0",
+      "relative_path": "normal1\\C251201T140703_0",
+      "timestamp": "2025-12-01T14:07:03",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140703_963.bmp",
+      "relative_path": "cam1\\20251201_140703_963.bmp",
+      "timestamp": "2025-12-01T14:07:03.963000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140704_174.bmp",
+      "relative_path": "cam3\\20251201_140704_174.bmp",
+      "timestamp": "2025-12-01T14:07:04.174000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140704_218.bmp",
+      "relative_path": "cam2\\20251201_140704_218.bmp",
+      "timestamp": "2025-12-01T14:07:04.218000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140705_0",
+      "relative_path": "normal1\\C251201T140705_0",
+      "timestamp": "2025-12-01T14:07:05",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140705_766.bmp",
+      "relative_path": "cam1\\20251201_140705_766.bmp",
+      "timestamp": "2025-12-01T14:07:05.766000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140705_981.bmp",
+      "relative_path": "cam3\\20251201_140705_981.bmp",
+      "timestamp": "2025-12-01T14:07:05.981000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140706_0",
+      "relative_path": "normal1\\C251201T140706_0",
+      "timestamp": "2025-12-01T14:07:06",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140706_024.bmp",
+      "relative_path": "cam2\\20251201_140706_024.bmp",
+      "timestamp": "2025-12-01T14:07:06.024000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140707_517.bmp",
+      "relative_path": "cam1\\20251201_140707_517.bmp",
+      "timestamp": "2025-12-01T14:07:07.517000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140707_729.bmp",
+      "relative_path": "cam3\\20251201_140707_729.bmp",
+      "timestamp": "2025-12-01T14:07:07.729000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140707_773.bmp",
+      "relative_path": "cam2\\20251201_140707_773.bmp",
+      "timestamp": "2025-12-01T14:07:07.773000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140708.spc",
+      "relative_path": "nir1\\run_120251201T140708.spc",
+      "timestamp": "2025-12-01T14:07:08",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140708A.txt",
+      "relative_path": "nir1\\run_120251201T140708A.txt",
+      "timestamp": "2025-12-01T14:07:08",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140708_0",
+      "relative_path": "normal1\\C251201T140708_0",
+      "timestamp": "2025-12-01T14:07:08",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140709_250.bmp",
+      "relative_path": "cam1\\20251201_140709_250.bmp",
+      "timestamp": "2025-12-01T14:07:09.250000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140709_461.bmp",
+      "relative_path": "cam3\\20251201_140709_461.bmp",
+      "timestamp": "2025-12-01T14:07:09.461000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140709_506.bmp",
+      "relative_path": "cam2\\20251201_140709_506.bmp",
+      "timestamp": "2025-12-01T14:07:09.506000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140710.spc",
+      "relative_path": "nir1\\run_120251201T140710.spc",
+      "timestamp": "2025-12-01T14:07:10",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140710A.txt",
+      "relative_path": "nir1\\run_120251201T140710A.txt",
+      "timestamp": "2025-12-01T14:07:10",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140710_0",
+      "relative_path": "normal1\\C251201T140710_0",
+      "timestamp": "2025-12-01T14:07:10",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140711_042.bmp",
+      "relative_path": "cam1\\20251201_140711_042.bmp",
+      "timestamp": "2025-12-01T14:07:11.042000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140711_254.bmp",
+      "relative_path": "cam3\\20251201_140711_254.bmp",
+      "timestamp": "2025-12-01T14:07:11.254000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140711_298.bmp",
+      "relative_path": "cam2\\20251201_140711_298.bmp",
+      "timestamp": "2025-12-01T14:07:11.298000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140712_0",
+      "relative_path": "normal1\\C251201T140712_0",
+      "timestamp": "2025-12-01T14:07:12",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140712_772.bmp",
+      "relative_path": "cam1\\20251201_140712_772.bmp",
+      "timestamp": "2025-12-01T14:07:12.772000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140712_984.bmp",
+      "relative_path": "cam3\\20251201_140712_984.bmp",
+      "timestamp": "2025-12-01T14:07:12.984000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140713_030.bmp",
+      "relative_path": "cam2\\20251201_140713_030.bmp",
+      "timestamp": "2025-12-01T14:07:13.030000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140714_0",
+      "relative_path": "normal1\\C251201T140714_0",
+      "timestamp": "2025-12-01T14:07:14",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140714_637.bmp",
+      "relative_path": "cam1\\20251201_140714_637.bmp",
+      "timestamp": "2025-12-01T14:07:14.637000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140714_852.bmp",
+      "relative_path": "cam3\\20251201_140714_852.bmp",
+      "timestamp": "2025-12-01T14:07:14.852000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140714_895.bmp",
+      "relative_path": "cam2\\20251201_140714_895.bmp",
+      "timestamp": "2025-12-01T14:07:14.895000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140715.spc",
+      "relative_path": "nir1\\run_120251201T140715.spc",
+      "timestamp": "2025-12-01T14:07:15",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140715A.txt",
+      "relative_path": "nir1\\run_120251201T140715A.txt",
+      "timestamp": "2025-12-01T14:07:15",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140715_0",
+      "relative_path": "normal1\\C251201T140715_0",
+      "timestamp": "2025-12-01T14:07:15",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140716_447.bmp",
+      "relative_path": "cam1\\20251201_140716_447.bmp",
+      "timestamp": "2025-12-01T14:07:16.447000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140716_658.bmp",
+      "relative_path": "cam3\\20251201_140716_658.bmp",
+      "timestamp": "2025-12-01T14:07:16.658000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140716_702.bmp",
+      "relative_path": "cam2\\20251201_140716_702.bmp",
+      "timestamp": "2025-12-01T14:07:16.702000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140717.spc",
+      "relative_path": "nir1\\run_120251201T140717.spc",
+      "timestamp": "2025-12-01T14:07:17",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140717A.txt",
+      "relative_path": "nir1\\run_120251201T140717A.txt",
+      "timestamp": "2025-12-01T14:07:17",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140717_0",
+      "relative_path": "normal1\\C251201T140717_0",
+      "timestamp": "2025-12-01T14:07:17",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140718_147.bmp",
+      "relative_path": "cam1\\20251201_140718_147.bmp",
+      "timestamp": "2025-12-01T14:07:18.147000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140718_360.bmp",
+      "relative_path": "cam3\\20251201_140718_360.bmp",
+      "timestamp": "2025-12-01T14:07:18.360000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140718_404.bmp",
+      "relative_path": "cam2\\20251201_140718_404.bmp",
+      "timestamp": "2025-12-01T14:07:18.404000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140719_0",
+      "relative_path": "normal1\\C251201T140719_0",
+      "timestamp": "2025-12-01T14:07:19",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140719_896.bmp",
+      "relative_path": "cam1\\20251201_140719_896.bmp",
+      "timestamp": "2025-12-01T14:07:19.896000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140720_108.bmp",
+      "relative_path": "cam3\\20251201_140720_108.bmp",
+      "timestamp": "2025-12-01T14:07:20.108000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140720_152.bmp",
+      "relative_path": "cam2\\20251201_140720_152.bmp",
+      "timestamp": "2025-12-01T14:07:20.152000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140721_0",
+      "relative_path": "normal1\\C251201T140721_0",
+      "timestamp": "2025-12-01T14:07:21",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140721_672.bmp",
+      "relative_path": "cam1\\20251201_140721_672.bmp",
+      "timestamp": "2025-12-01T14:07:21.672000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140721_886.bmp",
+      "relative_path": "cam3\\20251201_140721_886.bmp",
+      "timestamp": "2025-12-01T14:07:21.886000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140721_930.bmp",
+      "relative_path": "cam2\\20251201_140721_930.bmp",
+      "timestamp": "2025-12-01T14:07:21.930000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140722_0",
+      "relative_path": "normal1\\C251201T140722_0",
+      "timestamp": "2025-12-01T14:07:22",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140723_464.bmp",
+      "relative_path": "cam1\\20251201_140723_464.bmp",
+      "timestamp": "2025-12-01T14:07:23.464000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140723_678.bmp",
+      "relative_path": "cam3\\20251201_140723_678.bmp",
+      "timestamp": "2025-12-01T14:07:23.678000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140723_722.bmp",
+      "relative_path": "cam2\\20251201_140723_722.bmp",
+      "timestamp": "2025-12-01T14:07:23.722000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140724_0",
+      "relative_path": "normal1\\C251201T140724_0",
+      "timestamp": "2025-12-01T14:07:24",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140725_182.bmp",
+      "relative_path": "cam1\\20251201_140725_182.bmp",
+      "timestamp": "2025-12-01T14:07:25.182000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140725_395.bmp",
+      "relative_path": "cam3\\20251201_140725_395.bmp",
+      "timestamp": "2025-12-01T14:07:25.395000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140725_439.bmp",
+      "relative_path": "cam2\\20251201_140725_439.bmp",
+      "timestamp": "2025-12-01T14:07:25.439000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140726.spc",
+      "relative_path": "nir1\\run_120251201T140726.spc",
+      "timestamp": "2025-12-01T14:07:26",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140726A.txt",
+      "relative_path": "nir1\\run_120251201T140726A.txt",
+      "timestamp": "2025-12-01T14:07:26",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140726_0",
+      "relative_path": "normal1\\C251201T140726_0",
+      "timestamp": "2025-12-01T14:07:26",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140727_019.bmp",
+      "relative_path": "cam1\\20251201_140727_019.bmp",
+      "timestamp": "2025-12-01T14:07:27.019000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140727_231.bmp",
+      "relative_path": "cam3\\20251201_140727_231.bmp",
+      "timestamp": "2025-12-01T14:07:27.231000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140727_274.bmp",
+      "relative_path": "cam2\\20251201_140727_274.bmp",
+      "timestamp": "2025-12-01T14:07:27.274000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140728_0",
+      "relative_path": "normal1\\C251201T140728_0",
+      "timestamp": "2025-12-01T14:07:28",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140728_722.bmp",
+      "relative_path": "cam1\\20251201_140728_722.bmp",
+      "timestamp": "2025-12-01T14:07:28.722000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140728_933.bmp",
+      "relative_path": "cam3\\20251201_140728_933.bmp",
+      "timestamp": "2025-12-01T14:07:28.933000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140728_979.bmp",
+      "relative_path": "cam2\\20251201_140728_979.bmp",
+      "timestamp": "2025-12-01T14:07:28.979000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140729_0",
+      "relative_path": "normal1\\C251201T140729_0",
+      "timestamp": "2025-12-01T14:07:29",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140730_600.bmp",
+      "relative_path": "cam1\\20251201_140730_600.bmp",
+      "timestamp": "2025-12-01T14:07:30.600000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140730_814.bmp",
+      "relative_path": "cam3\\20251201_140730_814.bmp",
+      "timestamp": "2025-12-01T14:07:30.814000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140730_858.bmp",
+      "relative_path": "cam2\\20251201_140730_858.bmp",
+      "timestamp": "2025-12-01T14:07:30.858000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140731.spc",
+      "relative_path": "nir1\\run_120251201T140731.spc",
+      "timestamp": "2025-12-01T14:07:31",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140731A.txt",
+      "relative_path": "nir1\\run_120251201T140731A.txt",
+      "timestamp": "2025-12-01T14:07:31",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140731_0",
+      "relative_path": "normal1\\C251201T140731_0",
+      "timestamp": "2025-12-01T14:07:31",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140732_306.bmp",
+      "relative_path": "cam1\\20251201_140732_306.bmp",
+      "timestamp": "2025-12-01T14:07:32.306000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140732_518.bmp",
+      "relative_path": "cam3\\20251201_140732_518.bmp",
+      "timestamp": "2025-12-01T14:07:32.518000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140732_563.bmp",
+      "relative_path": "cam2\\20251201_140732_563.bmp",
+      "timestamp": "2025-12-01T14:07:32.563000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140733.spc",
+      "relative_path": "nir1\\run_120251201T140733.spc",
+      "timestamp": "2025-12-01T14:07:33",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140733A.txt",
+      "relative_path": "nir1\\run_120251201T140733A.txt",
+      "timestamp": "2025-12-01T14:07:33",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140733_0",
+      "relative_path": "normal1\\C251201T140733_0",
+      "timestamp": "2025-12-01T14:07:33",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140734_009.bmp",
+      "relative_path": "cam1\\20251201_140734_009.bmp",
+      "timestamp": "2025-12-01T14:07:34.009000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140734_221.bmp",
+      "relative_path": "cam3\\20251201_140734_221.bmp",
+      "timestamp": "2025-12-01T14:07:34.221000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140734_265.bmp",
+      "relative_path": "cam2\\20251201_140734_265.bmp",
+      "timestamp": "2025-12-01T14:07:34.265000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140735_0",
+      "relative_path": "normal1\\C251201T140735_0",
+      "timestamp": "2025-12-01T14:07:35",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140735_767.bmp",
+      "relative_path": "cam1\\20251201_140735_767.bmp",
+      "timestamp": "2025-12-01T14:07:35.767000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140735_981.bmp",
+      "relative_path": "cam3\\20251201_140735_981.bmp",
+      "timestamp": "2025-12-01T14:07:35.981000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140736_026.bmp",
+      "relative_path": "cam2\\20251201_140736_026.bmp",
+      "timestamp": "2025-12-01T14:07:36.026000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140737_0",
+      "relative_path": "normal1\\C251201T140737_0",
+      "timestamp": "2025-12-01T14:07:37",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140737_548.bmp",
+      "relative_path": "cam1\\20251201_140737_548.bmp",
+      "timestamp": "2025-12-01T14:07:37.548000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140737_758.bmp",
+      "relative_path": "cam3\\20251201_140737_758.bmp",
+      "timestamp": "2025-12-01T14:07:37.758000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140737_802.bmp",
+      "relative_path": "cam2\\20251201_140737_802.bmp",
+      "timestamp": "2025-12-01T14:07:37.802000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140738.spc",
+      "relative_path": "nir1\\run_120251201T140738.spc",
+      "timestamp": "2025-12-01T14:07:38",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140738A.txt",
+      "relative_path": "nir1\\run_120251201T140738A.txt",
+      "timestamp": "2025-12-01T14:07:38",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140738_0",
+      "relative_path": "normal1\\C251201T140738_0",
+      "timestamp": "2025-12-01T14:07:38",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140739_354.bmp",
+      "relative_path": "cam1\\20251201_140739_354.bmp",
+      "timestamp": "2025-12-01T14:07:39.354000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140739_567.bmp",
+      "relative_path": "cam3\\20251201_140739_567.bmp",
+      "timestamp": "2025-12-01T14:07:39.567000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140739_610.bmp",
+      "relative_path": "cam2\\20251201_140739_610.bmp",
+      "timestamp": "2025-12-01T14:07:39.610000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140740.spc",
+      "relative_path": "nir1\\run_120251201T140740.spc",
+      "timestamp": "2025-12-01T14:07:40",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140740A.txt",
+      "relative_path": "nir1\\run_120251201T140740A.txt",
+      "timestamp": "2025-12-01T14:07:40",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140740_0",
+      "relative_path": "normal1\\C251201T140740_0",
+      "timestamp": "2025-12-01T14:07:40",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140741_116.bmp",
+      "relative_path": "cam1\\20251201_140741_116.bmp",
+      "timestamp": "2025-12-01T14:07:41.116000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140741_326.bmp",
+      "relative_path": "cam3\\20251201_140741_326.bmp",
+      "timestamp": "2025-12-01T14:07:41.326000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140741_371.bmp",
+      "relative_path": "cam2\\20251201_140741_371.bmp",
+      "timestamp": "2025-12-01T14:07:41.371000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140742_0",
+      "relative_path": "normal1\\C251201T140742_0",
+      "timestamp": "2025-12-01T14:07:42",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140742_847.bmp",
+      "relative_path": "cam1\\20251201_140742_847.bmp",
+      "timestamp": "2025-12-01T14:07:42.847000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140743_060.bmp",
+      "relative_path": "cam2\\20251201_140743_060.bmp",
+      "timestamp": "2025-12-01T14:07:43.060000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140743_105.bmp",
+      "relative_path": "cam3\\20251201_140743_105.bmp",
+      "timestamp": "2025-12-01T14:07:43.105000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140744_0",
+      "relative_path": "normal1\\C251201T140744_0",
+      "timestamp": "2025-12-01T14:07:44",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140744_565.bmp",
+      "relative_path": "cam1\\20251201_140744_565.bmp",
+      "timestamp": "2025-12-01T14:07:44.565000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140744_777.bmp",
+      "relative_path": "cam3\\20251201_140744_777.bmp",
+      "timestamp": "2025-12-01T14:07:44.777000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140744_821.bmp",
+      "relative_path": "cam2\\20251201_140744_821.bmp",
+      "timestamp": "2025-12-01T14:07:44.821000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140745.spc",
+      "relative_path": "nir1\\run_120251201T140745.spc",
+      "timestamp": "2025-12-01T14:07:45",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140745A.txt",
+      "relative_path": "nir1\\run_120251201T140745A.txt",
+      "timestamp": "2025-12-01T14:07:45",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140745_0",
+      "relative_path": "normal1\\C251201T140745_0",
+      "timestamp": "2025-12-01T14:07:45",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140746_387.bmp",
+      "relative_path": "cam1\\20251201_140746_387.bmp",
+      "timestamp": "2025-12-01T14:07:46.387000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140746_599.bmp",
+      "relative_path": "cam3\\20251201_140746_599.bmp",
+      "timestamp": "2025-12-01T14:07:46.599000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140746_643.bmp",
+      "relative_path": "cam2\\20251201_140746_643.bmp",
+      "timestamp": "2025-12-01T14:07:46.643000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140747.spc",
+      "relative_path": "nir1\\run_120251201T140747.spc",
+      "timestamp": "2025-12-01T14:07:47",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140747A.txt",
+      "relative_path": "nir1\\run_120251201T140747A.txt",
+      "timestamp": "2025-12-01T14:07:47",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140747_0",
+      "relative_path": "normal1\\C251201T140747_0",
+      "timestamp": "2025-12-01T14:07:47",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140748_179.bmp",
+      "relative_path": "cam1\\20251201_140748_179.bmp",
+      "timestamp": "2025-12-01T14:07:48.179000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140748_390.bmp",
+      "relative_path": "cam3\\20251201_140748_390.bmp",
+      "timestamp": "2025-12-01T14:07:48.390000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140748_434.bmp",
+      "relative_path": "cam2\\20251201_140748_434.bmp",
+      "timestamp": "2025-12-01T14:07:48.434000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140749_0",
+      "relative_path": "normal1\\C251201T140749_0",
+      "timestamp": "2025-12-01T14:07:49",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140749_942.bmp",
+      "relative_path": "cam1\\20251201_140749_942.bmp",
+      "timestamp": "2025-12-01T14:07:49.942000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140750_152.bmp",
+      "relative_path": "cam3\\20251201_140750_152.bmp",
+      "timestamp": "2025-12-01T14:07:50.152000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140750_196.bmp",
+      "relative_path": "cam2\\20251201_140750_196.bmp",
+      "timestamp": "2025-12-01T14:07:50.196000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140751_0",
+      "relative_path": "normal1\\C251201T140751_0",
+      "timestamp": "2025-12-01T14:07:51",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140751_718.bmp",
+      "relative_path": "cam1\\20251201_140751_718.bmp",
+      "timestamp": "2025-12-01T14:07:51.718000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140751_930.bmp",
+      "relative_path": "cam3\\20251201_140751_930.bmp",
+      "timestamp": "2025-12-01T14:07:51.930000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140751_973.bmp",
+      "relative_path": "cam2\\20251201_140751_973.bmp",
+      "timestamp": "2025-12-01T14:07:51.973000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140752_0",
+      "relative_path": "normal1\\C251201T140752_0",
+      "timestamp": "2025-12-01T14:07:52",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140753_480.bmp",
+      "relative_path": "cam1\\20251201_140753_480.bmp",
+      "timestamp": "2025-12-01T14:07:53.480000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140753_691.bmp",
+      "relative_path": "cam3\\20251201_140753_691.bmp",
+      "timestamp": "2025-12-01T14:07:53.691000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140753_735.bmp",
+      "relative_path": "cam2\\20251201_140753_735.bmp",
+      "timestamp": "2025-12-01T14:07:53.735000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140754_0",
+      "relative_path": "normal1\\C251201T140754_0",
+      "timestamp": "2025-12-01T14:07:54",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140755_198.bmp",
+      "relative_path": "cam1\\20251201_140755_198.bmp",
+      "timestamp": "2025-12-01T14:07:55.198000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140755_409.bmp",
+      "relative_path": "cam3\\20251201_140755_409.bmp",
+      "timestamp": "2025-12-01T14:07:55.409000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140755_453.bmp",
+      "relative_path": "cam2\\20251201_140755_453.bmp",
+      "timestamp": "2025-12-01T14:07:55.453000",
+      "type": "cam_file"
+    },
+    {
+      "name": "run_120251201T140756.spc",
+      "relative_path": "nir1\\run_120251201T140756.spc",
+      "timestamp": "2025-12-01T14:07:56",
+      "type": "nir1_file"
+    },
+    {
+      "name": "run_120251201T140756A.txt",
+      "relative_path": "nir1\\run_120251201T140756A.txt",
+      "timestamp": "2025-12-01T14:07:56",
+      "type": "nir1_file"
+    },
+    {
+      "name": "C251201T140756_0",
+      "relative_path": "normal1\\C251201T140756_0",
+      "timestamp": "2025-12-01T14:07:56",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140756_960.bmp",
+      "relative_path": "cam1\\20251201_140756_960.bmp",
+      "timestamp": "2025-12-01T14:07:56.960000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140757_171.bmp",
+      "relative_path": "cam3\\20251201_140757_171.bmp",
+      "timestamp": "2025-12-01T14:07:57.171000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140757_216.bmp",
+      "relative_path": "cam2\\20251201_140757_216.bmp",
+      "timestamp": "2025-12-01T14:07:57.216000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140758_0",
+      "relative_path": "normal1\\C251201T140758_0",
+      "timestamp": "2025-12-01T14:07:58",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140758_842.bmp",
+      "relative_path": "cam1\\20251201_140758_842.bmp",
+      "timestamp": "2025-12-01T14:07:58.842000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140759_052.bmp",
+      "relative_path": "cam3\\20251201_140759_052.bmp",
+      "timestamp": "2025-12-01T14:07:59.052000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140759_097.bmp",
+      "relative_path": "cam2\\20251201_140759_097.bmp",
+      "timestamp": "2025-12-01T14:07:59.097000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140800_0",
+      "relative_path": "normal1\\C251201T140800_0",
+      "timestamp": "2025-12-01T14:08:00",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140800_554.bmp",
+      "relative_path": "cam1\\20251201_140800_554.bmp",
+      "timestamp": "2025-12-01T14:08:00.554000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140800_769.bmp",
+      "relative_path": "cam2\\20251201_140800_769.bmp",
+      "timestamp": "2025-12-01T14:08:00.769000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140800_812.bmp",
+      "relative_path": "cam3\\20251201_140800_812.bmp",
+      "timestamp": "2025-12-01T14:08:00.812000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140801_0",
+      "relative_path": "normal1\\C251201T140801_0",
+      "timestamp": "2025-12-01T14:08:01",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140802_306.bmp",
+      "relative_path": "cam1\\20251201_140802_306.bmp",
+      "timestamp": "2025-12-01T14:08:02.306000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140802_516.bmp",
+      "relative_path": "cam3\\20251201_140802_516.bmp",
+      "timestamp": "2025-12-01T14:08:02.516000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140802_561.bmp",
+      "relative_path": "cam2\\20251201_140802_561.bmp",
+      "timestamp": "2025-12-01T14:08:02.561000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140804_082.bmp",
+      "relative_path": "cam1\\20251201_140804_082.bmp",
+      "timestamp": "2025-12-01T14:08:04.082000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140804_294.bmp",
+      "relative_path": "cam3\\20251201_140804_294.bmp",
+      "timestamp": "2025-12-01T14:08:04.294000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140804_337.bmp",
+      "relative_path": "cam2\\20251201_140804_337.bmp",
+      "timestamp": "2025-12-01T14:08:04.337000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140805_889.bmp",
+      "relative_path": "cam1\\20251201_140805_889.bmp",
+      "timestamp": "2025-12-01T14:08:05.889000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140806_100.bmp",
+      "relative_path": "cam3\\20251201_140806_100.bmp",
+      "timestamp": "2025-12-01T14:08:06.100000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140806_144.bmp",
+      "relative_path": "cam2\\20251201_140806_144.bmp",
+      "timestamp": "2025-12-01T14:08:06.144000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140807_632.bmp",
+      "relative_path": "cam1\\20251201_140807_632.bmp",
+      "timestamp": "2025-12-01T14:08:07.632000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140807_847.bmp",
+      "relative_path": "cam3\\20251201_140807_847.bmp",
+      "timestamp": "2025-12-01T14:08:07.847000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140807_890.bmp",
+      "relative_path": "cam2\\20251201_140807_890.bmp",
+      "timestamp": "2025-12-01T14:08:07.890000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140830_0",
+      "relative_path": "normal1\\C251201T140830_0",
+      "timestamp": "2025-12-01T14:08:30",
+      "type": "normal_folder"
+    },
+    {
+      "name": "C251201T140832_0",
+      "relative_path": "normal1\\C251201T140832_0",
+      "timestamp": "2025-12-01T14:08:32",
+      "type": "normal_folder"
+    },
+    {
+      "name": "C251201T140834_0",
+      "relative_path": "normal1\\C251201T140834_0",
+      "timestamp": "2025-12-01T14:08:34",
+      "type": "normal_folder"
+    },
+    {
+      "name": "C251201T140835_0",
+      "relative_path": "normal1\\C251201T140835_0",
+      "timestamp": "2025-12-01T14:08:35",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140836_262.bmp",
+      "relative_path": "cam1\\20251201_140836_262.bmp",
+      "timestamp": "2025-12-01T14:08:36.262000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140836_475.bmp",
+      "relative_path": "cam3\\20251201_140836_475.bmp",
+      "timestamp": "2025-12-01T14:08:36.475000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140836_519.bmp",
+      "relative_path": "cam2\\20251201_140836_519.bmp",
+      "timestamp": "2025-12-01T14:08:36.519000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140837_0",
+      "relative_path": "normal1\\C251201T140837_0",
+      "timestamp": "2025-12-01T14:08:37",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140838_188.bmp",
+      "relative_path": "cam1\\20251201_140838_188.bmp",
+      "timestamp": "2025-12-01T14:08:38.188000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140838_399.bmp",
+      "relative_path": "cam3\\20251201_140838_399.bmp",
+      "timestamp": "2025-12-01T14:08:38.399000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140838_443.bmp",
+      "relative_path": "cam2\\20251201_140838_443.bmp",
+      "timestamp": "2025-12-01T14:08:38.443000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140839_0",
+      "relative_path": "normal1\\C251201T140839_0",
+      "timestamp": "2025-12-01T14:08:39",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140839_932.bmp",
+      "relative_path": "cam1\\20251201_140839_932.bmp",
+      "timestamp": "2025-12-01T14:08:39.932000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140840_147.bmp",
+      "relative_path": "cam3\\20251201_140840_147.bmp",
+      "timestamp": "2025-12-01T14:08:40.147000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140840_191.bmp",
+      "relative_path": "cam2\\20251201_140840_191.bmp",
+      "timestamp": "2025-12-01T14:08:40.191000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140841_0",
+      "relative_path": "normal1\\C251201T140841_0",
+      "timestamp": "2025-12-01T14:08:41",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140841_722.bmp",
+      "relative_path": "cam1\\20251201_140841_722.bmp",
+      "timestamp": "2025-12-01T14:08:41.722000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140841_938.bmp",
+      "relative_path": "cam3\\20251201_140841_938.bmp",
+      "timestamp": "2025-12-01T14:08:41.938000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140841_982.bmp",
+      "relative_path": "cam2\\20251201_140841_982.bmp",
+      "timestamp": "2025-12-01T14:08:41.982000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140843_0",
+      "relative_path": "normal1\\C251201T140843_0",
+      "timestamp": "2025-12-01T14:08:43",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140843_546.bmp",
+      "relative_path": "cam1\\20251201_140843_546.bmp",
+      "timestamp": "2025-12-01T14:08:43.546000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140843_761.bmp",
+      "relative_path": "cam3\\20251201_140843_761.bmp",
+      "timestamp": "2025-12-01T14:08:43.761000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140843_804.bmp",
+      "relative_path": "cam2\\20251201_140843_804.bmp",
+      "timestamp": "2025-12-01T14:08:43.804000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140844_0",
+      "relative_path": "normal1\\C251201T140844_0",
+      "timestamp": "2025-12-01T14:08:44",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140845_203.bmp",
+      "relative_path": "cam1\\20251201_140845_203.bmp",
+      "timestamp": "2025-12-01T14:08:45.203000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140845_418.bmp",
+      "relative_path": "cam3\\20251201_140845_418.bmp",
+      "timestamp": "2025-12-01T14:08:45.418000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140845_462.bmp",
+      "relative_path": "cam2\\20251201_140845_462.bmp",
+      "timestamp": "2025-12-01T14:08:45.462000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140846_0",
+      "relative_path": "normal1\\C251201T140846_0",
+      "timestamp": "2025-12-01T14:08:46",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140846_982.bmp",
+      "relative_path": "cam1\\20251201_140846_982.bmp",
+      "timestamp": "2025-12-01T14:08:46.982000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140847_194.bmp",
+      "relative_path": "cam3\\20251201_140847_194.bmp",
+      "timestamp": "2025-12-01T14:08:47.194000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140847_237.bmp",
+      "relative_path": "cam2\\20251201_140847_237.bmp",
+      "timestamp": "2025-12-01T14:08:47.237000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140848_0",
+      "relative_path": "normal1\\C251201T140848_0",
+      "timestamp": "2025-12-01T14:08:48",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140848_862.bmp",
+      "relative_path": "cam1\\20251201_140848_862.bmp",
+      "timestamp": "2025-12-01T14:08:48.862000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140849_075.bmp",
+      "relative_path": "cam3\\20251201_140849_075.bmp",
+      "timestamp": "2025-12-01T14:08:49.075000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140849_119.bmp",
+      "relative_path": "cam2\\20251201_140849_119.bmp",
+      "timestamp": "2025-12-01T14:08:49.119000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140850_0",
+      "relative_path": "normal1\\C251201T140850_0",
+      "timestamp": "2025-12-01T14:08:50",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140850_533.bmp",
+      "relative_path": "cam1\\20251201_140850_533.bmp",
+      "timestamp": "2025-12-01T14:08:50.533000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140850_749.bmp",
+      "relative_path": "cam3\\20251201_140850_749.bmp",
+      "timestamp": "2025-12-01T14:08:50.749000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140850_793.bmp",
+      "relative_path": "cam2\\20251201_140850_793.bmp",
+      "timestamp": "2025-12-01T14:08:50.793000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140851_0",
+      "relative_path": "normal1\\C251201T140851_0",
+      "timestamp": "2025-12-01T14:08:51",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140852_493.bmp",
+      "relative_path": "cam1\\20251201_140852_493.bmp",
+      "timestamp": "2025-12-01T14:08:52.493000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140852_705.bmp",
+      "relative_path": "cam3\\20251201_140852_705.bmp",
+      "timestamp": "2025-12-01T14:08:52.705000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140852_749.bmp",
+      "relative_path": "cam2\\20251201_140852_749.bmp",
+      "timestamp": "2025-12-01T14:08:52.749000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140853_0",
+      "relative_path": "normal1\\C251201T140853_0",
+      "timestamp": "2025-12-01T14:08:53",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140854_077.bmp",
+      "relative_path": "cam1\\20251201_140854_077.bmp",
+      "timestamp": "2025-12-01T14:08:54.077000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140854_287.bmp",
+      "relative_path": "cam3\\20251201_140854_287.bmp",
+      "timestamp": "2025-12-01T14:08:54.287000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140854_331.bmp",
+      "relative_path": "cam2\\20251201_140854_331.bmp",
+      "timestamp": "2025-12-01T14:08:54.331000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140855_0",
+      "relative_path": "normal1\\C251201T140855_0",
+      "timestamp": "2025-12-01T14:08:55",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140855_953.bmp",
+      "relative_path": "cam1\\20251201_140855_953.bmp",
+      "timestamp": "2025-12-01T14:08:55.953000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140856_170.bmp",
+      "relative_path": "cam3\\20251201_140856_170.bmp",
+      "timestamp": "2025-12-01T14:08:56.170000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140856_217.bmp",
+      "relative_path": "cam2\\20251201_140856_217.bmp",
+      "timestamp": "2025-12-01T14:08:56.217000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140857_0",
+      "relative_path": "normal1\\C251201T140857_0",
+      "timestamp": "2025-12-01T14:08:57",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140857_761.bmp",
+      "relative_path": "cam1\\20251201_140857_761.bmp",
+      "timestamp": "2025-12-01T14:08:57.761000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140857_976.bmp",
+      "relative_path": "cam3\\20251201_140857_976.bmp",
+      "timestamp": "2025-12-01T14:08:57.976000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140858_0",
+      "relative_path": "normal1\\C251201T140858_0",
+      "timestamp": "2025-12-01T14:08:58",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140858_021.bmp",
+      "relative_path": "cam2\\20251201_140858_021.bmp",
+      "timestamp": "2025-12-01T14:08:58.021000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140859_378.bmp",
+      "relative_path": "cam1\\20251201_140859_378.bmp",
+      "timestamp": "2025-12-01T14:08:59.378000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140859_589.bmp",
+      "relative_path": "cam3\\20251201_140859_589.bmp",
+      "timestamp": "2025-12-01T14:08:59.589000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140859_633.bmp",
+      "relative_path": "cam2\\20251201_140859_633.bmp",
+      "timestamp": "2025-12-01T14:08:59.633000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140900_0",
+      "relative_path": "normal1\\C251201T140900_0",
+      "timestamp": "2025-12-01T14:09:00",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140901_243.bmp",
+      "relative_path": "cam1\\20251201_140901_243.bmp",
+      "timestamp": "2025-12-01T14:09:01.243000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140901_456.bmp",
+      "relative_path": "cam3\\20251201_140901_456.bmp",
+      "timestamp": "2025-12-01T14:09:01.456000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140901_500.bmp",
+      "relative_path": "cam2\\20251201_140901_500.bmp",
+      "timestamp": "2025-12-01T14:09:01.500000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140902_0",
+      "relative_path": "normal1\\C251201T140902_0",
+      "timestamp": "2025-12-01T14:09:02",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140902_990.bmp",
+      "relative_path": "cam1\\20251201_140902_990.bmp",
+      "timestamp": "2025-12-01T14:09:02.990000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140903_203.bmp",
+      "relative_path": "cam3\\20251201_140903_203.bmp",
+      "timestamp": "2025-12-01T14:09:03.203000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140903_246.bmp",
+      "relative_path": "cam2\\20251201_140903_246.bmp",
+      "timestamp": "2025-12-01T14:09:03.246000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140904_0",
+      "relative_path": "normal1\\C251201T140904_0",
+      "timestamp": "2025-12-01T14:09:04",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140904_735.bmp",
+      "relative_path": "cam1\\20251201_140904_735.bmp",
+      "timestamp": "2025-12-01T14:09:04.735000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140904_950.bmp",
+      "relative_path": "cam3\\20251201_140904_950.bmp",
+      "timestamp": "2025-12-01T14:09:04.950000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140904_994.bmp",
+      "relative_path": "cam2\\20251201_140904_994.bmp",
+      "timestamp": "2025-12-01T14:09:04.994000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140905_0",
+      "relative_path": "normal1\\C251201T140905_0",
+      "timestamp": "2025-12-01T14:09:05",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140906_426.bmp",
+      "relative_path": "cam1\\20251201_140906_426.bmp",
+      "timestamp": "2025-12-01T14:09:06.426000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140906_637.bmp",
+      "relative_path": "cam3\\20251201_140906_637.bmp",
+      "timestamp": "2025-12-01T14:09:06.637000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140906_682.bmp",
+      "relative_path": "cam2\\20251201_140906_682.bmp",
+      "timestamp": "2025-12-01T14:09:06.682000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140907_0",
+      "relative_path": "normal1\\C251201T140907_0",
+      "timestamp": "2025-12-01T14:09:07",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140908_248.bmp",
+      "relative_path": "cam1\\20251201_140908_248.bmp",
+      "timestamp": "2025-12-01T14:09:08.248000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140908_462.bmp",
+      "relative_path": "cam2\\20251201_140908_462.bmp",
+      "timestamp": "2025-12-01T14:09:08.462000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140908_505.bmp",
+      "relative_path": "cam3\\20251201_140908_505.bmp",
+      "timestamp": "2025-12-01T14:09:08.505000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140909_0",
+      "relative_path": "normal1\\C251201T140909_0",
+      "timestamp": "2025-12-01T14:09:09",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140909_948.bmp",
+      "relative_path": "cam1\\20251201_140909_948.bmp",
+      "timestamp": "2025-12-01T14:09:09.948000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140910_160.bmp",
+      "relative_path": "cam3\\20251201_140910_160.bmp",
+      "timestamp": "2025-12-01T14:09:10.160000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140910_204.bmp",
+      "relative_path": "cam2\\20251201_140910_204.bmp",
+      "timestamp": "2025-12-01T14:09:10.204000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140911_0",
+      "relative_path": "normal1\\C251201T140911_0",
+      "timestamp": "2025-12-01T14:09:11",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140911_796.bmp",
+      "relative_path": "cam1\\20251201_140911_796.bmp",
+      "timestamp": "2025-12-01T14:09:11.796000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140912_0",
+      "relative_path": "normal1\\C251201T140912_0",
+      "timestamp": "2025-12-01T14:09:12",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140912_013.bmp",
+      "relative_path": "cam3\\20251201_140912_013.bmp",
+      "timestamp": "2025-12-01T14:09:12.013000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140912_056.bmp",
+      "relative_path": "cam2\\20251201_140912_056.bmp",
+      "timestamp": "2025-12-01T14:09:12.056000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140913_474.bmp",
+      "relative_path": "cam1\\20251201_140913_474.bmp",
+      "timestamp": "2025-12-01T14:09:13.474000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140913_685.bmp",
+      "relative_path": "cam3\\20251201_140913_685.bmp",
+      "timestamp": "2025-12-01T14:09:13.685000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140913_728.bmp",
+      "relative_path": "cam2\\20251201_140913_728.bmp",
+      "timestamp": "2025-12-01T14:09:13.728000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140914_0",
+      "relative_path": "normal1\\C251201T140914_0",
+      "timestamp": "2025-12-01T14:09:14",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140915_307.bmp",
+      "relative_path": "cam1\\20251201_140915_307.bmp",
+      "timestamp": "2025-12-01T14:09:15.307000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140915_522.bmp",
+      "relative_path": "cam3\\20251201_140915_522.bmp",
+      "timestamp": "2025-12-01T14:09:15.522000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140915_565.bmp",
+      "relative_path": "cam2\\20251201_140915_565.bmp",
+      "timestamp": "2025-12-01T14:09:15.565000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140916_983.bmp",
+      "relative_path": "cam1\\20251201_140916_983.bmp",
+      "timestamp": "2025-12-01T14:09:16.983000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140917_195.bmp",
+      "relative_path": "cam3\\20251201_140917_195.bmp",
+      "timestamp": "2025-12-01T14:09:17.195000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140917_237.bmp",
+      "relative_path": "cam2\\20251201_140917_237.bmp",
+      "timestamp": "2025-12-01T14:09:17.237000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140918_817.bmp",
+      "relative_path": "cam1\\20251201_140918_817.bmp",
+      "timestamp": "2025-12-01T14:09:18.817000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T140919_0",
+      "relative_path": "normal1\\C251201T140919_0",
+      "timestamp": "2025-12-01T14:09:19",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_140919_032.bmp",
+      "relative_path": "cam3\\20251201_140919_032.bmp",
+      "timestamp": "2025-12-01T14:09:19.032000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140919_075.bmp",
+      "relative_path": "cam2\\20251201_140919_075.bmp",
+      "timestamp": "2025-12-01T14:09:19.075000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140920_653.bmp",
+      "relative_path": "cam1\\20251201_140920_653.bmp",
+      "timestamp": "2025-12-01T14:09:20.653000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140920_869.bmp",
+      "relative_path": "cam3\\20251201_140920_869.bmp",
+      "timestamp": "2025-12-01T14:09:20.869000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140920_913.bmp",
+      "relative_path": "cam2\\20251201_140920_913.bmp",
+      "timestamp": "2025-12-01T14:09:20.913000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140925_685.bmp",
+      "relative_path": "cam1\\20251201_140925_685.bmp",
+      "timestamp": "2025-12-01T14:09:25.685000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140925_901.bmp",
+      "relative_path": "cam3\\20251201_140925_901.bmp",
+      "timestamp": "2025-12-01T14:09:25.901000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_140925_946.bmp",
+      "relative_path": "cam2\\20251201_140925_946.bmp",
+      "timestamp": "2025-12-01T14:09:25.946000",
+      "type": "cam_file"
+    },
+    {
+      "name": "C251201T141012_0",
+      "relative_path": "normal1\\C251201T141012_0",
+      "timestamp": "2025-12-01T14:10:12",
+      "type": "normal_folder"
+    },
+    {
+      "name": "C251201T141013_0",
+      "relative_path": "normal1\\C251201T141013_0",
+      "timestamp": "2025-12-01T14:10:13",
+      "type": "normal_folder"
+    },
+    {
+      "name": "C251201T141015_0",
+      "relative_path": "normal1\\C251201T141015_0",
+      "timestamp": "2025-12-01T14:10:15",
+      "type": "normal_folder"
+    },
+    {
+      "name": "C251201T141017_0",
+      "relative_path": "normal1\\C251201T141017_0",
+      "timestamp": "2025-12-01T14:10:17",
+      "type": "normal_folder"
+    },
+    {
+      "name": "20251201_141017_878.bmp",
+      "relative_path": "cam1\\20251201_141017_878.bmp",
+      "timestamp": "2025-12-01T14:10:17.878000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_141018_089.bmp",
+      "relative_path": "cam3\\20251201_141018_089.bmp",
+      "timestamp": "2025-12-01T14:10:18.089000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_141018_132.bmp",
+      "relative_path": "cam2\\20251201_141018_132.bmp",
+      "timestamp": "2025-12-01T14:10:18.132000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_141019_592.bmp",
+      "relative_path": "cam1\\20251201_141019_592.bmp",
+      "timestamp": "2025-12-01T14:10:19.592000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_141019_808.bmp",
+      "relative_path": "cam3\\20251201_141019_808.bmp",
+      "timestamp": "2025-12-01T14:10:19.808000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_141019_851.bmp",
+      "relative_path": "cam2\\20251201_141019_851.bmp",
+      "timestamp": "2025-12-01T14:10:19.851000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_141021_343.bmp",
+      "relative_path": "cam1\\20251201_141021_343.bmp",
+      "timestamp": "2025-12-01T14:10:21.343000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_141021_555.bmp",
+      "relative_path": "cam3\\20251201_141021_555.bmp",
+      "timestamp": "2025-12-01T14:10:21.555000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_141021_597.bmp",
+      "relative_path": "cam2\\20251201_141021_597.bmp",
+      "timestamp": "2025-12-01T14:10:21.597000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_141023_298.bmp",
+      "relative_path": "cam1\\20251201_141023_298.bmp",
+      "timestamp": "2025-12-01T14:10:23.298000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_141023_511.bmp",
+      "relative_path": "cam3\\20251201_141023_511.bmp",
+      "timestamp": "2025-12-01T14:10:23.511000",
+      "type": "cam_file"
+    },
+    {
+      "name": "20251201_141023_554.bmp",
+      "relative_path": "cam2\\20251201_141023_554.bmp",
+      "timestamp": "2025-12-01T14:10:23.554000",
+      "type": "cam_file"
+    }
+  ],
+  "reference_path": "C:\\workspace\\seaweed\\data\\2025_A046",
+  "generated_at": "2026-01-15T16:00:28.289250"
+}

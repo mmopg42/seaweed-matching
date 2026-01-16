@@ -4,6 +4,7 @@ using System.Linq;
 using UiAuto = SkillsScripts.UiAutomation.UiAutomation;
 using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
 using Toolbar = SkillsScripts.UiAutomation.ChronoToolbarController;
+using Workflow = SkillsScripts.UiAutomation.ChronoWorkflowController;
 
 namespace UiAutomation;
 
@@ -868,6 +869,80 @@ class Program
         inspectCommand.AddCommand(inspectWorkflowCommand);
 
         rootCommand.AddCommand(inspectCommand);
+
+        // workflow 명령: ChronoWorkflowController 기반 워크플로우 패널 제어
+        var workflowCommand = new Command("workflow", "WorkflowPanel 제어 (ChronoWorkflowController)");
+
+        // workflow launch-general: General Camera 버튼 클릭
+        var wfLaunchGeneralCommand = new Command("launch-general", "General Camera 버튼 클릭");
+        wfLaunchGeneralCommand.SetHandler(() =>
+        {
+            using var controller = new Workflow();
+            var result = controller.ClickGeneralCameraButton();
+            Console.WriteLine(result ? "[workflow-launch-general] Success: General Camera button clicked" : "[workflow-launch-general] Failed: Could not click General Camera button");
+        });
+        workflowCommand.AddCommand(wfLaunchGeneralCommand);
+
+        // workflow launch-nir: NIR 1 Camera 버튼 클릭
+        var wfLaunchNirCommand = new Command("launch-nir", "NIR 1 Camera 버튼 클릭");
+        wfLaunchNirCommand.SetHandler(() =>
+        {
+            using var controller = new Workflow();
+            var result = controller.ClickNirCameraButton();
+            Console.WriteLine(result ? "[workflow-launch-nir] Success: NIR 1 Camera button clicked" : "[workflow-launch-nir] Failed: Could not click NIR 1 Camera button");
+        });
+        workflowCommand.AddCommand(wfLaunchNirCommand);
+
+        // workflow launch-nir2: NIR 2 Camera 버튼 클릭
+        var wfLaunchNir2Command = new Command("launch-nir2", "NIR 2 Camera 버튼 클릭");
+        wfLaunchNir2Command.SetHandler(() =>
+        {
+            using var controller = new Workflow();
+            var result = controller.ClickNir2CameraButton();
+            Console.WriteLine(result ? "[workflow-launch-nir2] Success: NIR 2 Camera button clicked" : "[workflow-launch-nir2] Failed: Could not click NIR 2 Camera button");
+        });
+        workflowCommand.AddCommand(wfLaunchNir2Command);
+
+        // workflow toggle-filtering: NIR Filtering 토글
+        var wfToggleFilteringCommand = new Command("toggle-filtering", "NIR Filtering 토글");
+        wfToggleFilteringCommand.SetHandler(() =>
+        {
+            using var controller = new Workflow();
+            var result = controller.ToggleNir2Filtering();
+            Console.WriteLine(result ? "[workflow-toggle-filtering] Success: NIR Filtering toggled" : "[workflow-toggle-filtering] Failed: Could not toggle NIR Filtering");
+        });
+        workflowCommand.AddCommand(wfToggleFilteringCommand);
+
+        // workflow camera-states: 모든 카메라 상태 읽기
+        var wfCameraStatesCommand = new Command("camera-states", "모든 카메라 상태 읽기");
+        wfCameraStatesCommand.AddOption(jsonOption);
+        wfCameraStatesCommand.SetHandler((json) =>
+        {
+            using var controller = new Workflow();
+            var states = controller.GetCameraStates();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    source = "WorkflowPanel",
+                    count = states.Count,
+                    states = states
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[workflow-camera-states] Found {states.Count} camera state(s):");
+                foreach (var kvp in states)
+                {
+                    Console.WriteLine($"  - {kvp.Key}: {kvp.Value}");
+                }
+            }
+        }, jsonOption);
+        workflowCommand.AddCommand(wfCameraStatesCommand);
+
+        rootCommand.AddCommand(workflowCommand);
 
         return await rootCommand.InvokeAsync(args);
     }

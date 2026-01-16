@@ -18,6 +18,11 @@ namespace ChronoView.UI.Controls;
 /// </summary>
 public partial class LogPanel : WpfUserControl
 {
+    /// <summary>
+    /// Maximum number of log messages to retain in memory to prevent excessive memory usage.
+    /// </summary>
+    public const int MaxLogMessages = 5000;
+
     private ObservableCollection<LogMessage> _allMessages = new();
     private ICollectionView? _filteredView;
     private string _searchText = string.Empty;
@@ -65,6 +70,31 @@ public partial class LogPanel : WpfUserControl
     {
         get => (ICommand)GetValue(CloseCommandProperty);
         set => SetValue(CloseCommandProperty, value);
+    }
+
+    /// <summary>
+    /// Dependency property for the active tab index (0=Line1, 1=Line2, 2=Combined).
+    /// Used for line-based log filtering.
+    /// </summary>
+    public static readonly DependencyProperty ActiveTabIndexProperty =
+        DependencyProperty.Register(
+            nameof(ActiveTabIndex),
+            typeof(int),
+            typeof(LogPanel),
+            new PropertyMetadata(2, OnActiveTabIndexChanged)); // Default: Combined (show all)
+
+    public int ActiveTabIndex
+    {
+        get => (int)GetValue(ActiveTabIndexProperty);
+        set => SetValue(ActiveTabIndexProperty, value);
+    }
+
+    private static void OnActiveTabIndexChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is LogPanel panel)
+        {
+            panel._filteredView?.Refresh();
+        }
     }
 
     private static void OnLogMessagesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -146,6 +176,19 @@ public partial class LogPanel : WpfUserControl
             }
         }
 
+        // Filter by production line (ActiveTabIndex: 0=Line1, 1=Line2, 2=Combined)
+        if (ActiveTabIndex == 0) // Line 1 tab: show Line 1 + System (null)
+        {
+            if (message.LineNumber == 2)
+                return false;
+        }
+        else if (ActiveTabIndex == 1) // Line 2 tab: show Line 2 + System (null)
+        {
+            if (message.LineNumber == 1)
+                return false;
+        }
+        // ActiveTabIndex == 2 (Combined): show all
+
         return true;
     }
 
@@ -183,17 +226,9 @@ public partial class LogPanel : WpfUserControl
     {
         try
         {
-            var logDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "ChronoView",
-                "Logs");
-            
-            // 날짜 폴더 생성
-            var dateFolder = Path.Combine(logDir, DateTime.Now.ToString("yyyyMMdd"));
-            Directory.CreateDirectory(dateFolder);
-            
-            var fileName = $"ChronoView_UI_Export_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
-            var filePath = Path.Combine(dateFolder, fileName);
+            var filePath = Core.Configuration.PathHelper.GetSessionLogExportFilePath(
+                "ChronoView_UI_Export",
+                "txt");
             
             ExportToFile(filePath);
             
@@ -217,10 +252,7 @@ public partial class LogPanel : WpfUserControl
     {
         try
         {
-            var logDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "ChronoView",
-                "Logs");
+            var logDir = Core.Configuration.PathHelper.LogsDirectory;
             
             Directory.CreateDirectory(logDir);
             
@@ -292,8 +324,8 @@ public partial class LogPanel : WpfUserControl
         {
             _allMessages.Add(logMessage);
             
-            // Keep only last 1000 messages to prevent memory issues
-            while (_allMessages.Count > 1000)
+            // Keep only last MaxLogMessages to prevent memory issues
+            while (_allMessages.Count > MaxLogMessages)
             {
                 _allMessages.RemoveAt(0);
             }
@@ -309,15 +341,9 @@ public partial class LogPanel : WpfUserControl
     {
         try
         {
-            var logDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "ChronoView",
-                "Logs");
+            var logDir = Core.Configuration.PathHelper.LogsDirectory;
 
-            Directory.CreateDirectory(logDir);
-
-            var startTime = DateTime.Now;
-            var logFile = Path.Combine(logDir, $"ChronoView_{startTime:yyyyMMdd_HHmmss}.log");
+            var logFile = Core.Configuration.PathHelper.GetSessionLogFilePath("ChronoView");
 
             var logEntry = $"[{message.Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{message.Severity}] [{message.Source}] {message.Message}";
 

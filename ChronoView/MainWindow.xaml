@@ -148,37 +148,11 @@
             </Border>
             
             <!-- Main Panel -->
-            <Grid Grid.Column="1">
+            <Grid Grid.Column="1" x:Name="MainContentGrid">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
-                    <RowDefinition>
-                        <RowDefinition.Style>
-                            <Style TargetType="RowDefinition">
-                                <Setter Property="Height" Value="5"/>
-                                <Setter Property="MinHeight" Value="0"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsLogPanelVisible}" Value="False">
-                                        <Setter Property="Height" Value="0"/>
-                                        <Setter Property="MinHeight" Value="0"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </RowDefinition.Style>
-                    </RowDefinition>
-                    <RowDefinition>
-                        <RowDefinition.Style>
-                            <Style TargetType="RowDefinition">
-                                <Setter Property="Height" Value="200"/>
-                                <Setter Property="MinHeight" Value="0"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsLogPanelVisible}" Value="False">
-                                        <Setter Property="Height" Value="0"/>
-                                        <Setter Property="MinHeight" Value="0"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </RowDefinition.Style>
-                    </RowDefinition>
+                    <RowDefinition Height="{Binding ElementName=MainContentGrid, Path=DataContext.LogSplitterHeight, Mode=TwoWay}" MinHeight="0"/>
+                    <RowDefinition Height="{Binding ElementName=MainContentGrid, Path=DataContext.LogPanelHeight, Mode=TwoWay}" MinHeight="0"/>
                 </Grid.RowDefinitions>
                 
                 
@@ -254,12 +228,13 @@
                 <!-- Message Log -->
                 <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0"
                         Visibility="{Binding IsLogPanelVisible, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <controls:LogPanel LogMessages="{Binding LogMessages}" CloseCommand="{Binding CloseLogPanelCommand}"/>
+                    <controls:LogPanel LogMessages="{Binding LogMessages}"
+                                      CloseCommand="{Binding CloseLogPanelCommand}"
+                                      ActiveTabIndex="{Binding ActiveTabIndex, Mode=OneWay}"/>
                 </Border>
             </Grid>
         
-        <!-- Detail View Overlay -->
-        <views:DetailPreviewView DataContext="{Binding DetailPreviewVM}" Panel.ZIndex="100"/>
+
     </Grid>
     </DockPanel>
 </Window>

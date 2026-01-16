@@ -111,7 +111,7 @@ public class ConfigurationPersistencePropertyTests : IDisposable
                 CameraTimeWindowSeconds = cameraTimeWindow,
                 NormalFolderTimeWindowSeconds = normalFolderTimeWindow,
                 EnableAbnormalDetection = enableAbnormalDetection,
-                ZScoreThreshold = zScoreThreshold,
+                AbnormalRatioThreshold = zScoreThreshold,
                 SupportMultipleLines = supportMultipleLines,
                 LineMode = supportMultipleLines ? "separated" : "integrated"
             },
@@ -151,7 +151,7 @@ public class ConfigurationPersistencePropertyTests : IDisposable
         Assert.Equal(config.MatchingSettings.CameraTimeWindowSeconds, loadedConfig.MatchingSettings.CameraTimeWindowSeconds);
         Assert.Equal(config.MatchingSettings.NormalFolderTimeWindowSeconds, loadedConfig.MatchingSettings.NormalFolderTimeWindowSeconds);
         Assert.Equal(config.MatchingSettings.EnableAbnormalDetection, loadedConfig.MatchingSettings.EnableAbnormalDetection);
-        Assert.Equal(config.MatchingSettings.ZScoreThreshold, loadedConfig.MatchingSettings.ZScoreThreshold, 0.0001);
+        Assert.Equal(config.MatchingSettings.AbnormalRatioThreshold, loadedConfig.MatchingSettings.AbnormalRatioThreshold, 0.0001);
         Assert.Equal(config.MatchingSettings.SupportMultipleLines, loadedConfig.MatchingSettings.SupportMultipleLines);
         Assert.Equal(config.MatchingSettings.LineMode, loadedConfig.MatchingSettings.LineMode);
         Assert.Equal(config.WorkflowSettings.EnableAutoOperations, loadedConfig.WorkflowSettings.EnableAutoOperations);
@@ -212,18 +212,18 @@ public class ConfigurationPersistencePropertyTests : IDisposable
         int cameraWindow,
         int normalWindow,
         bool enableAbnormal,
-        double zScore,
+        double ratioThreshold,
         bool multiLine)
     {
         // Filter out invalid double values (NaN, Infinity)
-        if (double.IsNaN(zScore) || double.IsInfinity(zScore))
-            zScore = 2.0;
+        if (double.IsNaN(ratioThreshold) || double.IsInfinity(ratioThreshold))
+            ratioThreshold = 0.3;
 
         // Constrain to valid ranges
         nirWindow = Math.Clamp(nirWindow, 10, 3600);
         cameraWindow = Math.Clamp(cameraWindow, 10, 600);
         normalWindow = Math.Clamp(normalWindow, 10, 600);
-        zScore = Math.Clamp(zScore, 1.0, 5.0);
+        ratioThreshold = Math.Clamp(ratioThreshold, 0.01, 5.0);
 
         var settings = new MatchingSettings
         {
@@ -231,7 +231,7 @@ public class ConfigurationPersistencePropertyTests : IDisposable
             CameraTimeWindowSeconds = cameraWindow,
             NormalFolderTimeWindowSeconds = normalWindow,
             EnableAbnormalDetection = enableAbnormal,
-            ZScoreThreshold = zScore,
+            AbnormalRatioThreshold = ratioThreshold,
             SupportMultipleLines = multiLine,
             LineMode = multiLine ? "separated" : "integrated"
         };
@@ -245,7 +245,7 @@ public class ConfigurationPersistencePropertyTests : IDisposable
         Assert.Equal(settings.CameraTimeWindowSeconds, loadedConfig.MatchingSettings.CameraTimeWindowSeconds);
         Assert.Equal(settings.NormalFolderTimeWindowSeconds, loadedConfig.MatchingSettings.NormalFolderTimeWindowSeconds);
         Assert.Equal(settings.EnableAbnormalDetection, loadedConfig.MatchingSettings.EnableAbnormalDetection);
-        Assert.Equal(settings.ZScoreThreshold, loadedConfig.MatchingSettings.ZScoreThreshold, 0.0001);
+        Assert.Equal(settings.AbnormalRatioThreshold, loadedConfig.MatchingSettings.AbnormalRatioThreshold, 0.0001);
         Assert.Equal(settings.SupportMultipleLines, loadedConfig.MatchingSettings.SupportMultipleLines);
         Assert.Equal(settings.LineMode, loadedConfig.MatchingSettings.LineMode);
     }

@@ -1075,7 +1075,25 @@ namespace ChronoView.Resources {
                 return ResourceManager.GetString("Panel_SampleMoveSettings", resourceCulture);
             }
         }
-        
+
+        public static string Panel_Line1MoveSettings {
+            get {
+                return ResourceManager.GetString("Panel_Line1MoveSettings", resourceCulture);
+            }
+        }
+
+        public static string Panel_Line2MoveSettings {
+            get {
+                return ResourceManager.GetString("Panel_Line2MoveSettings", resourceCulture);
+            }
+        }
+
+        public static string Panel_CombinedMoveSettings {
+            get {
+                return ResourceManager.GetString("Panel_CombinedMoveSettings", resourceCulture);
+            }
+        }
+
         public static string Label_MoveSettings {
             get {
                 return ResourceManager.GetString("Label_MoveSettings", resourceCulture);

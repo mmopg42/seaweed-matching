@@ -5,12 +5,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using ChronoView.Helpers;
+using ChronoView.Models;
 
 namespace ChronoView.Core.FileWatching;
 
 public class FileWatcherService : IFileWatcher, IDisposable
 {
     private readonly ILogger<FileWatcherService> _logger;
+    private readonly ApplicationConfiguration _config;
     private readonly List<FileSystemWatcher> _watchers = new();
     private readonly HashSet<string> _knownFiles = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _lockObject = new();
@@ -21,9 +24,10 @@ public class FileWatcherService : IFileWatcher, IDisposable
 
     public event EventHandler<FileSystemEventArgs>? FileChanged;
 
-    public FileWatcherService(ILogger<FileWatcherService> logger)
+    public FileWatcherService(ILogger<FileWatcherService> logger, ApplicationConfiguration config)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
     public Task StartWatchingAsync(IEnumerable<string> paths, FileWatcherOptions options)
@@ -70,8 +74,10 @@ public class FileWatcherService : IFileWatcher, IDisposable
             // 3. Setup Polling
             if (options.EnablePolling)
             {
-                _pollingTimer = new System.Threading.Timer(OnPollTick, null, options.PollingIntervalMs, options.PollingIntervalMs);
-                _logger.LogInformation("Polling enabled every {Interval}ms", options.PollingIntervalMs);
+                // Use injected config for polling interval
+                var interval = _config.WorkflowSettings.PollingIntervalMs;
+                _pollingTimer = new System.Threading.Timer(OnPollTick, null, interval, interval);
+                _logger.LogInformation("Polling enabled every {Interval}ms", interval);
             }
 
             _isWatching = true;
@@ -81,6 +87,84 @@ public class FileWatcherService : IFileWatcher, IDisposable
              _logger.LogError(ex, "Error starting file system watchers");
              StopWatchingAsync().Wait();
              throw;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Starts watching with pre-populated known files, skipping silent scan for optimization.
+    /// </summary>
+    public Task StartWatchingAsync(IEnumerable<string> paths, FileWatcherOptions options, IEnumerable<string> knownFiles)
+    {
+        if (_isWatching)
+        {
+            _logger.LogWarning("Watcher is already running.");
+            return Task.CompletedTask;
+        }
+
+        _paths = paths;
+        _options = options;
+        _logger.LogInformation("Starting hybrid file watcher with injected files (Polling: {EnablePolling})", options.EnablePolling);
+
+        try
+        {
+            // OPTIMIZATION: Use injected files instead of PerformSilentScan
+            lock (_lockObject)
+            {
+                _knownFiles.Clear();
+                if (knownFiles != null)
+                {
+                    foreach (var f in knownFiles) _knownFiles.Add(f);
+                    _logger.LogInformation("Initialized with {Count} known files (Skipped silent scan)", _knownFiles.Count);
+                }
+                else
+                {
+                    _logger.LogWarning("knownFiles was null, falling back to silent scan");
+                    PerformSilentScan(paths);
+                }
+            }
+
+            // Setup Watchers
+            foreach (var path in paths)
+            {
+                if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+                {
+                    _logger.LogWarning("Directory does not exist or invalid: {Path}", path);
+                    continue;
+                }
+
+                var watcher = new FileSystemWatcher(path)
+                {
+                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.CreationTime,
+                    Filter = "*.*",
+                    IncludeSubdirectories = true,
+                    EnableRaisingEvents = true
+                };
+
+                watcher.Created += (s, e) => ProcessWatcherEvent(e);
+                watcher.Renamed += (s, e) => ProcessWatcherEvent(e);
+
+                _watchers.Add(watcher);
+                _logger.LogInformation("Started watching {Path}", path);
+            }
+
+            // Setup Polling
+            if (options.EnablePolling)
+            {
+                // Use injected config for polling interval
+                var interval = _config.WorkflowSettings.PollingIntervalMs;
+                _pollingTimer = new System.Threading.Timer(OnPollTick, null, interval, interval);
+                _logger.LogInformation("Polling enabled every {Interval}ms", interval);
+            }
+
+            _isWatching = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting file system watchers");
+            StopWatchingAsync().Wait();
+            throw;
         }
 
         return Task.CompletedTask;
@@ -102,8 +186,27 @@ public class FileWatcherService : IFileWatcher, IDisposable
                     foreach (var file in files) _knownFiles.Add(file);
 
                     // Scan directories (Normal folders)
+                    // Only add Normal folders to _knownFiles if they have stitched_original.png
+                    // This allows polling to keep checking folders without images
                     var dirs = Directory.GetDirectories(path, "*", SearchOption.AllDirectories);
-                    foreach (var dir in dirs) _knownFiles.Add(dir);
+                    foreach (var dir in dirs)
+                    {
+                        var dirName = Path.GetFileName(dir);
+                        if (IsNormalFolderName(dirName))
+                        {
+                            var stitchedPath = Path.Combine(dir, "stitched_original.png");
+                            if (File.Exists(stitchedPath))
+                            {
+                                _knownFiles.Add(dir);
+                            }
+                            // Skip adding to _knownFiles if image doesn't exist - polling will check again
+                        }
+                        else
+                        {
+                            // Non-Normal folders: add as usual
+                            _knownFiles.Add(dir);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -156,7 +259,23 @@ public class FileWatcherService : IFileWatcher, IDisposable
         }
 
         // 2. 파일명 기준 정렬 (타임스탬프가 파일명에 포함됨)
-        var sortedItems = newItems.OrderBy(item => Path.GetFileName(item.Path)).ToList();
+        var sortedItems = newItems
+            .Select(item => 
+            {
+                var timestamp = FileNamingHelper.ExtractTimestampAuto(item.Path);
+                var priority = GetSensorPriority(item.Path);
+                return (item, timestamp: timestamp ?? DateTime.MaxValue, priority);
+            })
+            .OrderBy(x => x.timestamp) // Sort by timestamp (ascending)
+            .ThenBy(x => x.priority)   // Then by priority (ascending)
+            .Select(x => x.item)
+            .ToList();
+
+        if (sortedItems.Any())
+        {
+             _logger.LogDebug("Polled items sort order: {Items}", 
+                 string.Join(", ", sortedItems.Take(5).Select(x => Path.GetFileName(x.Path))));
+        }
 
         // 3. 정렬된 순서로 이벤트 발생
         foreach (var (itemPath, isDir) in sortedItems)
@@ -167,6 +286,29 @@ public class FileWatcherService : IFileWatcher, IDisposable
                 Path.GetFileName(itemPath));
             HandleEvent(args);
         }
+    }
+
+    private int GetSensorPriority(string path)
+    {
+        var detectedType = FileNamingHelper.IdentifyDataType(path);
+        
+        if (detectedType == null)
+            return int.MaxValue;
+            
+        var sequenceSettings = _options?.DataSequenceSettings;
+        
+        if (sequenceSettings == null)
+        {
+            // Fallback: NIR=1, Normal=2, Camera=3
+            return detectedType switch
+            {
+                DataType.NIR => 1,
+                DataType.Normal => 2,
+                _ => 3
+            };
+        }
+        
+        return sequenceSettings.GetOrder(detectedType.Value);
     }
 
     private bool ShouldProcessPath(string path)
@@ -234,39 +376,36 @@ public class FileWatcherService : IFileWatcher, IDisposable
         }
     }
 
-    private bool IsNormalFolderName(string name)
+    private bool IsNormalFolderName(string name, bool useSuffix = false, int? expectedLine = null)
     {
-        if (string.IsNullOrEmpty(name)) return false;
-        // Basic pattern check (C...T...)
-        return name.StartsWith("C", StringComparison.OrdinalIgnoreCase) && name.Contains("T");
+        return Helpers.NormalFolderHelper.IsValidNormalFolder(name, useSuffix, expectedLine);
     }
 
     private void HandleEvent(FileSystemEventArgs e)
     {
         var eventToFire = e;
 
-        // Perform conversion if it's stitched_original.png
-        if (Path.GetFileName(e.FullPath).Equals("stitched_original.png", StringComparison.OrdinalIgnoreCase))
-        {
-            var parentDir = Path.GetDirectoryName(e.FullPath);
-            if (!string.IsNullOrEmpty(parentDir))
-            {
-                var parentName = Path.GetFileName(parentDir);
-                if (IsNormalFolderName(parentName))
-                {
-                    var grandParent = Path.GetDirectoryName(parentDir);
-                    if (!string.IsNullOrEmpty(grandParent))
-                    {
-                        _logger.LogInformation("Converting stitched image event to folder event for: {Folder}", parentName);
-                        eventToFire = new FileSystemEventArgs(WatcherChangeTypes.Created, grandParent, parentName);
-                    }
-                }
-            }
-        }
+
 
         lock (_lockObject)
         {
             if (_knownFiles.Contains(eventToFire.FullPath)) return;
+            
+            // For Normal folders, only add to _knownFiles if stitched_original.png exists
+            // This allows polling to keep checking folders without images until they appear
+            var folderName = Path.GetFileName(eventToFire.FullPath);
+            if (IsNormalFolderName(folderName) && Directory.Exists(eventToFire.FullPath))
+            {
+                var stitchedPath = Path.Combine(eventToFire.FullPath, "stitched_original.png");
+                if (!File.Exists(stitchedPath))
+                {
+                    _logger.LogDebug("Normal folder without image, skipping _knownFiles addition: {Folder}", folderName);
+                    // Still fire the event, but don't add to _knownFiles so polling can check again
+                    FileChanged?.Invoke(this, eventToFire);
+                    return;
+                }
+            }
+            
             _knownFiles.Add(eventToFire.FullPath);
         }
 

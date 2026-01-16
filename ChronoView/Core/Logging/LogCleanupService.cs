@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Globalization;
 using ChronoView.Core.Configuration;
 using ChronoView.Models;
 using Microsoft.Extensions.Logging;
@@ -21,16 +22,7 @@ public class LogCleanupService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    /// <summary>
-    /// 로그 디렉토리 경로를 반환합니다. (중복 로직 제거)
-    /// </summary>
-    private static string GetLogDirectory()
-    {
-        return Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "ChronoView",
-            "Logs");
-    }
+
 
     /// <summary>
     /// 오래된 로그 파일을 삭제합니다.
@@ -49,7 +41,7 @@ public class LogCleanupService
             }
 
             var cutoffDate = DateTime.Now.AddDays(-retentionDays);
-            var logDir = GetLogDirectory(); // 헬퍼 메서드 사용
+            var logDir = _configurationManager.LogsDirectory;
 
             if (!Directory.Exists(logDir))
                 return;
@@ -63,10 +55,19 @@ public class LogCleanupService
             {
                 try
                 {
-                    var folderInfo = new DirectoryInfo(dateFolderPath);
+                    var folderName = Path.GetFileName(dateFolderPath);
                     
-                    // 날짜 폴더의 LastWriteTime을 기준으로 삭제 여부 결정
-                    if (folderInfo.LastWriteTime < cutoffDate)
+                    // 폴더명이 yyyyMMdd 형식인지 확인하고 날짜 파싱
+                    if (folderName.Length != 8 || 
+                        !DateTime.TryParseExact(folderName, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var folderDate))
+                    {
+                        // 날짜 형식이 아닌 폴더는 건너뜀
+                        _logger.LogDebug("Skipping non-date folder: {FolderPath}", dateFolderPath);
+                        continue;
+                    }
+                    
+                    // 폴더명의 날짜를 기준으로 삭제 여부 결정 (LastWriteTime 대신 폴더명 날짜 사용)
+                    if (folderDate.Date < cutoffDate.Date)
                     {
                         // 폴더 내의 모든 파일 삭제
                         var allFiles = Directory.GetFiles(dateFolderPath);
@@ -76,8 +77,8 @@ public class LogCleanupService
                             {
                                 File.Delete(filePath);
                                 deletedCount++;
-                                _logger.LogInformation("Deleted old log file: {FilePath} (Folder LastWriteTime: {LastWriteTime})", 
-                                    filePath, folderInfo.LastWriteTime);
+                                _logger.LogInformation("Deleted old log file: {FilePath} (Folder date: {FolderDate})", 
+                                    filePath, folderDate.ToString("yyyy-MM-dd"));
                             }
                             catch (Exception ex)
                             {
@@ -93,7 +94,8 @@ public class LogCleanupService
                             {
                                 Directory.Delete(dateFolderPath);
                                 deletedFolderCount++;
-                                _logger.LogInformation("Deleted empty date folder: {FolderPath}", dateFolderPath);
+                                _logger.LogInformation("Deleted empty date folder: {FolderPath} (Folder date: {FolderDate})", 
+                                    dateFolderPath, folderDate.ToString("yyyy-MM-dd"));
                             }
                         }
                         catch (Exception ex)

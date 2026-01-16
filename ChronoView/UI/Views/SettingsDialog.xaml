@@ -23,15 +23,19 @@
     <DockPanel>
         <!-- Button Panel -->
         <Border DockPanel.Dock="Bottom" Background="#f5f5f5" BorderBrush="#d0d0d0" BorderThickness="0,1,0,0" Padding="10">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="{x:Static res:Strings.Button_Apply}" Width="80" Height="30" Margin="0,0,10,0" Command="{Binding ApplyCommand}"/>
-                <Button Content="{x:Static res:Strings.Button_OK}" Width="80" Height="30" Margin="0,0,10,0" Command="{Binding SaveCommand}" IsDefault="True"/>
-                <Button Content="{x:Static res:Strings.Button_Cancel}" Width="80" Height="30" Click="Cancel_Click" IsCancel="True"/>
-            </StackPanel>
+            <DockPanel LastChildFill="False">
+                <Button DockPanel.Dock="Left" Content="기본값" Width="80" Height="30" Command="{Binding ResetToDefaultsCommand}"/>
+                
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="{x:Static res:Strings.Button_Apply}" Width="80" Height="30" Margin="0,0,10,0" Command="{Binding ApplyCommand}"/>
+                    <Button Content="{x:Static res:Strings.Button_OK}" Width="80" Height="30" Margin="0,0,10,0" Command="{Binding SaveCommand}" IsDefault="True"/>
+                    <Button Content="{x:Static res:Strings.Button_Cancel}" Width="80" Height="30" Click="Cancel_Click" IsCancel="True"/>
+                </StackPanel>
+            </DockPanel>
         </Border>
         
         <!-- Main Content -->
-        <TabControl Margin="10">
+        <TabControl Margin="10" SelectedIndex="{Binding SelectedTabIndex}">
             <!-- Paths Tab -->
             <TabItem Header="{x:Static res:Strings.Tab_Paths}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -142,6 +146,11 @@
                         <TextBlock Text="{x:Static res:Strings.Section_DataArrivalSequence}" Style="{StaticResource SectionHeaderStyle}"/>
                         <TextBlock Text="{x:Static res:Strings.Helper_DataSequenceDescription}" 
                                    TextWrapping="Wrap" Margin="0,0,0,10" Foreground="Gray"/>
+                        
+                        <CheckBox Content="Cam2/3(Cam5/6) 묶음 처리" 
+                                  IsChecked="{Binding CompareToReferenceCamera}"
+                                  ToolTip="Cam2와 3은 순서가 서로 바뀔 수 있습니다. 체크할 경우, Cam2/3(Cam5/6)을 하나로 간주합니다."
+                                  Margin="0,0,0,10"/>
                         
                         
                         <!-- Sequence List -->
@@ -273,7 +282,7 @@
                         </StackPanel>
 
                         <TextBlock Text="{x:Static res:Strings.Section_UIDisplayOptions}" Style="{StaticResource SectionHeaderStyle}"/>
-                        <CheckBox Content="{x:Static res:Strings.Checkbox_LegacyUiMode}" IsChecked="{Binding LegacyUiMode}" Margin="0,5"/>
+
                         <CheckBox Content="{x:Static res:Strings.Checkbox_ShowTooltips}" IsChecked="{Binding ShowTooltips}" Margin="0,5"/>
                     </StackPanel>
                 </ScrollViewer>
@@ -297,6 +306,30 @@
                             <TextBox Text="{Binding LogRetentionDays}" Width="100"/>
                             <TextBlock Text="(기본값: 30일)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
                         </StackPanel>
+                        
+                        <TextBlock Text="그룹 관리" Style="{StaticResource SectionHeaderStyle}"/>
+                        <CheckBox Content="라인별 독립 그룹 ID 사용 (Line 1: group_1_XXX, Line 2: group_2_XXX)" 
+                                  IsChecked="{Binding UseLineSpecificGroupId}" Margin="0,5"/>
+                        <TextBlock Text="체크 해제 시 전역 시퀀스 사용 (group_001, group_002...)" 
+                                   Foreground="Gray" FontSize="11" Margin="150,0,0,0"/>
+                        
+                        <!-- Abnormal Detection Settings -->
+                        <TextBlock Text="이상치 탐지 설정" Style="{StaticResource SectionHeaderStyle}"/>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="비율 차이 임계값:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding AbnormalRatioThreshold}" Width="100"/>
+                            <TextBlock Text="(기본값: 0.3, 예: 4:3→1:1 = 0.33)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="분석 샘플 개수:" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding AbnormalDetectionWindowSize}" Width="100"/>
+                            <TextBlock Text="(기본값: 40, 최근 N개 샘플과 비교)" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="Gray"/>
+                        </StackPanel>
+                        
+                        <TextBlock Text="현재 이미지의 가로/세로 비율이 과거 평균과 설정값 이상 차이나면 이상치로 판정합니다." 
+                                   Foreground="Gray" FontSize="11" Margin="150,5,0,0"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

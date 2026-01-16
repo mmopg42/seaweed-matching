@@ -29,6 +29,10 @@ public class ProjectStructureTests
 
             var ns = type.Namespace;
 
+            // WPF/XAML 빌드 과정에서 자동 생성되는 네임스페이스는 아키텍처 레이어 규칙 대상에서 제외
+            if (ns.StartsWith("XamlGeneratedNamespace", StringComparison.Ordinal))
+                return false;
+
             // Valid namespace patterns according to design document
             var validPrefixes = new[]
             {
@@ -57,6 +61,11 @@ public class ProjectStructureTests
             .Where(t => t.Namespace != null)
             .Select(t => t.Namespace!)
             .Distinct()
+            .ToList();
+
+        // WPF/XAML 자동 생성 네임스페이스 제외
+        namespaces = namespaces
+            .Where(ns => !ns.StartsWith("XamlGeneratedNamespace", StringComparison.Ordinal))
             .ToList();
 
         // According to design document, these are the valid architectural layers

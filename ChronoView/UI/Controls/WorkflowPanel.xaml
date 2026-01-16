@@ -13,42 +13,128 @@
                       Background="{StaticResource HoverBrush}" Margin="0,0,0,1">
                 <StackPanel Margin="10">
                     <TextBlock Text="{x:Static res:Strings.Panel_SystemStatus}" FontWeight="Bold" Margin="0,0,0,8"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBlock Text="{x:Static res:Strings.Status_Normal}" Width="80"/>
-                        <Ellipse Width="10" Height="10" Fill="{Binding Control.GeneralCameraForeground}" Margin="0,0,5,0"/>
-                        <TextBlock Text="{Binding Control.GeneralCameraStatus}"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock Text="{x:Static res:Strings.Status_NIR}" Width="80"/>
-                        <Ellipse Width="10" Height="10" Fill="{Binding Control.NirCameraForeground}" Margin="0,0,5,0"/>
-                        <TextBlock Text="{Binding Control.NirCameraStatus}"/>
-                    </StackPanel>
+                    
+                    <!-- General Camera -->
+                    <!-- General Camera -->
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{x:Static res:Strings.Status_Normal}" VerticalAlignment="Center"/>
+                        <Ellipse Grid.Column="1" Width="12" Height="12" VerticalAlignment="Center" HorizontalAlignment="Left" Fill="{Binding Control.GeneralCameraState, Converter={StaticResource CameraStateToIndicatorBrush}}"/>
+                        <Button Grid.Column="2" Content="{Binding Control.GeneralCameraState, Converter={StaticResource CameraStateToButtonText}}" Width="60" Height="24" 
+                                Command="{Binding Control.LaunchGeneralCameraCommand}"
+                                Background="{Binding Control.GeneralCameraState, Converter={StaticResource CameraStateToButtonBackground}}"
+                                IsEnabled="{Binding Control.GeneralCameraState, Converter={StaticResource CameraStateToIsEnabled}}"
+                                Foreground="White" FontWeight="Bold" ToolTip="실행 및 활성화"/>
+                    </Grid>
+                    
+                    <!-- NIR Camera 1 -->
+                    <!-- NIR Camera 1 -->
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{x:Static res:Strings.Status_NIR}" VerticalAlignment="Center"/>
+                        <Ellipse Grid.Column="1" Width="12" Height="12" VerticalAlignment="Center" HorizontalAlignment="Left" Fill="{Binding Control.NirCameraState, Converter={StaticResource CameraStateToIndicatorBrush}}"/>
+                        <Button Grid.Column="2" Content="{Binding Control.NirCameraState, Converter={StaticResource CameraStateToButtonText}}" Width="60" Height="24" 
+                                Command="{Binding Control.LaunchNir1CameraCommand}"
+                                Background="{Binding Control.NirCameraState, Converter={StaticResource CameraStateToButtonBackground}}"
+                                IsEnabled="{Binding Control.NirCameraState, Converter={StaticResource CameraStateToIsEnabled}}"
+                                Foreground="White" FontWeight="Bold" ToolTip="실행 및 활성화"/>
+                    </Grid>
+                    
+                    <!-- NIR Camera 2 -->
+                    <!-- NIR Camera 2 -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="NIR 2" VerticalAlignment="Center"/>
+                        <Ellipse Grid.Column="1" Width="12" Height="12" VerticalAlignment="Center" HorizontalAlignment="Left" Fill="{Binding Control.Nir2CameraState, Converter={StaticResource CameraStateToIndicatorBrush}}"/>
+                        <Button Grid.Column="2" Content="{Binding Control.Nir2CameraState, Converter={StaticResource CameraStateToButtonText}}" Width="60" Height="24" 
+                                Command="{Binding Control.LaunchNir2CameraCommand}"
+                                Background="{Binding Control.Nir2CameraState, Converter={StaticResource CameraStateToButtonBackground}}"
+                                IsEnabled="{Binding Control.Nir2CameraState, Converter={StaticResource CameraStateToIsEnabled}}"
+                                Foreground="White" FontWeight="Bold" ToolTip="실행 및 활성화"/>
+                    </Grid>
                     
                     <!-- NIR Filtering Toggle -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock Text="{x:Static res:Strings.Status_NirFiltering}" Width="80"/>
-                        <Ellipse Width="10" Height="10" Fill="{Binding Control.Nir2FilteringForeground}" Margin="0,0,5,0"/>
-                        <TextBlock Text="{Binding Control.Nir2FilteringStatus}" Width="80"/>
-                        <Button Content="{Binding Control.Nir2FilteringButtonText}" Width="40" Height="24" 
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{x:Static res:Strings.Status_NirFiltering}" VerticalAlignment="Center"/>
+                        <Ellipse Grid.Column="1" Width="12" Height="12" VerticalAlignment="Center" HorizontalAlignment="Left" Fill="{Binding Control.Nir2FilteringState, Converter={StaticResource CameraStateToIndicatorBrush}}"/>
+                        <Button Grid.Column="2" Content="{Binding Control.Nir2FilteringState, Converter={StaticResource CameraStateToButtonText}}" Width="60" Height="24" 
                                 Command="{Binding Control.ToggleNir2FilteringCommand}"
-                                Background="{Binding Control.Nir2FilteringButtonBackground}"
-                                Foreground="White" Margin="4,0"
-                                FontWeight="Bold"/>
-                    </StackPanel>
+                                Background="{Binding Control.Nir2FilteringState, Converter={StaticResource CameraStateToButtonBackground}}"
+                                IsEnabled="{Binding Control.Nir2FilteringState, Converter={StaticResource CameraStateToIsEnabled}}"
+                                Foreground="White" FontWeight="Bold"/>
+                    </Grid>
                 </StackPanel>
             </Expander>
             
             <!-- Sample Move Settings Section -->
-            <Expander Header="{x:Static res:Strings.Panel_SampleMoveSettings}" IsExpanded="True" 
+            <Expander Header="{Binding SampleMoveSettingsHeader}" IsExpanded="True" 
                       Background="{StaticResource HoverBrush}" Margin="0,0,0,1">
                 <StackPanel Margin="10">
-                    <TextBlock Text="{x:Static res:Strings.Label_MoveSettings}" FontWeight="Bold" Margin="0,0,0,8"/>
-                    <Label Content="{x:Static res:Strings.Sample_Name}" FontSize="10"/>
-                    <TextBox Text="{Binding SampleName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
-                    <Label Content="{x:Static res:Strings.Sample_MoveNIR}" FontSize="10"/>
-                    <TextBox Text="{Binding MoveNir, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
-                    <Label Content="{x:Static res:Strings.Sample_MoveAllData}" FontSize="10"/>
-                    <TextBox Text="{Binding MoveAllData, UpdateSourceTrigger=PropertyChanged}"/>
+                    <!-- Line 1 Settings (visible when Line1 tab or Combined tab) -->
+                    <StackPanel Visibility="{Binding IsLine1Tab, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="Line 1 설정" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <Label Content="{x:Static res:Strings.Sample_Name}" FontSize="10"/>
+                        <TextBox Text="{Binding Line1SampleName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <Label Content="{x:Static res:Strings.Sample_MoveNIR}" FontSize="10"/>
+                        <TextBox Text="{Binding Line1MoveNir, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <Label Content="{x:Static res:Strings.Sample_MoveAllData}" FontSize="10"/>
+                        <TextBox Text="{Binding Line1MoveAllData, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                    
+                    <!-- Line 2 Settings (visible when Line2 tab) -->
+                    <StackPanel Visibility="{Binding IsLine2Tab, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="Line 2 설정" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <Label Content="{x:Static res:Strings.Sample_Name}" FontSize="10"/>
+                        <TextBox Text="{Binding Line2SampleName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <Label Content="{x:Static res:Strings.Sample_MoveNIR}" FontSize="10"/>
+                        <TextBox Text="{Binding Line2MoveNir, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                        <Label Content="{x:Static res:Strings.Sample_MoveAllData}" FontSize="10"/>
+                        <TextBox Text="{Binding Line2MoveAllData, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                    
+                    <!-- Combined Settings (visible when Combined tab) -->
+                    <StackPanel Visibility="{Binding IsCombinedTab, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <!-- Line 1 Section -->
+                        <Border BorderBrush="Gray" BorderThickness="0,0,0,1" Margin="0,0,0,8" Padding="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="Line 1 설정" FontWeight="Bold" Margin="0,0,0,8"/>
+                                <Label Content="{x:Static res:Strings.Sample_Name}" FontSize="10"/>
+                                <TextBox Text="{Binding Line1SampleName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                                <Label Content="{x:Static res:Strings.Sample_MoveNIR}" FontSize="10"/>
+                                <TextBox Text="{Binding Line1MoveNir, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                                <Label Content="{x:Static res:Strings.Sample_MoveAllData}" FontSize="10"/>
+                                <TextBox Text="{Binding Line1MoveAllData, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- Line 2 Section -->
+                        <StackPanel>
+                            <TextBlock Text="Line 2 설정" FontWeight="Bold" Margin="0,0,0,8"/>
+                            <Label Content="{x:Static res:Strings.Sample_Name}" FontSize="10"/>
+                            <TextBox Text="{Binding Line2SampleName, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                            <Label Content="{x:Static res:Strings.Sample_MoveNIR}" FontSize="10"/>
+                            <TextBox Text="{Binding Line2MoveNir, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8"/>
+                            <Label Content="{x:Static res:Strings.Sample_MoveAllData}" FontSize="10"/>
+                            <TextBox Text="{Binding Line2MoveAllData, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                    </StackPanel>
                 </StackPanel>
             </Expander>
             
