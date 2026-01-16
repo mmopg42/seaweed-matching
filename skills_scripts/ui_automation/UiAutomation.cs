@@ -75,6 +75,69 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Finds a window by its title text.
+        /// </summary>
+        /// <param name="title">The exact or partial window title</param>
+        /// <param name="substring">If true, matches windows containing the title; if false, requires exact match</param>
+        /// <returns>The Window element if found, null otherwise</returns>
+        public Window? FindWindowByTitle(string title, bool substring = false)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                Console.WriteLine($"[UiAutomation] Title is null or empty");
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var desktop = _automation.GetDesktop();
+
+                if (substring)
+                {
+                    // Find all windows and filter by substring
+                    var windowCondition = cf.ByControlType(ControlType.Window);
+                    var windows = desktop.FindAllChildren(windowCondition);
+
+                    foreach (var window in windows)
+                    {
+                        if (!string.IsNullOrEmpty(window.Name) &&
+                            window.Name.IndexOf(title, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            Console.WriteLine($"[UiAutomation] Found window by substring '{title}': '{window.Name}'");
+                            return window.AsWindow();
+                        }
+                    }
+
+                    Console.WriteLine($"[UiAutomation] No window found containing title: {title}");
+                    return null;
+                }
+                else
+                {
+                    // Exact match with case insensitivity
+                    var windowCondition = cf.ByControlType(ControlType.Window)
+                        .And(cf.ByName(title, PropertyConditionFlags.IgnoreCase));
+
+                    var window = desktop.FindFirstDescendant(windowCondition)?.AsWindow();
+
+                    if (window == null)
+                    {
+                        Console.WriteLine($"[UiAutomation] No window found with exact title: {title}");
+                        return null;
+                    }
+
+                    Console.WriteLine($"[UiAutomation] Found window by exact title '{title}': '{window.Name}'");
+                    return window;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UiAutomation] Error finding window by title '{title}': {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
