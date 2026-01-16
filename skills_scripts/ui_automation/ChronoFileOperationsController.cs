@@ -831,6 +831,56 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Selects rows by GroupId and clicks the Delete button.
+        /// </summary>
+        /// <param name="groupIds">Array of GroupId values to select</param>
+        /// <returns>True if rows were selected and Delete button clicked, false otherwise</returns>
+        public bool SelectAndDeleteByGroupIds(string[] groupIds)
+        {
+            if (groupIds == null || groupIds.Length == 0)
+            {
+                Console.WriteLine("[ChronoFileOperationsController] Cannot delete: no GroupIds provided");
+                return false;
+            }
+
+            var dataGrid = FindDataGrid();
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[ChronoFileOperationsController] Cannot delete: DataGrid not found");
+                return false;
+            }
+
+            Console.WriteLine($"[ChronoFileOperationsController] Selecting {groupIds.Length} row(s) by GroupId for delete");
+
+            // Clear existing selection first
+            ClearSelection(dataGrid);
+
+            // Select each row by GroupId
+            var successCount = 0;
+            foreach (var groupId in groupIds)
+            {
+                if (SelectRowByGroupId(dataGrid, groupId))
+                {
+                    successCount++;
+                }
+            }
+
+            if (successCount == 0)
+            {
+                Console.WriteLine("[ChronoFileOperationsController] Failed to select any rows by GroupId");
+                return false;
+            }
+
+            Console.WriteLine($"[ChronoFileOperationsController] Selected {successCount}/{groupIds.Length} row(s) by GroupId");
+
+            // Small delay to ensure UI updates
+            Thread.Sleep(100);
+
+            // Click Delete button
+            return ClickDeleteButton();
+        }
+
+        /// <summary>
         /// Waits for a file operation to complete by monitoring button enabled state.
         /// </summary>
         /// <param name="buttonText">The button text to monitor ("이동" for Move, "삭제" for Delete)</param>
@@ -883,6 +933,199 @@ namespace SkillsScripts.UiAutomation
         public bool WaitForDeleteComplete(int timeoutMs = 30000)
         {
             return WaitForOperationComplete("삭제", timeoutMs);
+        }
+
+        #endregion
+
+        #region Delete Confirmation Dialog
+
+        /// <summary>
+        /// Finds and handles the delete confirmation dialog.
+        /// </summary>
+        /// <remarks>
+        /// Delete operations may show a confirmation dialog (MessageBox).
+        /// This method searches for a dialog containing "삭제" (Delete) or "확인" (Confirm)
+        /// and clicks the confirmation button ("예"/Yes or "확인"/OK).
+        /// </remarks>
+        /// <returns>True if confirmation dialog was found and confirmed, or no dialog was present (OK). False if error occurred.</returns>
+        public bool HandleDeleteConfirmationDialog()
+        {
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                // Search for a dialog/window containing "삭제" (Delete) or "확인" (Confirm)
+                // Confirmation dialogs are typically Window elements
+                var desktop = _automation.GetDesktop();
+                var allWindows = desktop.FindAllChildren(cf.ByControlType(ControlType.Window));
+
+                Console.WriteLine($"[ChronoFileOperationsController] Searching for confirmation dialog among {allWindows.Length} windows");
+
+                foreach (var window in allWindows)
+                {
+                    var windowName = window.Name ?? "";
+
+                    // Check if this is a confirmation dialog
+                    if (windowName.IndexOf("삭제", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        windowName.IndexOf("확인", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        windowName.IndexOf("Confirm", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        windowName.IndexOf("Delete", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        Console.WriteLine($"[ChronoFileOperationsController] Found confirmation dialog: '{windowName}'");
+
+                        // Look for "예" (Yes) or "확인" (OK) button
+                        var buttons = window.FindAllChildren(cf.ByControlType(ControlType.Button));
+
+                        foreach (var button in buttons)
+                        {
+                            var buttonName = button.Name ?? "";
+
+                            // Look for confirmation button
+                            if (buttonName.IndexOf("예", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                buttonName.IndexOf("확인", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                buttonName.IndexOf("Yes", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                buttonName.IndexOf("OK", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                Console.WriteLine($"[ChronoFileOperationsController] Clicking confirmation button: '{buttonName}'");
+
+                                var invokePattern = button.Patterns.Invoke.Pattern;
+                                if (invokePattern != null)
+                                {
+                                    invokePattern.Invoke();
+                                    Console.WriteLine("[ChronoFileOperationsController] Successfully confirmed deletion");
+
+                                    // Wait a bit for the dialog to close
+                                    Thread.Sleep(200);
+                                    return true;
+                                }
+                            }
+                        }
+
+                        Console.WriteLine("[ChronoFileOperationsController] Confirmation button not found in dialog");
+                        return false;
+                    }
+                }
+
+                Console.WriteLine("[ChronoFileOperationsController] No confirmation dialog found (may not be required)");
+                return true; // No dialog might be OK - operation proceeds without confirmation
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoFileOperationsController] Error handling confirmation dialog: {ex.Message}");
+                return false;
+            }
+        }
+
+        #endregion
+
+        #region Verification Methods
+
+        /// <summary>
+        /// Gets the current DataGrid row count after an operation.
+        /// </summary>
+        /// <returns>Current number of data rows in the DataGrid</returns>
+        public int GetDataRowCountAfterOperation()
+        {
+            var dataGrid = FindDataGrid();
+            if (dataGrid == null)
+            {
+                return 0;
+            }
+
+            var rows = GetDataRows(dataGrid);
+            return rows.Length;
+        }
+
+        /// <summary>
+        /// Verifies that a group with the specified GroupId has been deleted.
+        /// </summary>
+        /// <param name="groupId">The GroupId to verify</param>
+        /// <returns>True if the group no longer exists in the DataGrid, false if still found</returns>
+        public bool VerifyGroupDeleted(string groupId)
+        {
+            if (string.IsNullOrWhiteSpace(groupId))
+            {
+                Console.WriteLine("[ChronoFileOperationsController] Cannot verify deletion: groupId is null or empty");
+                return false;
+            }
+
+            var dataGrid = FindDataGrid();
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[ChronoFileOperationsController] Cannot verify deletion: DataGrid not found");
+                return false;
+            }
+
+            var rows = GetDataRows(dataGrid);
+            Console.WriteLine($"[ChronoFileOperationsController] Verifying deletion of GroupId '{groupId}' among {rows.Length} rows");
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                for (int i = 0; i < rows.Length; i++)
+                {
+                    var row = rows[i];
+
+                    // Get all Text children (cells)
+                    var cells = row.FindAllChildren(cf.ByControlType(ControlType.Text));
+
+                    // GroupId is in column 1 (index 1, after checkbox column 0)
+                    if (cells.Length > 1)
+                    {
+                        var cellValue = cells[1].Name ?? "";
+                        if (string.Equals(cellValue, groupId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Console.WriteLine($"[ChronoFileOperationsController] Verification failed: GroupId '{groupId}' still exists at row {i}");
+                            return false;
+                        }
+                    }
+                }
+
+                Console.WriteLine($"[ChronoFileOperationsController] Verified: GroupId '{groupId}' has been deleted");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoFileOperationsController] Error verifying group deletion: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Waits for the DataGrid row count to change from the original count.
+        /// </summary>
+        /// <param name="originalCount">The original row count before the operation</param>
+        /// <param name="timeoutMs">Maximum time to wait in milliseconds (default: 5000)</param>
+        /// <returns>True if row count changed, false if timeout</returns>
+        public bool WaitForRowCountChange(int originalCount, int timeoutMs = 5000)
+        {
+            var startTime = Stopwatch.StartNew();
+            Console.WriteLine($"[ChronoFileOperationsController] Waiting for row count to change from {originalCount} (timeout: {timeoutMs}ms)");
+
+            try
+            {
+                while (startTime.ElapsedMilliseconds < timeoutMs)
+                {
+                    var currentCount = GetDataRowCountAfterOperation();
+                    if (currentCount != originalCount)
+                    {
+                        Console.WriteLine($"[ChronoFileOperationsController] Row count changed from {originalCount} to {currentCount} after {startTime.ElapsedMilliseconds}ms");
+                        return true;
+                    }
+
+                    Thread.Sleep(DefaultPollIntervalMs);
+                }
+
+                var finalCount = GetDataRowCountAfterOperation();
+                Console.WriteLine($"[ChronoFileOperationsController] Timeout waiting for row count change. Original: {originalCount}, Current: {finalCount}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoFileOperationsController] Error waiting for row count change: {ex.Message}");
+                return false;
+            }
         }
 
         #endregion
