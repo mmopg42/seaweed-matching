@@ -714,6 +714,123 @@ class Program
         }, jsonOption);
         datagridCommand.AddCommand(dgDataCommand);
 
+        // datagrid info: Show headers and row count
+        var dgInfoCommand = new Command("info", "DataGrid 헤더 및 행 개수 요약");
+        dgInfoCommand.AddOption(jsonOption);
+        dgInfoCommand.SetHandler((json) =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[datagrid-info] Failed: MainWindow not found");
+                return;
+            }
+
+            var dataGrid = automation.FindDataGrid(mainWindow);
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[datagrid-info] Failed: DataGrid not found");
+                return;
+            }
+
+            var headers = automation.GetDataGridHeaders(dataGrid);
+            var rowCount = automation.GetDataRowCount(dataGrid);
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    columnCount = headers.Count,
+                    rowCount = rowCount,
+                    columns = headers
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[datagrid-info] DataGrid: {headers.Count} columns, {rowCount} rows");
+                Console.WriteLine("  Columns: " + string.Join(", ", headers));
+            }
+        }, jsonOption);
+        datagridCommand.AddCommand(dgInfoCommand);
+
+        // datagrid cell: Get specific cell value
+        var rowArgument = new Argument<int>("row", "행 인덱스 (0-based)");
+        var colArgument = new Argument<int>("col", "열 인덱스 (0-based)");
+        var dgCellCommand = new Command("cell", "특정 셀 값 가져오기");
+        dgCellCommand.AddArgument(rowArgument);
+        dgCellCommand.AddArgument(colArgument);
+        dgCellCommand.AddOption(jsonOption);
+        dgCellCommand.SetHandler((row, col, json) =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[datagrid-cell] Failed: MainWindow not found");
+                return;
+            }
+
+            var dataGrid = automation.FindDataGrid(mainWindow);
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[datagrid-cell] Failed: DataGrid not found");
+                return;
+            }
+
+            var cf = automation.GetAutomation().ConditionFactory;
+            var rows = dataGrid.FindAllChildren(cf.ByControlType(FlaUI.Core.Definitions.ControlType.DataItem));
+
+            if (row < 0 || row >= rows.Length)
+            {
+                Console.WriteLine($"[datagrid-cell] Failed: Row index {row} out of range (0-{rows.Length - 1})");
+                return;
+            }
+
+            var rowElement = rows[row];
+            var cellText = automation.GetCellText(rowElement, col);
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = cellText != null,
+                    row = row,
+                    column = col,
+                    value = cellText
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[datagrid-cell] Row {row}, Column {col}: '{cellText ?? "(null)"}'");
+            }
+        }, rowArgument, colArgument, jsonOption);
+        datagridCommand.AddCommand(dgCellCommand);
+
+        // datagrid export: Export all data as JSON
+        var dgExportCommand = new Command("export", "모든 DataGrid 데이터를 JSON으로 내보내기");
+        dgExportCommand.SetHandler(() =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[datagrid-export] Failed: MainWindow not found");
+                return;
+            }
+
+            var allData = automation.GetAllDataGridData(mainWindow);
+            Console.WriteLine(JsonSerializer.Serialize(new
+            {
+                success = true,
+                rowCount = allData.Count,
+                exportedAt = DateTime.UtcNow.ToString("o"),
+                data = allData
+            }, new JsonSerializerOptions { WriteIndented = true }));
+        });
+        datagridCommand.AddCommand(dgExportCommand);
+
         rootCommand.AddCommand(datagridCommand);
 
         return await rootCommand.InvokeAsync(args);
