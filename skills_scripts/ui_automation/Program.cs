@@ -7,6 +7,7 @@ using Toolbar = SkillsScripts.UiAutomation.ChronoToolbarController;
 using Workflow = SkillsScripts.UiAutomation.ChronoWorkflowController;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
 using Settings = SkillsScripts.UiAutomation.ChronoSettingsController;
+using FileOps = SkillsScripts.UiAutomation.ChronoFileOperationsController;
 
 namespace UiAutomation;
 
@@ -1662,6 +1663,177 @@ class Program
         settingsDialogCommand.AddCommand(settingsActionCommand);
 
         rootCommand.AddCommand(settingsDialogCommand);
+
+        // file-ops 명령: ChronoFileOperationsController 기반 파일 작업 제어
+        var fileOpsCommand = new Command("file-ops", "파일 작업 제어 (ChronoFileOperationsController)");
+
+        // file-ops select: 행 선택
+        var fileOpsSelectCommand = new Command("select", "DataGrid 행 선택");
+
+        // file-ops select --row-index: 특정 인덱스의 행 선택
+        var rowIndexOption = new Option<int>(
+            ["--row-index", "-r"],
+            "선택할 행 인덱스 (0-based)"
+        );
+        var selectRowIndexCommand = new Command("row-index", "특정 인덱스의 행 선택");
+        selectRowIndexCommand.AddOption(rowIndexOption);
+        selectRowIndexCommand.SetHandler((rowIndex) =>
+        {
+            using var controller = new FileOps();
+            var result = controller.SelectRowByIndex(rowIndex);
+            Console.WriteLine(result ? $"[file-ops-select row-index] Success: Row {rowIndex} selected" : $"[file-ops-select row-index] Failed: Could not select row {rowIndex}");
+        }, rowIndexOption);
+        fileOpsSelectCommand.AddCommand(selectRowIndexCommand);
+
+        // file-ops select --group-id: GroupId로 행 선택
+        var groupIdOption = new Option<string>(
+            ["--group-id", "-g"],
+            "선택할 GroupId"
+        );
+        var selectGroupIdCommand = new Command("group-id", "GroupId로 행 선택");
+        selectGroupIdCommand.AddOption(groupIdOption);
+        selectGroupIdCommand.SetHandler((groupId) =>
+        {
+            using var controller = new FileOps();
+            var result = controller.SelectRowByGroupId(groupId);
+            Console.WriteLine(result ? $"[file-ops-select group-id] Success: Row with GroupId '{groupId}' selected" : $"[file-ops-select group-id] Failed: Could not select row with GroupId '{groupId}'");
+        }, groupIdOption);
+        fileOpsSelectCommand.AddCommand(selectGroupIdCommand);
+
+        fileOpsCommand.AddCommand(fileOpsSelectCommand);
+
+        // file-ops select-all: 모든 행 선택
+        var fileOpsSelectAllCommand = new Command("select-all", "모든 행 선택 (SelectAll 체크박스 클릭)");
+        fileOpsSelectAllCommand.SetHandler(() =>
+        {
+            using var controller = new FileOps();
+            var result = controller.SelectAllRows();
+            Console.WriteLine(result ? "[file-ops-select-all] Success: All rows selected" : "[file-ops-select-all] Failed: Could not select all rows");
+        });
+        fileOpsCommand.AddCommand(fileOpsSelectAllCommand);
+
+        // file-ops clear-selection: 선택 해제
+        var fileOpsClearSelectionCommand = new Command("clear-selection", "모든 행 선택 해제");
+        fileOpsClearSelectionCommand.SetHandler(() =>
+        {
+            using var controller = new FileOps();
+            var result = controller.ClearSelection();
+            Console.WriteLine(result ? "[file-ops-clear-selection] Success: Selection cleared" : "[file-ops-clear-selection] Failed: Could not clear selection");
+        });
+        fileOpsCommand.AddCommand(fileOpsClearSelectionCommand);
+
+        // file-ops selected: 선택된 행 목록 조회
+        var fileOpsSelectedCommand = new Command("selected", "선택된 행 인덱스 목록 조회");
+        fileOpsSelectedCommand.AddOption(jsonOption);
+        fileOpsSelectedCommand.SetHandler((json) =>
+        {
+            using var controller = new FileOps();
+            var selectedRows = controller.GetSelectedRows();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    count = selectedRows.Count,
+                    selectedRows = selectedRows
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[file-ops-selected] Found {selectedRows.Count} selected row(s):");
+                foreach (var index in selectedRows)
+                {
+                    Console.WriteLine($"  - Row {index}");
+                }
+            }
+        }, jsonOption);
+        fileOpsCommand.AddCommand(fileOpsSelectedCommand);
+
+        // file-ops move: 이동 작업
+        var fileOpsMoveCommand = new Command("move", "행 선택 후 이동 버튼 클릭");
+
+        // file-ops move --rows: 행 인덱스로 이동
+        var rowsOption = new Option<int[]>(
+            ["--rows", "-r"],
+            "이동할 행 인덱스 목록 (쉼표로 구분)"
+        );
+        var moveRowsCommand = new Command("rows", "행 인덱스로 선택 후 이동");
+        moveRowsCommand.AddOption(rowsOption);
+        moveRowsCommand.SetHandler((rows) =>
+        {
+            using var controller = new FileOps();
+            var result = controller.SelectAndMoveRows(rows);
+            Console.WriteLine(result ? $"[file-ops-move rows] Success: Moved {rows.Length} row(s)" : $"[file-ops-move rows] Failed: Could not move rows");
+        }, rowsOption);
+        fileOpsMoveCommand.AddCommand(moveRowsCommand);
+
+        // file-ops move --group-ids: GroupId로 이동
+        var groupIdsOption = new Option<string[]>(
+            ["--group-ids", "-g"],
+            "이동할 GroupId 목록 (쉼표로 구분)"
+        );
+        var moveGroupIdsCommand = new Command("group-ids", "GroupId로 선택 후 이동");
+        moveGroupIdsCommand.AddOption(groupIdsOption);
+        moveGroupIdsCommand.SetHandler((groupIds) =>
+        {
+            using var controller = new FileOps();
+            var result = controller.SelectAndMoveByGroupIds(groupIds);
+            Console.WriteLine(result ? $"[file-ops-move group-ids] Success: Moved {groupIds.Length} row(s)" : $"[file-ops-move group-ids] Failed: Could not move rows by GroupId");
+        }, groupIdsOption);
+        fileOpsMoveCommand.AddCommand(moveGroupIdsCommand);
+
+        fileOpsCommand.AddCommand(fileOpsMoveCommand);
+
+        // file-ops delete: 삭제 작업
+        var fileOpsDeleteCommand = new Command("delete", "행 선택 후 삭제 버튼 클릭");
+
+        // file-ops delete --rows: 행 인덱스로 삭제
+        var deleteRowsCommand = new Command("rows", "행 인덱스로 선택 후 삭제");
+        deleteRowsCommand.AddOption(rowsOption);
+        deleteRowsCommand.SetHandler((rows) =>
+        {
+            using var controller = new FileOps();
+            var result = controller.SelectAndDeleteRows(rows);
+            Console.WriteLine(result ? $"[file-ops-delete rows] Success: Deleted {rows.Length} row(s)" : $"[file-ops-delete rows] Failed: Could not delete rows");
+        }, rowsOption);
+        fileOpsDeleteCommand.AddCommand(deleteRowsCommand);
+
+        fileOpsCommand.AddCommand(fileOpsDeleteCommand);
+
+        // file-ops wait: 작업 완료 대기
+        var fileOpsWaitCommand = new Command("wait", "파일 작업 완료 대기");
+
+        // file-ops wait move: 이동 작업 완료 대기
+        var timeoutOption = new Option<int>(
+            ["--timeout", "-t"],
+            () => 30000,
+            "대기 시간 (밀리초, 기본값: 30000)"
+        );
+        var waitMoveCommand = new Command("move", "이동 작업 완료 대기");
+        waitMoveCommand.AddOption(timeoutOption);
+        waitMoveCommand.SetHandler((timeout) =>
+        {
+            using var controller = new FileOps();
+            var result = controller.WaitForMoveComplete(timeout);
+            Console.WriteLine(result ? $"[file-ops-wait move] Success: Move operation completed" : $"[file-ops-wait move] Failed: Timeout waiting for move operation");
+        }, timeoutOption);
+        fileOpsWaitCommand.AddCommand(waitMoveCommand);
+
+        // file-ops wait delete: 삭제 작업 완료 대기
+        var waitDeleteCommand = new Command("delete", "삭제 작업 완료 대기");
+        waitDeleteCommand.AddOption(timeoutOption);
+        waitDeleteCommand.SetHandler((timeout) =>
+        {
+            using var controller = new FileOps();
+            var result = controller.WaitForDeleteComplete(timeout);
+            Console.WriteLine(result ? $"[file-ops-wait delete] Success: Delete operation completed" : $"[file-ops-wait delete] Failed: Timeout waiting for delete operation");
+        }, timeoutOption);
+        fileOpsWaitCommand.AddCommand(waitDeleteCommand);
+
+        fileOpsCommand.AddCommand(fileOpsWaitCommand);
+
+        rootCommand.AddCommand(fileOpsCommand);
 
         return await rootCommand.InvokeAsync(args);
     }
