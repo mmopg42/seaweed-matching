@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-16)
 
 **Core value:** UI 요소 식별 및 조작 — ChronoView의 모든 UI 요소를 안정적으로 식별하고 조작
-**Current focus:** Phase 5 — Workflow panel control
+**Current focus:** Phase 6 — SettingsDialog automation
 
 ## Current Position
 
-Phase: 5 of 10 (workflow-control)
-Plan: 3 of 4 in phase
-Status: Plan 05-03 complete
-Last activity: 2026-01-16 — Completed 05-03: Path TextBox automation with ValuePattern read/write and CLI workflow path commands
+Phase: 6 of 10 (settings-dialog)
+Plan: 0 of 3 in phase
+Status: Phase 6 planned, ready for execution
+Last activity: 2026-01-16 — Phase 6 planned: 3 plans for SettingsDialog automation
 
-Progress: █████░░░░░░░░░ 75% (3/4 plans)
+Progress: ██████░░░░░░░ 50% (5/10 phases complete, Phase 6 planned)
 
 ## Performance Metrics
 
@@ -88,6 +88,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-16
-Stopped at: Plan 05-03 complete - Path TextBox automation with ValuePattern read/write and CLI workflow path commands
+Stopped at: Phase 6 planned - 3 plans for SettingsDialog automation ready for execution
 Resume file: None
-Note: Phase 5 (workflow-control) has 3 of 4 plans complete. Next: 05-04 Expander control automation.
+Note: Phase 6 (settings-dialog) has 0 of 3 plans executed. Plans created: 06-01 (Dialog open/inspect), 06-02 (Tab/Path automation), 06-03 (CheckBox/Action buttons).
