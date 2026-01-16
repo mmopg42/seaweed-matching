@@ -943,6 +943,247 @@ namespace SkillsScripts.UiAutomation
             return allMessages;
         }
 
+        /// <summary>
+        /// Gets all log messages filtered by severity level.
+        /// </summary>
+        /// <param name="logPanel">The LogPanel element</param>
+        /// <param name="level">The severity level to filter by (Debug, Info, Warning, Error). Case-insensitive. Null for all levels.</param>
+        /// <returns>List of log message dictionaries matching the severity level</returns>
+        public List<Dictionary<string, string>> GetLogsByLevel(AutomationElement logPanel, string? level)
+        {
+            var allMessages = GetAllLogMessagesFromPanel(logPanel);
+
+            if (string.IsNullOrWhiteSpace(level))
+            {
+                Console.WriteLine($"[ChronoDataPanelReader] GetLogsByLevel: No filter specified, returning all {allMessages.Count} messages");
+                return allMessages;
+            }
+
+            var filtered = allMessages
+                .Where(msg => msg.TryGetValue("Severity", out var severity) &&
+                              severity.IndexOf(level, StringComparison.OrdinalIgnoreCase) >= 0)
+                .ToList();
+
+            Console.WriteLine($"[ChronoDataPanelReader] GetLogsByLevel: Filtered by '{level}', found {filtered.Count} of {allMessages.Count} messages");
+            return filtered;
+        }
+
+        /// <summary>
+        /// Gets all log messages filtered by severity level (convenience method).
+        /// </summary>
+        /// <param name="level">The severity level to filter by (Debug, Info, Warning, Error). Case-insensitive. Null for all levels.</param>
+        /// <returns>List of log message dictionaries matching the severity level</returns>
+        public List<Dictionary<string, string>> GetLogsByLevel(string? level)
+        {
+            var logPanel = FindLogPanel();
+            if (logPanel == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] GetLogsByLevel: LogPanel not found");
+                return new List<Dictionary<string, string>>();
+            }
+
+            return GetLogsByLevel(logPanel, level);
+        }
+
+        /// <summary>
+        /// Searches log messages for text in Source or Message fields.
+        /// </summary>
+        /// <param name="logPanel">The LogPanel element</param>
+        /// <param name="searchText">The text to search for. Case-insensitive.</param>
+        /// <returns>List of log message dictionaries containing the search text</returns>
+        public List<Dictionary<string, string>> SearchLogs(AutomationElement logPanel, string searchText)
+        {
+            var allMessages = GetAllLogMessagesFromPanel(logPanel);
+
+            if (string.IsNullOrWhiteSpace(searchText))
+            {
+                Console.WriteLine($"[ChronoDataPanelReader] SearchLogs: No search text specified, returning all {allMessages.Count} messages");
+                return allMessages;
+            }
+
+            var filtered = allMessages
+                .Where(msg =>
+                {
+                    var source = msg.GetValueOrDefault("Source", "");
+                    var message = msg.GetValueOrDefault("Message", "");
+                    return source.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                           message.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0;
+                })
+                .ToList();
+
+            Console.WriteLine($"[ChronoDataPanelReader] SearchLogs: Searched for '{searchText}', found {filtered.Count} of {allMessages.Count} messages");
+            return filtered;
+        }
+
+        /// <summary>
+        /// Searches log messages for text in Source or Message fields (convenience method).
+        /// </summary>
+        /// <param name="searchText">The text to search for. Case-insensitive.</param>
+        /// <returns>List of log message dictionaries containing the search text</returns>
+        public List<Dictionary<string, string>> SearchLogs(string searchText)
+        {
+            var logPanel = FindLogPanel();
+            if (logPanel == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] SearchLogs: LogPanel not found");
+                return new List<Dictionary<string, string>>();
+            }
+
+            return SearchLogs(logPanel, searchText);
+        }
+
+        /// <summary>
+        /// Gets log messages filtered by both severity level and search text.
+        /// </summary>
+        /// <param name="logPanel">The LogPanel element</param>
+        /// <param name="level">The severity level to filter by (Debug, Info, Warning, Error). Case-insensitive. Null for all levels.</param>
+        /// <param name="searchText">The text to search for in Source/Message. Case-insensitive. Null for no search filter.</param>
+        /// <returns>List of log message dictionaries matching both criteria</returns>
+        public List<Dictionary<string, string>> GetFilteredLogs(AutomationElement logPanel, string? level, string? searchText)
+        {
+            var allMessages = GetAllLogMessagesFromPanel(logPanel);
+
+            var filtered = allMessages
+                .Where(msg =>
+                {
+                    // Level filter
+                    if (!string.IsNullOrWhiteSpace(level))
+                    {
+                        if (!msg.TryGetValue("Severity", out var severity) ||
+                            severity.IndexOf(level, StringComparison.OrdinalIgnoreCase) < 0)
+                        {
+                            return false;
+                        }
+                    }
+
+                    // Search text filter
+                    if (!string.IsNullOrWhiteSpace(searchText))
+                    {
+                        var source = msg.GetValueOrDefault("Source", "");
+                        var message = msg.GetValueOrDefault("Message", "");
+                        if (source.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) < 0 &&
+                            message.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) < 0)
+                        {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                })
+                .ToList();
+
+            Console.WriteLine($"[ChronoDataPanelReader] GetFilteredLogs: Applied filter (level='{level}', search='{searchText}'), found {filtered.Count} of {allMessages.Count} messages");
+            return filtered;
+        }
+
+        /// <summary>
+        /// Gets log messages filtered by both severity level and search text (convenience method).
+        /// </summary>
+        /// <param name="level">The severity level to filter by (Debug, Info, Warning, Error). Case-insensitive. Null for all levels.</param>
+        /// <param name="searchText">The text to search for in Source/Message. Case-insensitive. Null for no search filter.</param>
+        /// <returns>List of log message dictionaries matching both criteria</returns>
+        public List<Dictionary<string, string>> GetFilteredLogs(string? level, string? searchText)
+        {
+            var logPanel = FindLogPanel();
+            if (logPanel == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] GetFilteredLogs: LogPanel not found");
+                return new List<Dictionary<string, string>>();
+            }
+
+            return GetFilteredLogs(logPanel, level, searchText);
+        }
+
+        /// <summary>
+        /// Gets the most recent N log messages.
+        /// </summary>
+        /// <param name="logPanel">The LogPanel element</param>
+        /// <param name="count">Number of most recent messages to retrieve</param>
+        /// <returns>List of the most recent log message dictionaries</returns>
+        public List<Dictionary<string, string>> GetLatestLogs(AutomationElement logPanel, int count)
+        {
+            var allMessages = GetAllLogMessagesFromPanel(logPanel);
+
+            if (count <= 0)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] GetLatestLogs: Invalid count, returning empty list");
+                return new List<Dictionary<string, string>>();
+            }
+
+            var takeCount = Math.Min(count, allMessages.Count);
+            var latest = allMessages.TakeLast(takeCount).ToList();
+
+            Console.WriteLine($"[ChronoDataPanelReader] GetLatestLogs: Returning latest {latest.Count} of {allMessages.Count} messages");
+            return latest;
+        }
+
+        /// <summary>
+        /// Gets the most recent N log messages (convenience method).
+        /// </summary>
+        /// <param name="count">Number of most recent messages to retrieve</param>
+        /// <returns>List of the most recent log message dictionaries</returns>
+        public List<Dictionary<string, string>> GetLatestLogs(int count)
+        {
+            var logPanel = FindLogPanel();
+            if (logPanel == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] GetLatestLogs: LogPanel not found");
+                return new List<Dictionary<string, string>>();
+            }
+
+            return GetLatestLogs(logPanel, count);
+        }
+
+        /// <summary>
+        /// Helper method to get all log messages from a LogPanel (shared implementation).
+        /// </summary>
+        /// <param name="logPanel">The LogPanel element</param>
+        /// <returns>List of all log message dictionaries</returns>
+        private List<Dictionary<string, string>> GetAllLogMessagesFromPanel(AutomationElement logPanel)
+        {
+            if (logPanel == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] GetAllLogMessagesFromPanel: logPanel is null");
+                return new List<Dictionary<string, string>>();
+            }
+
+            var dataGrid = FindLogDataGrid(logPanel);
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] GetAllLogMessagesFromPanel: LogDataGrid not found");
+                return new List<Dictionary<string, string>>();
+            }
+
+            var headers = GetLogHeadersFromDataGrid(dataGrid);
+            if (headers.Count == 0)
+            {
+                Console.WriteLine("[ChronoDataPanelReader] GetAllLogMessagesFromPanel: No headers found");
+                return new List<Dictionary<string, string>>();
+            }
+
+            var cf = _automation.ConditionFactory;
+            var rows = dataGrid.FindAllChildren(cf.ByControlType(ControlType.DataItem));
+
+            var allMessages = new List<Dictionary<string, string>>();
+
+            foreach (var row in rows)
+            {
+                var logMessage = new Dictionary<string, string>();
+                var cells = row.FindAllChildren(cf.ByControlType(ControlType.Text));
+
+                for (int i = 0; i < Math.Min(cells.Length, headers.Count); i++)
+                {
+                    var key = headers[i];
+                    var value = cells[i].Name ?? "";
+                    logMessage[key] = value;
+                }
+
+                allMessages.Add(logMessage);
+            }
+
+            return allMessages;
+        }
+
         #endregion
 
         /// <summary>
