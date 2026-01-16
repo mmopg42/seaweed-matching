@@ -868,6 +868,62 @@ class Program
         });
         inspectCommand.AddCommand(inspectWorkflowCommand);
 
+        // inspect log: LogPanel 구조 검사
+        var inspectLogCommand = new Command("log", "LogPanel 구조 검사");
+        inspectLogCommand.SetHandler(() =>
+        {
+            using var reader = new SkillsScripts.UiAutomation.ChronoDataPanelReader();
+            var mainWindow = reader.FindMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[inspect-log] Failed: MainWindow not found");
+                return;
+            }
+
+            var logPanel = reader.FindLogPanel(mainWindow);
+            if (logPanel == null)
+            {
+                Console.WriteLine("[inspect-log] Failed: LogPanel not found");
+                return;
+            }
+
+            Console.WriteLine("[inspect-log] LogPanel found - listing element tree (depth=2):");
+            Console.WriteLine();
+            Console.WriteLine("=== Key Elements to Identify ===");
+            Console.WriteLine("  - LogDataGrid (DataGrid with Severity, Time, Source, Message columns)");
+            Console.WriteLine("  - SearchBox (TextBox for search filtering)");
+            Console.WriteLine("  - LevelFilter (ComboBox with: All, Debug, Info, Warning, Error)");
+            Console.WriteLine("  - AutoScrollCheckBox (CheckBox for auto-scroll toggle)");
+            Console.WriteLine("  - Action buttons (Clear, QuickSave, OpenLogFolder, Close)");
+            Console.WriteLine();
+
+            // Get log summary
+            var logDataGrid = reader.FindLogDataGrid(logPanel);
+            if (logDataGrid != null)
+            {
+                Console.WriteLine("=== LogDataGrid Summary ===");
+                Console.WriteLine($"  - ControlType: {logDataGrid.ControlType}");
+                Console.WriteLine($"  - Name: '{logDataGrid.Name ?? "(unnamed)"}'");
+                Console.WriteLine($"  - ClassName: '{logDataGrid.ClassName ?? "(null)"}'");
+                Console.WriteLine($"  - AutomationId: '{logDataGrid.AutomationId ?? "(null)"}'");
+
+                var headers = reader.GetLogHeaders(logPanel);
+                if (headers.Count > 0)
+                {
+                    Console.WriteLine($"  - Columns: {string.Join(", ", headers)}");
+                }
+
+                var rowCount = reader.GetLogRowCount(logPanel);
+                Console.WriteLine($"  - Row count: {rowCount}");
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("=== Element Tree (depth=2) ===");
+            using var automation = new UiAuto();
+            automation.ListElements(logPanel, maxDepth: 2);
+        });
+        inspectCommand.AddCommand(inspectLogCommand);
+
         rootCommand.AddCommand(inspectCommand);
 
         // workflow 명령: ChronoWorkflowController 기반 워크플로우 패널 제어
