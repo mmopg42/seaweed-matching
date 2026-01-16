@@ -658,6 +658,459 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Finds the StatisticsPanel within the ChronoView MainWindow.
+        /// </summary>
+        /// <remarks>
+        /// The StatisticsPanel is a UserControl (StatisticsPanel.xaml).
+        /// It contains file count statistics (NIR1, Normal1, Cam1-6, NIR2, Normal2)
+        /// and matching statistics (Total, WithNIR, WithoutNIR, Failed, Abnormal).
+        /// This method searches for a UserControl with Name or ClassName containing "StatisticsPanel".
+        /// </remarks>
+        /// <param name="mainWindow">The MainWindow to search within</param>
+        /// <returns>The StatisticsPanel AutomationElement if found, null otherwise</returns>
+        public AutomationElement? FindStatisticsPanel(Window? mainWindow)
+        {
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[UiAutomation] Cannot find StatisticsPanel: mainWindow is null");
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                // Try to find by Name containing "StatisticsPanel"
+                var nameCondition = cf.ByControlType(ControlType.Custom)
+                    .And(cf.ByName("StatisticsPanel", PropertyConditionFlags.IgnoreCase));
+                var panel = mainWindow.FindFirstDescendant(nameCondition);
+
+                if (panel != null)
+                {
+                    Console.WriteLine("[UiAutomation] Found StatisticsPanel by Name");
+                    return panel;
+                }
+
+                // Try to find by ClassName containing "StatisticsPanel"
+                var allElements = mainWindow.FindAllChildren(cf.ByControlType(ControlType.Custom));
+                foreach (var element in allElements)
+                {
+                    if (!string.IsNullOrEmpty(element.ClassName) &&
+                        element.ClassName.IndexOf("StatisticsPanel", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        Console.WriteLine($"[UiAutomation] Found StatisticsPanel by ClassName: '{element.ClassName}'");
+                        return element;
+                    }
+                }
+
+                Console.WriteLine("[UiAutomation] StatisticsPanel not found");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UiAutomation] Error finding StatisticsPanel: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Finds the DataGrid within the ChronoView MainWindow.
+        /// </summary>
+        /// <remarks>
+        /// The FileGroupDataGrid is the main data grid displaying file groups.
+        /// It appears as ControlType.DataGrid in UI Automation.
+        /// Can be filtered by Name ("MainDataGrid" from FileGroupDataGrid.xaml line 18).
+        /// </remarks>
+        /// <param name="mainWindow">The MainWindow to search within</param>
+        /// <returns>The DataGrid AutomationElement if found, null otherwise</returns>
+        public AutomationElement? FindDataGrid(Window? mainWindow)
+        {
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[UiAutomation] Cannot find DataGrid: mainWindow is null");
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                // First try to find by Name "MainDataGrid"
+                var nameCondition = cf.ByControlType(ControlType.DataGrid)
+                    .And(cf.ByName("MainDataGrid", PropertyConditionFlags.IgnoreCase));
+                var dataGrid = mainWindow.FindFirstDescendant(nameCondition);
+
+                if (dataGrid != null)
+                {
+                    Console.WriteLine("[UiAutomation] Found DataGrid by Name: 'MainDataGrid'");
+                    return dataGrid;
+                }
+
+                // Fallback: find any DataGrid
+                var gridCondition = cf.ByControlType(ControlType.DataGrid);
+                dataGrid = mainWindow.FindFirstDescendant(gridCondition);
+
+                if (dataGrid != null)
+                {
+                    Console.WriteLine($"[UiAutomation] Found DataGrid (Name: '{dataGrid.Name ?? "(unnamed)"}')");
+                    return dataGrid;
+                }
+
+                Console.WriteLine("[UiAutomation] DataGrid not found");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UiAutomation] Error finding DataGrid: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Extracts a statistics value from the StatisticsPanel by label text.
+        /// </summary>
+        /// <remarks>
+        /// The statistics use a Border with StackPanel containing a label TextBlock
+        /// and a value TextBlock (e.g., lines 19-27 of StatisticsPanel.xaml).
+        /// This method finds the Border containing the label and extracts the value.
+        /// </remarks>
+        /// <param name="panel">The StatisticsPanel element</param>
+        /// <param name="labelText">The label text to find (e.g., "NIR1:", "Total:")</param>
+        /// <returns>The statistics value as string, or null if not found</returns>
+        public string? GetStatisticsValue(AutomationElement? panel, string labelText)
+        {
+            if (panel == null)
+            {
+                Console.WriteLine("[UiAutomation] Cannot get statistics value: panel is null");
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(labelText))
+            {
+                Console.WriteLine("[UiAutomation] Cannot get statistics value: labelText is null or empty");
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                // Find all TextBlocks in the panel
+                var textBlocks = panel.FindAllChildren(cf.ByControlType(ControlType.Text));
+
+                Console.WriteLine($"[UiAutomation] Searching for statistics label '{labelText}' among {textBlocks.Length} text elements");
+
+                // Find the label TextBlock
+                for (int i = 0; i < textBlocks.Length; i++)
+                {
+                    var textBlock = textBlocks[i];
+                    if (!string.IsNullOrEmpty(textBlock.Name) &&
+                        textBlock.Name.IndexOf(labelText, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        // The value should be the next TextBlock (sibling with bold text)
+                        // Try to get it from the parent's children
+                        var parent = textBlock.Parent;
+                        if (parent != null)
+                        {
+                            var siblings = parent.FindAllChildren();
+                            for (int j = 0; j < siblings.Length; j++)
+                            {
+                                var sibling = siblings[j];
+                                // Look for the next TextBlock with actual content (not just the label)
+                                if (sibling.ControlType == ControlType.Text &&
+                                    !string.IsNullOrEmpty(sibling.Name) &&
+                                    sibling.Name.IndexOf(labelText, StringComparison.OrdinalIgnoreCase) < 0)
+                                {
+                                    var value = sibling.Name;
+                                    Console.WriteLine($"[UiAutomation] Found value for '{labelText}': '{value}'");
+                                    return value;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                Console.WriteLine($"[UiAutomation] Statistics value for '{labelText}' not found");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UiAutomation] Error getting statistics value for '{labelText}': {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Extracts all statistics from the StatisticsPanel.
+        /// </summary>
+        /// <remarks>
+        /// Returns a dictionary containing all file counts and matching statistics.
+        /// File Counts: NIR1, Normal1, Cam1, Cam2, Cam3, NIR2, Normal2, Cam4, Cam5, Cam6
+        /// Matching Status: Total, WithNIR, WithoutNIR, Failed, Abnormal
+        /// </remarks>
+        /// <param name="mainWindow">The MainWindow to search within</param>
+        /// <returns>Dictionary of statistic names to values, or null if panel not found</returns>
+        public Dictionary<string, string>? GetAllStatistics(Window? mainWindow)
+        {
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[UiAutomation] Cannot get all statistics: mainWindow is null");
+                return null;
+            }
+
+            var panel = FindStatisticsPanel(mainWindow);
+            if (panel == null)
+            {
+                Console.WriteLine("[UiAutomation] StatisticsPanel not found");
+                return null;
+            }
+
+            var statistics = new Dictionary<string, string>();
+
+            // File count statistics
+            var fileCounts = new[] { "NIR1:", "Normal1:", "Cam1:", "Cam2:", "Cam3:", "NIR2:", "일반2:", "Cam4:", "Cam5:", "Cam6:" };
+            foreach (var label in fileCounts)
+            {
+                var value = GetStatisticsValue(panel, label);
+                if (value != null)
+                {
+                    // Remove colon for key
+                    statistics[label.TrimEnd(':')] = value;
+                }
+            }
+
+            // Matching status statistics
+            var matchingStats = new[] { "Total:", "WithNIR:", "WithoutNIR:", "Failed:", "Abnormal:" };
+            foreach (var label in matchingStats)
+            {
+                var value = GetStatisticsValue(panel, label);
+                if (value != null)
+                {
+                    statistics[label.TrimEnd(':')] = value;
+                }
+            }
+
+            Console.WriteLine($"[UiAutomation] Extracted {statistics.Count} statistics values");
+            return statistics;
+        }
+
+        /// <summary>
+        /// Gets the column headers from the DataGrid.
+        /// </summary>
+        /// <remarks>
+        /// DataGrid headers are typically in a DataGridItemsControl with ControlType.Header.
+        /// This method finds the header row and extracts all column names.
+        /// </remarks>
+        /// <param name="dataGrid">The DataGrid element</param>
+        /// <returns>List of column header names, or empty list if not found</returns>
+        public List<string> GetDataGridHeaders(AutomationElement? dataGrid)
+        {
+            var headers = new List<string>();
+
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[UiAutomation] Cannot get DataGrid headers: dataGrid is null");
+                return headers;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                // Find Header element
+                var headerCondition = cf.ByControlType(ControlType.Header);
+                var header = dataGrid.FindFirstDescendant(headerCondition);
+
+                if (header == null)
+                {
+                    Console.WriteLine("[UiAutomation] DataGrid Header not found");
+                    return headers;
+                }
+
+                // Get all header items
+                var headerItems = header.FindAllChildren(cf.ByControlType(ControlType.HeaderItem));
+
+                Console.WriteLine($"[UiAutomation] Found {headerItems.Length} header columns");
+
+                foreach (var item in headerItems)
+                {
+                    var name = item.Name ?? "(unnamed)";
+                    headers.Add(name);
+                    Console.WriteLine($"[UiAutomation] Header: '{name}'");
+                }
+
+                return headers;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UiAutomation] Error getting DataGrid headers: {ex.Message}");
+                return headers;
+            }
+        }
+
+        /// <summary>
+        /// Gets the number of data rows in the DataGrid.
+        /// </summary>
+        /// <remarks>
+        /// Counts DataRow elements (ControlType.DataItem) in the grid.
+        /// </remarks>
+        /// <param name="dataGrid">The DataGrid element</param>
+        /// <returns>Number of data rows, or 0 if not found</returns>
+        public int GetDataRowCount(AutomationElement? dataGrid)
+        {
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[UiAutomation] Cannot get row count: dataGrid is null");
+                return 0;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var rows = dataGrid.FindAllChildren(cf.ByControlType(ControlType.DataItem));
+
+                Console.WriteLine($"[UiAutomation] DataGrid has {rows.Length} data rows");
+                return rows.Length;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UiAutomation] Error getting row count: {ex.Message}");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Gets the text content of a specific cell in a data row.
+        /// </summary>
+        /// <remarks>
+        /// DataGrid cells are typically TextBlock elements within DataItem children.
+        /// This method finds the cell at the specified column index within a row.
+        /// </remarks>
+        /// <param name="rowElement">The DataItem element representing the row</param>
+        /// <param name="columnIndex">Zero-based column index</param>
+        /// <returns>The cell text content, or null if not found</returns>
+        public string? GetCellText(AutomationElement? rowElement, int columnIndex)
+        {
+            if (rowElement == null)
+            {
+                Console.WriteLine("[UiAutomation] Cannot get cell text: rowElement is null");
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var cells = rowElement.FindAllChildren(cf.ByControlType(ControlType.Text));
+
+                if (columnIndex >= 0 && columnIndex < cells.Length)
+                {
+                    var cellText = cells[columnIndex].Name ?? "";
+                    Console.WriteLine($"[UiAutomation] Cell [{columnIndex}]: '{cellText}'");
+                    return cellText;
+                }
+
+                Console.WriteLine($"[UiAutomation] Column index {columnIndex} out of range (found {cells.Length} cells)");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UiAutomation] Error getting cell text: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Extracts all data from a data row as a dictionary.
+        /// </summary>
+        /// <remarks>
+        /// Returns column names mapped to cell values for the specified row.
+        /// Requires headers to be known for proper key mapping.
+        /// </remarks>
+        /// <param name="rowElement">The DataItem element representing the row</param>
+        /// <param name="headers">List of column header names for keys</param>
+        /// <returns>Dictionary mapping column names to cell values</returns>
+        public Dictionary<string, string> GetRowData(AutomationElement? rowElement, List<string> headers)
+        {
+            var rowData = new Dictionary<string, string>();
+
+            if (rowElement == null)
+            {
+                Console.WriteLine("[UiAutomation] Cannot get row data: rowElement is null");
+                return rowData;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var cells = rowElement.FindAllChildren(cf.ByControlType(ControlType.Text));
+
+                for (int i = 0; i < Math.Min(cells.Length, headers.Count); i++)
+                {
+                    var key = headers[i];
+                    var value = cells[i].Name ?? "";
+                    rowData[key] = value;
+                }
+
+                Console.WriteLine($"[UiAutomation] Extracted {rowData.Count} cells from row");
+                return rowData;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UiAutomation] Error getting row data: {ex.Message}");
+                return rowData;
+            }
+        }
+
+        /// <summary>
+        /// Extracts all data from the DataGrid.
+        /// </summary>
+        /// <remarks>
+        /// Returns a list of dictionaries, each representing a row with column headers as keys.
+        /// This is the primary method for bulk data extraction from the grid.
+        /// </remarks>
+        /// <param name="mainWindow">The MainWindow to search within</param>
+        /// <returns>List of row dictionaries, or empty list if DataGrid not found</returns>
+        public List<Dictionary<string, string>> GetAllDataGridData(Window? mainWindow)
+        {
+            var allData = new List<Dictionary<string, string>>();
+
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[UiAutomation] Cannot get all data: mainWindow is null");
+                return allData;
+            }
+
+            var dataGrid = FindDataGrid(mainWindow);
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[UiAutomation] DataGrid not found");
+                return allData;
+            }
+
+            var headers = GetDataGridHeaders(dataGrid);
+            if (headers.Count == 0)
+            {
+                Console.WriteLine("[UiAutomation] No headers found, cannot extract data");
+                return allData;
+            }
+
+            var cf = _automation.ConditionFactory;
+            var rows = dataGrid.FindAllChildren(cf.ByControlType(ControlType.DataItem));
+
+            Console.WriteLine($"[UiAutomation] Extracting data from {rows.Length} rows");
+
+            foreach (var row in rows)
+            {
+                var rowData = GetRowData(row, headers);
+                allData.Add(rowData);
+            }
+
+            Console.WriteLine($"[UiAutomation] Extracted {allData.Count} rows with {headers.Count} columns each");
+            return allData;
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
