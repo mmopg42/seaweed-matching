@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [ ] 01-01: FlaUI 5.x 호환성 수정 및 빌드 성공
-- [ ] 01-02: 기본 UIAutomation 클래스 메서드 검증
+- [x] 01-02: 기본 UIAutomation 클래스 메서드 검증
 
 ### Phase 2: 윈도우 탐지
 **Goal**: ChronoView 메인 윈도우와 모든 대화상자를 식별
@@ -149,7 +149,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|------------|
-| 1. FlaUI 인프라 | 0/2 | Not started | - |
+| 1. FlaUI 인프라 | 1/2 | In progress | 2026-01-16 |
 | 2. 윈도우 탐지 | 0/3 | Not started | - |
 | 3. 툴바 제어 | 0/4 | Not started | - |
 | 4. 데이터 패널 | 0/3 | Not started | - |
