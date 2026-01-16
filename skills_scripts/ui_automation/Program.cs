@@ -46,9 +46,50 @@ class Program
         Console.Error.WriteLine(message);
         return exitCode;
     }
+
+    /// <summary>
+    /// Print output only if not in quiet mode
+    /// </summary>
+    static void PrintOutput(string message)
+    {
+        if (!s_isQuiet)
+        {
+            Console.WriteLine(message);
+        }
+    }
+
+    /// <summary>
+    /// Print verbose output only if verbose mode is enabled
+    /// </summary>
+    static void PrintVerbose(string message)
+    {
+        if (s_isVerbose && !s_isQuiet)
+        {
+            Console.WriteLine($"[VERBOSE] {message}");
+        }
+    }
     static async Task<int> Main(string[] args)
     {
         var rootCommand = new RootCommand("Windows UI Automation - FlaUI 5.x 기반 CLI 도구");
+
+        // Global options for agent control
+        var quietOption = new Option<bool>(
+            ["--quiet", "-q"],
+            "Suppress all non-error output (for agent consumption)")
+        {
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        var verboseOption = new Option<bool>(
+            ["--verbose", "-v"],
+            "Enable verbose output for debugging")
+        {
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        // Add global options to root
+        rootCommand.AddGlobalOption(quietOption);
+        rootCommand.AddGlobalOption(verboseOption);
 
         // JSON output option
         var jsonOption = new Option<bool>(
