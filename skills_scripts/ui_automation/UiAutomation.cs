@@ -228,6 +228,139 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Finds the ChronoView SetupWindow.
+        /// </summary>
+        /// <remarks>
+        /// The SetupWindow has Title="Setup - ChronoView Pro" (SetupWindow.xaml line 4).
+        /// It uses WindowStyle="None" and AllowsTransparency="True" which may affect detection.
+        /// Uses substring search for "Setup" to ensure reliability.
+        /// </remarks>
+        /// <returns>The SetupWindow if found, null otherwise</returns>
+        public Window? FindSetupWindow()
+        {
+            return FindWindowByTitle("Setup", substring: true);
+        }
+
+        /// <summary>
+        /// Finds the ChronoView SettingsDialog.
+        /// </summary>
+        /// <remarks>
+        /// The title comes from localization resource {x:Static res:Strings.Dialog_Settings}.
+        /// Uses substring search for "Settings" (English) or "설정" (Korean) fallback.
+        /// The dialog is shown via SettingsDialog.xaml with WindowStartupLocation="CenterOwner".
+        /// </remarks>
+        /// <returns>The SettingsDialog if found, null otherwise</returns>
+        public Window? FindSettingsDialog()
+        {
+            // Try English first
+            var window = FindWindowByTitle("Settings", substring: true);
+            if (window != null)
+            {
+                return window;
+            }
+
+            // Fallback to Korean title
+            return FindWindowByTitle("설정", substring: true);
+        }
+
+        /// <summary>
+        /// Finds the ChronoView ImagePreviewWindow.
+        /// </summary>
+        /// <remarks>
+        /// The ImagePreviewWindow has Title="Image Preview" (ImagePreviewWindow.xaml line 4).
+        /// It uses WindowStyle="None" which may affect detection.
+        /// Uses substring search for "Image Preview" to ensure reliability.
+        /// </remarks>
+        /// <returns>The ImagePreviewWindow if found, null otherwise</returns>
+        public Window? FindImagePreviewWindow()
+        {
+            return FindWindowByTitle("Image Preview", substring: true);
+        }
+
+        /// <summary>
+        /// Finds all ChronoView windows (main window, dialogs, and preview windows).
+        /// </summary>
+        /// <remarks>
+        /// Searches for windows containing "ChronoView" in their title.
+        /// Returns all matching windows as a List<Window> and logs their count and titles.
+        /// </remarks>
+        /// <returns>List of all ChronoView windows found</returns>
+        public List<Window> FindAllChronoViewWindows()
+        {
+            var result = new List<Window>();
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var desktop = _automation.GetDesktop();
+                var windowCondition = cf.ByControlType(ControlType.Window);
+                var windows = desktop.FindAllChildren(windowCondition);
+
+                foreach (var window in windows)
+                {
+                    if (!string.IsNullOrEmpty(window.Name) &&
+                        window.Name.IndexOf("ChronoView", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        result.Add(window.AsWindow());
+                    }
+                }
+
+                Console.WriteLine($"[UiAutomation] Found {result.Count} ChronoView window(s):");
+                foreach (var window in result)
+                {
+                    Console.WriteLine($"  - '{window.Name}'");
+                }
+
+                if (result.Count == 0)
+                {
+                    Console.WriteLine("[UiAutomation] No ChronoView windows found");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UiAutomation] Error finding ChronoView windows: {ex.Message}");
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Finds the ChronoView MainWindow by title.
+        /// </summary>
+        /// <remarks>
+        /// The MainWindow title is "ChronoView Pro - Desktop Application" (MainWindow.xaml line 14).
+        /// Uses substring search for "ChronoView Pro" to ensure reliable detection.
+        /// </remarks>
+        /// <returns>The Window element if found, null otherwise</returns>
+        public Window? FindChronoViewMainWindow()
+        {
+            const string titleSubstring = "ChronoView Pro";
+            var window = FindWindowByTitle(titleSubstring, substring: true);
+
+            if (window == null)
+            {
+                Console.WriteLine($"[UiAutomation] ChronoView MainWindow not found (title containing '{titleSubstring}')");
+                return null;
+            }
+
+            // Log window properties for verification
+            var handle = "N/A";
+            if (window.Properties.NativeWindowHandle.IsSupported)
+            {
+                var windowHandle = window.Properties.NativeWindowHandle.ValueOrDefault;
+                handle = windowHandle.ToString();
+            }
+
+            Console.WriteLine($"[UiAutomation] ChronoView MainWindow found:");
+            Console.WriteLine($"  - Name: '{window.Name}'");
+            Console.WriteLine($"  - ClassName: '{window.ClassName ?? "(null)"}'");
+            Console.WriteLine($"  - AutomationId: '{window.AutomationId ?? "(null)"}'");
+            Console.WriteLine($"  - NativeWindowHandle: {handle}");
+
+            return window;
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
