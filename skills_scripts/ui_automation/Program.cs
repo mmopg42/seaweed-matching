@@ -1336,6 +1336,213 @@ class Program
         }, jsonOption);
         settingsDialogCommand.AddCommand(settingsStatusCommand);
 
+        // settings-dialog path: Path 제어 (읽기/쓰기)
+        var settingsPathCommand = new Command("path", "SettingsDialog Path 설정 제어");
+
+        // settings-dialog path get-all: 모든 경로 읽기
+        var settingsPathGetAllCommand = new Command("get-all", "모든 경로 읽기 (Line 1, Line 2, Output, Quarantine)");
+        settingsPathGetAllCommand.AddOption(jsonOption);
+        settingsPathGetAllCommand.SetHandler((json) =>
+        {
+            using var controller = new Settings();
+            var line1Paths = controller.GetLine1Paths();
+            var line2Paths = controller.GetLine2Paths();
+            var outputPath = controller.GetOutputPath();
+            var quarantinePath = controller.GetQuarantinePath();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    line1 = line1Paths,
+                    line2 = line2Paths,
+                    output = outputPath,
+                    quarantine = quarantinePath
+                }));
+            }
+            else
+            {
+                Console.WriteLine("[settings-dialog-path get-all] All Paths:");
+                Console.WriteLine("\nLine 1:");
+                foreach (var kvp in line1Paths)
+                {
+                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                }
+                Console.WriteLine("\nLine 2:");
+                foreach (var kvp in line2Paths)
+                {
+                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                }
+                Console.WriteLine($"\nOutput: {outputPath}");
+                Console.WriteLine($"Quarantine: {quarantinePath}");
+            }
+        }, jsonOption);
+        settingsPathCommand.AddCommand(settingsPathGetAllCommand);
+
+        // settings-dialog path get-line1: Line 1 경로 읽기
+        var settingsPathGetLine1Command = new Command("get-line1", "Line 1 경로 읽기");
+        settingsPathGetLine1Command.AddOption(jsonOption);
+        settingsPathGetLine1Command.SetHandler((json) =>
+        {
+            using var controller = new Settings();
+            var paths = controller.GetLine1Paths();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    line = "Line1",
+                    count = paths.Count,
+                    paths = paths
+                }));
+            }
+            else
+            {
+                Console.WriteLine("[settings-dialog-path get-line1] Line 1 Paths:");
+                foreach (var kvp in paths)
+                {
+                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                }
+            }
+        }, jsonOption);
+        settingsPathCommand.AddCommand(settingsPathGetLine1Command);
+
+        // settings-dialog path get-line2: Line 2 경로 읽기
+        var settingsPathGetLine2Command = new Command("get-line2", "Line 2 경로 읽기");
+        settingsPathGetLine2Command.AddOption(jsonOption);
+        settingsPathGetLine2Command.SetHandler((json) =>
+        {
+            using var controller = new Settings();
+            var paths = controller.GetLine2Paths();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    line = "Line2",
+                    count = paths.Count,
+                    paths = paths
+                }));
+            }
+            else
+            {
+                Console.WriteLine("[settings-dialog-path get-line2] Line 2 Paths:");
+                foreach (var kvp in paths)
+                {
+                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                }
+            }
+        }, jsonOption);
+        settingsPathCommand.AddCommand(settingsPathGetLine2Command);
+
+        // settings-dialog path get-output: 출력 경로 읽기
+        var settingsPathGetOutputCommand = new Command("get-output", "출력 경로 읽기");
+        settingsPathGetOutputCommand.AddOption(jsonOption);
+        settingsPathGetOutputCommand.SetHandler((json) =>
+        {
+            using var controller = new Settings();
+            var path = controller.GetOutputPath();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    pathType = "output",
+                    path = path
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[settings-dialog-path get-output] Output Path: {path}");
+            }
+        }, jsonOption);
+        settingsPathCommand.AddCommand(settingsPathGetOutputCommand);
+
+        // settings-dialog path get-quarantine: 격리 경로 읽기
+        var settingsPathGetQuarantineCommand = new Command("get-quarantine", "격리 경로 읽기");
+        settingsPathGetQuarantineCommand.AddOption(jsonOption);
+        settingsPathGetQuarantineCommand.SetHandler((json) =>
+        {
+            using var controller = new Settings();
+            var path = controller.GetQuarantinePath();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    pathType = "quarantine",
+                    path = path
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[settings-dialog-path get-quarantine] Quarantine Path: {path}");
+            }
+        }, jsonOption);
+        settingsPathCommand.AddCommand(settingsPathGetQuarantineCommand);
+
+        // settings-dialog path set: 경로 설정
+        var settingsPathKeyArgument = new Argument<string>("key", "Path key (e.g., nir1, normal1, cam1-6)");
+        var settingsPathValueArgument = new Argument<string>("value", "Path value to set");
+        var settingsPathSetCommand = new Command("set", "경로 설정");
+        settingsPathSetCommand.AddArgument(settingsPathKeyArgument);
+        settingsPathSetCommand.AddArgument(settingsPathValueArgument);
+        settingsPathSetCommand.SetHandler((key, value) =>
+        {
+            using var controller = new Settings();
+            bool result = false;
+
+            var keyLower = key.ToLowerInvariant();
+            if (keyLower.StartsWith("cam") && keyLower.Length == 4)
+            {
+                // cam1-6
+                var camNum = keyLower[3];
+                if (camNum >= '1' && camNum <= '3')
+                {
+                    result = controller.SetLine1Path(key, value);
+                }
+                else if (camNum >= '4' && camNum <= '6')
+                {
+                    result = controller.SetLine2Path(key, value);
+                }
+                else
+                {
+                    Console.WriteLine($"[settings-dialog-path set] Unknown camera key: {key}");
+                    return;
+                }
+            }
+            else if (keyLower == "nir1" || keyLower == "normal1")
+            {
+                result = controller.SetLine1Path(key, value);
+            }
+            else if (keyLower == "nir2" || keyLower == "normal2")
+            {
+                result = controller.SetLine2Path(key, value);
+            }
+            else
+            {
+                Console.WriteLine($"[settings-dialog-path set] Unknown path key: {key}");
+                return;
+            }
+
+            if (result)
+            {
+                Console.WriteLine($"[settings-dialog-path set] Success: {key} set to '{value}'");
+            }
+            else
+            {
+                Console.WriteLine($"[settings-dialog-path set] Failed: Could not set {key}");
+            }
+        }, settingsPathKeyArgument, settingsPathValueArgument);
+        settingsPathCommand.AddCommand(settingsPathSetCommand);
+
+        settingsDialogCommand.AddCommand(settingsPathCommand);
+
         rootCommand.AddCommand(settingsDialogCommand);
 
         return await rootCommand.InvokeAsync(args);
