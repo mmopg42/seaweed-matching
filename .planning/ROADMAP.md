@@ -19,8 +19,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: FlaUI 인프라** - FlaUI 5.x 기반 C# CLI 도구 빌드 및 기반 구축
 - [x] **Phase 2: 윈도우 탐지** - ChronoView 메인 윈도우 및 대화상자 식별
 - [x] **Phase 3: 툴바 제어** - 시작/중지/설정/새로고침 버튼 자동화
-- [ ] **Phase 4: 데이터 패널** - StatisticsPanel, FileGroupDataGrid 상태 읽기
-- [ ] **Phase 5: 워크플로우 제어** - WorkflowPanel 카메라/경로 설정 자동화
+- [x] **Phase 4: 데이터 패널** - StatisticsPanel, FileGroupDataGrid 상태 읽기
+- [x] **Phase 5: 워크플로우 제어** - WorkflowPanel 카메라/경로 설정 자동화
 - [ ] **Phase 6: 설정 대화상자** - SettingsDialog 자동화
 - [ ] **Phase 7: 로그 모니터링** - LogPanel 실시간 로그 읽기
 - [ ] **Phase 8: 파일 작업** - 이동/ 삭제 작업 자동화
@@ -83,9 +83,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: WorkflowPanel 구조 파악 및 요소 식별
-- [ ] 05-02: 카메라 설정 변경 자동화
-- [ ] 05-03: 모니터링 경로 설정 자동화
+- [x] 05-01: WorkflowPanel 구조 파악 및 요소 식별
+- [x] 05-02: 카메라 설정 변경 자동화
+- [x] 05-03: 모니터링 경로 설정 자동화
 
 ### Phase 6: 설정 대화상자
 **Goal**: SettingsDialog 자동화
@@ -153,7 +153,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 2. 윈도우 탐지 | 3/3 | Complete | 2026-01-16 |
 | 3. 툴바 제어 | 4/4 | Complete | 2026-01-16 |
 | 4. 데이터 패널 | 3/3 | Complete | 2026-01-16 |
-| 5. 워크플로우 제어 | 0/3 | Not started | - |
+| 5. 워크플로우 제어 | 3/3 | Complete | 2026-01-16 |
 | 6. 설정 대화상자 | 0/2 | Not started | - |
 | 7. 로그 모니터링 | 0/2 | Not started | - |
 | 8. 파일 작업 | 0/2 | Not started | - |
