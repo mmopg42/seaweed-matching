@@ -6,6 +6,7 @@ using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
 using Toolbar = SkillsScripts.UiAutomation.ChronoToolbarController;
 using Workflow = SkillsScripts.UiAutomation.ChronoWorkflowController;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
+using Settings = SkillsScripts.UiAutomation.ChronoSettingsController;
 
 namespace UiAutomation;
 
@@ -1274,6 +1275,68 @@ class Program
         logsCommand.AddCommand(logsSearchCommand);
 
         rootCommand.AddCommand(logsCommand);
+
+        // settings-dialog 명령: ChronoSettingsController 기반 SettingsDialog 제어
+        var settingsDialogCommand = new Command("settings-dialog", "SettingsDialog 제어 (ChronoSettingsController)");
+
+        // settings-dialog open: SettingsDialog 열기
+        var settingsOpenCommand = new Command("open", "SettingsDialog 열기 (Settings 버튼 클릭)");
+        settingsOpenCommand.SetHandler(() =>
+        {
+            using var controller = new Settings();
+            var result = controller.OpenSettingsDialog();
+            Console.WriteLine(result ? "[settings-dialog-open] Success: SettingsDialog opened" : "[settings-dialog-open] Failed: Could not open SettingsDialog");
+        });
+        settingsDialogCommand.AddCommand(settingsOpenCommand);
+
+        // settings-dialog close: SettingsDialog 닫기
+        var settingsCloseCommand = new Command("close", "SettingsDialog 닫기 (Cancel 버튼 클릭)");
+        settingsCloseCommand.SetHandler(() =>
+        {
+            using var controller = new Settings();
+            var result = controller.CloseSettingsDialog();
+            Console.WriteLine(result ? "[settings-dialog-close] Success: SettingsDialog closed" : "[settings-dialog-close] Failed: Could not close SettingsDialog");
+        });
+        settingsDialogCommand.AddCommand(settingsCloseCommand);
+
+        // settings-dialog inspect: SettingsDialog 구조 검사
+        var settingsInspectCommand = new Command("inspect", "SettingsDialog 구조 검사");
+        settingsInspectCommand.SetHandler(() =>
+        {
+            using var controller = new Settings();
+            var result = controller.InspectSettingsDialog();
+            if (!result)
+            {
+                Console.WriteLine("[settings-dialog-inspect] Failed: Could not inspect SettingsDialog (dialog not open?)");
+            }
+        });
+        settingsDialogCommand.AddCommand(settingsInspectCommand);
+
+        // settings-dialog status: SettingsDialog 열림 상태 확인
+        var settingsStatusCommand = new Command("status", "SettingsDialog 열림 상태 확인");
+        settingsStatusCommand.AddOption(jsonOption);
+        settingsStatusCommand.SetHandler((json) =>
+        {
+            using var controller = new Settings();
+            var isOpen = controller.IsSettingsDialogOpen();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    dialogType = "SettingsDialog",
+                    isOpen = isOpen
+                }));
+            }
+            else
+            {
+                Console.WriteLine(isOpen ? "[settings-dialog-status] SettingsDialog is open" : "[settings-dialog-status] SettingsDialog is not open");
+            }
+        }, jsonOption);
+        settingsDialogCommand.AddCommand(settingsStatusCommand);
+
+        rootCommand.AddCommand(settingsDialogCommand);
 
         return await rootCommand.InvokeAsync(args);
     }
