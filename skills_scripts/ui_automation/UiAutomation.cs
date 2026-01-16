@@ -64,7 +64,13 @@ namespace SkillsScripts.UiAutomation
                     return null;
                 }
 
-                Console.WriteLine($"[UiAutomation] Found window: '{window.Name}' (Handle: {window.NativeWindowHandle})");
+                var handle = "N/A";
+                if (window.Properties.NativeWindowHandle.IsSupported)
+                {
+                    var windowHandle = window.Properties.NativeWindowHandle.ValueOrDefault;
+                    handle = windowHandle.ToString();
+                }
+                Console.WriteLine($"[UiAutomation] Found window: '{window.Name}' (Handle: {handle})");
                 return window;
             }
             catch (Exception ex)
