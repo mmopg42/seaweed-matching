@@ -833,6 +833,42 @@ class Program
 
         rootCommand.AddCommand(datagridCommand);
 
+        // inspect 명령: UI 요소 구조 검사
+        var inspectCommand = new Command("inspect", "UI 요소 구조 검사");
+
+        // inspect workflow: WorkflowPanel 구조 검사
+        var inspectWorkflowCommand = new Command("workflow", "WorkflowPanel 구조 검사");
+        inspectWorkflowCommand.SetHandler(() =>
+        {
+            using var automation = new UiAuto();
+            var mainWindow = automation.FindChronoViewMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[inspect-workflow] Failed: MainWindow not found");
+                return;
+            }
+
+            var workflowPanel = automation.FindWorkflowPanel(mainWindow);
+            if (workflowPanel == null)
+            {
+                Console.WriteLine("[inspect-workflow] Failed: WorkflowPanel not found");
+                return;
+            }
+
+            Console.WriteLine("[inspect-workflow] WorkflowPanel found - listing element tree (depth=3):");
+            Console.WriteLine();
+            Console.WriteLine("=== Key Elements to Identify ===");
+            Console.WriteLine("  - Camera status buttons (General, NIR, NIR2, NIR Filtering)");
+            Console.WriteLine("  - Path TextBox controls (Line1SampleName, Line1MoveNir, Line1MoveAllData, etc.)");
+            Console.WriteLine("  - Expander headers (Camera Status, Sample Move Settings, Data Status)");
+            Console.WriteLine();
+            Console.WriteLine("=== Element Tree ===");
+            automation.ListElements(workflowPanel, maxDepth: 3);
+        });
+        inspectCommand.AddCommand(inspectWorkflowCommand);
+
+        rootCommand.AddCommand(inspectCommand);
+
         return await rootCommand.InvokeAsync(args);
     }
 }
