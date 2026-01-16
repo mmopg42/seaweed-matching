@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-16)
 ## Current Position
 
 Phase: 7 of 10 (log-monitoring)
-Plan: 1 of 1 in phase
-Status: Phase 7 plan 01 complete
-Last activity: 2026-01-16 — Completed 07-01: LogPanel discovery and basic log reading
+Plan: 2 of 2 in phase
+Status: Phase 7 complete
+Last activity: 2026-01-16 — Completed 07-02: Log filtering and CLI commands
 
-Progress: ███████░░░░░ 60% (6/10 phases planned, Phase 7 plan 01 complete)
+Progress: ███████░░░░░ 70% (7/10 phases complete, Phase 7 done)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
-- Average duration: 9.2 min
-- Total execution time: 2.76 hours
+- Total plans completed: 20
+- Average duration: 9.0 min
+- Total execution time: 3.00 hours
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: ███████░░░░░ 60% (6/10 phases planned, Phase 7
 | 03-toolbar-control | 4 | 4 | 6.5 min |
 | 04-data-panel | 3 | 3 | 8.3 min |
 | 05-workflow-control | 4 | 3 | 7.3 min |
-| 07-log-monitoring | 1 | 1 | 8 min |
+| 07-log-monitoring | 2 | 2 | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 07-01 (8 min), 05-03 (12 min), 05-02 (6 min), 05-01 (8 min), 04-03 (10 min)
-- Trend: Stable, Phase 7 progressing
+- Last 5 plans: 07-02 (6 min), 07-01 (8 min), 05-03 (12 min), 05-02 (6 min), 05-01 (8 min)
+- Trend: Stable, Phase 7 complete
 
 *Updated after each plan completion*
 
@@ -76,6 +76,10 @@ Recent decisions affecting current work:
 | 7 | FindLogPanel follows FindStatisticsPanel pattern | Name first search, ClassName fallback for LogPanel discovery |
 | 7 | DataItem pattern for log row extraction | LogPanel rows appear as DataItem with Text children (Severity, Time, Source, Message) |
 | 7 | inspect-log CLI command | Lists LogPanel structure at depth=2, shows log row count and headers |
+| 7 | Method overloading for log filtering | GetLogsByLevel(logPanel, level) and GetLogsByLevel(level) for flexibility |
+| 7 | Case-insensitive log filtering | StringComparison.OrdinalIgnoreCase for level and text search robustness |
+| 7 | Private helper for log extraction | GetAllLogMessagesFromPanel reduces duplication across filtering methods |
+| 7 | logs CLI command group | logs get, logs tail, logs filter, logs search with --json option |
 
 ### Deferred Issues
 
@@ -92,6 +96,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-16
-Stopped at: Completed 07-01-PLAN.md - LogPanel discovery and basic log reading
+Stopped at: Completed 07-02-PLAN.md - Log filtering and CLI commands
 Resume file: None
-Note: Phase 7 (log-monitoring) has 1 of 1 plans complete.
+Note: Phase 7 (log-monitoring) complete (2/2 plans). Ready for Phase 8.
