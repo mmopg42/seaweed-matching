@@ -590,6 +590,446 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Finds a path TextBox control in the SettingsDialog by its associated Label text.
+        /// </summary>
+        /// <remarks>
+        /// In WPF, TextBox controls appear as ControlType.Edit in UI Automation.
+        /// Label controls appear as ControlType.Text.
+        /// This method searches for a Text element containing the labelText,
+        /// then finds the sibling Edit control (typically the next child in the parent).
+        ///
+        /// The scopeSection parameter allows searching within a specific section
+        /// (e.g., "Line 1", "Line 2") for disambiguating labels that appear multiple times.
+        /// </remarks>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <param name="labelText">The label text to search for (e.g., "NIR 1 경로", "Camera1 Path")</param>
+        /// <param name="scopeSection">Optional section to limit search (e.g., "Line 1", "Line 2")</param>
+        /// <returns>The TextBox AutomationElement if found, null otherwise</returns>
+        public AutomationElement? FindPathTextBox(Window? dialog, string labelText, string? scopeSection = null)
+        {
+            dialog ??= FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot find TextBox: SettingsDialog not found");
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(labelText))
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot find TextBox: labelText is null or empty");
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                AutomationElement? searchScope = dialog;
+
+                // If scopeSection is specified, find the section first
+                if (!string.IsNullOrEmpty(scopeSection))
+                {
+                    var sectionTextElements = dialog.FindAllChildren(cf.ByControlType(ControlType.Text));
+                    foreach (var textElement in sectionTextElements)
+                    {
+                        if (!string.IsNullOrEmpty(textElement.Name) &&
+                            textElement.Name.IndexOf(scopeSection, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            // Found the section header, use its parent as the search scope
+                            searchScope = textElement.Parent ?? dialog;
+                            Console.WriteLine($"[ChronoSettingsController] Found section '{scopeSection}', limiting search to that section");
+                            break;
+                        }
+                    }
+                }
+
+                // Find all Text elements (Labels) within the search scope
+                var textElements = searchScope.FindAllChildren(cf.ByControlType(ControlType.Text));
+
+                Console.WriteLine($"[ChronoSettingsController] Searching for label '{labelText}' in scope '{scopeSection ?? "(root)"}' among {textElements.Length} text elements");
+
+                // Find the label TextBlock
+                foreach (var textElement in textElements)
+                {
+                    if (!string.IsNullOrEmpty(textElement.Name) &&
+                        textElement.Name.IndexOf(labelText, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        // Found the label, now find the associated TextBox (Edit control)
+                        // The TextBox is typically a sibling or descendant of the label's parent
+                        var parent = textElement.Parent;
+                        if (parent != null)
+                        {
+                            // Search for Edit control in the parent's children
+                            var siblings = parent.FindAllChildren();
+                            foreach (var sibling in siblings)
+                            {
+                                if (sibling.ControlType == ControlType.Edit)
+                                {
+                                    Console.WriteLine($"[ChronoSettingsController] Found TextBox for label '{labelText}' (Name: '{sibling.Name ?? "(empty)"}')");
+                                    return sibling;
+                                }
+                            }
+                        }
+
+                        // If not found in siblings, search descendants
+                        var editElements = parent?.FindAllChildren(cf.ByControlType(ControlType.Edit));
+                        if (editElements != null && editElements.Length > 0)
+                        {
+                            Console.WriteLine($"[ChronoSettingsController] Found TextBox for label '{labelText}' in descendants");
+                            return editElements[0];
+                        }
+                    }
+                }
+
+                Console.WriteLine($"[ChronoSettingsController] TextBox for label '{labelText}' not found");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Error finding TextBox for label '{labelText}': {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Reads the current text value from a path TextBox in the SettingsDialog.
+        /// </summary>
+        /// <remarks>
+        /// Uses ValuePattern.ValueProperty if available (standard for Edit controls).
+        /// Falls back to element.Name if ValuePattern is not supported.
+        /// </remarks>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <param name="labelText">The label text to search for</param>
+        /// <param name="scopeSection">Optional section to limit search (e.g., "Line 1", "Line 2")</param>
+        /// <returns>The current text value, or empty string if error</returns>
+        public string GetPathTextBoxValue(Window? dialog, string labelText, string? scopeSection = null)
+        {
+            var textBox = FindPathTextBox(dialog, labelText, scopeSection);
+            if (textBox == null)
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                // Try ValuePattern first (standard for TextBox/Edit controls)
+                var valuePattern = textBox.Patterns.Value.Pattern;
+                if (valuePattern != null)
+                {
+                    var value = valuePattern.Value;
+                    Console.WriteLine($"[ChronoSettingsController] TextBox value (via ValuePattern): '{value}'");
+                    return value;
+                }
+
+                // Fallback to Name property
+                var name = textBox.Name ?? string.Empty;
+                Console.WriteLine($"[ChronoSettingsController] TextBox value (via Name): '{name}'");
+                return name;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Error getting TextBox value: {ex.Message}");
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Sets the text value in a path TextBox in the SettingsDialog.
+        /// </summary>
+        /// <remarks>
+        /// Uses ValuePattern.SetValue() to set the text content.
+        /// </remarks>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <param name="labelText">The label text to search for</param>
+        /// <param name="value">The new value to set</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SetPathTextBoxValue(Window? dialog, string labelText, string value)
+        {
+            var textBox = FindPathTextBox(dialog, labelText);
+            if (textBox == null)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Cannot set value: TextBox for label '{labelText}' not found");
+                return false;
+            }
+
+            try
+            {
+                var valuePattern = textBox.Patterns.Value.Pattern;
+                if (valuePattern == null)
+                {
+                    Console.WriteLine("[ChronoSettingsController] Cannot set TextBox value: ValuePattern not supported");
+                    return false;
+                }
+
+                var oldValue = GetPathTextBoxValue(dialog, labelText);
+                valuePattern.SetValue(value);
+                Console.WriteLine($"[ChronoSettingsController] TextBox value set: '{oldValue}' -> '{value}'");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Error setting TextBox value: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Reads all Line 1 paths from the SettingsDialog Paths tab.
+        /// </summary>
+        /// <remarks>
+        /// Returns a dictionary with keys: nir1, normal1, cam1, cam2, cam3.
+        /// Uses label text from SettingsDialog.xaml (Korean primary, English fallback).
+        /// </remarks>
+        /// <returns>Dictionary of path type to value, or empty dictionary if dialog not found</returns>
+        public Dictionary<string, string> GetLine1Paths()
+        {
+            var paths = new Dictionary<string, string>();
+            var dialog = FindSettingsDialog();
+
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot get Line 1 paths: SettingsDialog not found");
+                return paths;
+            }
+
+            // Ensure we're on the Paths tab
+            if (!SelectPathsTab())
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot get Line 1 paths: Failed to select Paths tab");
+                return paths;
+            }
+
+            // Label text mappings (Korean primary, English fallback)
+            // From SettingsDialog.xaml
+            var nir1Path = GetPathTextBoxValue(dialog, "NIR 1 경로") ?? GetPathTextBoxValue(dialog, "NIR1 Path");
+            if (!string.IsNullOrEmpty(nir1Path)) paths["nir1"] = nir1Path;
+
+            var normal1Path = GetPathTextBoxValue(dialog, "일반 1 경로") ?? GetPathTextBoxValue(dialog, "Normal1 Path");
+            if (!string.IsNullOrEmpty(normal1Path)) paths["normal1"] = normal1Path;
+
+            var cam1Path = GetPathTextBoxValue(dialog, "카메라 1 경로") ?? GetPathTextBoxValue(dialog, "Camera1 Path");
+            if (!string.IsNullOrEmpty(cam1Path)) paths["cam1"] = cam1Path;
+
+            var cam2Path = GetPathTextBoxValue(dialog, "카메라 2 경로") ?? GetPathTextBoxValue(dialog, "Camera2 Path");
+            if (!string.IsNullOrEmpty(cam2Path)) paths["cam2"] = cam2Path;
+
+            var cam3Path = GetPathTextBoxValue(dialog, "카메라 3 경로") ?? GetPathTextBoxValue(dialog, "Camera3 Path");
+            if (!string.IsNullOrEmpty(cam3Path)) paths["cam3"] = cam3Path;
+
+            Console.WriteLine($"[ChronoSettingsController] Got {paths.Count} Line 1 paths");
+            return paths;
+        }
+
+        /// <summary>
+        /// Reads all Line 2 paths from the SettingsDialog Paths tab.
+        /// </summary>
+        /// <remarks>
+        /// Returns a dictionary with keys: nir2, normal2, cam4, cam5, cam6.
+        /// Uses label text from SettingsDialog.xaml (Korean primary, English fallback).
+        /// </remarks>
+        /// <returns>Dictionary of path type to value, or empty dictionary if dialog not found</returns>
+        public Dictionary<string, string> GetLine2Paths()
+        {
+            var paths = new Dictionary<string, string>();
+            var dialog = FindSettingsDialog();
+
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot get Line 2 paths: SettingsDialog not found");
+                return paths;
+            }
+
+            // Ensure we're on the Paths tab
+            if (!SelectPathsTab())
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot get Line 2 paths: Failed to select Paths tab");
+                return paths;
+            }
+
+            // Label text mappings (Korean primary, English fallback)
+            // Line 2 section has "Line 2" header for scoping
+            var nir2Path = GetPathTextBoxValue(dialog, "NIR 2 경로", "Line 2") ?? GetPathTextBoxValue(dialog, "NIR2 Path", "Line 2");
+            if (!string.IsNullOrEmpty(nir2Path)) paths["nir2"] = nir2Path;
+
+            var normal2Path = GetPathTextBoxValue(dialog, "일반 2 경로", "Line 2") ?? GetPathTextBoxValue(dialog, "Normal2 Path", "Line 2");
+            if (!string.IsNullOrEmpty(normal2Path)) paths["normal2"] = normal2Path;
+
+            var cam4Path = GetPathTextBoxValue(dialog, "카메라 4 경로", "Line 2") ?? GetPathTextBoxValue(dialog, "Camera4 Path", "Line 2");
+            if (!string.IsNullOrEmpty(cam4Path)) paths["cam4"] = cam4Path;
+
+            var cam5Path = GetPathTextBoxValue(dialog, "카메라 5 경로", "Line 2") ?? GetPathTextBoxValue(dialog, "Camera5 Path", "Line 2");
+            if (!string.IsNullOrEmpty(cam5Path)) paths["cam5"] = cam5Path;
+
+            var cam6Path = GetPathTextBoxValue(dialog, "카메라 6 경로", "Line 2") ?? GetPathTextBoxValue(dialog, "Camera6 Path", "Line 2");
+            if (!string.IsNullOrEmpty(cam6Path)) paths["cam6"] = cam6Path;
+
+            Console.WriteLine($"[ChronoSettingsController] Got {paths.Count} Line 2 paths");
+            return paths;
+        }
+
+        /// <summary>
+        /// Reads the output path from the SettingsDialog Paths tab.
+        /// </summary>
+        /// <remarks>
+        /// Uses label text from SettingsDialog.xaml (Korean primary, English fallback).
+        /// </remarks>
+        /// <returns>The output path value, or empty string if not found</returns>
+        public string GetOutputPath()
+        {
+            var dialog = FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot get output path: SettingsDialog not found");
+                return string.Empty;
+            }
+
+            // Ensure we're on the Paths tab
+            if (!SelectPathsTab())
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot get output path: Failed to select Paths tab");
+                return string.Empty;
+            }
+
+            return GetPathTextBoxValue(dialog, "출력 경로") ?? GetPathTextBoxValue(dialog, "Output Path") ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Reads the quarantine/delete path from the SettingsDialog Paths tab.
+        /// </summary>
+        /// <remarks>
+        /// Uses label text from SettingsDialog.xaml (Korean primary, English fallback).
+        /// </remarks>
+        /// <returns>The quarantine path value, or empty string if not found</returns>
+        public string GetQuarantinePath()
+        {
+            var dialog = FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot get quarantine path: SettingsDialog not found");
+                return string.Empty;
+            }
+
+            // Ensure we're on the Paths tab
+            if (!SelectPathsTab())
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot get quarantine path: Failed to select Paths tab");
+                return string.Empty;
+            }
+
+            return GetPathTextBoxValue(dialog, "삭제 격리 경로") ?? GetPathTextBoxValue(dialog, "Delete Quarantine Path") ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Sets a specific Line 1 path value.
+        /// </summary>
+        /// <param name="pathKey">The path key: "nir1", "normal1", "cam1", "cam2", or "cam3"</param>
+        /// <param name="value">The new path value to set</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SetLine1Path(string pathKey, string value)
+        {
+            var dialog = FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot set Line 1 path: SettingsDialog not found");
+                return false;
+            }
+
+            // Ensure we're on the Paths tab
+            if (!SelectPathsTab())
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot set Line 1 path: Failed to select Paths tab");
+                return false;
+            }
+
+            string? labelText = pathKey.ToLowerInvariant() switch
+            {
+                "nir1" => "NIR 1 경로",
+                "normal1" => "일반 1 경로",
+                "cam1" => "카메라 1 경로",
+                "cam2" => "카메라 2 경로",
+                "cam3" => "카메라 3 경로",
+                _ => null
+            };
+
+            if (labelText == null)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Unknown Line 1 path key: {pathKey}");
+                return false;
+            }
+
+            // Try Korean first, then English fallback
+            return SetPathTextBoxValue(dialog, labelText, value) ||
+                   SetPathTextBoxValue(dialog, GetEnglishLabelForPathKey(pathKey), value);
+        }
+
+        /// <summary>
+        /// Sets a specific Line 2 path value.
+        /// </summary>
+        /// <param name="pathKey">The path key: "nir2", "normal2", "cam4", "cam5", or "cam6"</param>
+        /// <param name="value">The new path value to set</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool SetLine2Path(string pathKey, string value)
+        {
+            var dialog = FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot set Line 2 path: SettingsDialog not found");
+                return false;
+            }
+
+            // Ensure we're on the Paths tab
+            if (!SelectPathsTab())
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot set Line 2 path: Failed to select Paths tab");
+                return false;
+            }
+
+            string? labelText = pathKey.ToLowerInvariant() switch
+            {
+                "nir2" => "NIR 2 경로",
+                "normal2" => "일반 2 경로",
+                "cam4" => "카메라 4 경로",
+                "cam5" => "카메라 5 경로",
+                "cam6" => "카메라 6 경로",
+                _ => null
+            };
+
+            if (labelText == null)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Unknown Line 2 path key: {pathKey}");
+                return false;
+            }
+
+            // Try Korean first with Line 2 scope, then English fallback
+            return SetPathTextBoxValue(dialog, labelText, value) ||
+                   SetPathTextBoxValue(dialog, GetEnglishLabelForPathKey(pathKey), value);
+        }
+
+        /// <summary>
+        /// Helper to get English label text for a path key.
+        /// </summary>
+        /// <param name="pathKey">The path key</param>
+        /// <returns>English label text, or empty string if not found</returns>
+        private string GetEnglishLabelForPathKey(string pathKey)
+        {
+            return pathKey.ToLowerInvariant() switch
+            {
+                "nir1" => "NIR1 Path",
+                "normal1" => "Normal1 Path",
+                "cam1" => "Camera1 Path",
+                "cam2" => "Camera2 Path",
+                "cam3" => "Camera3 Path",
+                "nir2" => "NIR2 Path",
+                "normal2" => "Normal2 Path",
+                "cam4" => "Camera4 Path",
+                "cam5" => "Camera5 Path",
+                "cam6" => "Camera6 Path",
+                "output" => "Output Path",
+                "quarantine" => "Delete Quarantine Path",
+                _ => string.Empty
+            };
+        }
+
+        /// <summary>
         /// Gets the names of all available tabs.
         /// </summary>
         /// <param name="tabItems">Array of TabItem elements</param>
