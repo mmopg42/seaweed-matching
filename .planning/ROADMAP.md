@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: 툴바 제어** - 시작/중지/설정/새로고침 버튼 자동화
 - [x] **Phase 4: 데이터 패널** - StatisticsPanel, FileGroupDataGrid 상태 읽기
 - [x] **Phase 5: 워크플로우 제어** - WorkflowPanel 카메라/경로 설정 자동화
-- [ ] **Phase 6: 설정 대화상자** - SettingsDialog 자동화
+- [x] **Phase 6: 설정 대화상자** - SettingsDialog 자동화
 - [x] **Phase 7: 로그 모니터링** - LogPanel 실시간 로그 읽기
 - [ ] **Phase 8: 파일 작업** - 이동/ 삭제 작업 자동화
 - [ ] **Phase 9: CLI 인터페이스** - Agent 호출 가능한 명령줄 인터페이스
@@ -96,8 +96,8 @@ Plans:
 
 Plans:
 - [x] 06-01: SettingsDialog 열기 및 구조 파악
-- [ ] 06-02: 탭 네비게이션 및 경로 설정 자동화
-- [ ] 06-03: 체크박스 및 저장/적용/취소 버튼 자동화
+- [x] 06-02: 탭 네비게이션 및 경로 설정 자동화
+- [x] 06-03: 체크박스 및 저장/적용/취소 버튼 자동화
 
 ### Phase 7: 로그 모니터링
 **Goal**: LogPanel 실시간 로그 읽기
@@ -155,7 +155,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. 툴바 제어 | 4/4 | Complete | 2026-01-16 |
 | 4. 데이터 패널 | 3/3 | Complete | 2026-01-16 |
 | 5. 워크플로우 제어 | 3/3 | Complete | 2026-01-16 |
-| 6. 설정 대화상자 | 1/3 | In progress | 2026-01-16 |
+| 6. 설정 대화상자 | 3/3 | Complete | 2026-01-16 |
 | 7. 로그 모니터링 | 2/2 | Complete | 2026-01-16 |
 | 8. 파일 작업 | 0/2 | Not started | - |
 | 9. CLI 인터페이스 | 0/3 | Not started | - |
