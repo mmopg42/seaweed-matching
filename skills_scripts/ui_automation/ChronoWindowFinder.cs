@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
@@ -16,6 +17,7 @@ namespace SkillsScripts.UiAutomation
     public class ChronoWindowFinder
     {
         private readonly UIA3Automation _automation;
+        private const int DefaultPollIntervalMs = 200;
 
         /// <summary>
         /// Initializes a new instance of the ChronoWindowFinder class.
@@ -236,6 +238,184 @@ namespace SkillsScripts.UiAutomation
             {
                 Console.WriteLine($"[ChronoWindowFinder] Error finding window by title '{title}': {ex.Message}");
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Waits for a window with the given title substring to appear.
+        /// </summary>
+        /// <param name="titleSubstring">The substring to search for in window titles</param>
+        /// <param name="timeoutMs">Maximum time to wait in milliseconds (default: 5000)</param>
+        /// <returns>The window if found, null if timeout</returns>
+        public Window? WaitForWindow(string titleSubstring, int timeoutMs = 5000)
+        {
+            if (string.IsNullOrWhiteSpace(titleSubstring))
+            {
+                Console.WriteLine($"[ChronoWindowFinder] Title substring is null or empty");
+                return null;
+            }
+
+            var startTime = Stopwatch.StartNew();
+            Console.WriteLine($"[ChronoWindowFinder] Waiting for window containing '{titleSubstring}' (timeout: {timeoutMs}ms)");
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var desktop = _automation.GetDesktop();
+
+                while (startTime.ElapsedMilliseconds < timeoutMs)
+                {
+                    var windowCondition = cf.ByControlType(ControlType.Window);
+                    var windows = desktop.FindAllChildren(windowCondition);
+
+                    foreach (var window in windows)
+                    {
+                        if (!string.IsNullOrEmpty(window.Name) &&
+                            window.Name.IndexOf(titleSubstring, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            Console.WriteLine($"[ChronoWindowFinder] Window found after {startTime.ElapsedMilliseconds}ms: '{window.Name}'");
+                            return window.AsWindow();
+                        }
+                    }
+
+                    Thread.Sleep(DefaultPollIntervalMs);
+                }
+
+                Console.WriteLine($"[ChronoWindowFinder] Timeout waiting for window containing '{titleSubstring}'");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoWindowFinder] Error waiting for window: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Waits for a window with the given title substring to close.
+        /// </summary>
+        /// <param name="titleSubstring">The substring to search for in window titles</param>
+        /// <param name="timeoutMs">Maximum time to wait in milliseconds (default: 5000)</param>
+        /// <returns>True if the window closed, false if timeout</returns>
+        public bool WaitForWindowToClose(string titleSubstring, int timeoutMs = 5000)
+        {
+            if (string.IsNullOrWhiteSpace(titleSubstring))
+            {
+                Console.WriteLine($"[ChronoWindowFinder] Title substring is null or empty");
+                return false;
+            }
+
+            var startTime = Stopwatch.StartNew();
+            Console.WriteLine($"[ChronoWindowFinder] Waiting for window containing '{titleSubstring}' to close (timeout: {timeoutMs}ms)");
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var desktop = _automation.GetDesktop();
+
+                // First check if window exists
+                bool windowExists = false;
+                var windowCondition = cf.ByControlType(ControlType.Window);
+                var windows = desktop.FindAllChildren(windowCondition);
+
+                foreach (var window in windows)
+                {
+                    if (!string.IsNullOrEmpty(window.Name) &&
+                        window.Name.IndexOf(titleSubstring, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        windowExists = true;
+                        break;
+                    }
+                }
+
+                if (!windowExists)
+                {
+                    Console.WriteLine($"[ChronoWindowFinder] Window containing '{titleSubstring}' not found (already closed?)");
+                    return true;
+                }
+
+                // Window exists, wait for it to close
+                while (startTime.ElapsedMilliseconds < timeoutMs)
+                {
+                    windows = desktop.FindAllChildren(windowCondition);
+                    bool found = false;
+
+                    foreach (var window in windows)
+                    {
+                        if (!string.IsNullOrEmpty(window.Name) &&
+                            window.Name.IndexOf(titleSubstring, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        Console.WriteLine($"[ChronoWindowFinder] Window closed after {startTime.ElapsedMilliseconds}ms");
+                        return true;
+                    }
+
+                    Thread.Sleep(DefaultPollIntervalMs);
+                }
+
+                Console.WriteLine($"[ChronoWindowFinder] Timeout waiting for window containing '{titleSubstring}' to close");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoWindowFinder] Error waiting for window to close: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Checks if the ChronoView MainWindow is ready for interaction.
+        /// </summary>
+        /// <remarks>
+        /// A window is considered ready if:
+        /// - It exists (can be found)
+        /// - IsEnabled is true (not during startup/shutdown)
+        /// - Properties are accessible (has loaded)
+        /// </remarks>
+        /// <returns>True if the MainWindow is ready, false otherwise</returns>
+        public bool IsMainWindowReady()
+        {
+            try
+            {
+                var window = FindMainWindow();
+                if (window == null)
+                {
+                    Console.WriteLine($"[ChronoWindowFinder] MainWindow not found");
+                    return false;
+                }
+
+                // Check IsEnabled
+                if (window.Properties.IsEnabled.IsSupported)
+                {
+                    var isEnabled = window.Properties.IsEnabled.ValueOrDefault;
+                    if (!isEnabled)
+                    {
+                        Console.WriteLine($"[ChronoWindowFinder] MainWindow exists but IsEnabled=false (likely during startup/shutdown)");
+                        return false;
+                    }
+                }
+
+                // Try accessing other properties to verify loaded state
+                bool isOffscreen = false;
+                if (window.Properties.IsOffscreen.IsSupported)
+                {
+                    isOffscreen = window.Properties.IsOffscreen.ValueOrDefault;
+                }
+
+                // If we got here without exceptions, the window is ready
+                Console.WriteLine($"[ChronoWindowFinder] MainWindow is ready (IsEnabled=true, IsOffscreen={isOffscreen})");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoWindowFinder] Error checking MainWindow readiness: {ex.Message}");
+                return false;
             }
         }
     }
