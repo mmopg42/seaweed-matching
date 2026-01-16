@@ -942,6 +942,125 @@ class Program
         }, jsonOption);
         workflowCommand.AddCommand(wfCameraStatesCommand);
 
+        // workflow path: Path 제어 (읽기/쓰기)
+        var workflowPathCommand = new Command("path", "WorkflowPanel Path 설정 제어");
+
+        // workflow path get-line1: Line 1 경로 읽기
+        var pathGetLine1Command = new Command("get-line1", "Line 1 경로 모두 읽기");
+        pathGetLine1Command.AddOption(jsonOption);
+        pathGetLine1Command.SetHandler((json) =>
+        {
+            using var controller = new Workflow();
+            var paths = controller.GetLine1Paths();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    line = "Line1",
+                    count = paths.Count,
+                    paths = paths
+                }));
+            }
+            else
+            {
+                Console.WriteLine("[workflow-path get-line1] Line 1 Paths:");
+                Console.WriteLine($"  SampleName: {paths.GetValueOrDefault("SampleName", "(not found)")}");
+                Console.WriteLine($"  MoveNIR: {paths.GetValueOrDefault("MoveNir", "(not found)")}");
+                Console.WriteLine($"  MoveAllData: {paths.GetValueOrDefault("MoveAllData", "(not found)")}");
+            }
+        }, jsonOption);
+        workflowPathCommand.AddCommand(pathGetLine1Command);
+
+        // workflow path get-line2: Line 2 경로 읽기
+        var pathGetLine2Command = new Command("get-line2", "Line 2 경로 모두 읽기");
+        pathGetLine2Command.AddOption(jsonOption);
+        pathGetLine2Command.SetHandler((json) =>
+        {
+            using var controller = new Workflow();
+            var paths = controller.GetLine2Paths();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    line = "Line2",
+                    count = paths.Count,
+                    paths = paths
+                }));
+            }
+            else
+            {
+                Console.WriteLine("[workflow-path get-line2] Line 2 Paths:");
+                Console.WriteLine($"  SampleName: {paths.GetValueOrDefault("SampleName", "(not found)")}");
+                Console.WriteLine($"  MoveNIR: {paths.GetValueOrDefault("MoveNir", "(not found)")}");
+                Console.WriteLine($"  MoveAllData: {paths.GetValueOrDefault("MoveAllData", "(not found)")}");
+            }
+        }, jsonOption);
+        workflowPathCommand.AddCommand(pathGetLine2Command);
+
+        // workflow path get-all: 모든 라인 경로 읽기
+        var pathGetAllCommand = new Command("get-all", "모든 Line 1/Line 2 경로 읽기");
+        pathGetAllCommand.AddOption(jsonOption);
+        pathGetAllCommand.SetHandler((json) =>
+        {
+            using var controller = new Workflow();
+            var allPaths = controller.GetAllPaths();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    count = allPaths.Count,
+                    paths = allPaths
+                }));
+            }
+            else
+            {
+                Console.WriteLine("[workflow-path get-all] All Paths:");
+                foreach (var linePaths in allPaths)
+                {
+                    Console.WriteLine($"\n{linePaths.Key}:");
+                    foreach (var path in linePaths.Value)
+                    {
+                        Console.WriteLine($"  {path.Key}: {path.Value}");
+                    }
+                }
+            }
+        }, jsonOption);
+        workflowPathCommand.AddCommand(pathGetAllCommand);
+
+        // workflow path set-line1: Line 1 특정 경로 설정
+        var pathTypeArgument = new Argument<string>("type", "Path type (samplename|movenir|movealldata)");
+        var pathValueArgument = new Argument<string>("value", "Path value to set");
+        var pathSetLine1Command = new Command("set-line1", "Line 1 특정 경로 설정");
+        pathSetLine1Command.AddArgument(pathTypeArgument);
+        pathSetLine1Command.AddArgument(pathValueArgument);
+        pathSetLine1Command.SetHandler((type, value) =>
+        {
+            using var controller = new Workflow();
+            var result = controller.SetLine1Path(type, value);
+            Console.WriteLine(result ? $"[workflow-path set-line1] Success: {type} set to '{value}'" : $"[workflow-path set-line1] Failed: Could not set {type}");
+        }, pathTypeArgument, pathValueArgument);
+        workflowPathCommand.AddCommand(pathSetLine1Command);
+
+        // workflow path set-line2: Line 2 특정 경로 설정
+        var pathSetLine2Command = new Command("set-line2", "Line 2 특정 경로 설정");
+        pathSetLine2Command.AddArgument(pathTypeArgument);
+        pathSetLine2Command.AddArgument(pathValueArgument);
+        pathSetLine2Command.SetHandler((type, value) =>
+        {
+            using var controller = new Workflow();
+            var result = controller.SetLine2Path(type, value);
+            Console.WriteLine(result ? $"[workflow-path set-line2] Success: {type} set to '{value}'" : $"[workflow-path set-line2] Failed: Could not set {type}");
+        }, pathTypeArgument, pathValueArgument);
+        workflowPathCommand.AddCommand(pathSetLine2Command);
+
+        workflowCommand.AddCommand(workflowPathCommand);
+
         rootCommand.AddCommand(workflowCommand);
 
         return await rootCommand.InvokeAsync(args);
