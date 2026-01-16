@@ -143,14 +143,18 @@ class Program
             {
                 if (json)
                 {
-                    Console.WriteLine(JsonSerializer.Serialize(new
+                    PrintJsonOutput(new
                     {
-                        found = true,
-                        windowType = "MainWindow",
-                        title = window.Name,
-                        className = window.ClassName,
-                        automationId = window.AutomationId
-                    }));
+                        success = true,
+                        data = new
+                        {
+                            found = true,
+                            windowType = "MainWindow",
+                            title = window.Name,
+                            className = window.ClassName,
+                            automationId = window.AutomationId
+                        }
+                    });
                 }
                 else
                 {
@@ -158,21 +162,24 @@ class Program
                     Console.WriteLine($"  - ClassName: {window.ClassName ?? "(null)"}");
                     Console.WriteLine($"  - AutomationId: {window.AutomationId ?? "(null)"}");
                 }
+                Environment.Exit(EXIT_SUCCESS);
             }
             else
             {
                 if (json)
                 {
-                    Console.WriteLine(JsonSerializer.Serialize(new
+                    PrintJsonOutput(new
                     {
-                        found = false,
-                        windowType = "MainWindow"
-                    }));
+                        success = false,
+                        error = "MainWindow not found",
+                        errorCode = EXIT_NOT_FOUND
+                    });
                 }
                 else
                 {
                     Console.WriteLine("[MainWindow] Not found - make sure ChronoView is running");
                 }
+                Environment.Exit(EXIT_NOT_FOUND);
             }
         }, jsonOption);
         windowsCommand.AddCommand(mainCommand);
@@ -190,14 +197,18 @@ class Program
             {
                 if (json)
                 {
-                    Console.WriteLine(JsonSerializer.Serialize(new
+                    PrintJsonOutput(new
                     {
-                        found = true,
-                        windowType = "SetupWindow",
-                        title = window.Name,
-                        className = window.ClassName,
-                        automationId = window.AutomationId
-                    }));
+                        success = true,
+                        data = new
+                        {
+                            found = true,
+                            windowType = "SetupWindow",
+                            title = window.Name,
+                            className = window.ClassName,
+                            automationId = window.AutomationId
+                        }
+                    });
                 }
                 else
                 {
@@ -205,21 +216,24 @@ class Program
                     Console.WriteLine($"  - ClassName: {window.ClassName ?? "(null)"}");
                     Console.WriteLine($"  - AutomationId: {window.AutomationId ?? "(null)"}");
                 }
+                Environment.Exit(EXIT_SUCCESS);
             }
             else
             {
                 if (json)
                 {
-                    Console.WriteLine(JsonSerializer.Serialize(new
+                    PrintJsonOutput(new
                     {
-                        found = false,
-                        windowType = "SetupWindow"
-                    }));
+                        success = false,
+                        error = "SetupWindow not found",
+                        errorCode = EXIT_NOT_FOUND
+                    });
                 }
                 else
                 {
                     Console.WriteLine("[SetupWindow] Not found");
                 }
+                Environment.Exit(EXIT_NOT_FOUND);
             }
         }, jsonOption);
         windowsCommand.AddCommand(setupCommand);
@@ -237,14 +251,18 @@ class Program
             {
                 if (json)
                 {
-                    Console.WriteLine(JsonSerializer.Serialize(new
+                    PrintJsonOutput(new
                     {
-                        found = true,
-                        windowType = "SettingsDialog",
-                        title = window.Name,
-                        className = window.ClassName,
-                        automationId = window.AutomationId
-                    }));
+                        success = true,
+                        data = new
+                        {
+                            found = true,
+                            windowType = "SettingsDialog",
+                            title = window.Name,
+                            className = window.ClassName,
+                            automationId = window.AutomationId
+                        }
+                    });
                 }
                 else
                 {
@@ -252,21 +270,24 @@ class Program
                     Console.WriteLine($"  - ClassName: {window.ClassName ?? "(null)"}");
                     Console.WriteLine($"  - AutomationId: {window.AutomationId ?? "(null)"}");
                 }
+                Environment.Exit(EXIT_SUCCESS);
             }
             else
             {
                 if (json)
                 {
-                    Console.WriteLine(JsonSerializer.Serialize(new
+                    PrintJsonOutput(new
                     {
-                        found = false,
-                        windowType = "SettingsDialog"
-                    }));
+                        success = false,
+                        error = "SettingsDialog not found",
+                        errorCode = EXIT_NOT_FOUND
+                    });
                 }
                 else
                 {
                     Console.WriteLine("[SettingsDialog] Not found");
                 }
+                Environment.Exit(EXIT_NOT_FOUND);
             }
         }, jsonOption);
         windowsCommand.AddCommand(settingsCommand);
@@ -284,14 +305,18 @@ class Program
             {
                 if (json)
                 {
-                    Console.WriteLine(JsonSerializer.Serialize(new
+                    PrintJsonOutput(new
                     {
-                        found = true,
-                        windowType = "ImagePreviewWindow",
-                        title = window.Name,
-                        className = window.ClassName,
-                        automationId = window.AutomationId
-                    }));
+                        success = true,
+                        data = new
+                        {
+                            found = true,
+                            windowType = "ImagePreviewWindow",
+                            title = window.Name,
+                            className = window.ClassName,
+                            automationId = window.AutomationId
+                        }
+                    });
                 }
                 else
                 {
@@ -299,21 +324,24 @@ class Program
                     Console.WriteLine($"  - ClassName: {window.ClassName ?? "(null)"}");
                     Console.WriteLine($"  - AutomationId: {window.AutomationId ?? "(null)"}");
                 }
+                Environment.Exit(EXIT_SUCCESS);
             }
             else
             {
                 if (json)
                 {
-                    Console.WriteLine(JsonSerializer.Serialize(new
+                    PrintJsonOutput(new
                     {
-                        found = false,
-                        windowType = "ImagePreviewWindow"
-                    }));
+                        success = false,
+                        error = "ImagePreviewWindow not found",
+                        errorCode = EXIT_NOT_FOUND
+                    });
                 }
                 else
                 {
                     Console.WriteLine("[ImagePreviewWindow] Not found");
                 }
+                Environment.Exit(EXIT_NOT_FOUND);
             }
         }, jsonOption);
         windowsCommand.AddCommand(previewCommand);
@@ -335,11 +363,15 @@ class Program
                     className = w.ClassName,
                     automationId = w.AutomationId
                 });
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
-                    count = windows.Count,
-                    windows = windowList
-                }));
+                    success = true,
+                    data = new
+                    {
+                        count = windows.Count,
+                        windows = windowList
+                    }
+                });
             }
             else
             {
@@ -349,6 +381,7 @@ class Program
                     Console.WriteLine($"  - '{window.Name}'");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         windowsCommand.AddCommand(allCommand);
 
@@ -477,7 +510,16 @@ class Program
         {
             using var controller = new Toolbar();
             var result = controller.ClickStartButton();
-            Console.WriteLine(result ? "[toolbar-start] Success: Start button clicked" : "[toolbar-start] Failed: Could not click Start button");
+            if (result)
+            {
+                Console.WriteLine("[toolbar-start] Success: Start button clicked");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine("[toolbar-start] Failed: Could not click Start button");
+                Environment.Exit(EXIT_ERROR);
+            }
         });
         toolbarCommand.AddCommand(toolbarStartCommand);
 
@@ -487,7 +529,16 @@ class Program
         {
             using var controller = new Toolbar();
             var result = controller.ClickStopButton();
-            Console.WriteLine(result ? "[toolbar-stop] Success: Stop button clicked" : "[toolbar-stop] Failed: Could not click Stop button");
+            if (result)
+            {
+                Console.WriteLine("[toolbar-stop] Success: Stop button clicked");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine("[toolbar-stop] Failed: Could not click Stop button");
+                Environment.Exit(EXIT_ERROR);
+            }
         });
         toolbarCommand.AddCommand(toolbarStopCommand);
 
@@ -497,7 +548,16 @@ class Program
         {
             using var controller = new Toolbar();
             var result = controller.ClickSettingsButton();
-            Console.WriteLine(result ? "[toolbar-settings] Success: Settings button clicked" : "[toolbar-settings] Failed: Could not click Settings button");
+            if (result)
+            {
+                Console.WriteLine("[toolbar-settings] Success: Settings button clicked");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine("[toolbar-settings] Failed: Could not click Settings button");
+                Environment.Exit(EXIT_ERROR);
+            }
         });
         toolbarCommand.AddCommand(toolbarSettingsCommand);
 
@@ -507,7 +567,16 @@ class Program
         {
             using var controller = new Toolbar();
             var result = controller.ClickRefreshButton();
-            Console.WriteLine(result ? "[toolbar-refresh] Success: Refresh button clicked" : "[toolbar-refresh] Failed: Could not click Refresh button");
+            if (result)
+            {
+                Console.WriteLine("[toolbar-refresh] Success: Refresh button clicked");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine("[toolbar-refresh] Failed: Could not click Refresh button");
+                Environment.Exit(EXIT_ERROR);
+            }
         });
         toolbarCommand.AddCommand(toolbarRefreshCommand);
 
@@ -517,7 +586,16 @@ class Program
         {
             using var controller = new Toolbar();
             var result = controller.ClickMoveButton();
-            Console.WriteLine(result ? "[toolbar-move] Success: Move button clicked" : "[toolbar-move] Failed: Could not click Move button");
+            if (result)
+            {
+                Console.WriteLine("[toolbar-move] Success: Move button clicked");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine("[toolbar-move] Failed: Could not click Move button");
+                Environment.Exit(EXIT_ERROR);
+            }
         });
         toolbarCommand.AddCommand(toolbarMoveCommand);
 
@@ -527,7 +605,16 @@ class Program
         {
             using var controller = new Toolbar();
             var result = controller.ClickDeleteButton();
-            Console.WriteLine(result ? "[toolbar-delete] Success: Delete button clicked" : "[toolbar-delete] Failed: Could not click Delete button");
+            if (result)
+            {
+                Console.WriteLine("[toolbar-delete] Success: Delete button clicked");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine("[toolbar-delete] Failed: Could not click Delete button");
+                Environment.Exit(EXIT_ERROR);
+            }
         });
         toolbarCommand.AddCommand(toolbarDeleteCommand);
 
@@ -541,11 +628,15 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
-                    count = buttons.Length,
-                    buttons = buttons
-                }));
+                    success = true,
+                    data = new
+                    {
+                        count = buttons.Length,
+                        buttons = buttons
+                    }
+                });
             }
             else
             {
@@ -555,6 +646,7 @@ class Program
                     Console.WriteLine($"  - '{button}'");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         toolbarCommand.AddCommand(toolbarListCommand);
 
@@ -566,7 +658,16 @@ class Program
         {
             using var controller = new Toolbar();
             var result = controller.ClickToolbarButton(text);
-            Console.WriteLine(result ? $"[toolbar-click] Success: Button '{text}' clicked" : $"[toolbar-click] Failed: Could not click button '{text}'");
+            if (result)
+            {
+                Console.WriteLine($"[toolbar-click] Success: Button '{text}' clicked");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine($"[toolbar-click] Failed: Could not click button '{text}'");
+                Environment.Exit(EXIT_ERROR);
+            }
         }, buttonTextArgument);
         toolbarCommand.AddCommand(toolbarClickCommand);
 
@@ -578,6 +679,7 @@ class Program
             using var controller = new Toolbar();
             var isEnabled = controller.IsButtonEnabled(text);
             Console.WriteLine(isEnabled ? $"[toolbar-enabled] Button '{text}' is enabled" : $"[toolbar-enabled] Button '{text}' is disabled");
+            Environment.Exit(EXIT_SUCCESS);
         }, buttonTextArgument);
         toolbarCommand.AddCommand(toolbarEnabledCommand);
 
@@ -592,40 +694,70 @@ class Program
             var mainWindow = automation.FindChronoViewMainWindow();
             if (mainWindow == null)
             {
-                Console.WriteLine("[stats] Failed: MainWindow not found");
+                if (json)
+                {
+                    PrintJsonOutput(new
+                    {
+                        success = false,
+                        error = "MainWindow not found",
+                        errorCode = EXIT_NOT_FOUND
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("[stats] Failed: MainWindow not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
                 return;
             }
 
             var statistics = automation.GetAllStatistics(mainWindow);
             if (statistics == null)
             {
-                Console.WriteLine("[stats] Failed: Could not extract statistics (StatisticsPanel not found)");
+                if (json)
+                {
+                    PrintJsonOutput(new
+                    {
+                        success = false,
+                        error = "StatisticsPanel not found",
+                        errorCode = EXIT_NOT_FOUND
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("[stats] Failed: Could not extract statistics (StatisticsPanel not found)");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
                 return;
             }
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    source = "StatisticsPanel",
-                    statistics = statistics
-                }));
+                    data = new
+                    {
+                        source = "StatisticsPanel",
+                        statistics = statistics
+                    }
+                });
             }
             else
             {
                 Console.WriteLine("[stats] Statistics from StatisticsPanel:");
-                Console.WriteLine("\n📊 File Counts:");
+                Console.WriteLine("\nFile Counts:");
                 foreach (var kvp in statistics.Where(k => k.Key.StartsWith("NIR") || k.Key.StartsWith("Normal") || k.Key.StartsWith("Cam")))
                 {
                     Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
                 }
-                Console.WriteLine("\n🔗 Matching Status:");
+                Console.WriteLine("\nMatching Status:");
                 foreach (var kvp in statistics.Where(k => !k.Key.StartsWith("NIR") && !k.Key.StartsWith("Normal") && !k.Key.StartsWith("Cam") && k.Key != "일반2"))
                 {
                     Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         rootCommand.AddCommand(statsCommand);
 
@@ -641,26 +773,41 @@ class Program
             var mainWindow = automation.FindChronoViewMainWindow();
             if (mainWindow == null)
             {
-                Console.WriteLine("[datagrid-headers] Failed: MainWindow not found");
+                if (json)
+                {
+                    PrintJsonOutput(new { success = false, error = "MainWindow not found", errorCode = EXIT_NOT_FOUND });
+                }
+                else
+                {
+                    Console.WriteLine("[datagrid-headers] Failed: MainWindow not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
                 return;
             }
 
             var dataGrid = automation.FindDataGrid(mainWindow);
             if (dataGrid == null)
             {
-                Console.WriteLine("[datagrid-headers] Failed: DataGrid not found");
+                if (json)
+                {
+                    PrintJsonOutput(new { success = false, error = "DataGrid not found", errorCode = EXIT_NOT_FOUND });
+                }
+                else
+                {
+                    Console.WriteLine("[datagrid-headers] Failed: DataGrid not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
                 return;
             }
 
             var headers = automation.GetDataGridHeaders(dataGrid);
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    columnCount = headers.Count,
-                    columns = headers
-                }));
+                    data = new { columnCount = headers.Count, columns = headers }
+                });
             }
             else
             {
@@ -670,6 +817,7 @@ class Program
                     Console.WriteLine($"  - {header}");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         datagridCommand.AddCommand(dgHeadersCommand);
 
@@ -682,30 +830,47 @@ class Program
             var mainWindow = automation.FindChronoViewMainWindow();
             if (mainWindow == null)
             {
-                Console.WriteLine("[datagrid-rows] Failed: MainWindow not found");
+                if (json)
+                {
+                    PrintJsonOutput(new { success = false, error = "MainWindow not found", errorCode = EXIT_NOT_FOUND });
+                }
+                else
+                {
+                    Console.WriteLine("[datagrid-rows] Failed: MainWindow not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
                 return;
             }
 
             var dataGrid = automation.FindDataGrid(mainWindow);
             if (dataGrid == null)
             {
-                Console.WriteLine("[datagrid-rows] Failed: DataGrid not found");
+                if (json)
+                {
+                    PrintJsonOutput(new { success = false, error = "DataGrid not found", errorCode = EXIT_NOT_FOUND });
+                }
+                else
+                {
+                    Console.WriteLine("[datagrid-rows] Failed: DataGrid not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
                 return;
             }
 
             var rowCount = automation.GetDataRowCount(dataGrid);
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    rowCount = rowCount
-                }));
+                    data = new { rowCount = rowCount }
+                });
             }
             else
             {
                 Console.WriteLine($"[datagrid-rows] DataGrid has {rowCount} data rows");
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         datagridCommand.AddCommand(dgRowsCommand);
 
@@ -718,19 +883,26 @@ class Program
             var mainWindow = automation.FindChronoViewMainWindow();
             if (mainWindow == null)
             {
-                Console.WriteLine("[datagrid-data] Failed: MainWindow not found");
+                if (json)
+                {
+                    PrintJsonOutput(new { success = false, error = "MainWindow not found", errorCode = EXIT_NOT_FOUND });
+                }
+                else
+                {
+                    Console.WriteLine("[datagrid-data] Failed: MainWindow not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
                 return;
             }
 
             var allData = automation.GetAllDataGridData(mainWindow);
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    rowCount = allData.Count,
-                    data = allData
-                }));
+                    data = new { rowCount = allData.Count, data = allData }
+                });
             }
             else
             {
@@ -745,6 +917,7 @@ class Program
                     }
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         datagridCommand.AddCommand(dgDataCommand);
 
@@ -757,14 +930,30 @@ class Program
             var mainWindow = automation.FindChronoViewMainWindow();
             if (mainWindow == null)
             {
-                Console.WriteLine("[datagrid-info] Failed: MainWindow not found");
+                if (json)
+                {
+                    PrintJsonOutput(new { success = false, error = "MainWindow not found", errorCode = EXIT_NOT_FOUND });
+                }
+                else
+                {
+                    Console.WriteLine("[datagrid-info] Failed: MainWindow not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
                 return;
             }
 
             var dataGrid = automation.FindDataGrid(mainWindow);
             if (dataGrid == null)
             {
-                Console.WriteLine("[datagrid-info] Failed: DataGrid not found");
+                if (json)
+                {
+                    PrintJsonOutput(new { success = false, error = "DataGrid not found", errorCode = EXIT_NOT_FOUND });
+                }
+                else
+                {
+                    Console.WriteLine("[datagrid-info] Failed: DataGrid not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
                 return;
             }
 
@@ -773,19 +962,18 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    columnCount = headers.Count,
-                    rowCount = rowCount,
-                    columns = headers
-                }));
+                    data = new { columnCount = headers.Count, rowCount = rowCount, columns = headers }
+                });
             }
             else
             {
                 Console.WriteLine($"[datagrid-info] DataGrid: {headers.Count} columns, {rowCount} rows");
                 Console.WriteLine("  Columns: " + string.Join(", ", headers));
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         datagridCommand.AddCommand(dgInfoCommand);
 
@@ -802,14 +990,30 @@ class Program
             var mainWindow = automation.FindChronoViewMainWindow();
             if (mainWindow == null)
             {
-                Console.WriteLine("[datagrid-cell] Failed: MainWindow not found");
+                if (json)
+                {
+                    PrintJsonOutput(new { success = false, error = "MainWindow not found", errorCode = EXIT_NOT_FOUND });
+                }
+                else
+                {
+                    Console.WriteLine("[datagrid-cell] Failed: MainWindow not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
                 return;
             }
 
             var dataGrid = automation.FindDataGrid(mainWindow);
             if (dataGrid == null)
             {
-                Console.WriteLine("[datagrid-cell] Failed: DataGrid not found");
+                if (json)
+                {
+                    PrintJsonOutput(new { success = false, error = "DataGrid not found", errorCode = EXIT_NOT_FOUND });
+                }
+                else
+                {
+                    Console.WriteLine("[datagrid-cell] Failed: DataGrid not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
                 return;
             }
 
@@ -818,7 +1022,15 @@ class Program
 
             if (row < 0 || row >= rows.Length)
             {
-                Console.WriteLine($"[datagrid-cell] Failed: Row index {row} out of range (0-{rows.Length - 1})");
+                if (json)
+                {
+                    PrintJsonOutput(new { success = false, error = $"Row index {row} out of range", errorCode = EXIT_INVALID_ARGUMENT });
+                }
+                else
+                {
+                    Console.WriteLine($"[datagrid-cell] Failed: Row index {row} out of range (0-{rows.Length - 1})");
+                }
+                Environment.Exit(EXIT_INVALID_ARGUMENT);
                 return;
             }
 
@@ -827,18 +1039,17 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = cellText != null,
-                    row = row,
-                    column = col,
-                    value = cellText
-                }));
+                    data = new { row = row, column = col, value = cellText }
+                });
             }
             else
             {
                 Console.WriteLine($"[datagrid-cell] Row {row}, Column {col}: '{cellText ?? "(null)"}'");
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, rowArgument, colArgument, jsonOption);
         datagridCommand.AddCommand(dgCellCommand);
 
@@ -851,6 +1062,7 @@ class Program
             if (mainWindow == null)
             {
                 Console.WriteLine("[datagrid-export] Failed: MainWindow not found");
+                Environment.Exit(EXIT_NOT_FOUND);
                 return;
             }
 
@@ -858,10 +1070,14 @@ class Program
             Console.WriteLine(JsonSerializer.Serialize(new
             {
                 success = true,
-                rowCount = allData.Count,
-                exportedAt = DateTime.UtcNow.ToString("o"),
-                data = allData
+                data = new
+                {
+                    rowCount = allData.Count,
+                    exportedAt = DateTime.UtcNow.ToString("o"),
+                    data = allData
+                }
             }, new JsonSerializerOptions { WriteIndented = true }));
+            Environment.Exit(EXIT_SUCCESS);
         });
         datagridCommand.AddCommand(dgExportCommand);
 
@@ -968,7 +1184,16 @@ class Program
         {
             using var controller = new Workflow();
             var result = controller.ClickGeneralCameraButton();
-            Console.WriteLine(result ? "[workflow-launch-general] Success: General Camera button clicked" : "[workflow-launch-general] Failed: Could not click General Camera button");
+            if (result)
+            {
+                Console.WriteLine("[workflow-launch-general] Success: General Camera button clicked");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine("[workflow-launch-general] Failed: Could not click General Camera button");
+                Environment.Exit(EXIT_ERROR);
+            }
         });
         workflowCommand.AddCommand(wfLaunchGeneralCommand);
 
@@ -978,7 +1203,16 @@ class Program
         {
             using var controller = new Workflow();
             var result = controller.ClickNirCameraButton();
-            Console.WriteLine(result ? "[workflow-launch-nir] Success: NIR 1 Camera button clicked" : "[workflow-launch-nir] Failed: Could not click NIR 1 Camera button");
+            if (result)
+            {
+                Console.WriteLine("[workflow-launch-nir] Success: NIR 1 Camera button clicked");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine("[workflow-launch-nir] Failed: Could not click NIR 1 Camera button");
+                Environment.Exit(EXIT_ERROR);
+            }
         });
         workflowCommand.AddCommand(wfLaunchNirCommand);
 
@@ -988,7 +1222,16 @@ class Program
         {
             using var controller = new Workflow();
             var result = controller.ClickNir2CameraButton();
-            Console.WriteLine(result ? "[workflow-launch-nir2] Success: NIR 2 Camera button clicked" : "[workflow-launch-nir2] Failed: Could not click NIR 2 Camera button");
+            if (result)
+            {
+                Console.WriteLine("[workflow-launch-nir2] Success: NIR 2 Camera button clicked");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine("[workflow-launch-nir2] Failed: Could not click NIR 2 Camera button");
+                Environment.Exit(EXIT_ERROR);
+            }
         });
         workflowCommand.AddCommand(wfLaunchNir2Command);
 
@@ -998,7 +1241,16 @@ class Program
         {
             using var controller = new Workflow();
             var result = controller.ToggleNir2Filtering();
-            Console.WriteLine(result ? "[workflow-toggle-filtering] Success: NIR Filtering toggled" : "[workflow-toggle-filtering] Failed: Could not toggle NIR Filtering");
+            if (result)
+            {
+                Console.WriteLine("[workflow-toggle-filtering] Success: NIR Filtering toggled");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine("[workflow-toggle-filtering] Failed: Could not toggle NIR Filtering");
+                Environment.Exit(EXIT_ERROR);
+            }
         });
         workflowCommand.AddCommand(wfToggleFilteringCommand);
 
@@ -1012,13 +1264,16 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    source = "WorkflowPanel",
-                    count = states.Count,
-                    states = states
-                }));
+                    data = new
+                    {
+                        source = "WorkflowPanel",
+                        count = states.Count,
+                        states = states
+                    }
+                });
             }
             else
             {
@@ -1028,6 +1283,7 @@ class Program
                     Console.WriteLine($"  - {kvp.Key}: {kvp.Value}");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         workflowCommand.AddCommand(wfCameraStatesCommand);
 
@@ -1044,13 +1300,16 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    line = "Line1",
-                    count = paths.Count,
-                    paths = paths
-                }));
+                    data = new
+                    {
+                        line = "Line1",
+                        count = paths.Count,
+                        paths = paths
+                    }
+                });
             }
             else
             {
@@ -1059,6 +1318,7 @@ class Program
                 Console.WriteLine($"  MoveNIR: {paths.GetValueOrDefault("MoveNir", "(not found)")}");
                 Console.WriteLine($"  MoveAllData: {paths.GetValueOrDefault("MoveAllData", "(not found)")}");
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         workflowPathCommand.AddCommand(pathGetLine1Command);
 
@@ -1072,13 +1332,16 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    line = "Line2",
-                    count = paths.Count,
-                    paths = paths
-                }));
+                    data = new
+                    {
+                        line = "Line2",
+                        count = paths.Count,
+                        paths = paths
+                    }
+                });
             }
             else
             {
@@ -1087,6 +1350,7 @@ class Program
                 Console.WriteLine($"  MoveNIR: {paths.GetValueOrDefault("MoveNir", "(not found)")}");
                 Console.WriteLine($"  MoveAllData: {paths.GetValueOrDefault("MoveAllData", "(not found)")}");
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         workflowPathCommand.AddCommand(pathGetLine2Command);
 
@@ -1100,12 +1364,15 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    count = allPaths.Count,
-                    paths = allPaths
-                }));
+                    data = new
+                    {
+                        count = allPaths.Count,
+                        paths = allPaths
+                    }
+                });
             }
             else
             {
@@ -1119,6 +1386,7 @@ class Program
                     }
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         workflowPathCommand.AddCommand(pathGetAllCommand);
 
@@ -1132,7 +1400,16 @@ class Program
         {
             using var controller = new Workflow();
             var result = controller.SetLine1Path(type, value);
-            Console.WriteLine(result ? $"[workflow-path set-line1] Success: {type} set to '{value}'" : $"[workflow-path set-line1] Failed: Could not set {type}");
+            if (result)
+            {
+                Console.WriteLine($"[workflow-path set-line1] Success: {type} set to '{value}'");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine($"[workflow-path set-line1] Failed: Could not set {type}");
+                Environment.Exit(EXIT_ERROR);
+            }
         }, pathTypeArgument, pathValueArgument);
         workflowPathCommand.AddCommand(pathSetLine1Command);
 
@@ -1144,7 +1421,16 @@ class Program
         {
             using var controller = new Workflow();
             var result = controller.SetLine2Path(type, value);
-            Console.WriteLine(result ? $"[workflow-path set-line2] Success: {type} set to '{value}'" : $"[workflow-path set-line2] Failed: Could not set {type}");
+            if (result)
+            {
+                Console.WriteLine($"[workflow-path set-line2] Success: {type} set to '{value}'");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine($"[workflow-path set-line2] Failed: Could not set {type}");
+                Environment.Exit(EXIT_ERROR);
+            }
         }, pathTypeArgument, pathValueArgument);
         workflowPathCommand.AddCommand(pathSetLine2Command);
 
@@ -1165,13 +1451,16 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    source = "LogPanel",
-                    count = logs.Count,
-                    logs = logs
-                }));
+                    data = new
+                    {
+                        source = "LogPanel",
+                        count = logs.Count,
+                        logs = logs
+                    }
+                });
             }
             else
             {
@@ -1185,6 +1474,7 @@ class Program
                     Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         logsCommand.AddCommand(logsGetCommand);
 
@@ -1204,14 +1494,17 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    source = "LogPanel",
-                    requested = actualCount,
-                    returned = logs.Count,
-                    logs = logs
-                }));
+                    data = new
+                    {
+                        source = "LogPanel",
+                        requested = actualCount,
+                        returned = logs.Count,
+                        logs = logs
+                    }
+                });
             }
             else
             {
@@ -1225,6 +1518,7 @@ class Program
                     Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, countArgument, jsonOption);
         logsCommand.AddCommand(logsTailCommand);
 
@@ -1244,14 +1538,17 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    source = "LogPanel",
-                    filter = new { level = level },
-                    count = logs.Count,
-                    logs = logs
-                }));
+                    data = new
+                    {
+                        source = "LogPanel",
+                        filter = new { level = level },
+                        count = logs.Count,
+                        logs = logs
+                    }
+                });
             }
             else
             {
@@ -1266,6 +1563,7 @@ class Program
                     Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, levelOption, jsonOption);
         logsCommand.AddCommand(logsFilterCommand);
 
@@ -1281,14 +1579,17 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    source = "LogPanel",
-                    search = text,
-                    count = logs.Count,
-                    logs = logs
-                }));
+                    data = new
+                    {
+                        source = "LogPanel",
+                        search = text,
+                        count = logs.Count,
+                        logs = logs
+                    }
+                });
             }
             else
             {
@@ -1302,6 +1603,7 @@ class Program
                     Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
                 }
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, searchTextArgument, jsonOption);
         logsCommand.AddCommand(logsSearchCommand);
 
@@ -1316,7 +1618,16 @@ class Program
         {
             using var controller = new Settings();
             var result = controller.OpenSettingsDialog();
-            Console.WriteLine(result ? "[settings-dialog-open] Success: SettingsDialog opened" : "[settings-dialog-open] Failed: Could not open SettingsDialog");
+            if (result)
+            {
+                Console.WriteLine("[settings-dialog-open] Success: SettingsDialog opened");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine("[settings-dialog-open] Failed: Could not open SettingsDialog");
+                Environment.Exit(EXIT_ERROR);
+            }
         });
         settingsDialogCommand.AddCommand(settingsOpenCommand);
 
@@ -1326,7 +1637,16 @@ class Program
         {
             using var controller = new Settings();
             var result = controller.CloseSettingsDialog();
-            Console.WriteLine(result ? "[settings-dialog-close] Success: SettingsDialog closed" : "[settings-dialog-close] Failed: Could not close SettingsDialog");
+            if (result)
+            {
+                Console.WriteLine("[settings-dialog-close] Success: SettingsDialog closed");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine("[settings-dialog-close] Failed: Could not close SettingsDialog");
+                Environment.Exit(EXIT_ERROR);
+            }
         });
         settingsDialogCommand.AddCommand(settingsCloseCommand);
 
@@ -1336,9 +1656,14 @@ class Program
         {
             using var controller = new Settings();
             var result = controller.InspectSettingsDialog();
-            if (!result)
+            if (result)
+            {
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
             {
                 Console.WriteLine("[settings-dialog-inspect] Failed: Could not inspect SettingsDialog (dialog not open?)");
+                Environment.Exit(EXIT_ERROR);
             }
         });
         settingsDialogCommand.AddCommand(settingsInspectCommand);
@@ -1353,17 +1678,21 @@ class Program
 
             if (json)
             {
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintJsonOutput(new
                 {
                     success = true,
-                    dialogType = "SettingsDialog",
-                    isOpen = isOpen
-                }));
+                    data = new
+                    {
+                        dialogType = "SettingsDialog",
+                        isOpen = isOpen
+                    }
+                });
             }
             else
             {
                 Console.WriteLine(isOpen ? "[settings-dialog-status] SettingsDialog is open" : "[settings-dialog-status] SettingsDialog is not open");
             }
+            Environment.Exit(EXIT_SUCCESS);
         }, jsonOption);
         settingsDialogCommand.AddCommand(settingsStatusCommand);
 
