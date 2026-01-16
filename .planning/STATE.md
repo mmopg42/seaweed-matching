@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-16)
 
 **Core value:** UI 요소 식별 및 조작 — ChronoView의 모든 UI 요소를 안정적으로 식별하고 조작
-**Current focus:** Phase 6 — SettingsDialog automation
+**Current focus:** Phase 8 — File operations automation
 
 ## Current Position
 
-Phase: 6 of 10 (settings-dialog)
-Plan: 3 of 3 in phase
+Phase: 8 of 10 (file-operations)
+Plan: 1 of 1 in phase
 Status: Complete
-Last activity: 2026-01-16 — Completed 06-03: CheckBox automation and dialog action buttons
+Last activity: 2026-01-16 — Completed 08-01: FileGroup selection and move operation automation
 
-Progress: ████████░░░ 77% (23/30 plans complete, Phase 6: 3/3 complete)
+Progress: ████████░░░ 80% (24/30 plans complete, Phase 8: 1/1 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23
-- Average duration: 8.9 min
-- Total execution time: 3.40 hours
+- Total plans completed: 24
+- Average duration: 9.0 min
+- Total execution time: 3.60 hours
 
 **By Phase:**
 
@@ -34,10 +34,11 @@ Progress: ████████░░░ 77% (23/30 plans complete, Phase 6: 
 | 05-workflow-control | 4 | 3 | 7.3 min |
 | 06-settings-dialog | 3 | 3 | 8 min |
 | 07-log-monitoring | 2 | 2 | 7 min |
+| 08-file-operations | 1 | 1 | 12 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-03 (8 min), 06-02 (9 min), 06-01 (7 min), 07-02 (6 min), 07-01 (8 min)
-- Trend: Stable, Phase 6 (settings-dialog) complete
+- Last 5 plans: 08-01 (12 min), 06-03 (8 min), 06-02 (9 min), 06-01 (7 min), 07-02 (6 min)
+- Trend: Stable, Phase 8 (file-operations) first plan complete
 
 *Updated after each plan completion*
 
@@ -93,6 +94,12 @@ Recent decisions affecting current work:
 | 6 | CheckBox detection supports Button+TogglePattern | WPF CheckBoxes may appear as ControlType.Button with TogglePattern |
 | 6 | Batch settings dictionary retrieval | GetAdvancedSettings() returns Dictionary<string, bool> for all Advanced tab CheckBoxes |
 | 6 | Dialog action buttons with close wait | Save/Cancel wait for dialog close (3000ms); Apply/Reset keep dialog open |
+| 8 | ChronoFileOperationsController class | Dedicated file operations controller following ChronoToolbarController pattern |
+| 8 | DataGrid CheckBox selection pattern | CheckBox in first column (column 0) of each DataItem row, clicked via TogglePattern or InvokePattern |
+| 8 | SelectAll checkbox in DataGrid header | Header ControlType.Header contains SelectAll CheckBox for selecting all rows |
+| 8 | GroupId column-based row finding | GroupId in column 1 (after checkbox column 0) used for row identification |
+| 8 | Reuse ChronoToolbarController for Move/Delete | File operations reuses existing toolbar controller instead of duplicating button click code |
+| 8 | file-ops CLI command group | file-ops select, move, delete, wait subcommands with --json option for programmatic access |
 
 ### Deferred Issues
 
@@ -109,6 +116,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-16
-Stopped at: Completed 06-03-PLAN.md - CheckBox automation and dialog action buttons
+Stopped at: Completed 08-01-PLAN.md - FileGroup selection and move operation automation
 Resume file: None
-Note: Phase 6 (settings-dialog) complete (3/3 plans). Ready for next phase.
+Note: Phase 8 (file-operations) complete (1/1 plans). Ready for next phase.
