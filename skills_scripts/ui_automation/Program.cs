@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Text.Json;
 using UiAuto = SkillsScripts.UiAutomation.UiAutomation;
 using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
+using Toolbar = SkillsScripts.UiAutomation.ChronoToolbarController;
 
 namespace UiAutomation;
 
@@ -431,6 +432,121 @@ class Program
         clickCommand.AddCommand(clickDeleteCommand);
 
         rootCommand.AddCommand(clickCommand);
+
+        // toolbar 명령: ChronoToolbarController 기반 통합 툴바 컨트롤
+        var toolbarCommand = new Command("toolbar", "툴바 버튼 제어 (ChronoToolbarController)");
+
+        // toolbar start: Start 버튼 클릭
+        var toolbarStartCommand = new Command("start", "Start 버튼 클릭");
+        toolbarStartCommand.SetHandler(() =>
+        {
+            using var controller = new Toolbar();
+            var result = controller.ClickStartButton();
+            Console.WriteLine(result ? "[toolbar-start] Success: Start button clicked" : "[toolbar-start] Failed: Could not click Start button");
+        });
+        toolbarCommand.AddCommand(toolbarStartCommand);
+
+        // toolbar stop: Stop 버튼 클릭
+        var toolbarStopCommand = new Command("stop", "Stop 버튼 클릭");
+        toolbarStopCommand.SetHandler(() =>
+        {
+            using var controller = new Toolbar();
+            var result = controller.ClickStopButton();
+            Console.WriteLine(result ? "[toolbar-stop] Success: Stop button clicked" : "[toolbar-stop] Failed: Could not click Stop button");
+        });
+        toolbarCommand.AddCommand(toolbarStopCommand);
+
+        // toolbar settings: Settings (Setup) 버튼 클릭
+        var toolbarSettingsCommand = new Command("settings", "Settings (Setup) 버튼 클릭");
+        toolbarSettingsCommand.SetHandler(() =>
+        {
+            using var controller = new Toolbar();
+            var result = controller.ClickSettingsButton();
+            Console.WriteLine(result ? "[toolbar-settings] Success: Settings button clicked" : "[toolbar-settings] Failed: Could not click Settings button");
+        });
+        toolbarCommand.AddCommand(toolbarSettingsCommand);
+
+        // toolbar refresh: Refresh 버튼 클릭
+        var toolbarRefreshCommand = new Command("refresh", "Refresh 버튼 클릭");
+        toolbarRefreshCommand.SetHandler(() =>
+        {
+            using var controller = new Toolbar();
+            var result = controller.ClickRefreshButton();
+            Console.WriteLine(result ? "[toolbar-refresh] Success: Refresh button clicked" : "[toolbar-refresh] Failed: Could not click Refresh button");
+        });
+        toolbarCommand.AddCommand(toolbarRefreshCommand);
+
+        // toolbar move: Move 버튼 클릭
+        var toolbarMoveCommand = new Command("move", "Move 버튼 클릭");
+        toolbarMoveCommand.SetHandler(() =>
+        {
+            using var controller = new Toolbar();
+            var result = controller.ClickMoveButton();
+            Console.WriteLine(result ? "[toolbar-move] Success: Move button clicked" : "[toolbar-move] Failed: Could not click Move button");
+        });
+        toolbarCommand.AddCommand(toolbarMoveCommand);
+
+        // toolbar delete: Delete 버튼 클릭
+        var toolbarDeleteCommand = new Command("delete", "Delete 버튼 클릭");
+        toolbarDeleteCommand.SetHandler(() =>
+        {
+            using var controller = new Toolbar();
+            var result = controller.ClickDeleteButton();
+            Console.WriteLine(result ? "[toolbar-delete] Success: Delete button clicked" : "[toolbar-delete] Failed: Could not click Delete button");
+        });
+        toolbarCommand.AddCommand(toolbarDeleteCommand);
+
+        // toolbar list: 모든 툴바 버튼 나열
+        var toolbarListCommand = new Command("list", "모든 툴바 버튼 나열");
+        toolbarListCommand.AddOption(jsonOption);
+        toolbarListCommand.SetHandler((json) =>
+        {
+            using var controller = new Toolbar();
+            var buttons = controller.GetAvailableButtons();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    count = buttons.Length,
+                    buttons = buttons
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[toolbar-list] Found {buttons.Length} toolbar button(s):");
+                foreach (var button in buttons)
+                {
+                    Console.WriteLine($"  - '{button}'");
+                }
+            }
+        }, jsonOption);
+        toolbarCommand.AddCommand(toolbarListCommand);
+
+        // toolbar click: 지정한 텍스트의 버튼 클릭
+        var buttonTextArgument = new Argument<string>("text", "버튼 텍스트 (예: '시작', '중지', '설정')");
+        var toolbarClickCommand = new Command("click", "지정한 텍스트의 버튼 클릭");
+        toolbarClickCommand.AddArgument(buttonTextArgument);
+        toolbarClickCommand.SetHandler((text) =>
+        {
+            using var controller = new Toolbar();
+            var result = controller.ClickToolbarButton(text);
+            Console.WriteLine(result ? $"[toolbar-click] Success: Button '{text}' clicked" : $"[toolbar-click] Failed: Could not click button '{text}'");
+        }, buttonTextArgument);
+        toolbarCommand.AddCommand(toolbarClickCommand);
+
+        // toolbar enabled: 버튼 활성화 상태 확인
+        var toolbarEnabledCommand = new Command("enabled", "버튼 활성화 상태 확인");
+        toolbarEnabledCommand.AddArgument(buttonTextArgument);
+        toolbarEnabledCommand.SetHandler((text) =>
+        {
+            using var controller = new Toolbar();
+            var isEnabled = controller.IsButtonEnabled(text);
+            Console.WriteLine(isEnabled ? $"[toolbar-enabled] Button '{text}' is enabled" : $"[toolbar-enabled] Button '{text}' is disabled");
+        }, buttonTextArgument);
+        toolbarCommand.AddCommand(toolbarEnabledCommand);
+
+        rootCommand.AddCommand(toolbarCommand);
 
         return await rootCommand.InvokeAsync(args);
     }
