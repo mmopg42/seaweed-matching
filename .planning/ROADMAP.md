@@ -95,7 +95,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 06-01: SettingsDialog 열기 및 구조 파악
+- [x] 06-01: SettingsDialog 열기 및 구조 파악
 - [ ] 06-02: 탭 네비게이션 및 경로 설정 자동화
 - [ ] 06-03: 체크박스 및 저장/적용/취소 버튼 자동화
 
@@ -155,7 +155,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 3. 툴바 제어 | 4/4 | Complete | 2026-01-16 |
 | 4. 데이터 패널 | 3/3 | Complete | 2026-01-16 |
 | 5. 워크플로우 제어 | 3/3 | Complete | 2026-01-16 |
-| 6. 설정 대화상자 | 0/3 | Not started | - |
+| 6. 설정 대화상자 | 1/3 | In progress | 2026-01-16 |
 | 7. 로그 모니터링 | 2/2 | Complete | 2026-01-16 |
 | 8. 파일 작업 | 0/2 | Not started | - |
 | 9. CLI 인터페이스 | 0/3 | Not started | - |
