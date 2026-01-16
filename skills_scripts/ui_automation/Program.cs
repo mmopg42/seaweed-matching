@@ -1799,6 +1799,17 @@ class Program
         }, rowsOption);
         fileOpsDeleteCommand.AddCommand(deleteRowsCommand);
 
+        // file-ops delete --group-ids: GroupId로 삭제
+        var deleteGroupIdsCommand = new Command("group-ids", "GroupId로 선택 후 삭제");
+        deleteGroupIdsCommand.AddOption(groupIdsOption);
+        deleteGroupIdsCommand.SetHandler((groupIds) =>
+        {
+            using var controller = new FileOps();
+            var result = controller.SelectAndDeleteByGroupIds(groupIds);
+            Console.WriteLine(result ? $"[file-ops-delete group-ids] Success: Deleted {groupIds.Length} row(s)" : $"[file-ops-delete group-ids] Failed: Could not delete rows by GroupId");
+        }, groupIdsOption);
+        fileOpsDeleteCommand.AddCommand(deleteGroupIdsCommand);
+
         fileOpsCommand.AddCommand(fileOpsDeleteCommand);
 
         // file-ops wait: 작업 완료 대기
@@ -1832,6 +1843,90 @@ class Program
         fileOpsWaitCommand.AddCommand(waitDeleteCommand);
 
         fileOpsCommand.AddCommand(fileOpsWaitCommand);
+
+        // file-ops confirm: 확인 대화상자 처리
+        var fileOpsConfirmCommand = new Command("confirm", "확인 대화상자 찾기 및 클릭");
+        fileOpsConfirmCommand.AddOption(jsonOption);
+        fileOpsConfirmCommand.SetHandler((json) =>
+        {
+            using var controller = new FileOps();
+            var result = controller.HandleDeleteConfirmationDialog();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = result,
+                    action = "confirm-dialog"
+                }));
+            }
+            else
+            {
+                Console.WriteLine(result ? "[file-ops-confirm] Success: Confirmation dialog handled" : "[file-ops-confirm] Failed: Could not handle confirmation dialog");
+            }
+        }, jsonOption);
+        fileOpsCommand.AddCommand(fileOpsConfirmCommand);
+
+        // file-ops verify: 삭제 검증
+        var fileOpsVerifyCommand = new Command("verify", "삭제 작업 결과 검증");
+
+        // file-ops verify deleted: GroupId로 삭제 검증
+        var groupIdArgument = new Argument<string>("groupId", "검증할 GroupId");
+        var verifyDeletedCommand = new Command("deleted", "GroupId로 그룹 삭제 검증");
+        verifyDeletedCommand.AddArgument(groupIdArgument);
+        verifyDeletedCommand.AddOption(jsonOption);
+        verifyDeletedCommand.SetHandler((groupId, json) =>
+        {
+            using var controller = new FileOps();
+            var result = controller.VerifyGroupDeleted(groupId);
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = result,
+                    groupId = groupId,
+                    verified = result
+                }));
+            }
+            else
+            {
+                Console.WriteLine(result ? $"[file-ops-verify deleted] Success: GroupId '{groupId}' has been deleted" : $"[file-ops-verify deleted] Failed: GroupId '{groupId}' still exists");
+            }
+        }, groupIdArgument, jsonOption);
+        fileOpsVerifyCommand.AddCommand(verifyDeletedCommand);
+
+        // file-ops verify row-count: 행 개수 변화 검증
+        var rowCountWaitCommand = new Command("row-count", "행 개수 변화 대기 및 검증");
+        var originalCountArgument = new Argument<int>("originalCount", "원래 행 개수");
+        rowCountWaitCommand.AddArgument(originalCountArgument);
+        rowCountWaitCommand.AddOption(timeoutOption);
+        rowCountWaitCommand.AddOption(jsonOption);
+        rowCountWaitCommand.SetHandler((originalCount, timeout, json) =>
+        {
+            using var controller = new FileOps();
+            var result = controller.WaitForRowCountChange(originalCount, timeout);
+
+            if (json)
+            {
+                var currentCount = controller.GetDataRowCountAfterOperation();
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = result,
+                    originalCount = originalCount,
+                    currentCount = currentCount,
+                    changed = result
+                }));
+            }
+            else
+            {
+                var currentCount = controller.GetDataRowCountAfterOperation();
+                Console.WriteLine(result ? $"[file-ops-verify row-count] Success: Row count changed from {originalCount} to {currentCount}" : $"[file-ops-verify row-count] Failed: Row count did not change (still {currentCount})");
+            }
+        }, originalCountArgument, timeoutOption, jsonOption);
+        fileOpsVerifyCommand.AddCommand(rowCountWaitCommand);
+
+        fileOpsCommand.AddCommand(fileOpsVerifyCommand);
 
         rootCommand.AddCommand(fileOpsCommand);
 
