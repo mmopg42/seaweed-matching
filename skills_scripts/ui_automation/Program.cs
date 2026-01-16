@@ -16,6 +16,36 @@ namespace UiAutomation;
 /// </summary>
 class Program
 {
+    // Exit code constants for agent consumption
+    const int EXIT_SUCCESS = 0;
+    const int EXIT_ERROR = 1;
+    const int EXIT_NOT_FOUND = 2;
+    const int EXIT_TIMEOUT = 3;
+    const int EXIT_INVALID_ARGUMENT = 4;
+
+    // Global options state
+    static bool s_isQuiet = false;
+    static bool s_isVerbose = false;
+
+    /// <summary>
+    /// Print JSON output with consistent formatting for programmatic consumption
+    /// </summary>
+    static void PrintJsonOutput(object data)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(data, new JsonSerializerOptions
+        {
+            WriteIndented = false
+        }));
+    }
+
+    /// <summary>
+    /// Print error message and return exit code
+    /// </summary>
+    static int PrintError(string message, int exitCode = EXIT_ERROR)
+    {
+        Console.Error.WriteLine(message);
+        return exitCode;
+    }
     static async Task<int> Main(string[] args)
     {
         var rootCommand = new RootCommand("Windows UI Automation - FlaUI 5.x 기반 CLI 도구");
