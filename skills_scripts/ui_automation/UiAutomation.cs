@@ -767,6 +767,71 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Finds the WorkflowPanel within the ChronoView MainWindow.
+        /// </summary>
+        /// <remarks>
+        /// The WorkflowPanel is a UserControl (WorkflowPanel.xaml).
+        /// It contains camera status buttons (General, NIR, NIR2, NIR Filtering),
+        /// sample move settings (path TextBox controls for Line1/Line2),
+        /// and data status displays.
+        /// This method searches for a Custom control with Name or ClassName containing "WorkflowPanel".
+        /// </remarks>
+        /// <param name="mainWindow">The MainWindow to search within</param>
+        /// <returns>The WorkflowPanel AutomationElement if found, null otherwise</returns>
+        public AutomationElement? FindWorkflowPanel(Window? mainWindow)
+        {
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[UiAutomation] Cannot find WorkflowPanel: mainWindow is null");
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                // Try to find by Name containing "WorkflowPanel"
+                var nameCondition = cf.ByControlType(ControlType.Custom)
+                    .And(cf.ByName("WorkflowPanel", PropertyConditionFlags.IgnoreCase));
+                var panel = mainWindow.FindFirstDescendant(nameCondition);
+
+                if (panel != null)
+                {
+                    Console.WriteLine("[UiAutomation] Found WorkflowPanel by Name:");
+                    Console.WriteLine($"  - ControlType: {panel.ControlType}");
+                    Console.WriteLine($"  - Name: '{panel.Name ?? "(unnamed)"}'");
+                    Console.WriteLine($"  - AutomationId: '{panel.AutomationId ?? "(null)"}'");
+                    Console.WriteLine($"  - ClassName: '{panel.ClassName ?? "(null)"}'");
+                    return panel;
+                }
+
+                // Try to find by ClassName containing "WorkflowPanel"
+                var allElements = mainWindow.FindAllChildren(cf.ByControlType(ControlType.Custom));
+                foreach (var element in allElements)
+                {
+                    if (!string.IsNullOrEmpty(element.ClassName) &&
+                        element.ClassName.IndexOf("WorkflowPanel", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        Console.WriteLine($"[UiAutomation] Found WorkflowPanel by ClassName:");
+                        Console.WriteLine($"  - ControlType: {element.ControlType}");
+                        Console.WriteLine($"  - Name: '{element.Name ?? "(unnamed)"}'");
+                        Console.WriteLine($"  - AutomationId: '{element.AutomationId ?? "(null)"}'");
+                        Console.WriteLine($"  - ClassName: '{element.ClassName}'");
+                        return element;
+                    }
+                }
+
+                Console.WriteLine("[UiAutomation] WorkflowPanel not found");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[UiAutomation] Error finding WorkflowPanel: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Extracts a statistics value from the StatisticsPanel by label text.
         /// </summary>
         /// <remarks>
