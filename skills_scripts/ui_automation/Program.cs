@@ -5,6 +5,7 @@ using UiAuto = SkillsScripts.UiAutomation.UiAutomation;
 using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
 using Toolbar = SkillsScripts.UiAutomation.ChronoToolbarController;
 using Workflow = SkillsScripts.UiAutomation.ChronoWorkflowController;
+using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
 
 namespace UiAutomation;
 
@@ -1118,6 +1119,161 @@ class Program
         workflowCommand.AddCommand(workflowPathCommand);
 
         rootCommand.AddCommand(workflowCommand);
+
+        // logs 명령: LogPanel 데이터 읽기 및 필터링
+        var logsCommand = new Command("logs", "LogPanel 데이터 읽기 및 필터링");
+
+        // logs get: 모든 로그 메시지 가져오기
+        var logsGetCommand = new Command("get", "모든 로그 메시지 가져오기");
+        logsGetCommand.AddOption(jsonOption);
+        logsGetCommand.SetHandler((json) =>
+        {
+            using var reader = new DataReader();
+            var logs = reader.GetAllLogMessages();
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    source = "LogPanel",
+                    count = logs.Count,
+                    logs = logs
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[logs-get] Found {logs.Count} log message(s):");
+                foreach (var log in logs)
+                {
+                    var severity = log.GetValueOrDefault("Severity", "");
+                    var time = log.GetValueOrDefault("Time", "");
+                    var source = log.GetValueOrDefault("Source", "");
+                    var message = log.GetValueOrDefault("Message", "");
+                    Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
+                }
+            }
+        }, jsonOption);
+        logsCommand.AddCommand(logsGetCommand);
+
+        // logs tail: 최근 N개 로그 메시지 가져오기
+        var countArgument = new Argument<int>("count", "가져올 로그 개수 (기본값: 10)")
+        {
+            Arity = ArgumentArity.ZeroOrOne
+        };
+        var logsTailCommand = new Command("tail", "최근 N개 로그 메시지 가져오기");
+        logsTailCommand.AddArgument(countArgument);
+        logsTailCommand.AddOption(jsonOption);
+        logsTailCommand.SetHandler((count, json) =>
+        {
+            var actualCount = count > 0 ? count : 10;
+            using var reader = new DataReader();
+            var logs = reader.GetLatestLogs(actualCount);
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    source = "LogPanel",
+                    requested = actualCount,
+                    returned = logs.Count,
+                    logs = logs
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[logs-tail] Latest {logs.Count} log message(s):");
+                foreach (var log in logs)
+                {
+                    var severity = log.GetValueOrDefault("Severity", "");
+                    var time = log.GetValueOrDefault("Time", "");
+                    var source = log.GetValueOrDefault("Source", "");
+                    var message = log.GetValueOrDefault("Message", "");
+                    Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
+                }
+            }
+        }, countArgument, jsonOption);
+        logsCommand.AddCommand(logsTailCommand);
+
+        // logs filter: 로그 레벨로 필터링
+        var levelOption = new Option<string?>(
+            ["--level", "-l"],
+            () => null,
+            "필터링할 로그 레벨 (Debug, Info, Warning, Error)"
+        );
+        var logsFilterCommand = new Command("filter", "로그 레벨로 필터링");
+        logsFilterCommand.AddOption(levelOption);
+        logsFilterCommand.AddOption(jsonOption);
+        logsFilterCommand.SetHandler((level, json) =>
+        {
+            using var reader = new DataReader();
+            var logs = reader.GetLogsByLevel(level);
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    source = "LogPanel",
+                    filter = new { level = level },
+                    count = logs.Count,
+                    logs = logs
+                }));
+            }
+            else
+            {
+                var levelText = string.IsNullOrWhiteSpace(level) ? "All" : level;
+                Console.WriteLine($"[logs-filter] Filtered by level '{levelText}': {logs.Count} message(s)");
+                foreach (var log in logs)
+                {
+                    var severity = log.GetValueOrDefault("Severity", "");
+                    var time = log.GetValueOrDefault("Time", "");
+                    var source = log.GetValueOrDefault("Source", "");
+                    var message = log.GetValueOrDefault("Message", "");
+                    Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
+                }
+            }
+        }, levelOption, jsonOption);
+        logsCommand.AddCommand(logsFilterCommand);
+
+        // logs search: 로그 메시지 검색
+        var searchTextArgument = new Argument<string>("text", "검색할 텍스트");
+        var logsSearchCommand = new Command("search", "로그 메시지 검색");
+        logsSearchCommand.AddArgument(searchTextArgument);
+        logsSearchCommand.AddOption(jsonOption);
+        logsSearchCommand.SetHandler((text, json) =>
+        {
+            using var reader = new DataReader();
+            var logs = reader.SearchLogs(text);
+
+            if (json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    source = "LogPanel",
+                    search = text,
+                    count = logs.Count,
+                    logs = logs
+                }));
+            }
+            else
+            {
+                Console.WriteLine($"[logs-search] Searched for '{text}': {logs.Count} message(s) found");
+                foreach (var log in logs)
+                {
+                    var severity = log.GetValueOrDefault("Severity", "");
+                    var time = log.GetValueOrDefault("Time", "");
+                    var source = log.GetValueOrDefault("Source", "");
+                    var message = log.GetValueOrDefault("Message", "");
+                    Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
+                }
+            }
+        }, searchTextArgument, jsonOption);
+        logsCommand.AddCommand(logsSearchCommand);
+
+        rootCommand.AddCommand(logsCommand);
 
         return await rootCommand.InvokeAsync(args);
     }
