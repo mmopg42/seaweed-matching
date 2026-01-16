@@ -361,6 +361,82 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Extracts and prints detailed properties of a window.
+        /// </summary>
+        /// <param name="window">The window to inspect</param>
+        public void GetWindowProperties(Window? window)
+        {
+            if (window == null)
+            {
+                Console.WriteLine("[UiAutomation] Cannot get properties: window is null");
+                return;
+            }
+
+            Console.WriteLine("[UiAutomation] Window Properties:");
+            Console.WriteLine($"  - Name (Title): '{window.Name ?? "(null)"}'");
+            Console.WriteLine($"  - ClassName: '{window.ClassName ?? "(null)"}'");
+            Console.WriteLine($"  - AutomationId: '{window.AutomationId ?? "(null)"}'");
+
+            // NativeWindowHandle
+            if (window.Properties.NativeWindowHandle.IsSupported)
+            {
+                var handle = window.Properties.NativeWindowHandle.ValueOrDefault;
+                Console.WriteLine($"  - NativeWindowHandle: {handle}");
+            }
+            else
+            {
+                Console.WriteLine($"  - NativeWindowHandle: Not supported");
+            }
+
+            // Bounds (position and size)
+            if (window.Properties.BoundingRectangle.IsSupported)
+            {
+                var bounds = window.Properties.BoundingRectangle.ValueOrDefault;
+                Console.WriteLine($"  - Bounds: X={bounds.X}, Y={bounds.Y}, Width={bounds.Width}, Height={bounds.Height}");
+            }
+            else
+            {
+                Console.WriteLine($"  - Bounds: Not supported");
+            }
+
+            // Enabled state
+            if (window.Properties.IsEnabled.IsSupported)
+            {
+                Console.WriteLine($"  - IsEnabled: {window.Properties.IsEnabled.ValueOrDefault}");
+            }
+
+            // Offscreen state
+            if (window.Properties.IsOffscreen.IsSupported)
+            {
+                Console.WriteLine($"  - IsOffscreen: {window.Properties.IsOffscreen.ValueOrDefault}");
+            }
+        }
+
+        /// <summary>
+        /// Finds ChronoView MainWindow and prints its properties and UI tree.
+        /// </summary>
+        public void PrintMainWindowInfo()
+        {
+            Console.WriteLine("[UiAutomation] === ChronoView MainWindow Detection ===");
+
+            var window = FindChronoViewMainWindow();
+
+            if (window == null)
+            {
+                Console.WriteLine("[UiAutomation] Failed to find ChronoView MainWindow");
+                Console.WriteLine("[UiAutomation] Make sure ChronoView is running before using this command");
+                return;
+            }
+
+            Console.WriteLine();
+            GetWindowProperties(window);
+
+            Console.WriteLine();
+            Console.WriteLine("[UiAutomation] === UI Tree (depth=2) ===");
+            ListElements(window, maxDepth: 2);
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
