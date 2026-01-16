@@ -22,10 +22,16 @@ namespace SkillsScripts.UiAutomation
     /// - Closing SettingsDialog via Cancel button click
     /// - Inspecting SettingsDialog element structure for analysis
     /// - Checking if SettingsDialog is currently open
+    /// - Tab selection (Paths, Data Sequence, UI Options, Advanced, External Programs)
+    /// - Path TextBox reading and writing (Line 1 and Line 2 paths)
+    /// - CheckBox manipulation (Advanced tab, UI Options tab, Data Sequence tab)
+    /// - Dialog action buttons (Save/Apply/Cancel/Reset)
     ///
     /// SettingsDialog buttons have bilingual text labels:
-    /// - "Save" or "저장"
+    /// - "Save" or "확인"
     /// - "Cancel" or "취소"
+    /// - "Apply" or "적용"
+    /// - "Reset/Defaults" or "기본값"
     ///
     /// The Settings button in the toolbar has text "설정" (Korean).
     /// </remarks>
@@ -1046,6 +1052,505 @@ namespace SkillsScripts.UiAutomation
             }
             return names;
         }
+
+        #region CheckBox Automation
+
+        /// <summary>
+        /// Finds a CheckBox within the SettingsDialog by label text or AutomationId.
+        /// </summary>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <param name="labelText">The label text or AutomationId to search for</param>
+        /// <param name="tabName">Optional tab name to select first (e.g., "Advanced", "UI Options")</param>
+        /// <returns>The first matching CheckBox element or null if not found</returns>
+        /// <remarks>
+        /// CheckBox detection in WPF via UI Automation:
+        /// - ControlType.CheckBox (if explicitly set) OR ControlType.Button with TogglePattern
+        /// - Supports bilingual labels (Korean primary, English fallback)
+        /// </remarks>
+        public AutomationElement? FindCheckBox(Window? dialog, string labelText, string? tabName = null)
+        {
+            dialog ??= FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot find CheckBox: SettingsDialog not found");
+                return null;
+            }
+
+            // Select tab if specified
+            if (!string.IsNullOrEmpty(tabName))
+            {
+                SelectTab(dialog, tabName);
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                // First try to find by AutomationId (exact match)
+                var automationIdCondition = cf.ByAutomationId(labelText);
+                var byIdElement = dialog.FindFirstDescendant(automationIdCondition);
+                if (byIdElement != null && IsCheckBox(byIdElement))
+                {
+                    Console.WriteLine($"[ChronoSettingsController] Found CheckBox by AutomationId: '{labelText}'");
+                    return byIdElement;
+                }
+
+                // Search for CheckBox with matching Name (content)
+                var allCheckBoxes = dialog.FindAllChildren(cf.ByControlType(ControlType.CheckBox));
+                foreach (var checkBox in allCheckBoxes)
+                {
+                    if (!string.IsNullOrEmpty(checkBox.Name) &&
+                        checkBox.Name.IndexOf(labelText, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        Console.WriteLine($"[ChronoSettingsController] Found CheckBox by Name: '{checkBox.Name}'");
+                        return checkBox;
+                    }
+                }
+
+                // Also check for Button with TogglePattern (some WPF CheckBoxes appear as Button)
+                var allButtons = dialog.FindAllChildren(cf.ByControlType(ControlType.Button));
+                foreach (var button in allButtons)
+                {
+                    if (button.Patterns.Toggle.Pattern != null &&
+                        !string.IsNullOrEmpty(button.Name) &&
+                        button.Name.IndexOf(labelText, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        Console.WriteLine($"[ChronoSettingsController] Found CheckBox (as Button with TogglePattern) by Name: '{button.Name}'");
+                        return button;
+                    }
+                }
+
+                Console.WriteLine($"[ChronoSettingsController] CheckBox not found: '{labelText}'");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Error finding CheckBox '{labelText}': {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the current checked state of a CheckBox.
+        /// </summary>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <param name="labelText">The label text or AutomationId to search for</param>
+        /// <param name="tabName">Optional tab name to select first</param>
+        /// <returns>True if checked, false if unchecked or not found</returns>
+        /// <remarks>
+        /// Uses TogglePattern.ToggleState if supported, otherwise checks IsOffscreen property.
+        /// ToggleState: On (checked), Off (unchecked)
+        /// </remarks>
+        public bool GetCheckBoxState(Window? dialog, string labelText, string? tabName = null)
+        {
+            var checkBox = FindCheckBox(dialog, labelText, tabName);
+            if (checkBox == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                var togglePattern = checkBox.Patterns.Toggle.Pattern;
+                if (togglePattern != null)
+                {
+                    var state = togglePattern.ToggleState.Value;
+                    bool isChecked = state == ToggleState.On;
+                    Console.WriteLine($"[ChronoSettingsController] CheckBox '{labelText}' state: {(isChecked ? "Checked" : "Unchecked")}");
+                    return isChecked;
+                }
+
+                // Fallback: IsOffscreen property often indicates checked state in WPF CheckBoxes
+                bool isCheckedByOffscreen = !checkBox.IsOffscreen;
+                Console.WriteLine($"[ChronoSettingsController] CheckBox '{labelText}' state (fallback): {(isCheckedByOffscreen ? "Checked" : "Unchecked")}");
+                return isCheckedByOffscreen;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Error getting CheckBox state for '{labelText}': {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Sets the checked state of a CheckBox.
+        /// </summary>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <param name="labelText">The label text or AutomationId to search for</param>
+        /// <param name="isChecked">The desired checked state</param>
+        /// <param name="tabName">Optional tab name to select first</param>
+        /// <returns>True if the state was set successfully, false otherwise</returns>
+        /// <remarks>
+        /// Uses TogglePattern.Toggle() if current state doesn't match target.
+        /// </remarks>
+        public bool SetCheckBoxState(Window? dialog, string labelText, bool isChecked, string? tabName = null)
+        {
+            dialog ??= FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot set CheckBox state: SettingsDialog not found");
+                return false;
+            }
+
+            var checkBox = FindCheckBox(dialog, labelText, tabName);
+            if (checkBox == null)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Cannot set CheckBox state: CheckBox '{labelText}' not found");
+                return false;
+            }
+
+            try
+            {
+                var togglePattern = checkBox.Patterns.Toggle.Pattern;
+                if (togglePattern == null)
+                {
+                    Console.WriteLine($"[ChronoSettingsController] CheckBox '{labelText}' does not support TogglePattern");
+                    return false;
+                }
+
+                bool currentState = togglePattern.ToggleState.Value == ToggleState.On;
+
+                if (currentState == isChecked)
+                {
+                    Console.WriteLine($"[ChronoSettingsController] CheckBox '{labelText}' already in desired state: {(isChecked ? "Checked" : "Unchecked")}");
+                    return true;
+                }
+
+                Console.WriteLine($"[ChronoSettingsController] Toggling CheckBox '{labelText}' to: {(isChecked ? "Checked" : "Unchecked")}");
+                togglePattern.Toggle();
+
+                // Brief wait for state change
+                Thread.Sleep(100);
+                Console.WriteLine($"[ChronoSettingsController] Successfully toggled CheckBox '{labelText}'");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Error setting CheckBox state for '{labelText}': {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets all Advanced tab CheckBox states as a dictionary.
+        /// </summary>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <returns>Dictionary of setting names to boolean states</returns>
+        /// <remarks>
+        /// Supported settings:
+        /// - use_folder_suffix (UseFolderSuffix)
+        /// - use_camera_subfolder_normal (UseCameraSubfolderNormal)
+        /// - use_camera_subfolder_normal2 (UseCameraSubfolderNormal2)
+        /// - use_disk_cache (UseDiskCache)
+        /// - use_line_specific_group_id (UseLineSpecificGroupId)
+        /// - enable_nir_graph (EnableNirGraph)
+        /// - show_tooltips (ShowTooltips)
+        /// - compare_to_reference_camera (CompareToReferenceCamera)
+        /// </remarks>
+        public Dictionary<string, bool> GetAdvancedSettings(Window? dialog = null)
+        {
+            var settings = new Dictionary<string, bool>();
+
+            dialog ??= FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot get advanced settings: SettingsDialog not found");
+                return settings;
+            }
+
+            // Advanced tab CheckBoxes
+            settings["use_folder_suffix"] = GetCheckBoxState(dialog, "UseFolderSuffix", "Advanced");
+            settings["use_camera_subfolder_normal"] = GetCheckBoxState(dialog, "UseCameraSubfolderNormal", "Advanced");
+            settings["use_camera_subfolder_normal2"] = GetCheckBoxState(dialog, "UseCameraSubfolderNormal2", "Advanced");
+            settings["use_disk_cache"] = GetCheckBoxState(dialog, "UseDiskCache", "Advanced");
+            settings["use_line_specific_group_id"] = GetCheckBoxState(dialog, "UseLineSpecificGroupId", "Advanced");
+
+            // UI Options tab CheckBoxes
+            settings["enable_nir_graph"] = GetCheckBoxState(dialog, "EnableNirGraph", "UI Options");
+            settings["show_tooltips"] = GetCheckBoxState(dialog, "ShowTooltips", "UI Options");
+
+            // Data Sequence tab CheckBox
+            settings["compare_to_reference_camera"] = GetCheckBoxState(dialog, "CompareToReferenceCamera", "Data Sequence");
+
+            return settings;
+        }
+
+        /// <summary>
+        /// Sets a specific advanced setting by name.
+        /// </summary>
+        /// <param name="settingName">The setting name (e.g., "use_folder_suffix")</param>
+        /// <param name="value">The desired boolean value</param>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <returns>True if the setting was set successfully, false otherwise</returns>
+        /// <remarks>
+        /// Supported setting names: use_folder_suffix, use_camera_subfolder_normal,
+        /// use_camera_subfolder_normal2, use_disk_cache, use_line_specific_group_id,
+        /// enable_nir_graph, show_tooltips, compare_to_reference_camera
+        /// </remarks>
+        public bool SetAdvancedSetting(string settingName, bool value, Window? dialog = null)
+        {
+            // Map setting names to their AutomationId/labels and tab names
+            var (automationId, tabName) = settingName.ToLowerInvariant() switch
+            {
+                "use_folder_suffix" => ("UseFolderSuffix", "Advanced"),
+                "use_camera_subfolder_normal" => ("UseCameraSubfolderNormal", "Advanced"),
+                "use_camera_subfolder_normal2" => ("UseCameraSubfolderNormal2", "Advanced"),
+                "use_disk_cache" => ("UseDiskCache", "Advanced"),
+                "use_line_specific_group_id" => ("UseLineSpecificGroupId", "Advanced"),
+                "enable_nir_graph" => ("EnableNirGraph", "UI Options"),
+                "show_tooltips" => ("ShowTooltips", "UI Options"),
+                "compare_to_reference_camera" => ("CompareToReferenceCamera", "Data Sequence"),
+                _ => (null, null)
+            };
+
+            if (automationId == null)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Unknown setting name: '{settingName}'");
+                return false;
+            }
+
+            return SetCheckBoxState(dialog, automationId, value, tabName);
+        }
+
+        /// <summary>
+        /// Checks if an element is a CheckBox (either ControlType.CheckBox or Button with TogglePattern).
+        /// </summary>
+        private bool IsCheckBox(AutomationElement element)
+        {
+            if (element.ControlType == ControlType.CheckBox)
+            {
+                return true;
+            }
+
+            // Check for Button with TogglePattern (WPF CheckBoxes often appear as Button)
+            if (element.ControlType == ControlType.Button)
+            {
+                return element.Patterns.Toggle.Pattern != null;
+            }
+
+            return false;
+        }
+
+        #endregion
+
+        #region Dialog Action Buttons
+
+        private const int DefaultDialogWaitMs = 3000;
+
+        /// <summary>
+        /// Clicks the Save/OK button and waits for the dialog to close.
+        /// </summary>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <param name="timeoutMs">Maximum time to wait for the dialog to close (default: 3000)</param>
+        /// <returns>True if the button was clicked and dialog closed successfully, false otherwise</returns>
+        /// <remarks>
+        /// Finds the "확인" (OK) or "Save" button, clicks it using InvokePattern,
+        /// and waits for the dialog to close.
+        /// </remarks>
+        public bool ClickSaveButton(Window? dialog = null, int timeoutMs = DefaultDialogWaitMs)
+        {
+            dialog ??= FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot click Save button: SettingsDialog not found");
+                return false;
+            }
+
+            Console.WriteLine("[ChronoSettingsController] Attempting to click Save/OK button");
+
+            // Try Korean text first (확인), then English (OK, Save)
+            var saveButton = FindButton(dialog, "확인") ??
+                            FindButton(dialog, "OK") ??
+                            FindButton(dialog, "Save");
+
+            if (saveButton == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Save/OK button not found in SettingsDialog");
+                return false;
+            }
+
+            if (!ClickButton(saveButton))
+            {
+                Console.WriteLine("[ChronoSettingsController] Failed to click Save/OK button");
+                return false;
+            }
+
+            // Wait for dialog to close
+            bool closed = _windowFinder.WaitForWindowToClose("Settings", timeoutMs);
+            if (!closed)
+            {
+                closed = _windowFinder.WaitForWindowToClose("설정", timeoutMs);
+            }
+
+            if (closed)
+            {
+                Console.WriteLine("[ChronoSettingsController] Save/OK button clicked, dialog closed successfully");
+                return true;
+            }
+
+            Console.WriteLine("[ChronoSettingsController] Save/OK button clicked, but dialog did not close");
+            return false;
+        }
+
+        /// <summary>
+        /// Clicks the Apply button (dialog stays open).
+        /// </summary>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <returns>True if the button was clicked successfully, false otherwise</returns>
+        /// <remarks>
+        /// Finds the "적용" (Apply) button and clicks it using InvokePattern.
+        /// Does NOT wait for the dialog to close since Apply keeps the dialog open.
+        /// </remarks>
+        public bool ClickApplyButton(Window? dialog = null)
+        {
+            dialog ??= FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot click Apply button: SettingsDialog not found");
+                return false;
+            }
+
+            Console.WriteLine("[ChronoSettingsController] Attempting to click Apply button");
+
+            var applyButton = FindButton(dialog, "적용") ?? FindButton(dialog, "Apply");
+
+            if (applyButton == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Apply button not found in SettingsDialog");
+                return false;
+            }
+
+            if (ClickButton(applyButton))
+            {
+                Console.WriteLine("[ChronoSettingsController] Apply button clicked successfully (dialog remains open)");
+                return true;
+            }
+
+            Console.WriteLine("[ChronoSettingsController] Failed to click Apply button");
+            return false;
+        }
+
+        /// <summary>
+        /// Clicks the Cancel button and waits for the dialog to close.
+        /// </summary>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <param name="timeoutMs">Maximum time to wait for the dialog to close (default: 3000)</param>
+        /// <returns>True if the button was clicked and dialog closed successfully, false otherwise</returns>
+        /// <remarks>
+        /// Finds the "취소" (Cancel) button, clicks it using InvokePattern,
+        /// and waits for the dialog to close.
+        /// </remarks>
+        public bool ClickCancelButton(Window? dialog = null, int timeoutMs = DefaultDialogWaitMs)
+        {
+            dialog ??= FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot click Cancel button: SettingsDialog not found");
+                return false;
+            }
+
+            Console.WriteLine("[ChronoSettingsController] Attempting to click Cancel button");
+
+            var cancelButton = FindButton(dialog, "취소") ?? FindButton(dialog, "Cancel");
+
+            if (cancelButton == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cancel button not found in SettingsDialog");
+                return false;
+            }
+
+            if (!ClickButton(cancelButton))
+            {
+                Console.WriteLine("[ChronoSettingsController] Failed to click Cancel button");
+                return false;
+            }
+
+            // Wait for dialog to close
+            bool closed = _windowFinder.WaitForWindowToClose("Settings", timeoutMs);
+            if (!closed)
+            {
+                closed = _windowFinder.WaitForWindowToClose("설정", timeoutMs);
+            }
+
+            if (closed)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cancel button clicked, dialog closed successfully");
+                return true;
+            }
+
+            Console.WriteLine("[ChronoSettingsController] Cancel button clicked, but dialog did not close");
+            return false;
+        }
+
+        /// <summary>
+        /// Clicks the Reset/Defaults button (dialog stays open).
+        /// </summary>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <returns>True if the button was clicked successfully, false otherwise</returns>
+        /// <remarks>
+        /// Finds the "기본값" (Defaults) button and clicks it using InvokePattern.
+        /// Does NOT wait for the dialog to close since Reset keeps the dialog open.
+        /// </remarks>
+        public bool ClickResetButton(Window? dialog = null)
+        {
+            dialog ??= FindSettingsDialog();
+            if (dialog == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot click Reset button: SettingsDialog not found");
+                return false;
+            }
+
+            Console.WriteLine("[ChronoSettingsController] Attempting to click Reset/Defaults button");
+
+            var resetButton = FindButton(dialog, "기본값") ??
+                             FindButton(dialog, "Defaults") ??
+                             FindButton(dialog, "Reset");
+
+            if (resetButton == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Reset/Defaults button not found in SettingsDialog");
+                return false;
+            }
+
+            if (ClickButton(resetButton))
+            {
+                Console.WriteLine("[ChronoSettingsController] Reset/Defaults button clicked successfully (dialog remains open)");
+                return true;
+            }
+
+            Console.WriteLine("[ChronoSettingsController] Failed to click Reset/Defaults button");
+            return false;
+        }
+
+        /// <summary>
+        /// Clicks the Save/OK button and waits for the dialog to close.
+        /// </summary>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <param name="timeoutMs">Maximum time to wait for the dialog to close (default: 3000)</param>
+        /// <returns>True if the dialog was saved and closed successfully, false otherwise</returns>
+        /// <remarks>
+        /// Convenience method that combines finding the dialog, clicking Save, and waiting for close.
+        /// </remarks>
+        public bool SaveAndClose(Window? dialog = null, int timeoutMs = DefaultDialogWaitMs)
+        {
+            return ClickSaveButton(dialog, timeoutMs);
+        }
+
+        /// <summary>
+        /// Clicks the Cancel button and waits for the dialog to close.
+        /// </summary>
+        /// <param name="dialog">The SettingsDialog window (optional, will find if null)</param>
+        /// <param name="timeoutMs">Maximum time to wait for the dialog to close (default: 3000)</param>
+        /// <returns>True if the dialog was cancelled and closed successfully, false otherwise</returns>
+        /// <remarks>
+        /// Convenience method that combines finding the dialog, clicking Cancel, and waiting for close.
+        /// </remarks>
+        public bool CancelAndClose(Window? dialog = null, int timeoutMs = DefaultDialogWaitMs)
+        {
+            return ClickCancelButton(dialog, timeoutMs);
+        }
+
+        #endregion
 
         /// <summary>
         /// Releases resources used by the UIA3 automation.
