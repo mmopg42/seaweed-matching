@@ -540,6 +540,39 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Generic helper to find and click a toolbar button by its display text.
+        /// </summary>
+        /// <remarks>
+        /// This consolidates the logic for finding and clicking toolbar buttons.
+        /// The specific methods (ClickStartButton, ClickStopButton, etc.) call this internally.
+        /// This DRY approach reduces code duplication and ensures consistent behavior.
+        /// </remarks>
+        /// <param name="mainWindow">The MainWindow to search within</param>
+        /// <param name="buttonText">The Korean button text to search for (e.g., "시작", "중지", "이동", "삭제")</param>
+        /// <param name="buttonName">English button name for logging (e.g., "Start", "Stop", "Move", "Delete")</param>
+        /// <returns>True if the button was found and clicked successfully, false otherwise</returns>
+        public bool ClickToolbarButton(Window? mainWindow, string buttonText, string? buttonName = null)
+        {
+            if (mainWindow == null)
+            {
+                Console.WriteLine($"[UiAutomation] Cannot click {buttonName ?? buttonText} button: mainWindow is null");
+                return false;
+            }
+
+            var logName = string.IsNullOrEmpty(buttonName) ? buttonText : buttonName;
+            Console.WriteLine($"[UiAutomation] Attempting to click {logName} button");
+
+            var button = FindToolbarButton(mainWindow, buttonText);
+            if (button == null)
+            {
+                Console.WriteLine($"[UiAutomation] {logName} button not found");
+                return false;
+            }
+
+            return ClickButton(button);
+        }
+
+        /// <summary>
         /// Finds and clicks the Start button in the ChronoView MainWindow toolbar.
         /// </summary>
         /// <remarks>
@@ -550,16 +583,7 @@ namespace SkillsScripts.UiAutomation
         /// <returns>True if the Start button was found and clicked successfully, false otherwise</returns>
         public bool ClickStartButton(Window? mainWindow)
         {
-            Console.WriteLine("[UiAutomation] Attempting to click Start button");
-
-            var button = FindToolbarButton(mainWindow, "시작");
-            if (button == null)
-            {
-                Console.WriteLine("[UiAutomation] Start button not found");
-                return false;
-            }
-
-            return ClickButton(button);
+            return ClickToolbarButton(mainWindow, "시작", "Start");
         }
 
         /// <summary>
@@ -573,16 +597,7 @@ namespace SkillsScripts.UiAutomation
         /// <returns>True if the Stop button was found and clicked successfully, false otherwise</returns>
         public bool ClickStopButton(Window? mainWindow)
         {
-            Console.WriteLine("[UiAutomation] Attempting to click Stop button");
-
-            var button = FindToolbarButton(mainWindow, "중지");
-            if (button == null)
-            {
-                Console.WriteLine("[UiAutomation] Stop button not found");
-                return false;
-            }
-
-            return ClickButton(button);
+            return ClickToolbarButton(mainWindow, "중지", "Stop");
         }
 
         /// <summary>
@@ -597,16 +612,7 @@ namespace SkillsScripts.UiAutomation
         /// <returns>True if the Settings button was found and clicked successfully, false otherwise</returns>
         public bool ClickSettingsButton(Window? mainWindow)
         {
-            Console.WriteLine("[UiAutomation] Attempting to click Settings (Setup) button");
-
-            var button = FindToolbarButton(mainWindow, "설정");
-            if (button == null)
-            {
-                Console.WriteLine("[UiAutomation] Settings button not found");
-                return false;
-            }
-
-            return ClickButton(button);
+            return ClickToolbarButton(mainWindow, "설정", "Settings");
         }
 
         /// <summary>
@@ -620,16 +626,7 @@ namespace SkillsScripts.UiAutomation
         /// <returns>True if the Refresh button was found and clicked successfully, false otherwise</returns>
         public bool ClickRefreshButton(Window? mainWindow)
         {
-            Console.WriteLine("[UiAutomation] Attempting to click Refresh button");
-
-            var button = FindToolbarButton(mainWindow, "새로고침");
-            if (button == null)
-            {
-                Console.WriteLine("[UiAutomation] Refresh button not found");
-                return false;
-            }
-
-            return ClickButton(button);
+            return ClickToolbarButton(mainWindow, "새로고침", "Refresh");
         }
 
         /// <summary>
@@ -643,16 +640,7 @@ namespace SkillsScripts.UiAutomation
         /// <returns>True if the Move button was found and clicked successfully, false otherwise</returns>
         public bool ClickMoveButton(Window? mainWindow)
         {
-            Console.WriteLine("[UiAutomation] Attempting to click Move button");
-
-            var button = FindToolbarButton(mainWindow, "이동");
-            if (button == null)
-            {
-                Console.WriteLine("[UiAutomation] Move button not found");
-                return false;
-            }
-
-            return ClickButton(button);
+            return ClickToolbarButton(mainWindow, "이동", "Move");
         }
 
         /// <summary>
@@ -666,16 +654,7 @@ namespace SkillsScripts.UiAutomation
         /// <returns>True if the Delete button was found and clicked successfully, false otherwise</returns>
         public bool ClickDeleteButton(Window? mainWindow)
         {
-            Console.WriteLine("[UiAutomation] Attempting to click Delete button");
-
-            var button = FindToolbarButton(mainWindow, "삭제");
-            if (button == null)
-            {
-                Console.WriteLine("[UiAutomation] Delete button not found");
-                return false;
-            }
-
-            return ClickButton(button);
+            return ClickToolbarButton(mainWindow, "삭제", "Delete");
         }
 
         /// <summary>
