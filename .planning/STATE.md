@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-16)
 ## Current Position
 
 Phase: 5 of 10 (workflow-control)
-Plan: 2 of 4 in phase
-Status: Plan 05-02 complete
-Last activity: 2026-01-16 — Completed 05-02: ChronoWorkflowController class and CLI workflow camera commands
+Plan: 3 of 4 in phase
+Status: Plan 05-03 complete
+Last activity: 2026-01-16 — Completed 05-03: Path TextBox automation with ValuePattern read/write and CLI workflow path commands
 
-Progress: ████░░░░░░░░░░ 50% (2/4 plans)
+Progress: █████░░░░░░░░░ 75% (3/4 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
-- Average duration: 9.1 min
-- Total execution time: 2.42 hours
+- Total plans completed: 17
+- Average duration: 9.3 min
+- Total execution time: 2.63 hours
 
 **By Phase:**
 
@@ -31,10 +31,10 @@ Progress: ████░░░░░░░░░░ 50% (2/4 plans)
 | 02-window-detection | 3 | 3 | 11 min |
 | 03-toolbar-control | 4 | 4 | 6.5 min |
 | 04-data-panel | 3 | 3 | 8.3 min |
-| 05-workflow-control | 4 | 2 | 7 min |
+| 05-workflow-control | 4 | 3 | 7.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-02 (6 min), 05-01 (8 min), 04-03 (10 min), 04-02 (5 min), 04-01 (15 min)
+- Last 5 plans: 05-03 (12 min), 05-02 (6 min), 05-01 (8 min), 04-03 (10 min), 04-02 (5 min)
 - Trend: Stable, Phase 5 progressing
 
 *Updated after each plan completion*
@@ -68,6 +68,10 @@ Recent decisions affecting current work:
 | 5 | ChronoWorkflowController class | Dedicated workflow panel controller following ChronoToolbarController pattern |
 | 5 | Camera button text substring matching | Buttons have dynamic text ("실행", "중지"), searched by Korean text substring |
 | 5 | Ellipse detection via ClassName | WPF Ellipse appears as ControlType.Custom with ClassName="Ellipse" |
+| 5 | Path TextBox ControlType.Edit | WPF TextBox appears as ControlType.Edit in UI Automation |
+| 5 | ValuePattern for TextBox I/O | ValuePattern.Value for read, ValuePattern.SetValue() for write with Name property fallback |
+| 5 | Label-TextBox association method | Search for Text label by content, then find sibling Edit control via parent traversal |
+| 5 | Panel-scoped TextBox search for Line 2 | Line 2 section found via "Line 2" header, TextBoxes searched within that panel |
 
 ### Deferred Issues
 
@@ -84,6 +88,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-16
-Stopped at: Plan 05-02 complete - ChronoWorkflowController class implemented with CLI workflow camera commands
+Stopped at: Plan 05-03 complete - Path TextBox automation with ValuePattern read/write and CLI workflow path commands
 Resume file: None
-Note: Phase 5 (workflow-control) has 2 of 4 plans complete. Next: 05-03 path TextBox automation.
+Note: Phase 5 (workflow-control) has 3 of 4 plans complete. Next: 05-04 Expander control automation.
