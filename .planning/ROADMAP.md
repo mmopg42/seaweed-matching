@@ -71,9 +71,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: StatisticsPanel 통계 값 읽기
-- [ ] 04-02: FileGroupDataGrid 구조 파악
-- [ ] 04-03: FileGroupDataGrid 데이터 추출
+- [x] 04-01: StatisticsPanel 통계 값 읽기
+- [x] 04-02: FileGroupDataGrid 구조 파악
+- [x] 04-03: FileGroupDataGrid 데이터 추출
 
 ### Phase 5: 워크플로우 제어
 **Goal**: WorkflowPanel 카메라 설정/모니터링 경로 설정 자동화
@@ -152,7 +152,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 1. FlaUI 인프라 | 2/2 | Complete | 2026-01-16 |
 | 2. 윈도우 탐지 | 3/3 | Complete | 2026-01-16 |
 | 3. 툴바 제어 | 4/4 | Complete | 2026-01-16 |
-| 4. 데이터 패널 | 0/3 | Not started | - |
+| 4. 데이터 패널 | 3/3 | Complete | 2026-01-16 |
 | 5. 워크플로우 제어 | 0/3 | Not started | - |
 | 6. 설정 대화상자 | 0/2 | Not started | - |
 | 7. 로그 모니터링 | 0/2 | Not started | - |
