@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-16)
 
 **Core value:** UI 요소 식별 및 조작 — ChronoView의 모든 UI 요소를 안정적으로 식별하고 조작
-**Current focus:** Phase 4 — Data panel
+**Current focus:** Phase 5 — Workflow panel control
 
 ## Current Position
 
-Phase: 4 of 10 (data-panel)
-Plan: 3 of 3 in phase
-Status: Phase 4 complete - all 3 plans done
-Last activity: 2026-01-16 — Completed 04-03: ChronoDataPanelReader with enhanced datagrid CLI commands
+Phase: 5 of 10 (workflow-control)
+Plan: 1 of 4 in phase
+Status: Plan 05-01 complete
+Last activity: 2026-01-16 — Completed 05-01: WorkflowPanel UI structure identification and CLI inspect command
 
-Progress: ████████████ 100%
+Progress: ██░░░░░░░░░░░░ 25% (1/4 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: 9.5 min
-- Total execution time: 2.22 hours
+- Total plans completed: 15
+- Average duration: 9.3 min
+- Total execution time: 2.33 hours
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: ████████████ 100%
 | 02-window-detection | 3 | 3 | 11 min |
 | 03-toolbar-control | 4 | 4 | 6.5 min |
 | 04-data-panel | 3 | 3 | 8.3 min |
+| 05-workflow-control | 4 | 1 | 8 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-03 (10 min), 04-02 (5 min), 04-01 (15 min), 03-04 (8 min), 03-03 (8 min)
-- Trend: Stable, Phase 4 complete
+- Last 5 plans: 05-01 (8 min), 04-03 (10 min), 04-02 (5 min), 04-01 (15 min), 03-04 (8 min)
+- Trend: Stable, Phase 5 started
 
 *Updated after each plan completion*
 
@@ -62,6 +63,8 @@ Recent decisions affecting current work:
 | 4 | Text-based statistics extraction | StatisticsPanel uses label TextBlock search and sibling value TextBlock |
 | 4 | DataGrid via ControlType.DataItem | WPF DataGrid rows appear as DataItem, cells as Text children |
 | 4 | ChronoDataPanelReader controller class | Dedicated data panel reader following ChronoWindowFinder/ChronoToolbarController pattern |
+| 5 | FindWorkflowPanel by ControlType.Custom | WorkflowPanel has no AutomationId, searched by Name/ClassName containing "WorkflowPanel" |
+| 5 | CLI inspect workflow command | Identifies camera buttons, path TextBoxes, expanders via element tree traversal |
 
 ### Deferred Issues
 
@@ -78,6 +81,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-16
-Stopped at: Phase 4 complete - all 3 plans finished (04-01 through 04-03)
+Stopped at: Plan 05-01 complete - FindWorkflowPanel method and CLI inspect-workflow command implemented
 Resume file: None
-Note: Phase 4 (data-panel) is now complete. Ready to proceed to Phase 5 (WorkflowPanel control).
+Note: Phase 5 (workflow-control) has 1 of 4 plans complete. Next: 05-02 camera button automation.
