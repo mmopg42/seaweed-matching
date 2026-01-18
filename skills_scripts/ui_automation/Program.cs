@@ -553,12 +553,12 @@ class Program
             var result = controller.ClickStartButton();
             if (result)
             {
-                Console.WriteLine("[toolbar-start] Success: Start button clicked");
+                PrintOutput("[toolbar-start] Success: Start button clicked");
                 Environment.Exit(EXIT_SUCCESS);
             }
             else
             {
-                Console.WriteLine("[toolbar-start] Failed: Could not click Start button");
+                PrintOutput("[toolbar-start] Failed: Could not click Start button");
                 Environment.Exit(EXIT_ERROR);
             }
         });
@@ -572,12 +572,12 @@ class Program
             var result = controller.ClickStopButton();
             if (result)
             {
-                Console.WriteLine("[toolbar-stop] Success: Stop button clicked");
+                PrintOutput("[toolbar-stop] Success: Stop button clicked");
                 Environment.Exit(EXIT_SUCCESS);
             }
             else
             {
-                Console.WriteLine("[toolbar-stop] Failed: Could not click Stop button");
+                PrintOutput("[toolbar-stop] Failed: Could not click Stop button");
                 Environment.Exit(EXIT_ERROR);
             }
         });
@@ -591,12 +591,12 @@ class Program
             var result = controller.ClickSettingsButton();
             if (result)
             {
-                Console.WriteLine("[toolbar-settings] Success: Settings button clicked");
+                PrintOutput("[toolbar-settings] Success: Settings button clicked");
                 Environment.Exit(EXIT_SUCCESS);
             }
             else
             {
-                Console.WriteLine("[toolbar-settings] Failed: Could not click Settings button");
+                PrintOutput("[toolbar-settings] Failed: Could not click Settings button");
                 Environment.Exit(EXIT_ERROR);
             }
         });
@@ -610,12 +610,12 @@ class Program
             var result = controller.ClickRefreshButton();
             if (result)
             {
-                Console.WriteLine("[toolbar-refresh] Success: Refresh button clicked");
+                PrintOutput("[toolbar-refresh] Success: Refresh button clicked");
                 Environment.Exit(EXIT_SUCCESS);
             }
             else
             {
-                Console.WriteLine("[toolbar-refresh] Failed: Could not click Refresh button");
+                PrintOutput("[toolbar-refresh] Failed: Could not click Refresh button");
                 Environment.Exit(EXIT_ERROR);
             }
         });
@@ -629,12 +629,12 @@ class Program
             var result = controller.ClickMoveButton();
             if (result)
             {
-                Console.WriteLine("[toolbar-move] Success: Move button clicked");
+                PrintOutput("[toolbar-move] Success: Move button clicked");
                 Environment.Exit(EXIT_SUCCESS);
             }
             else
             {
-                Console.WriteLine("[toolbar-move] Failed: Could not click Move button");
+                PrintOutput("[toolbar-move] Failed: Could not click Move button");
                 Environment.Exit(EXIT_ERROR);
             }
         });
@@ -648,12 +648,12 @@ class Program
             var result = controller.ClickDeleteButton();
             if (result)
             {
-                Console.WriteLine("[toolbar-delete] Success: Delete button clicked");
+                PrintOutput("[toolbar-delete] Success: Delete button clicked");
                 Environment.Exit(EXIT_SUCCESS);
             }
             else
             {
-                Console.WriteLine("[toolbar-delete] Failed: Could not click Delete button");
+                PrintOutput("[toolbar-delete] Failed: Could not click Delete button");
                 Environment.Exit(EXIT_ERROR);
             }
         });
@@ -681,10 +681,10 @@ class Program
             }
             else
             {
-                Console.WriteLine($"[toolbar-list] Found {buttons.Length} toolbar button(s):");
+                PrintOutput($"[toolbar-list] Found {buttons.Length} toolbar button(s):");
                 foreach (var button in buttons)
                 {
-                    Console.WriteLine($"  - '{button}'");
+                    PrintOutput($"  - '{button}'");
                 }
             }
             Environment.Exit(EXIT_SUCCESS);
@@ -701,12 +701,12 @@ class Program
             var result = controller.ClickToolbarButton(text);
             if (result)
             {
-                Console.WriteLine($"[toolbar-click] Success: Button '{text}' clicked");
+                PrintOutput($"[toolbar-click] Success: Button '{text}' clicked");
                 Environment.Exit(EXIT_SUCCESS);
             }
             else
             {
-                Console.WriteLine($"[toolbar-click] Failed: Could not click button '{text}'");
+                PrintOutput($"[toolbar-click] Failed: Could not click button '{text}'");
                 Environment.Exit(EXIT_ERROR);
             }
         }, buttonTextArgument);
@@ -719,7 +719,7 @@ class Program
         {
             using var controller = new Toolbar();
             var isEnabled = controller.IsButtonEnabled(text);
-            Console.WriteLine(isEnabled ? $"[toolbar-enabled] Button '{text}' is enabled" : $"[toolbar-enabled] Button '{text}' is disabled");
+            PrintOutput(isEnabled ? $"[toolbar-enabled] Button '{text}' is enabled" : $"[toolbar-enabled] Button '{text}' is disabled");
             Environment.Exit(EXIT_SUCCESS);
         }, buttonTextArgument);
         toolbarCommand.AddCommand(toolbarEnabledCommand);
