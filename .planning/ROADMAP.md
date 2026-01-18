@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: 설정 대화상자** - SettingsDialog 자동화
 - [x] **Phase 7: 로그 모니터링** - LogPanel 실시간 로그 읽기
 - [x] **Phase 8: 파일 작업** - 이동/ 삭제 작업 자동화
-- [ ] **Phase 9: CLI 인터페이스** - Agent 호출 가능한 명령줄 인터페이스
+- [x] **Phase 9: CLI 인터페이스** - Agent 호출 가능한 명령줄 인터페이스
 - [ ] **Phase 10: 테스트 에이전트** - 스킬을 사용하는 자동화 테스트 에이전트
 
 ## Phase Details
@@ -124,12 +124,10 @@ Plans:
 **Goal**: Agent가 호출 가능한 명령줄 인터페이스 구현
 **Depends on**: Phase 3, Phase 4
 **Research**: Unlikely (System.CommandLine 패턴은 이미 사용 중)
-**Plans**: 3 plans
+**Plans**: 1 plan
 
 Plans:
-- [ ] 09-01: 스킬 명령 설계 및 CLI 구조 정의
-- [ ] 09-02: 각 스킬 명령 구현
-- [ ] 09-03: CLI 테스트 및 문서화
+- [x] 09-01: CLI 표준화 (종료 코드, 에러 처리, JSON 출력)
 
 ### Phase 10: 테스트 에이전트
 **Goal**: 스킬을 사용하는 자동화 테스트 에이전트 구현
@@ -158,5 +156,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 6. 설정 대화상자 | 3/3 | Complete | 2026-01-16 |
 | 7. 로그 모니터링 | 2/2 | Complete | 2026-01-16 |
 | 8. 파일 작업 | 2/2 | Complete | 2026-01-16 |
-| 9. CLI 인터페이스 | 0/3 | Not started | - |
+| 9. CLI 인터페이스 | 1/1 | Complete | 2026-01-18 |
 | 10. 테스트 에이전트 | 0/3 | Not started | - |
