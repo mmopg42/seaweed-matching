@@ -2393,6 +2393,11 @@ class Program
 
         rootCommand.AddCommand(fileOpsCommand);
 
+        // Parse args to capture global options before command execution
+        var parseResult = rootCommand.Parse(args);
+        s_isQuiet = parseResult.GetValueForOption(quietOption) == true;
+        s_isVerbose = parseResult.GetValueForOption(verboseOption) == true;
+
         return await rootCommand.InvokeAsync(args);
     }
 }
