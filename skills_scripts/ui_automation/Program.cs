@@ -2393,6 +2393,186 @@ class Program
 
         rootCommand.AddCommand(fileOpsCommand);
 
+        // test 명령: 연결성 및 기능 테스트
+        var testCommand = new Command("test", "ChronoView 연결성 및 기능 테스트");
+
+        // test connectivity: ChronoView 실행 중인지 확인
+        var testConnectivityCommand = new Command("connectivity", "ChronoView 연결 상태 확인");
+        testConnectivityCommand.AddOption(jsonOption);
+        testConnectivityCommand.SetHandler((json) =>
+        {
+            using var automation = new UiAuto();
+            var finder = new Finder(automation.GetAutomation());
+            var window = finder.FindMainWindow();
+
+            if (json)
+            {
+                PrintJsonOutput(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        connected = window != null,
+                        windowFound = window != null,
+                        appName = window != null ? window.Name : null,
+                        timestamp = DateTime.Now.ToString("o")
+                    }
+                });
+            }
+            else
+            {
+                if (window != null)
+                {
+                    PrintOutput($"[test-connectivity] Connected: '{window.Name}'");
+                }
+                else
+                {
+                    PrintOutput("[test-connectivity] Not connected: ChronoView MainWindow not found");
+                }
+            }
+            Environment.Exit(window != null ? EXIT_SUCCESS : EXIT_NOT_FOUND);
+        }, jsonOption);
+        testCommand.AddCommand(testConnectivityCommand);
+
+        // test capabilities: 사용 가능한 자동화 기능 목록
+        var testCapabilitiesCommand = new Command("capabilities", "사용 가능한 자동화 기능 목록");
+        testCapabilitiesCommand.AddOption(jsonOption);
+        testCapabilitiesCommand.SetHandler((json) =>
+        {
+            using var automation = new UiAuto();
+            var finder = new Finder(automation.GetAutomation());
+
+            // Check which windows are available
+            var mainWindow = finder.FindMainWindow();
+            var setupWindow = finder.FindSetupWindow();
+            var settingsDialog = finder.FindSettingsDialog();
+
+            // Get available controllers/capabilities
+            var windows = new List<object>();
+            var controllers = new List<string>();
+            var commands = new List<string>();
+
+            if (mainWindow != null)
+            {
+                windows.Add(new { type = "MainWindow", title = mainWindow.Name, accessible = true });
+                controllers.Add("ChronoToolbarController");
+                controllers.Add("ChronoDataPanelReader");
+                controllers.Add("ChronoWorkflowController");
+                controllers.Add("ChronoFileOperationsController");
+                commands.Add("toolbar");
+                commands.Add("datagrid");
+                commands.Add("workflow");
+                commands.Add("logs");
+                commands.Add("file-ops");
+            }
+            else
+            {
+                windows.Add(new { type = "MainWindow", accessible = false });
+            }
+
+            if (setupWindow != null)
+            {
+                windows.Add(new { type = "SetupWindow", title = setupWindow.Name, accessible = true });
+            }
+            else
+            {
+                windows.Add(new { type = "SetupWindow", accessible = false });
+            }
+
+            if (settingsDialog != null)
+            {
+                windows.Add(new { type = "SettingsDialog", title = settingsDialog.Name, accessible = true });
+                controllers.Add("ChronoSettingsController");
+                commands.Add("settings-dialog");
+            }
+            else
+            {
+                windows.Add(new { type = "SettingsDialog", accessible = false });
+            }
+
+            if (json)
+            {
+                PrintJsonOutput(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        windows,
+                        controllers = controllers.Distinct().ToList(),
+                        commands = commands.Distinct().ToList()
+                    }
+                });
+            }
+            else
+            {
+                PrintOutput("[test-capabilities] Available automation capabilities:");
+                PrintOutput("  Windows:");
+                foreach (var w in windows)
+                {
+                    PrintOutput($"    - {w}");
+                }
+                PrintOutput($"  Controllers: {string.Join(", ", controllers.Distinct())}");
+                PrintOutput($"  Commands: {string.Join(", ", commands.Distinct())}");
+            }
+            Environment.Exit(EXIT_SUCCESS);
+        }, jsonOption);
+        testCommand.AddCommand(testCapabilitiesCommand);
+
+        // test datagrid: DataGrid 접근 가능 여부 확인
+        var testDatagridCommand = new Command("datagrid", "DataGrid 접근 가능 여부 및 행 개수 확인");
+        testDatagridCommand.AddOption(jsonOption);
+        testDatagridCommand.SetHandler((json) =>
+        {
+            using var reader = new DataReader();
+            var dataGrid = reader.FindDataGrid();
+
+            if (dataGrid != null)
+            {
+                var rowCount = reader.GetDataRowCount();
+                var headers = reader.GetDataGridHeaders();
+
+                if (json)
+                {
+                    PrintJsonOutput(new
+                    {
+                        success = true,
+                        data = new
+                        {
+                            accessible = true,
+                            rowCount = rowCount,
+                            headers = headers
+                        }
+                    });
+                }
+                else
+                {
+                    PrintOutput($"[test-datagrid] Accessible: {rowCount} row(s), {headers.Count} column(s)");
+                    PrintOutput($"  Columns: {string.Join(", ", headers)}");
+                }
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                if (json)
+                {
+                    PrintJsonOutput(new
+                    {
+                        success = false,
+                        error = "DataGrid not found",
+                        errorCode = EXIT_NOT_FOUND
+                    });
+                }
+                else
+                {
+                    PrintOutput("[test-datagrid] Not accessible: DataGrid not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
+            }
+        }, jsonOption);
+        testCommand.AddCommand(testDatagridCommand);
+
+        rootCommand.AddCommand(testCommand);
+
         // Parse args to capture global options before command execution
         var parseResult = rootCommand.Parse(args);
         s_isQuiet = parseResult.GetValueForOption(quietOption) == true;
