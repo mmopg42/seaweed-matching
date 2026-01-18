@@ -199,9 +199,9 @@ class Program
                 }
                 else
                 {
-                    Console.WriteLine($"[MainWindow] Found: '{window.Name}'");
-                    Console.WriteLine($"  - ClassName: {window.ClassName ?? "(null)"}");
-                    Console.WriteLine($"  - AutomationId: {window.AutomationId ?? "(null)"}");
+                    PrintOutput($"[MainWindow] Found: '{window.Name}'");
+                    PrintOutput($"  - ClassName: {window.ClassName ?? "(null)"}");
+                    PrintOutput($"  - AutomationId: {window.AutomationId ?? "(null)"}");
                 }
                 Environment.Exit(EXIT_SUCCESS);
             }
@@ -218,7 +218,7 @@ class Program
                 }
                 else
                 {
-                    Console.WriteLine("[MainWindow] Not found - make sure ChronoView is running");
+                    PrintOutput("[MainWindow] Not found - make sure ChronoView is running");
                 }
                 Environment.Exit(EXIT_NOT_FOUND);
             }
@@ -253,9 +253,9 @@ class Program
                 }
                 else
                 {
-                    Console.WriteLine($"[SetupWindow] Found: '{window.Name}'");
-                    Console.WriteLine($"  - ClassName: {window.ClassName ?? "(null)"}");
-                    Console.WriteLine($"  - AutomationId: {window.AutomationId ?? "(null)"}");
+                    PrintOutput($"[SetupWindow] Found: '{window.Name}'");
+                    PrintOutput($"  - ClassName: {window.ClassName ?? "(null)"}");
+                    PrintOutput($"  - AutomationId: {window.AutomationId ?? "(null)"}");
                 }
                 Environment.Exit(EXIT_SUCCESS);
             }
@@ -272,7 +272,7 @@ class Program
                 }
                 else
                 {
-                    Console.WriteLine("[SetupWindow] Not found");
+                    PrintOutput("[SetupWindow] Not found");
                 }
                 Environment.Exit(EXIT_NOT_FOUND);
             }
@@ -307,9 +307,9 @@ class Program
                 }
                 else
                 {
-                    Console.WriteLine($"[SettingsDialog] Found: '{window.Name}'");
-                    Console.WriteLine($"  - ClassName: {window.ClassName ?? "(null)"}");
-                    Console.WriteLine($"  - AutomationId: {window.AutomationId ?? "(null)"}");
+                    PrintOutput($"[SettingsDialog] Found: '{window.Name}'");
+                    PrintOutput($"  - ClassName: {window.ClassName ?? "(null)"}");
+                    PrintOutput($"  - AutomationId: {window.AutomationId ?? "(null)"}");
                 }
                 Environment.Exit(EXIT_SUCCESS);
             }
@@ -326,7 +326,7 @@ class Program
                 }
                 else
                 {
-                    Console.WriteLine("[SettingsDialog] Not found");
+                    PrintOutput("[SettingsDialog] Not found");
                 }
                 Environment.Exit(EXIT_NOT_FOUND);
             }
@@ -361,9 +361,9 @@ class Program
                 }
                 else
                 {
-                    Console.WriteLine($"[ImagePreviewWindow] Found: '{window.Name}'");
-                    Console.WriteLine($"  - ClassName: {window.ClassName ?? "(null)"}");
-                    Console.WriteLine($"  - AutomationId: {window.AutomationId ?? "(null)"}");
+                    PrintOutput($"[ImagePreviewWindow] Found: '{window.Name}'");
+                    PrintOutput($"  - ClassName: {window.ClassName ?? "(null)"}");
+                    PrintOutput($"  - AutomationId: {window.AutomationId ?? "(null)"}");
                 }
                 Environment.Exit(EXIT_SUCCESS);
             }
@@ -380,7 +380,7 @@ class Program
                 }
                 else
                 {
-                    Console.WriteLine("[ImagePreviewWindow] Not found");
+                    PrintOutput("[ImagePreviewWindow] Not found");
                 }
                 Environment.Exit(EXIT_NOT_FOUND);
             }
@@ -416,10 +416,10 @@ class Program
             }
             else
             {
-                Console.WriteLine($"[All ChronoView Windows] Found: {windows.Count}");
+                PrintOutput($"[All ChronoView Windows] Found: {windows.Count}");
                 foreach (var window in windows)
                 {
-                    Console.WriteLine($"  - '{window.Name}'");
+                    PrintOutput($"  - '{window.Name}'");
                 }
             }
             Environment.Exit(EXIT_SUCCESS);
