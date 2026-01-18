@@ -1,0 +1,10 @@
+# ChronoView Test Agent Requirements
+# Python test framework for CLI automation testing
+
+# Test framework
+pytest>=7.0.0
+pytest-asyncio>=0.20.0
+pytest-html>=3.0.0
+
+# Output validation
+pydantic>=2.0.0
