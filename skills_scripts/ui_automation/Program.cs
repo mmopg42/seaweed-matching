@@ -2889,6 +2889,270 @@ class Program
 
         rootCommand.AddCommand(scenarioCommand);
 
+        // batch 명령: 대량 작업
+        var batchCommand = new Command("batch", "대량 작업 (multi-row operations)");
+
+        // batch select-and-move: Select multiple rows and move them
+        var batchSelectAndMoveCommand = new Command("select-and-move", "Select multiple rows and move them");
+        var startIndexOption = new Option<int>(
+            ["--start-index", "-s"],
+            "Start index (0-based)"
+        );
+        var countOption = new Option<int>(
+            ["--count", "-c"],
+            "Number of rows to select"
+        );
+        batchSelectAndMoveCommand.AddOption(startIndexOption);
+        batchSelectAndMoveCommand.AddOption(countOption);
+        batchSelectAndMoveCommand.AddOption(rowsOption);
+        batchSelectAndMoveCommand.AddOption(groupIdsOption);
+        batchSelectAndMoveCommand.AddOption(jsonOption);
+        batchSelectAndMoveCommand.SetHandler((startIndex, count, rows, groupIds, json) =>
+        {
+            using var controller = new FileOps();
+
+            // Clear existing selection first
+            controller.ClearSelection();
+
+            var selectedCount = 0;
+
+            // Determine selection method
+            if (rows != null && rows.Length > 0)
+            {
+                // Select by specific row indices
+                selectedCount = rows.Length;
+                foreach (var rowIndex in rows)
+                {
+                    controller.SelectRowByIndex(rowIndex);
+                }
+            }
+            else if (groupIds != null && groupIds.Length > 0)
+            {
+                // Select by GroupIds
+                selectedCount = groupIds.Length;
+                foreach (var groupId in groupIds)
+                {
+                    controller.SelectRowByGroupId(groupId);
+                }
+            }
+            else if (count > 0)
+            {
+                // Select by range
+                selectedCount = count;
+                for (int i = startIndex; i < startIndex + count; i++)
+                {
+                    controller.SelectRowByIndex(i);
+                }
+            }
+            else
+            {
+                if (json)
+                {
+                    PrintJsonOutput(new
+                    {
+                        success = false,
+                        error = "Must specify --rows, --group-ids, or --count with --start-index",
+                        errorCode = EXIT_INVALID_ARGUMENT
+                    });
+                }
+                else
+                {
+                    PrintOutput("[batch-select-and-move] Failed: Must specify --rows, --group-ids, or --count with --start-index");
+                }
+                Environment.Exit(EXIT_INVALID_ARGUMENT);
+            }
+
+            // Click Move button
+            var moved = controller.ClickMoveButton();
+
+            // Wait for completion
+            if (moved)
+            {
+                controller.WaitForMoveComplete(30000);
+            }
+
+            var duration = moved ? "completed" : "failed";
+
+            if (json)
+            {
+                PrintJsonOutput(new
+                {
+                    success = moved,
+                    data = new
+                    {
+                        selected = selectedCount,
+                        moved = moved ? selectedCount : 0,
+                        duration = duration
+                    }
+                });
+            }
+            else
+            {
+                PrintOutput($"[batch-select-and-move] {(moved ? "Success" : "Failed")}: {selectedCount} row(s) selected, {(moved ? "moved" : "move failed")}");
+            }
+            Environment.Exit(moved ? EXIT_SUCCESS : EXIT_ERROR);
+        }, startIndexOption, countOption, rowsOption, groupIdsOption, jsonOption);
+        batchCommand.AddCommand(batchSelectAndMoveCommand);
+
+        // batch select-and-delete: Select multiple rows and delete them
+        var batchSelectAndDeleteCommand = new Command("select-and-delete", "Select multiple rows and delete them");
+        batchSelectAndDeleteCommand.AddOption(startIndexOption);
+        batchSelectAndDeleteCommand.AddOption(countOption);
+        batchSelectAndDeleteCommand.AddOption(rowsOption);
+        batchSelectAndDeleteCommand.AddOption(groupIdsOption);
+        batchSelectAndDeleteCommand.AddOption(jsonOption);
+        batchSelectAndDeleteCommand.SetHandler((startIndex, count, rows, groupIds, json) =>
+        {
+            using var controller = new FileOps();
+
+            // Clear existing selection first
+            controller.ClearSelection();
+
+            var selectedCount = 0;
+
+            // Determine selection method
+            if (rows != null && rows.Length > 0)
+            {
+                // Select by specific row indices
+                selectedCount = rows.Length;
+                foreach (var rowIndex in rows)
+                {
+                    controller.SelectRowByIndex(rowIndex);
+                }
+            }
+            else if (groupIds != null && groupIds.Length > 0)
+            {
+                // Select by GroupIds
+                selectedCount = groupIds.Length;
+                foreach (var groupId in groupIds)
+                {
+                    controller.SelectRowByGroupId(groupId);
+                }
+            }
+            else if (count > 0)
+            {
+                // Select by range
+                selectedCount = count;
+                for (int i = startIndex; i < startIndex + count; i++)
+                {
+                    controller.SelectRowByIndex(i);
+                }
+            }
+            else
+            {
+                if (json)
+                {
+                    PrintJsonOutput(new
+                    {
+                        success = false,
+                        error = "Must specify --rows, --group-ids, or --count with --start-index",
+                        errorCode = EXIT_INVALID_ARGUMENT
+                    });
+                }
+                else
+                {
+                    PrintOutput("[batch-select-and-delete] Failed: Must specify --rows, --group-ids, or --count with --start-index");
+                }
+                Environment.Exit(EXIT_INVALID_ARGUMENT);
+            }
+
+            // Click Delete button
+            var deleted = controller.ClickDeleteButton();
+
+            // Handle confirmation dialog if present
+            var confirmed = false;
+            if (deleted)
+            {
+                confirmed = controller.HandleDeleteConfirmationDialog();
+                if (confirmed)
+                {
+                    controller.WaitForDeleteComplete(30000);
+                }
+            }
+
+            if (json)
+            {
+                PrintJsonOutput(new
+                {
+                    success = confirmed,
+                    data = new
+                    {
+                        selected = selectedCount,
+                        deleted = confirmed ? selectedCount : 0,
+                        confirmed = confirmed
+                    }
+                });
+            }
+            else
+            {
+                PrintOutput($"[batch-select-and-delete] {(confirmed ? "Success" : "Failed")}: {selectedCount} row(s) selected, {(confirmed ? "deleted" : "delete failed")}");
+                PrintOutput($"  Confirmed: {confirmed}");
+            }
+            Environment.Exit(confirmed ? EXIT_SUCCESS : EXIT_ERROR);
+        }, startIndexOption, countOption, rowsOption, groupIdsOption, jsonOption);
+        batchCommand.AddCommand(batchSelectAndDeleteCommand);
+
+        // batch export-all: Export all available data from ChronoView
+        var batchExportAllCommand = new Command("export-all", "Export all available data from ChronoView");
+        batchExportAllCommand.AddOption(jsonOption);
+        batchExportAllCommand.SetHandler((json) =>
+        {
+            using var automation = new UiAuto();
+
+            // Get StatisticsPanel statistics
+            using var reader = new DataReader(automation.GetAutomation());
+            var stats = reader.GetAllStatistics();
+
+            // Get all DataGrid rows
+            var allData = reader.GetAllData();
+
+            // Get camera states from WorkflowPanel
+            using var workflow = new Workflow(automation.GetAutomation());
+            var cameraStates = workflow.GetCameraStates();
+
+            if (json)
+            {
+                PrintJsonOutput(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        timestamp = DateTime.Now.ToString("o"),
+                        statistics = stats,
+                        dataGrid = new
+                        {
+                            rowCount = allData.Count,
+                            rows = allData
+                        },
+                        cameraStates = cameraStates
+                    }
+                });
+            }
+            else
+            {
+                PrintOutput("[batch-export-all] Exported all available data:");
+                PrintOutput($"  Timestamp: {DateTime.Now:O}");
+                PrintOutput($"  Statistics: {stats?.Count ?? 0} entries");
+                if (stats != null)
+                {
+                    foreach (var stat in stats)
+                    {
+                        PrintOutput($"    - {stat.Key}: {stat.Value}");
+                    }
+                }
+                PrintOutput($"  DataGrid: {allData.Count} row(s)");
+                PrintOutput($"  Camera States: {cameraStates.Count} camera(s)");
+                foreach (var camState in cameraStates)
+                {
+                    PrintOutput($"    - {camState.Key}: {camState.Value}");
+                }
+            }
+            Environment.Exit(EXIT_SUCCESS);
+        }, jsonOption);
+        batchCommand.AddCommand(batchExportAllCommand);
+
+        rootCommand.AddCommand(batchCommand);
+
         // Parse args to capture global options before command execution
         var parseResult = rootCommand.Parse(args);
         s_isQuiet = parseResult.GetValueForOption(quietOption) == true;
