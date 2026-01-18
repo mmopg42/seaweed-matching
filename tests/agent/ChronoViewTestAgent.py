@@ -11,6 +11,9 @@ import os
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
+import pytest
+from pydantic import BaseModel, Field
+
 
 class ChronoViewCLI:
     """Wrapper for ui_automation.exe CLI commands.
@@ -216,3 +219,118 @@ def run_cli(args: List[str], timeout: int = 30) -> Dict[str, Any]:
     """
     cli = ChronoViewCLI()
     return cli.run(args, timeout=timeout)
+
+
+# =============================================================================
+# Pydantic Models for Output Validation
+# =============================================================================
+
+class SuccessResponse(BaseModel):
+    """Pydantic model for successful CLI responses.
+
+    Provides type-safe validation of JSON output from the CLI.
+    """
+    success: bool = Field(default=True, description="Always true for success responses")
+    data: Dict[str, Any] = Field(default_factory=dict, description="Response data")
+    exitCode: int = Field(default=0, description="Process exit code")
+
+    class Config:
+        # Allow extra fields for flexibility
+        extra = "allow"
+
+
+class ErrorResponse(BaseModel):
+    """Pydantic model for error CLI responses.
+
+    Provides type-safe validation of error output from the CLI.
+    """
+    success: bool = Field(default=False, description="Always false for error responses")
+    error: str = Field(description="Error message")
+    errorCode: int = Field(description="Error code matching exit codes")
+    exitCode: int = Field(description="Process exit code")
+
+    class Config:
+        extra = "allow"
+
+
+# =============================================================================
+# Pytest Fixtures
+# =============================================================================
+
+@pytest.fixture(scope="session")
+def cli():
+    """Shared CLI instance for all tests.
+
+    This fixture is created once per test session and reused across all tests.
+    It provides a ChronoViewCLI instance with auto-detected executable path.
+
+    Example:
+        def test_something(cli):
+            result = cli.run(["stats", "get"])
+            assert result["success"] is True
+    """
+    return ChronoViewCLI()
+
+
+@pytest.fixture(scope="function")
+def require_chronoview(cli):
+    """Skip test if ChronoView is not running.
+
+    This fixture tests connectivity before running the test.
+    If ChronoView is not running, the test is skipped with a clear message.
+
+    Example:
+        def test_requires_chronoview(require_chronoview):
+            # This test will be skipped if ChronoView is not running
+            result = require_chronoview.get_statistics()
+            assert result["data"]["matchedGroups"] >= 0
+    """
+    result = cli.run(["test", "connectivity"])
+
+    # Check if ChronoView is running
+    if not result.get("success") or not result.get("data", {}).get("connected"):
+        pytest.skip("ChronoView not running - test skipped")
+
+    yield cli
+
+
+# =============================================================================
+# Test Helpers
+# =============================================================================
+
+def assert_success(result: Dict[str, Any], message: str = "") -> None:
+    """Assert that CLI command was successful.
+
+    Args:
+        result: Result dictionary from ChronoViewCLI.run()
+        message: Optional message to include in assertion error
+
+    Raises:
+        AssertionError: If result["success"] is False
+    """
+    if not result.get("success"):
+        error = result.get("error", "Unknown error")
+        exit_code = result.get("exitCode", "N/A")
+        fail_msg = f"CLI command failed (exit code: {exit_code}): {error}"
+        if message:
+            fail_msg = f"{message}: {fail_msg}"
+        raise AssertionError(fail_msg)
+
+
+def assert_has_data(result: Dict[str, Any], *keys: str) -> None:
+    """Assert that result contains specified data keys.
+
+    Args:
+        result: Result dictionary from ChronoViewCLI.run()
+        *keys: Data keys to check for existence
+
+    Raises:
+        AssertionError: If any key is missing from result["data"]
+    """
+    assert_success(result, "Cannot check data on failed response")
+
+    data = result.get("data", {})
+    missing = [k for k in keys if k not in data]
+
+    if missing:
+        raise AssertionError(f"Missing data keys: {', '.join(missing)}")
