@@ -51,13 +51,13 @@ None (Windows UI Automation with FlaUI)
 | Milestone | Phases | Plans | Status | Shipped |
 |-----------|--------|-------|--------|---------|
 | v1.0 UI Automation | 1-10 | 28 | ✅ Complete | 2026-01-18 |
-| v1.1 Code Quality | 11-19 | 14/30 | 🚧 In Progress | - |
+| v1.1 Code Quality | 11-19 | 16/30 | 🚧 In Progress | - |
 
 ## Current State
 
-**Status:** Phase 14 complete. Data panel commands extracted.
+**Status:** Phase 15 complete. Workflow and settings commands extracted.
 
-**Next:** Execute Phase 15 with `/gsd:execute-phase 15`
+**Next:** Execute Phase 16 with `/gsd:execute-phase 16`
 
 ---
 
@@ -114,7 +114,7 @@ Plans:
 
 **Shipped:** 2026-01-19 | Program.cs: 2871 → 2477 lines (-394)
 
-#### Phase 15: Workflow & Settings Commands
+#### Phase 15: Workflow & Settings Commands ✅
 
 **Goal**: Extract workflow, logs, and settings-dialog commands
 **Depends on**: Phase 11
@@ -122,8 +122,10 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 15-01: Extract workflow/* and logs/* commands to WorkflowCommands.cs (~400 lines)
-- [ ] 15-02: Extract settings-dialog/* and console-logs/* to SettingsCommands.cs (~500 lines)
+- [x] 15-01: Extract workflow/* and logs/* commands to WorkflowCommands.cs (~400 lines)
+- [x] 15-02: Extract settings-dialog/* and console-logs/* to SettingsCommands.cs (~500 lines)
+
+**Shipped:** 2026-01-19 | Program.cs: 2477 → 1406 lines (-1,071)
 
 #### Phase 16: File Operations Commands
 
@@ -168,4 +170,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-01-19 after Phase 13 completion*
+*Last updated: 2026-01-19 after Phase 15 completion*
