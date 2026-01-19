@@ -51,13 +51,13 @@ None (Windows UI Automation with FlaUI)
 | Milestone | Phases | Plans | Status | Shipped |
 |-----------|--------|-------|--------|---------|
 | v1.0 UI Automation | 1-10 | 28 | ✅ Complete | 2026-01-18 |
-| v1.1 Code Quality | 11-19 | 16/30 | 🚧 In Progress | - |
+| v1.1 Code Quality | 11-19 | 17/30 | 🚧 In Progress | - |
 
 ## Current State
 
-**Status:** Phase 15 complete. Workflow and settings commands extracted.
+**Status:** Phase 16 complete. File operations commands extracted.
 
-**Next:** Execute Phase 16 with `/gsd:execute-phase 16`
+**Next:** Execute Phase 17 with `/gsd:execute-phase 17`
 
 ---
 
@@ -127,7 +127,7 @@ Plans:
 
 **Shipped:** 2026-01-19 | Program.cs: 2477 → 1406 lines (-1,071)
 
-#### Phase 16: File Operations Commands
+#### Phase 16: File Operations Commands ✅
 
 **Goal**: Extract file-ops commands
 **Depends on**: Phase 11
@@ -135,7 +135,9 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 16-01: Extract file-ops/* commands to FileOpsCommands.cs (~400 lines)
+- [x] 16-01: Extract file-ops/* commands to FileOpsCommands.cs (~400 lines)
+
+**Shipped:** 2026-01-19 | Program.cs: 1406 → 1126 lines (-280)
 
 #### Phase 17: Test & Scenario Commands
 
@@ -170,4 +172,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-01-19 after Phase 15 completion*
+*Last updated: 2026-01-19 after Phase 16 completion*
