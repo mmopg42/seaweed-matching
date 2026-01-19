@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** UI 요소 식별 및 조작 — ChronoView의 모든 UI 요소를 안정적으로 식별하고 조작
-**Current focus:** Phase 16 — File Operations Commands Extraction
+**Current focus:** Phase 17 — Test, Scenario, and Batch Commands Extraction
 
 ## Current Position
 
-**Milestone:** v1.1 Code Quality Refactoring (Phase 16 of 19)
-**Plan:** 16-01 (File Operations Commands Migration) - COMPLETE
-**Status:** Phase 16 complete
-**Last activity:** 2026-01-19 — Phase 16-01 completed
+**Milestone:** v1.1 Code Quality Refactoring (Phase 17 of 19)
+**Plan:** 17-01 (Test/Scenario/Batch Commands Migration) - COMPLETE
+**Status:** Phase 17 complete
+**Last activity:** 2026-01-19 — Phase 17-01 completed
 
-Progress: ███░░░░░░░░ 11% (36/37 plans complete: v1.0 done, v1.1 in progress)
+Progress: ████░░░░░░░ 12% (37/38 plans complete: v1.0 done, v1.1 in progress)
 
 ## Milestone v1.0 Summary
 
@@ -82,6 +82,9 @@ Decisions from all phases are logged in PROJECT.md.
 | 16-01 | FileOpsCommands class with 9 file operations command groups | Seventh command group migrated from Program.cs |
 | 16-01 | Use ChronoFileOperationsController directly in FileOpsCommands | FileOpsCommands uses FileOps alias for direct API access |
 | 16-01 | Keep rowsOption and groupIdsOption in Program.cs | These options are shared by scenario and batch commands |
+| 17-01 | TestCommands class with 9 test/scenario/batch command groups | Eighth command group migrated from Program.cs |
+| 17-01 | TestCommands orchestrates multiple controllers for end-to-end workflows | Coordinates Finder, Toolbar, Workflow, DataReader, Settings, FileOps |
+| 17-01 | Local helper methods in TestCommands instead of using Program.cs methods | PrintJsonOutput and PrintOutput implemented as private static methods |
 
 ### Deferred Issues
 
@@ -98,8 +101,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-19
-Stopped at: Phase 16-01 completed, Phase 16 fully complete
-Resume file: .planning/phases/16-file-ops-commands/16-01-SUMMARY.md
+Stopped at: Phase 17-01 completed, Phase 17 fully complete
+Resume file: .planning/phases/17-test-scenario-commands/17-01-SUMMARY.md
 
 ## Roadmap Evolution
 
@@ -112,10 +115,18 @@ Resume file: .planning/phases/16-file-ops-commands/16-01-SUMMARY.md
 - Phase 15-01: Program.cs reduced from 2477 to 2045 lines (432 line reduction)
 - Phase 15-02: Program.cs reduced from 2045 to 1406 lines (639 line reduction)
 - Phase 16-01: Program.cs reduced from 1406 to 1126 lines (280 line reduction)
-- Total reduction so far: 2,485 lines (~69% reduction from original)
-- Program.cs now at 1126 lines, well below the 1500 line target
-- Pattern confirmed for future command extraction phases
+- Phase 17-01: Program.cs reduced from 1126 to 368 lines (758 line reduction)
+- Total reduction: 3,243 lines (~90% reduction from original 3,604 lines)
+- **Program.cs now at 368 lines, EXCEEDING the 500 line target**
+- **Goal achieved: All major command groups successfully extracted**
+
+**Remaining in Program.cs (368 lines):**
+- Global options setup (--quiet, --verbose, --json)
+- inspect command (UI element structure inspection)
+- config command (Config file direct reading)
+- CommandRegistry setup and handler registrations
+- Main method orchestration
 
 ---
 
-*Updated: 2026-01-19 after Phase 16-01 completion*
+*Updated: 2026-01-19 after Phase 17-01 completion*
