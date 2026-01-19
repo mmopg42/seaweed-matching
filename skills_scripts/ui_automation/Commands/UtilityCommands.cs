@@ -127,5 +127,142 @@ public class UtilityCommands : ICommandHandler
         inspectCommand.AddCommand(inspectLogCommand);
 
         rootCommand.AddCommand(inspectCommand);
+
+        // ============================================================
+        // config: Config 파일 직접 읽기 (UI Automation 없이 파일 시스템에서 직접 확인)
+        // ============================================================
+
+        var configCommand = new Command("config", "Config 파일 직접 읽기");
+
+        // config path: Config 파일 위치 확인
+        var configPathCommand = new Command("path", "Config 파일 위치 확인");
+        configPathCommand.SetHandler(() =>
+        {
+            var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
+
+            Console.WriteLine($"[Config Path] {configPath}");
+            Console.WriteLine($"[Exists] {File.Exists(configPath)}");
+
+            if (File.Exists(configPath))
+            {
+                var fileInfo = new FileInfo(configPath);
+                Console.WriteLine($"[Size] {fileInfo.Length} bytes");
+                Console.WriteLine($"[Modified] {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+            }
+
+            Environment.Exit(EXIT_SUCCESS);
+        });
+        configCommand.AddCommand(configPathCommand);
+
+        // config read: Config 파일 내용 읽기
+        var configReadCommand = new Command("read", "Config 파일 내용 읽기");
+        var jsonConfigOption = new Option<bool>(["--json", "-j"], "JSON 형식으로 출력");
+        configReadCommand.AddOption(jsonConfigOption);
+        configReadCommand.SetHandler((json) =>
+        {
+            var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
+
+            if (!File.Exists(configPath))
+            {
+                Console.WriteLine($"[Config] File not found: {configPath}");
+                Environment.Exit(EXIT_NOT_FOUND);
+                return;
+            }
+
+            try
+            {
+                var jsonContent = File.ReadAllText(configPath);
+
+                if (json)
+                {
+                    // Pretty print JSON
+                    using var jsonDoc = JsonDocument.Parse(jsonContent);
+                    var prettyJson = JsonSerializer.Serialize(jsonDoc, new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    });
+                    Console.WriteLine(prettyJson);
+                }
+                else
+                {
+                    Console.WriteLine($"[Config] Reading from: {configPath}");
+                    Console.WriteLine();
+                    Console.WriteLine("=== Raw JSON ===");
+                    Console.WriteLine(jsonContent);
+                }
+
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Config] Error reading file: {ex.Message}");
+                Environment.Exit(EXIT_ERROR);
+                return;
+            }
+        }, jsonConfigOption);
+        configCommand.AddCommand(configReadCommand);
+
+        // config get: 특정 설정 값 읽기 (경로 등)
+        var configGetCommand = new Command("get", "특정 설정 값 읽기");
+        var keyOption = new Option<string>(["--key", "-k"], "설정 키 (예: folderPaths.line1SampleName)");
+        configGetCommand.AddOption(keyOption);
+        configGetCommand.SetHandler((key) =>
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                Console.WriteLine("[Config] --key parameter is required");
+                Environment.Exit(EXIT_INVALID_ARGUMENT);
+                return;
+            }
+
+            var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
+
+            if (!File.Exists(configPath))
+            {
+                Console.WriteLine($"[Config] File not found: {configPath}");
+                Environment.Exit(EXIT_NOT_FOUND);
+                return;
+            }
+
+            try
+            {
+                var jsonContent = File.ReadAllText(configPath);
+                using var jsonDoc = JsonDocument.Parse(jsonContent);
+                var root = jsonDoc.RootElement;
+
+                // Navigate using JSON path (dot notation)
+                var parts = key.Split('.');
+                var current = root;
+
+                foreach (var part in parts)
+                {
+                    if (current.ValueKind == JsonValueKind.Object && current.TryGetProperty(part, out var property))
+                    {
+                        current = property;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[Config] Key not found: {key}");
+                        Environment.Exit(EXIT_NOT_FOUND);
+                        return;
+                    }
+                }
+
+                Console.WriteLine($"[{key}] {current}");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Config] Error reading key: {ex.Message}");
+                Environment.Exit(EXIT_ERROR);
+                return;
+            }
+        }, keyOption);
+        configCommand.AddCommand(configGetCommand);
+
+        rootCommand.AddCommand(configCommand);
     }
 }
