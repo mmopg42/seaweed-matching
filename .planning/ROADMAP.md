@@ -51,13 +51,13 @@ None (Windows UI Automation with FlaUI)
 | Milestone | Phases | Plans | Status | Shipped |
 |-----------|--------|-------|--------|---------|
 | v1.0 UI Automation | 1-10 | 28 | ✅ Complete | 2026-01-18 |
-| v1.1 Code Quality | 11-19 | 12/30 | 🚧 In Progress | - |
+| v1.1 Code Quality | 11-19 | 13/30 | 🚧 In Progress | - |
 
 ## Current State
 
-**Status:** Phase 12 complete. Windows commands extracted.
+**Status:** Phase 13 complete. Toolbar commands extracted.
 
-**Next:** Execute Phase 13 with `/gsd:execute-phase 13`
+**Next:** Execute Phase 14 with `/gsd:execute-phase 14`
 
 ---
 
@@ -90,7 +90,7 @@ Plans:
 
 **Shipped:** 2026-01-19 | Program.cs: 3429 → 3054 lines (-375)
 
-#### Phase 13: Toolbar Commands
+#### Phase 13: Toolbar Commands ✅
 
 **Goal**: Extract toolbar control commands
 **Depends on**: Phase 11
@@ -98,7 +98,9 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 13-01: Extract toolbar/* and click/* commands to ToolbarCommands.cs (~300 lines)
+- [x] 13-01: Extract toolbar/* and click/* commands to ToolbarCommands.cs (~300 lines)
+
+**Shipped:** 2026-01-19 | Program.cs: 3054 → 2871 lines (-183)
 
 #### Phase 14: Data Panel Commands
 
@@ -164,4 +166,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-01-19 after Phase 12 completion*
+*Last updated: 2026-01-19 after Phase 13 completion*
