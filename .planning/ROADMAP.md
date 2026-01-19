@@ -51,13 +51,13 @@ None (Windows UI Automation with FlaUI)
 | Milestone | Phases | Plans | Status | Shipped |
 |-----------|--------|-------|--------|---------|
 | v1.0 UI Automation | 1-10 | 28 | ✅ Complete | 2026-01-18 |
-| v1.1 Code Quality | 11-19 | TBD | 🚧 In Progress | - |
+| v1.1 Code Quality | 11-19 | 11/30 | 🚧 In Progress | - |
 
 ## Current State
 
-**Status:** Milestone v1.0 complete. v1.1 refactoring planned.
+**Status:** Phase 11 complete. Command registration infrastructure established.
 
-**Next:** Plan Phase 11 with `/gsd:plan-phase 11`
+**Next:** Execute Phase 12 with `/gsd:execute-phase 12`
 
 ---
 
@@ -65,7 +65,7 @@ None (Windows UI Automation with FlaUI)
 
 **Milestone Goal:** Refactor Program.cs (3,604 lines → ~500 lines per file) for maintainability and AI agent comprehension.
 
-#### Phase 11: Commands Architecture
+#### Phase 11: Commands Architecture ✅
 
 **Goal**: Design and implement the command registration architecture
 **Depends on**: Phase 10 (previous milestone complete)
@@ -73,8 +73,10 @@ None (Windows UI Automation with FlaUI)
 **Plans**: 2 plans
 
 Plans:
-- [ ] 11-01: Create Commands/ infrastructure with ICommandHandler interface
-- [ ] 11-02: Extract legacy commands (detect, list, find, click) to LegacyCommands.cs
+- [x] 11-01: Create Commands/ infrastructure with ICommandHandler interface
+- [x] 11-02: Extract legacy commands (detect, list, find, click) to LegacyCommands.cs
+
+**Shipped:** 2026-01-19 | Program.cs: 3611 → 3429 lines (-182)
 
 #### Phase 12: Windows Commands
 
