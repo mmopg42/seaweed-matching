@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** UI 요소 식별 및 조작 — ChronoView의 모든 UI 요소를 안정적으로 식별하고 조작
-**Current focus:** Phase 11 — Commands Architecture
+**Current focus:** Phase 12 — Windows Commands Extraction
 
 ## Current Position
 
-**Milestone:** v1.1 Code Quality Refactoring (Phase 11 of 19)
-**Plan:** 11-02 (Legacy Commands Migration) - COMPLETE
-**Status:** Ready for 11-03
-**Last activity:** 2026-01-19 — Phase 11-02 completed
+**Milestone:** v1.1 Code Quality Refactoring (Phase 12 of 19)
+**Plan:** 12-01 (Windows Commands Migration) - COMPLETE
+**Status:** Ready for 12-02
+**Last activity:** 2026-01-19 — Phase 12-01 completed
 
-Progress: ███░░░░░░░░ 11% (30/37 plans complete: v1.0 done, v1.1 in progress)
+Progress: ███░░░░░░░░ 11% (31/37 plans complete: v1.0 done, v1.1 in progress)
 
 ## Milestone v1.0 Summary
 
@@ -70,6 +70,8 @@ Decisions from all phases are logged in PROJECT.md.
 | 11-02 | LegacyCommands class with detect/list/find/click commands | First command group migrated from Program.cs |
 | 11-02 | Pure migration approach (no refactoring) | Original handler code copied verbatim for compatibility |
 | 11-02 | Registry.RegisterAllCommands() after inline commands | Maintains command order in help output |
+| 12-01 | WindowsCommands class with 6 window detection commands | Second command group migrated from Program.cs |
+| 12-01 | Private helper methods in handler classes | PrintJsonOutput, TryGetAutomationId kept local to handlers |
 
 ### Deferred Issues
 
@@ -86,16 +88,18 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-19
-Stopped at: Phase 11-02 completed, ready for 11-03
-Resume file: .planning/phases/11-commands-architecture/11-02-SUMMARY.md
+Stopped at: Phase 12-01 completed, ready for 12-02
+Resume file: .planning/phases/12-windows-commands/12-01-SUMMARY.md
 
 ## Roadmap Evolution
 
 - Milestone v1.1 created: Code quality refactoring, 9 phases (Phase 11-19)
 - Goal: Refactor Program.cs from 3,604 lines to ~500 lines per module
 - Phase 11-02: Program.cs reduced from 3611 to 3429 lines (182 line reduction)
-- Pattern established for phases 11-03 through 11-08 command extractions
+- Phase 12-01: Program.cs reduced from 3429 to 3054 lines (375 line reduction)
+- Total reduction so far: 557 lines (~15% reduction from original)
+- Pattern confirmed for phases 12-02 through 12-XX command extractions
 
 ---
 
-*Updated: 2026-01-19 after Phase 11-02 completion*
+*Updated: 2026-01-19 after Phase 12-01 completion*
