@@ -51,13 +51,13 @@ None (Windows UI Automation with FlaUI)
 | Milestone | Phases | Plans | Status | Shipped |
 |-----------|--------|-------|--------|---------|
 | v1.0 UI Automation | 1-10 | 28 | ✅ Complete | 2026-01-18 |
-| v1.1 Code Quality | 11-19 | 13/30 | 🚧 In Progress | - |
+| v1.1 Code Quality | 11-19 | 14/30 | 🚧 In Progress | - |
 
 ## Current State
 
-**Status:** Phase 13 complete. Toolbar commands extracted.
+**Status:** Phase 14 complete. Data panel commands extracted.
 
-**Next:** Execute Phase 14 with `/gsd:execute-phase 14`
+**Next:** Execute Phase 15 with `/gsd:execute-phase 15`
 
 ---
 
@@ -102,7 +102,7 @@ Plans:
 
 **Shipped:** 2026-01-19 | Program.cs: 3054 → 2871 lines (-183)
 
-#### Phase 14: Data Panel Commands
+#### Phase 14: Data Panel Commands ✅
 
 **Goal**: Extract stats and datagrid commands
 **Depends on**: Phase 11
@@ -110,7 +110,9 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 14-01: Extract stats/* and datagrid/* commands to DataPanelCommands.cs (~500 lines)
+- [x] 14-01: Extract stats/* and datagrid/* commands to DataPanelCommands.cs (~500 lines)
+
+**Shipped:** 2026-01-19 | Program.cs: 2871 → 2477 lines (-394)
 
 #### Phase 15: Workflow & Settings Commands
 
