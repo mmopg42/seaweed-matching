@@ -2857,6 +2857,8 @@ class Program
         // Register modular command handlers via registry (Phase 11-02+)
         registry.RegisterHandler(new LegacyCommands());
         registry.RegisterHandler(new WindowsCommands());
+        // Phase 13-01: Register toolbar commands
+        registry.RegisterHandler(new ToolbarCommands());
         registry.RegisterAllCommands(rootCommand);
 
         // Parse args to capture global options before command execution
