@@ -51,15 +51,15 @@ None (Windows UI Automation with FlaUI)
 | Milestone | Phases | Plans | Status | Shipped |
 |-----------|--------|-------|--------|---------|
 | v1.0 UI Automation | 1-10 | 28 | ✅ Complete | 2026-01-18 |
-| v1.1 Code Quality | 11-19 | 18/30 | 🚧 In Progress | - |
+| v1.1 Code Quality | 11-19 | 19/30 | 🚧 In Progress | - |
 
 ## Current State
 
-**Status:** Phase 17 complete. Test, scenario, and batch commands extracted.
+**Status:** Phase 18 complete. Config and utility commands extracted.
 
-**Next:** Execute Phase 18 with `/gsd:execute-phase 18`
+**Next:** Execute Phase 19 with `/gsd:execute-phase 19`
 
-**Note:** Program.cs now at 368 lines - **goal exceeded** (target was 500 lines)!
+**Note:** Program.cs now at 67 lines - **goal FAR exceeded** (target was 500 lines)!
 
 ---
 
@@ -153,7 +153,7 @@ Plans:
 
 **Shipped:** 2026-01-19 | Program.cs: 1126 → 368 lines (-758)
 
-#### Phase 18: Config & Utility Commands
+#### Phase 18: Config & Utility Commands ✅
 
 **Goal**: Extract remaining config and inspect commands
 **Depends on**: Phase 11
@@ -161,7 +161,9 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 18-01: Extract config/* and inspect/* commands to UtilityCommands.cs (~200 lines)
+- [x] 18-01: Extract config/* and inspect/* commands to UtilityCommands.cs (~200 lines)
+
+**Shipped:** 2026-01-19 | Program.cs: 368 → 67 lines (-301)
 
 #### Phase 19: Main Cleanup
 
@@ -176,4 +178,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-01-19 after Phase 17 completion*
+*Last updated: 2026-01-19 after Phase 18 completion*
