@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** UI 요소 식별 및 조작 — ChronoView의 모든 UI 요소를 안정적으로 식별하고 조작
-**Current focus:** Phase 13 — Toolbar Commands Extraction
+**Current focus:** Phase 14 — Data Panel Commands Extraction
 
 ## Current Position
 
-**Milestone:** v1.1 Code Quality Refactoring (Phase 13 of 19)
-**Plan:** 13-01 (Toolbar Commands Migration) - COMPLETE
-**Status:** Ready for 13-02
-**Last activity:** 2026-01-19 — Phase 13-01 completed
+**Milestone:** v1.1 Code Quality Refactoring (Phase 14 of 19)
+**Plan:** 14-01 (Data Panel Commands Migration) - COMPLETE
+**Status:** Ready for next phase
+**Last activity:** 2026-01-19 — Phase 14-01 completed
 
-Progress: ███░░░░░░░░ 11% (32/37 plans complete: v1.0 done, v1.1 in progress)
+Progress: ███░░░░░░░░ 11% (33/37 plans complete: v1.0 done, v1.1 in progress)
 
 ## Milestone v1.0 Summary
 
@@ -73,6 +73,8 @@ Decisions from all phases are logged in PROJECT.md.
 | 12-01 | WindowsCommands class with 6 window detection commands | Second command group migrated from Program.cs |
 | 12-01 | Private helper methods in handler classes | PrintJsonOutput, TryGetAutomationId kept local to handlers |
 | 13-01 | ToolbarCommands class with 9 toolbar commands | Third command group migrated from Program.cs |
+| 14-01 | DataPanelCommands class with 7 data panel commands | Fourth command group migrated from Program.cs |
+| 14-01 | Use ChronoDataPanelReader directly in DataPanelCommands | DataPanelCommands uses DataReader alias for direct API access |
 
 ### Deferred Issues
 
@@ -89,8 +91,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-19
-Stopped at: Phase 13-01 completed, ready for 13-02
-Resume file: .planning/phases/13-toolbar-commands/13-01-SUMMARY.md
+Stopped at: Phase 14-01 completed, ready for next phase
+Resume file: .planning/phases/14-data-panel-commands/14-01-SUMMARY.md
 
 ## Roadmap Evolution
 
@@ -99,9 +101,10 @@ Resume file: .planning/phases/13-toolbar-commands/13-01-SUMMARY.md
 - Phase 11-02: Program.cs reduced from 3611 to 3429 lines (182 line reduction)
 - Phase 12-01: Program.cs reduced from 3429 to 3054 lines (375 line reduction)
 - Phase 13-01: Program.cs reduced from 3054 to 2871 lines (183 line reduction)
-- Total reduction so far: 740 lines (~20% reduction from original)
-- Pattern confirmed for phases 13-02 through 13-XX command extractions
+- Phase 14-01: Program.cs reduced from 2871 to 2477 lines (394 line reduction)
+- Total reduction so far: 1,134 lines (~31% reduction from original)
+- Pattern confirmed for future command extraction phases
 
 ---
 
-*Updated: 2026-01-19 after Phase 13-01 completion*
+*Updated: 2026-01-19 after Phase 14-01 completion*
