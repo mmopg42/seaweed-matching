@@ -10,6 +10,7 @@ using Workflow = SkillsScripts.UiAutomation.ChronoWorkflowController;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
 using Settings = SkillsScripts.UiAutomation.ChronoSettingsController;
 using FileOps = SkillsScripts.UiAutomation.ChronoFileOperationsController;
+using UiAutomation.Commands;
 using ConsoleLogs = SkillsScripts.UiAutomation.ConsoleLogsReader;
 
 namespace UiAutomation;
@@ -93,6 +94,11 @@ class Program
         // Add global options to root
         rootCommand.AddGlobalOption(quietOption);
         rootCommand.AddGlobalOption(verboseOption);
+
+        // CommandRegistry for modular command registration (Phase 11-01+)
+        var registry = new CommandRegistry();
+        // TODO: Register command handlers via registry in Phase 11-02+
+
 
         // JSON output option
         var jsonOption = new Option<bool>(
