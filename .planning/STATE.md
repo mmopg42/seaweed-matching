@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-19)
 
 **Core value:** UI 요소 식별 및 조작 — ChronoView의 모든 UI 요소를 안정적으로 식별하고 조작
-**Current focus:** Phase 15 — Workflow and Settings Commands Extraction
+**Current focus:** Phase 16 — File Operations Commands Extraction
 
 ## Current Position
 
-**Milestone:** v1.1 Code Quality Refactoring (Phase 15 of 19)
-**Plan:** 15-02 (Settings and Console Log Commands Migration) - COMPLETE
-**Status:** Phase 15 complete
-**Last activity:** 2026-01-19 — Phase 15-02 completed
+**Milestone:** v1.1 Code Quality Refactoring (Phase 16 of 19)
+**Plan:** 16-01 (File Operations Commands Migration) - COMPLETE
+**Status:** Phase 16 complete
+**Last activity:** 2026-01-19 — Phase 16-01 completed
 
-Progress: ███░░░░░░░░ 11% (35/37 plans complete: v1.0 done, v1.1 in progress)
+Progress: ███░░░░░░░░ 11% (36/37 plans complete: v1.0 done, v1.1 in progress)
 
 ## Milestone v1.0 Summary
 
@@ -79,6 +79,9 @@ Decisions from all phases are logged in PROJECT.md.
 | 15-01 | Use ChronoWorkflowController and ChronoDataPanelReader in WorkflowCommands | WorkflowCommands uses Workflow and DataReader aliases |
 | 15-02 | SettingsCommands class with 19 settings and console log commands | Sixth command group migrated from Program.cs |
 | 15-02 | Use ChronoSettingsController and ConsoleLogsReader in SettingsCommands | SettingsCommands uses Settings and ConsoleLogs aliases |
+| 16-01 | FileOpsCommands class with 9 file operations command groups | Seventh command group migrated from Program.cs |
+| 16-01 | Use ChronoFileOperationsController directly in FileOpsCommands | FileOpsCommands uses FileOps alias for direct API access |
+| 16-01 | Keep rowsOption and groupIdsOption in Program.cs | These options are shared by scenario and batch commands |
 
 ### Deferred Issues
 
@@ -95,8 +98,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-19
-Stopped at: Phase 15-02 completed, Phase 15 fully complete
-Resume file: .planning/phases/15-workflow-settings-commands/15-02-SUMMARY.md
+Stopped at: Phase 16-01 completed, Phase 16 fully complete
+Resume file: .planning/phases/16-file-ops-commands/16-01-SUMMARY.md
 
 ## Roadmap Evolution
 
@@ -108,9 +111,11 @@ Resume file: .planning/phases/15-workflow-settings-commands/15-02-SUMMARY.md
 - Phase 14-01: Program.cs reduced from 2871 to 2477 lines (394 line reduction)
 - Phase 15-01: Program.cs reduced from 2477 to 2045 lines (432 line reduction)
 - Phase 15-02: Program.cs reduced from 2045 to 1406 lines (639 line reduction)
-- Total reduction so far: 2,205 lines (~61% reduction from original)
+- Phase 16-01: Program.cs reduced from 1406 to 1126 lines (280 line reduction)
+- Total reduction so far: 2,485 lines (~69% reduction from original)
+- Program.cs now at 1126 lines, well below the 1500 line target
 - Pattern confirmed for future command extraction phases
 
 ---
 
-*Updated: 2026-01-19 after Phase 15-02 completion*
+*Updated: 2026-01-19 after Phase 16-01 completion*
