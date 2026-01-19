@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-19)
 ## Current Position
 
 **Milestone:** v1.1 Code Quality Refactoring (Phase 11 of 19)
-**Plan:** 11-01 (Command Registration Infrastructure) - COMPLETE
-**Status:** Ready for 11-02
-**Last activity:** 2026-01-19 — Phase 11-01 completed
+**Plan:** 11-02 (Legacy Commands Migration) - COMPLETE
+**Status:** Ready for 11-03
+**Last activity:** 2026-01-19 — Phase 11-02 completed
 
-Progress: ███░░░░░░░░ 11% (29/37 plans complete: v1.0 done, v1.1 in progress)
+Progress: ███░░░░░░░░ 11% (30/37 plans complete: v1.0 done, v1.1 in progress)
 
 ## Milestone v1.0 Summary
 
@@ -67,6 +67,9 @@ Decisions from all phases are logged in PROJECT.md.
 | 11-01 | ICommandHandler interface with RegisterCommands(RootCommand) | Enables modular command registration pattern |
 | 11-01 | CommandRegistry class using List<ICommandHandler> | Centralized handler aggregation for Program.cs |
 | 11-01 | Infrastructure-first approach | Add registry before migrating commands (minimizes risk) |
+| 11-02 | LegacyCommands class with detect/list/find/click commands | First command group migrated from Program.cs |
+| 11-02 | Pure migration approach (no refactoring) | Original handler code copied verbatim for compatibility |
+| 11-02 | Registry.RegisterAllCommands() after inline commands | Maintains command order in help output |
 
 ### Deferred Issues
 
@@ -83,14 +86,16 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-19
-Stopped at: Phase 11-01 completed, ready for 11-02
-Resume file: .planning/phases/11-commands-architecture/11-01-SUMMARY.md
+Stopped at: Phase 11-02 completed, ready for 11-03
+Resume file: .planning/phases/11-commands-architecture/11-02-SUMMARY.md
 
 ## Roadmap Evolution
 
 - Milestone v1.1 created: Code quality refactoring, 9 phases (Phase 11-19)
 - Goal: Refactor Program.cs from 3,604 lines to ~500 lines per module
+- Phase 11-02: Program.cs reduced from 3611 to 3429 lines (182 line reduction)
+- Pattern established for phases 11-03 through 11-08 command extractions
 
 ---
 
-*Updated: 2026-01-19 after Phase 11-01 completion*
+*Updated: 2026-01-19 after Phase 11-02 completion*
