@@ -1,6 +1,8 @@
 using System.CommandLine;
 using System.Text.Json;
 using System.Linq;
+using FlaUI.Core.AutomationElements;
+using FlaUI.Core.Definitions;
 using UiAuto = SkillsScripts.UiAutomation.UiAutomation;
 using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
 using Toolbar = SkillsScripts.UiAutomation.ChronoToolbarController;
@@ -8,6 +10,7 @@ using Workflow = SkillsScripts.UiAutomation.ChronoWorkflowController;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
 using Settings = SkillsScripts.UiAutomation.ChronoSettingsController;
 using FileOps = SkillsScripts.UiAutomation.ChronoFileOperationsController;
+using ConsoleLogs = SkillsScripts.UiAutomation.ConsoleLogsReader;
 
 namespace UiAutomation;
 
@@ -279,6 +282,110 @@ class Program
         }, jsonOption);
         windowsCommand.AddCommand(setupCommand);
 
+        // windows setup-complete: SetupWindow 완료 (시작 버튼 클릭)
+        var setupCompleteCommand = new Command("setup-complete", "SetupWindow의 시작 버튼 클릭하여 완료");
+        setupCompleteCommand.AddOption(jsonOption);
+        setupCompleteCommand.SetHandler((json) =>
+        {
+            using var automation = new UiAuto();
+            var finder = new Finder(automation.GetAutomation());
+            var setupWindow = finder.FindSetupWindow();
+
+            if (setupWindow == null)
+            {
+                if (json)
+                {
+                    PrintJsonOutput(new
+                    {
+                        success = false,
+                        error = "SetupWindow not found",
+                        hint = "ChronoView may not be at setup screen"
+                    });
+                }
+                else
+                {
+                    PrintOutput("[setup-complete] SetupWindow not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
+                return;
+            }
+
+            // "모니터링 프로그램 시작" 버튼 찾기
+            var startButton = setupWindow.FindFirstDescendant(cf => cf.ByText("모니터링 프로그램 시작")
+                .Or(cf.ByName("모니터링 프로그램 시작")))?.AsButton();
+
+            if (startButton == null)
+            {
+                // Fallback: ControlType.Button으로 모든 버튼 검색
+                var allButtons = setupWindow.FindAllChildren(cf => cf.ByControlType(ControlType.Button));
+                foreach (var btn in allButtons)
+                {
+                    var name = btn.Name;
+                    if (!string.IsNullOrEmpty(name) && name.Contains("모니터링"))
+                    {
+                        startButton = btn.AsButton();
+                        break;
+                    }
+                }
+            }
+
+            if (startButton == null)
+            {
+                if (json)
+                {
+                    PrintJsonOutput(new
+                    {
+                        success = false,
+                        error = "Start button not found in SetupWindow",
+                        hint = "Button text may have changed"
+                    });
+                }
+                else
+                {
+                    PrintOutput("[setup-complete] Start button not found");
+                }
+                Environment.Exit(EXIT_ERROR);
+                return;
+            }
+
+            // 버튼 클릭
+            startButton.Click();
+            PrintVerbose("[setup-complete] Start button clicked");
+
+            // MainWindow가 나타날 때까지 대기 (최대 10초)
+            var mainWindow = finder.WaitForWindow("ChronoView Pro", 10000);
+            bool success = mainWindow != null;
+
+            if (json)
+            {
+                PrintJsonOutput(new
+                {
+                    success,
+                    data = success ? new
+                    {
+                        completed = true,
+                        mainWindowFound = true,
+                        mainWindowTitle = mainWindow?.Name
+                    } : null,
+                    error = success ? null : "MainWindow did not appear after clicking start"
+                });
+            }
+            else
+            {
+                if (success)
+                {
+                    PrintOutput($"[setup-complete] Setup completed, MainWindow found: '{mainWindow?.Name}'");
+                }
+                else
+                {
+                    PrintOutput("[setup-complete] Start button clicked but MainWindow did not appear");
+                }
+            }
+
+            Environment.Exit(success ? EXIT_SUCCESS : EXIT_TIMEOUT);
+        }, jsonOption);
+        windowsCommand.AddCommand(setupCompleteCommand);
+
         // windows settings: SettingsDialog 찾기
         var settingsCommand = new Command("settings", "SettingsDialog 찾기");
         settingsCommand.AddOption(jsonOption);
@@ -402,7 +509,7 @@ class Program
                 {
                     title = w.Name,
                     className = w.ClassName,
-                    automationId = w.AutomationId
+                    automationId = TryGetAutomationId(w)
                 });
                 PrintJsonOutput(new
                 {
@@ -1649,6 +1756,195 @@ class Program
         logsCommand.AddCommand(logsSearchCommand);
 
         rootCommand.AddCommand(logsCommand);
+
+        // console-logs 명령: 콘솔 로그 파일 읽기 (개발자용 디버그 로그)
+        var consoleLogsCommand = new Command("console-logs", "콘솔 로그 파일 읽기 (개발자용 디버그 로그)");
+
+        // console-logs list: 사용 가능한 로그 파일 목록
+        var dateFilterOption = new Option<string?>(
+            ["--date", "-d"],
+            () => null,
+            "날짜 필터 (YYYYMMDD 형식, 예: 20260118)"
+        );
+        var consoleLogsListCommand = new Command("list", "사용 가능한 로그 파일 목록");
+        consoleLogsListCommand.AddOption(dateFilterOption);
+        consoleLogsListCommand.AddOption(jsonOption);
+        consoleLogsListCommand.SetHandler((dateFilter, json) =>
+        {
+            var reader = new ConsoleLogs();
+            var files = reader.GetLogFiles(dateFilter);
+
+            if (json)
+            {
+                PrintJsonOutput(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        source = "ConsoleLogs",
+                        logDirectory = reader.GetLogDirectory(),
+                        dateFilter = dateFilter,
+                        count = files.Length,
+                        files = files
+                    }
+                });
+            }
+            else
+            {
+                Console.WriteLine($"[console-logs-list] Log directory: {reader.GetLogDirectory()}");
+                if (!string.IsNullOrEmpty(dateFilter))
+                {
+                    Console.WriteLine($"  Date filter: {dateFilter}");
+                }
+                Console.WriteLine($"  Found {files.Length} file(s):");
+                foreach (var file in files)
+                {
+                    var fileName = Path.GetFileName(file);
+                    var lastWrite = File.GetLastWriteTime(file);
+                    Console.WriteLine($"    - {fileName} (Modified: {lastWrite:yyyy-MM-dd HH:mm:ss})");
+                }
+            }
+            Environment.Exit(EXIT_SUCCESS);
+        }, dateFilterOption, jsonOption);
+        consoleLogsCommand.AddCommand(consoleLogsListCommand);
+
+        // console-logs tail: 최근 N줄 읽기
+        var tailCountArgument = new Argument<int>("count", "읽을 줄 수 (기본값: 20)")
+        {
+            Arity = ArgumentArity.ZeroOrOne
+        };
+        var logPathOption = new Option<string?>(
+            ["--file", "-f"],
+            () => null,
+            "로그 파일 경로 (지정하지 않으면 최신 파일 사용)"
+        );
+        var consoleLogsTailCommand = new Command("tail", "최근 N줄 읽기");
+        consoleLogsTailCommand.AddArgument(tailCountArgument);
+        consoleLogsTailCommand.AddOption(logPathOption);
+        consoleLogsTailCommand.AddOption(jsonOption);
+        consoleLogsTailCommand.SetHandler((count, logPath, json) =>
+        {
+            var actualCount = count > 0 ? count : 20;
+            var reader = new ConsoleLogs();
+
+            // 경로가 지정되지 않으면 최신 파일 찾기
+            var targetPath = logPath;
+            if (string.IsNullOrEmpty(targetPath))
+            {
+                var files = reader.GetLogFiles();
+                if (files.Length == 0)
+                {
+                    Console.Error.WriteLine("[console-logs-tail] No log files found");
+                    Environment.Exit(EXIT_NOT_FOUND);
+                    return;
+                }
+                targetPath = files[0]; // 최신 파일
+            }
+
+            if (!File.Exists(targetPath))
+            {
+                Console.Error.WriteLine($"[console-logs-tail] File not found: {targetPath}");
+                Environment.Exit(EXIT_NOT_FOUND);
+                return;
+            }
+
+            var lines = reader.ReadTail(targetPath, actualCount);
+
+            if (json)
+            {
+                PrintJsonOutput(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        source = "ConsoleLogs",
+                        file = targetPath,
+                        requested = actualCount,
+                        returned = lines.Length,
+                        logs = lines
+                    }
+                });
+            }
+            else
+            {
+                Console.WriteLine($"[console-logs-tail] Latest {lines.Length} line(s) from: {Path.GetFileName(targetPath)}");
+                foreach (var line in lines)
+                {
+                    Console.WriteLine($"  {line}");
+                }
+            }
+            Environment.Exit(EXIT_SUCCESS);
+        }, tailCountArgument, logPathOption, jsonOption);
+        consoleLogsCommand.AddCommand(consoleLogsTailCommand);
+
+        // console-logs search: 텍스트 검색
+        var consoleSearchTextArgument = new Argument<string>("text", "검색할 텍스트");
+        var consoleMaxResultsOption = new Option<int>(
+            ["--max", "-m"],
+            () => 50,
+            "최대 결과 수"
+        );
+        var consoleLogsSearchCommand = new Command("search", "텍스트 검색");
+        consoleLogsSearchCommand.AddArgument(consoleSearchTextArgument);
+        consoleLogsSearchCommand.AddOption(logPathOption);
+        consoleLogsSearchCommand.AddOption(consoleMaxResultsOption);
+        consoleLogsSearchCommand.AddOption(jsonOption);
+        consoleLogsSearchCommand.SetHandler((text, path, maxResults, json) =>
+        {
+            var reader = new ConsoleLogs();
+
+            // 경로가 지정되지 않으면 최신 파일 찾기
+            var targetPath = path;
+            if (string.IsNullOrEmpty(targetPath))
+            {
+                var files = reader.GetLogFiles();
+                if (files.Length == 0)
+                {
+                    Console.Error.WriteLine("[console-logs-search] No log files found");
+                    Environment.Exit(EXIT_NOT_FOUND);
+                    return;
+                }
+                targetPath = files[0]; // 최신 파일
+            }
+
+            if (!File.Exists(targetPath))
+            {
+                Console.Error.WriteLine($"[console-logs-search] File not found: {targetPath}");
+                Environment.Exit(EXIT_NOT_FOUND);
+                return;
+            }
+
+            var lines = reader.Search(targetPath, text, maxResults);
+
+            if (json)
+            {
+                PrintJsonOutput(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        source = "ConsoleLogs",
+                        file = targetPath,
+                        search = text,
+                        maxResults = maxResults,
+                        count = lines.Length,
+                        logs = lines
+                    }
+                });
+            }
+            else
+            {
+                Console.WriteLine($"[console-logs-search] Searched for '{text}' in {Path.GetFileName(targetPath)}: {lines.Length} match(es)");
+                foreach (var line in lines)
+                {
+                    Console.WriteLine($"  {line}");
+                }
+            }
+            Environment.Exit(EXIT_SUCCESS);
+        }, consoleSearchTextArgument, logPathOption, consoleMaxResultsOption, jsonOption);
+        consoleLogsCommand.AddCommand(consoleLogsSearchCommand);
+
+        rootCommand.AddCommand(consoleLogsCommand);
 
         // settings-dialog 명령: ChronoSettingsController 기반 SettingsDialog 제어
         var settingsDialogCommand = new Command("settings-dialog", "SettingsDialog 제어 (ChronoSettingsController)");
@@ -3153,11 +3449,157 @@ class Program
 
         rootCommand.AddCommand(batchCommand);
 
+        // config: Config 파일 직접 읽기 (UI Automation 없이 파일 시스템에서 직접 확인)
+        var configCommand = new Command("config", "Config 파일 직접 읽기");
+
+        // config path: Config 파일 위치 확인
+        var configPathCommand = new Command("path", "Config 파일 위치 확인");
+        configPathCommand.SetHandler(() =>
+        {
+            var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
+
+            Console.WriteLine($"[Config Path] {configPath}");
+            Console.WriteLine($"[Exists] {File.Exists(configPath)}");
+
+            if (File.Exists(configPath))
+            {
+                var fileInfo = new FileInfo(configPath);
+                Console.WriteLine($"[Size] {fileInfo.Length} bytes");
+                Console.WriteLine($"[Modified] {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+            }
+
+            Environment.Exit(EXIT_SUCCESS);
+        });
+        configCommand.AddCommand(configPathCommand);
+
+        // config read: Config 파일 내용 읽기
+        var configReadCommand = new Command("read", "Config 파일 내용 읽기");
+        var jsonConfigOption = new Option<bool>(["--json", "-j"], "JSON 형식으로 출력");
+        configReadCommand.AddOption(jsonConfigOption);
+        configReadCommand.SetHandler((json) =>
+        {
+            var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
+
+            if (!File.Exists(configPath))
+            {
+                Console.WriteLine($"[Config] File not found: {configPath}");
+                Environment.Exit(EXIT_NOT_FOUND);
+                return;
+            }
+
+            try
+            {
+                var jsonContent = File.ReadAllText(configPath);
+
+                if (json)
+                {
+                    // Pretty print JSON
+                    using var jsonDoc = JsonDocument.Parse(jsonContent);
+                    var prettyJson = JsonSerializer.Serialize(jsonDoc, new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    });
+                    Console.WriteLine(prettyJson);
+                }
+                else
+                {
+                    Console.WriteLine($"[Config] Reading from: {configPath}");
+                    Console.WriteLine();
+                    Console.WriteLine("=== Raw JSON ===");
+                    Console.WriteLine(jsonContent);
+                }
+
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Config] Error reading file: {ex.Message}");
+                Environment.Exit(EXIT_ERROR);
+                return;
+            }
+        }, jsonConfigOption);
+        configCommand.AddCommand(configReadCommand);
+
+        // config get: 특정 설정 값 읽기 (경로 등)
+        var configGetCommand = new Command("get", "특정 설정 값 읽기");
+        var keyOption = new Option<string>(["--key", "-k"], "설정 키 (예: folderPaths.line1SampleName)");
+        configGetCommand.AddOption(keyOption);
+        configGetCommand.SetHandler((key) =>
+        {
+            if (string.IsNullOrEmpty(key))
+            {
+                Console.WriteLine("[Config] --key parameter is required");
+                Environment.Exit(EXIT_INVALID_ARGUMENT);
+                return;
+            }
+
+            var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
+
+            if (!File.Exists(configPath))
+            {
+                Console.WriteLine($"[Config] File not found: {configPath}");
+                Environment.Exit(EXIT_NOT_FOUND);
+                return;
+            }
+
+            try
+            {
+                var jsonContent = File.ReadAllText(configPath);
+                using var jsonDoc = JsonDocument.Parse(jsonContent);
+                var root = jsonDoc.RootElement;
+
+                // Navigate using JSON path (dot notation)
+                var parts = key.Split('.');
+                var current = root;
+
+                foreach (var part in parts)
+                {
+                    if (current.ValueKind == JsonValueKind.Object && current.TryGetProperty(part, out var property))
+                    {
+                        current = property;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[Config] Key not found: {key}");
+                        Environment.Exit(EXIT_NOT_FOUND);
+                        return;
+                    }
+                }
+
+                Console.WriteLine($"[{key}] {current}");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Config] Error reading key: {ex.Message}");
+                Environment.Exit(EXIT_ERROR);
+                return;
+            }
+        }, keyOption);
+        configCommand.AddCommand(configGetCommand);
+
+        rootCommand.AddCommand(configCommand);
+
         // Parse args to capture global options before command execution
         var parseResult = rootCommand.Parse(args);
         s_isQuiet = parseResult.GetValueForOption(quietOption) == true;
         s_isVerbose = parseResult.GetValueForOption(verboseOption) == true;
 
         return await rootCommand.InvokeAsync(args);
+    }
+
+    private static string? TryGetAutomationId(AutomationElement element)
+    {
+        try
+        {
+            return element.AutomationId;
+        }
+        catch (FlaUI.Core.Exceptions.PropertyNotSupportedException)
+        {
+            return null;
+        }
     }
 }
