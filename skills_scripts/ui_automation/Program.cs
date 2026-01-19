@@ -2463,6 +2463,8 @@ class Program
         registry.RegisterHandler(new WindowsCommands());
         // Phase 13-01: Register toolbar commands
         registry.RegisterHandler(new ToolbarCommands());
+        // Phase 14-01: Register data panel commands
+        registry.RegisterHandler(new DataPanelCommands());
         registry.RegisterAllCommands(rootCommand);
 
         // Parse args to capture global options before command execution
