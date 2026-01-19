@@ -97,7 +97,6 @@ class Program
 
         // CommandRegistry for modular command registration (Phase 11-01+)
         var registry = new CommandRegistry();
-        // TODO: Register command handlers via registry in Phase 11-02+
 
 
         // JSON output option
@@ -3403,6 +3402,10 @@ class Program
         configCommand.AddCommand(configGetCommand);
 
         rootCommand.AddCommand(configCommand);
+
+        // Register modular command handlers via registry (Phase 11-02+)
+        registry.RegisterHandler(new LegacyCommands());
+        registry.RegisterAllCommands(rootCommand);
 
         // Parse args to capture global options before command execution
         var parseResult = rootCommand.Parse(args);
