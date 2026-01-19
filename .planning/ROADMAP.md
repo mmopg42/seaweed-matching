@@ -51,13 +51,15 @@ None (Windows UI Automation with FlaUI)
 | Milestone | Phases | Plans | Status | Shipped |
 |-----------|--------|-------|--------|---------|
 | v1.0 UI Automation | 1-10 | 28 | ✅ Complete | 2026-01-18 |
-| v1.1 Code Quality | 11-19 | 17/30 | 🚧 In Progress | - |
+| v1.1 Code Quality | 11-19 | 18/30 | 🚧 In Progress | - |
 
 ## Current State
 
-**Status:** Phase 16 complete. File operations commands extracted.
+**Status:** Phase 17 complete. Test, scenario, and batch commands extracted.
 
-**Next:** Execute Phase 17 with `/gsd:execute-phase 17`
+**Next:** Execute Phase 18 with `/gsd:execute-phase 18`
+
+**Note:** Program.cs now at 368 lines - **goal exceeded** (target was 500 lines)!
 
 ---
 
@@ -139,7 +141,7 @@ Plans:
 
 **Shipped:** 2026-01-19 | Program.cs: 1406 → 1126 lines (-280)
 
-#### Phase 17: Test & Scenario Commands
+#### Phase 17: Test & Scenario Commands ✅
 
 **Goal**: Extract test, scenario, and batch commands
 **Depends on**: Phase 11
@@ -147,7 +149,9 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 17-01: Extract test/*, scenario/*, and batch/* commands to TestCommands.cs (~600 lines)
+- [x] 17-01: Extract test/*, scenario/*, and batch/* commands to TestCommands.cs (~600 lines)
+
+**Shipped:** 2026-01-19 | Program.cs: 1126 → 368 lines (-758)
 
 #### Phase 18: Config & Utility Commands
 
@@ -172,4 +176,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-01-19 after Phase 16 completion*
+*Last updated: 2026-01-19 after Phase 17 completion*
