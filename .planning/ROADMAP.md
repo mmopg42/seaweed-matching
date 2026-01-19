@@ -51,13 +51,13 @@ None (Windows UI Automation with FlaUI)
 | Milestone | Phases | Plans | Status | Shipped |
 |-----------|--------|-------|--------|---------|
 | v1.0 UI Automation | 1-10 | 28 | ✅ Complete | 2026-01-18 |
-| v1.1 Code Quality | 11-19 | 11/30 | 🚧 In Progress | - |
+| v1.1 Code Quality | 11-19 | 12/30 | 🚧 In Progress | - |
 
 ## Current State
 
-**Status:** Phase 11 complete. Command registration infrastructure established.
+**Status:** Phase 12 complete. Windows commands extracted.
 
-**Next:** Execute Phase 12 with `/gsd:execute-phase 12`
+**Next:** Execute Phase 13 with `/gsd:execute-phase 13`
 
 ---
 
@@ -78,7 +78,7 @@ Plans:
 
 **Shipped:** 2026-01-19 | Program.cs: 3611 → 3429 lines (-182)
 
-#### Phase 12: Windows Commands
+#### Phase 12: Windows Commands ✅
 
 **Goal**: Extract all window-related commands to dedicated module
 **Depends on**: Phase 11
@@ -86,7 +86,9 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 12-01: Extract windows/* commands to WindowsCommands.cs (~400 lines)
+- [x] 12-01: Extract windows/* commands to WindowsCommands.cs (~400 lines)
+
+**Shipped:** 2026-01-19 | Program.cs: 3429 → 3054 lines (-375)
 
 #### Phase 13: Toolbar Commands
 
@@ -162,4 +164,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-01-19 after v1.1 milestone creation*
+*Last updated: 2026-01-19 after Phase 12 completion*
