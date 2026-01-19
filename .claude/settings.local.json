@@ -6,7 +6,34 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "mcp__plugin_context7_context7__resolve-library-id",
-      "WebSearch"
+      "WebSearch",
+      "Bash(dotnet run:*)",
+      "Bash(powershell:*)",
+      "Bash(python:*)",
+      "Bash(\"C:\\\\workspace\\\\seaweed\\\\gui_kiro_v2\\\\skills_scripts\\\\ui_automation\\\\bin\\\\Debug\\\\net10.0-windows\\\\ui_automation.exe\" test connectivity --json)",
+      "Bash(\"C:\\\\workspace\\\\seaweed\\\\gui_kiro_v2\\\\skills_scripts\\\\ui_automation\\\\bin\\\\Debug\\\\net10.0-windows\\\\ui_automation.exe\":*)",
+      "Bash(\"C:\\\\workspace\\\\seaweed\\\\gui_kiro_v2\\\\skills_scripts\\\\ui_automation\\\\bin\\\\Debug\\\\net10.0-windows\\\\ui_automation.exe\" toolbar start --json)",
+      "Bash(\"C:\\\\workspace\\\\seaweed\\\\gui_kiro_v2\\\\skills_scripts\\\\ui_automation\\\\bin\\\\Debug\\\\net10.0-windows\\\\ui_automation.exe\" -q datagrid rows)",
+      "Bash(\"C:\\\\workspace\\\\seaweed\\\\gui_kiro_v2\\\\skills_scripts\\\\ui_automation\\\\bin\\\\Debug\\\\net10.0-windows\\\\ui_automation.exe\" -q toolbar list)",
+      "Bash(\"C:\\\\workspace\\\\seaweed\\\\gui_kiro_v2\\\\skills_scripts\\\\ui_automation\\\\bin\\\\Debug\\\\net10.0-windows\\\\ui_automation.exe\" stats -j)",
+      "Bash(cmd:*)",
+      "Skill(gsd:execute-phase)"
     ]
-  }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "If $ARGUMENTS.file_path ends with 'PLAN.md', read the file and check if it contains '<!-- VALIDATE-REQUIRED -->' or '[//]: # (VALIDATE-REQUIRED)' marker. If found, you MUST immediately run the validate-plan agent by using the Task tool with: subagent_type='validate-plan' and prompt='Read the plan at $ARGUMENTS.file_path and validate it by coordinating all sub-validators (reality, errors, size, completeness, ssot, quality) to provide approval/rejection decision.' After the Task completes, report the validation results to the user.",
+            "model": "sonnet",
+            "statusMessage": "Checking plan validation marker..."
+          }
+        ]
+      }
+    ]
+  },
+  "outputStyle": "Learning"
 }

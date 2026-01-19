@@ -62,12 +62,13 @@ namespace SkillsScripts.UiAutomation
         /// The title comes from localization resource {x:Static res:Strings.Dialog_Settings}.
         /// Uses substring search for "Settings" (English) or "설정" (Korean) fallback.
         /// The dialog is shown via SettingsDialog.xaml with WindowStartupLocation="CenterOwner".
+        /// Excludes VS Code windows (containing "Visual Studio Code").
         /// </remarks>
         /// <returns>The SettingsDialog if found, null otherwise</returns>
         public Window? FindSettingsDialog()
         {
-            // Try English first
-            var window = FindWindowByTitle("Settings", substring: true);
+            // Try English first (excluding VS Code)
+            var window = FindWindowByTitleExcluding("Settings", exclude: "Visual Studio Code", substring: true);
             if (window != null)
             {
                 return window;
@@ -75,6 +76,78 @@ namespace SkillsScripts.UiAutomation
 
             // Fallback to Korean title
             return FindWindowByTitle("설정", substring: true);
+        }
+
+        /// <summary>
+        /// Finds a window by its title text, excluding windows containing certain text.
+        /// </summary>
+        /// <param name="title">The exact or partial window title</param>
+        /// <param name="exclude">Text to exclude from matches</param>
+        /// <param name="substring">If true, matches windows containing the title; if false, requires exact match</param>
+        /// <returns>The Window element if found, null otherwise</returns>
+        private Window? FindWindowByTitleExcluding(string title, string exclude, bool substring = false)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                Console.WriteLine($"[ChronoWindowFinder] Title is null or empty");
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var desktop = _automation.GetDesktop();
+
+                if (substring)
+                {
+                    // Find all windows and filter by substring
+                    var windowCondition = cf.ByControlType(ControlType.Window);
+                    var windows = desktop.FindAllChildren(windowCondition);
+
+                    foreach (var window in windows)
+                    {
+                        if (!string.IsNullOrEmpty(window.Name) &&
+                            window.Name.IndexOf(title, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            // Exclude windows containing the exclude text
+                            if (!string.IsNullOrEmpty(exclude) &&
+                                window.Name.IndexOf(exclude, StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                Console.WriteLine($"[ChronoWindowFinder] Skipping window containing '{exclude}': '{window.Name}'");
+                                continue;
+                            }
+
+                            Console.WriteLine($"[ChronoWindowFinder] Found window by substring '{title}': '{window.Name}'");
+                            return window.AsWindow();
+                        }
+                    }
+
+                    Console.WriteLine($"[ChronoWindowFinder] No window found containing title: {title} (excluding: {exclude})");
+                    return null;
+                }
+                else
+                {
+                    // Exact match with case insensitivity
+                    var windowCondition = cf.ByControlType(ControlType.Window)
+                        .And(cf.ByName(title, PropertyConditionFlags.IgnoreCase));
+
+                    var window = desktop.FindFirstDescendant(windowCondition)?.AsWindow();
+
+                    if (window == null)
+                    {
+                        Console.WriteLine($"[ChronoWindowFinder] No window found with exact title: {title}");
+                        return null;
+                    }
+
+                    Console.WriteLine($"[ChronoWindowFinder] Found window by exact title '{title}': '{window.Name}'");
+                    return window;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoWindowFinder] Error finding window by title '{title}': {ex.Message}");
+                return null;
+            }
         }
 
         /// <summary>
@@ -244,6 +317,9 @@ namespace SkillsScripts.UiAutomation
         /// <summary>
         /// Waits for a window with the given title substring to appear.
         /// </summary>
+        /// <remarks>
+        /// Excludes VS Code windows (containing "Visual Studio Code") from matching.
+        /// </remarks>
         /// <param name="titleSubstring">The substring to search for in window titles</param>
         /// <param name="timeoutMs">Maximum time to wait in milliseconds (default: 5000)</param>
         /// <returns>The window if found, null if timeout</returns>
@@ -273,6 +349,12 @@ namespace SkillsScripts.UiAutomation
                         if (!string.IsNullOrEmpty(window.Name) &&
                             window.Name.IndexOf(titleSubstring, StringComparison.OrdinalIgnoreCase) >= 0)
                         {
+                            // Exclude VS Code windows
+                            if (window.Name.IndexOf("Visual Studio Code", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                continue;  // Skip VS Code windows
+                            }
+
                             Console.WriteLine($"[ChronoWindowFinder] Window found after {startTime.ElapsedMilliseconds}ms: '{window.Name}'");
                             return window.AsWindow();
                         }

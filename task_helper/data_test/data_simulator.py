@@ -15,11 +15,18 @@ import statistics
 import threading
 import shutil
 import subprocess
+import argparse
 from collections import deque
 from datetime import datetime
 import uuid
-import tkinter as tk
-from tkinter import ttk, filedialog, scrolledtext, messagebox
+
+# GUI imports (only imported when needed)
+try:
+    import tkinter as tk
+    from tkinter import ttk, filedialog, scrolledtext, messagebox
+    GUI_AVAILABLE = True
+except ImportError:
+    GUI_AVAILABLE = False
 
 try:
     from PIL import Image
@@ -729,6 +736,7 @@ class DataSimulator:
 
     def run_line1_simulation(self, log_callback, progress_callback, complete_callback):
         """Run Line1 simulation by moving files at exact timestamps"""
+        self.is_running = True
         try:
             if not self.target_base:
                 log_callback("ERROR: Target folder not set!")
@@ -928,6 +936,7 @@ class DataSimulator:
 
     def run_line2_simulation(self, log_callback, progress_callback, complete_callback):
         """Run Line2 simulation by moving files at exact timestamps"""
+        self.is_running = True
         try:
             if not self.target_base:
                 log_callback("ERROR: Target folder not set!")
@@ -1198,6 +1207,303 @@ class DataSimulator:
     def stop(self):
         """Stop the running simulation"""
         self.is_running = False
+
+    def cleanup_test_data(self, target_path):
+        """Remove all test data from target directory.
+
+        Args:
+            target_path: Path to the test data directory to clean
+
+        Returns:
+            True if cleanup successful, False otherwise
+        """
+        import glob
+        try:
+            if not os.path.exists(target_path):
+                print(f"[CLI] Cleanup: Target path does not exist: {target_path}")
+                return True
+
+            # Count files before deletion
+            file_count = 0
+            for root, dirs, files in os.walk(target_path):
+                file_count += len(files)
+
+            # Remove all files and directories
+            for root, dirs, files in os.walk(target_path, topdown=False):
+                for name in files:
+                    file_path = os.path.join(root, name)
+                    try:
+                        os.remove(file_path)
+                    except Exception as e:
+                        print(f"[CLI] Cleanup: Failed to remove {file_path}: {e}")
+
+                for name in dirs:
+                    dir_path = os.path.join(root, name)
+                    try:
+                        os.rmdir(dir_path)
+                    except Exception as e:
+                        print(f"[CLI] Cleanup: Failed to remove directory {dir_path}: {e}")
+
+            # Remove the root directory
+            try:
+                os.rmdir(target_path)
+                print(f"[CLI] ✓ Cleanup: Removed {file_count} files from {target_path}")
+            except Exception as e:
+                print(f"[CLI] Cleanup: Failed to remove root directory: {e}")
+
+            return True
+
+        except Exception as e:
+            print(f"[CLI] ✗ Cleanup error: {e}")
+            return False
+
+    def get_chronoview_config_path(self):
+        """Get the ChronoView config.json path based on platform.
+
+        Returns:
+            Path to config.json or None if not found
+        """
+        if sys.platform == 'win32':
+            # Windows: %LOCALAPPDATA%\prische\ChronoView\config.json
+            appdata = os.environ.get('LOCALAPPDATA', '')
+            if appdata:
+                return os.path.join(appdata, 'prische', 'ChronoView', 'config.json')
+        elif sys.platform == 'darwin':
+            # macOS: ~/Library/Application Support/prische/ChronoView/config.json
+            home = os.path.expanduser('~')
+            return os.path.join(home, 'Library', 'Application Support', 'prische', 'ChronoView', 'config.json')
+        else:
+            # Linux: ~/.local/share/prische/ChronoView/config.json
+            home = os.path.expanduser('~')
+            xdg_data = os.environ.get('XDG_DATA_HOME', os.path.join(home, '.local', 'share'))
+            return os.path.join(xdg_data, 'prische', 'ChronoView', 'config.json')
+        return None
+
+    def read_chronoview_config(self):
+        """Read ChronoView configuration and extract watch folder paths.
+
+        Returns:
+            dict with keys: 'normal1', 'normal2', 'camera1-6', 'nir1', 'nir2', 'output'
+            Returns None if config not found or invalid
+        """
+        config_path = self.get_chronoview_config_path()
+        if not config_path or not os.path.exists(config_path):
+            return None
+
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+
+            # Extract from matchingSettings (primary source - actual paths used by app)
+            matching_settings = config.get('matchingSettings', {})
+
+            result = {
+                'normal1': matching_settings.get('normal1Path', ''),
+                'normal2': matching_settings.get('normal2Path', ''),
+                'camera1': matching_settings.get('camera1Path', ''),
+                'camera2': matching_settings.get('camera2Path', ''),
+                'camera3': matching_settings.get('camera3Path', ''),
+                'camera4': matching_settings.get('camera4Path', ''),
+                'camera5': matching_settings.get('camera5Path', ''),
+                'camera6': matching_settings.get('camera6Path', ''),
+                'nir1': matching_settings.get('nir1Path', ''),
+                'nir2': matching_settings.get('nir2Path', ''),
+                'output': matching_settings.get('outputPath', ''),
+                'base_path': config.get('basePath', ''),
+            }
+
+            # Fallback to folderPaths for any missing values
+            folder_paths = config.get('folderPaths', {})
+            if folder_paths:
+                # Map folderPaths keys to result keys
+                key_mapping = {
+                    'normal': 'normal1',
+                    'normal2': 'normal2',
+                    'nir': 'nir1',
+                    'nir2': 'nir2',
+                }
+                for fp_key, result_key in key_mapping.items():
+                    if fp_key in folder_paths and not result.get(result_key):
+                        result[result_key] = folder_paths[fp_key]
+
+            return result
+        except json.JSONDecodeError as e:
+            print(f"[CLI] Failed to parse ChronoView config: {e}")
+            return None
+        except Exception as e:
+            print(f"[CLI] Failed to read ChronoView config: {e}")
+            return None
+
+    def get_watch_path_for_line(self, line='line1', cv_config=None):
+        """Get the appropriate watch path for a given line.
+
+        Args:
+            line: 'line1' or 'line2'
+            cv_config: ChronoView config dict (if None, will read)
+
+        Returns:
+            Path to use as target for simulation, or None
+        """
+        if cv_config is None:
+            cv_config = self.read_chronoview_config()
+
+        if not cv_config:
+            return None
+
+        # For Line 1: prefer Normal1, fallback to Camera1, then NIR1
+        if line == 'line1':
+            path = (cv_config.get('normal1') or
+                    cv_config.get('camera1') or
+                    cv_config.get('nir1'))
+        # For Line 2: prefer Normal2, fallback to Camera4, then NIR2
+        else:
+            path = (cv_config.get('normal2') or
+                    cv_config.get('camera4') or
+                    cv_config.get('nir2'))
+
+        # Only use base_path as absolute last resort
+        if not path:
+            path = cv_config.get('base_path')
+
+        return path if path else None
+
+    def show_chronoview_config(self):
+        """Display ChronoView configuration paths.
+
+        Returns:
+            True if config was found and displayed, False otherwise
+        """
+        cv_config = self.read_chronoview_config()
+        if not cv_config:
+            print("[CLI] ChronoView config not found or invalid.")
+            print("[CLI] Expected location:")
+            print(f"     {self.get_chronoview_config_path()}")
+            return False
+
+        print("[CLI] ChronoView Configuration:")
+        print("[CLI] " + "=" * 50)
+        print(f"[CLI] Config file: {self.get_chronoview_config_path()}")
+        print("[CLI]")
+        print(f"[CLI] Line 1 Paths:")
+        print(f"[CLI]   Normal1:  {cv_config.get('normal1') or '(not set)'}")
+        print(f"[CLI]   Camera1:  {cv_config.get('camera1') or '(not set)'}")
+        print(f"[CLI]   Camera2:  {cv_config.get('camera2') or '(not set)'}")
+        print(f"[CLI]   Camera3:  {cv_config.get('camera3') or '(not set)'}")
+        print(f"[CLI]   NIR1:     {cv_config.get('nir1') or '(not set)'}")
+        print("[CLI]")
+        print(f"[CLI] Line 2 Paths:")
+        print(f"[CLI]   Normal2:  {cv_config.get('normal2') or '(not set)'}")
+        print(f"[CLI]   Camera4:  {cv_config.get('camera4') or '(not set)'}")
+        print(f"[CLI]   Camera5:  {cv_config.get('camera5') or '(not set)'}")
+        print(f"[CLI]   Camera6:  {cv_config.get('camera6') or '(not set)'}")
+        print(f"[CLI]   NIR2:     {cv_config.get('nir2') or '(not set)'}")
+        print("[CLI]")
+        print(f"[CLI] Common Paths:")
+        print(f"[CLI]   Base:     {cv_config.get('base_path') or '(not set)'}")
+        print(f"[CLI]   Output:   {cv_config.get('output') or '(not set)'}")
+        print("[CLI] " + "=" * 50)
+
+        # Show recommended target for each line
+        line1_target = self.get_watch_path_for_line('line1', cv_config)
+        line2_target = self.get_watch_path_for_line('line2', cv_config)
+        print("[CLI]")
+        print("[CLI] Recommended targets for simulation:")
+        print(f"[CLI]   Line 1: {line1_target or '(no path configured)'}")
+        print(f"[CLI]   Line 2: {line2_target or '(no path configured)'}")
+
+        return True
+
+    def run_cli(self, args):
+        """Run simulation in CLI mode (no GUI).
+
+        Args:
+            args: argparse.Namespace with CLI arguments
+                - mode: 'dummy' or 'real'
+                - line: 'line1' or 'line2'
+                - target: target folder path
+                - source: source folder path (for real mode)
+                - read_config: use ChronoView config to auto-detect target
+                - show_config: show ChronoView config and exit
+        """
+        # Handle --show-config: just display config and exit
+        if hasattr(args, 'show_config') and args.show_config:
+            return 0 if self.show_chronoview_config() else 1
+
+        # Determine target path
+        if hasattr(args, 'read_config') and args.read_config:
+            # Auto-detect target from ChronoView config
+            detected_target = self.get_watch_path_for_line(args.line)
+            if not detected_target:
+                print(f"[CLI] Error: Could not detect watch path for {args.line} from ChronoView config")
+                print("[CLI] Run with --show-config to see available paths")
+                return 1
+            self.target_base = detected_target
+            print(f"[CLI] Auto-detected target from ChronoView config: {self.target_base}")
+        elif hasattr(args, 'target') and args.target:
+            self.target_base = args.target
+        else:
+            print("[CLI] Error: --target is required (or use --read-config to auto-detect)")
+            return 1
+
+        self.use_dummy_data = (args.mode == 'dummy')
+
+        if args.mode == 'real':
+            if not args.source:
+                print("[CLI] Error: --source is required for real mode")
+                return 1
+            if args.line == 'line1':
+                self.source_line1 = args.source
+            else:
+                self.source_line2 = args.source
+        else:
+            # Dummy mode doesn't need source
+            print(f"[CLI] Dummy data mode: generating files to {self.target_base}")
+
+        # Setup callbacks for CLI output
+        # Note: progress_callback signature in existing code: progress_callback(progress_percent)
+        # Note: complete_callback signature in existing code: complete_callback() (no args)
+        simulation_result = {"success": False, "message": ""}
+
+        def log_callback(message):
+            print(f"[CLI] {message}")
+
+        def progress_callback(progress):
+            # progress is a number 0-100
+            print(f"[CLI] Progress: {progress}%")
+
+        def complete_callback():
+            # Just mark that callback was called
+            simulation_result["callback_called"] = True
+
+        # Start simulation
+        line = args.line
+        print(f"[CLI] Starting {line} simulation in {args.mode} mode...")
+        print(f"[CLI] Target: {self.target_base}")
+
+        if line == 'line1':
+            self.run_line1_simulation(log_callback, progress_callback, complete_callback)
+        else:
+            self.run_line2_simulation(log_callback, progress_callback, complete_callback)
+
+        # Wait for completion
+        if self.simulation_thread:
+            self.simulation_thread.join()
+
+        # Determine success: if callback was called, simulation completed
+        if simulation_result.get("callback_called", False):
+            simulation_result["success"] = True
+            simulation_result["message"] = "Simulation completed"
+        else:
+            simulation_result["success"] = False
+            simulation_result["message"] = "Simulation did not complete"
+
+        # Report final result
+        if simulation_result["success"]:
+            print(f"[CLI] ✓ {simulation_result['message']}")
+        else:
+            print(f"[CLI] ✗ {simulation_result['message']}")
+
+        return 0 if simulation_result["success"] else 1
 
 
 class SimulatorGUI:
@@ -1888,6 +2194,69 @@ class SimulatorGUI:
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = SimulatorGUI(root)
-    root.mainloop()
+    parser = argparse.ArgumentParser(
+        description='Data Simulator - Timestamp-based File Move Tool',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # GUI mode (default)
+  python data_simulator.py
+
+  # CLI mode - Show ChronoView config paths
+  python data_simulator.py --cli --show-config
+
+  # CLI mode - Auto-detect target from ChronoView config
+  python data_simulator.py --cli --read-config --mode dummy --line line1
+
+  # CLI mode - Manual target path
+  python data_simulator.py --cli --mode dummy --target /path/to/target --line line1
+
+  # CLI mode - Real data move with auto-detect
+  python data_simulator.py --cli --read-config --mode real --source /path/to/source --line line1
+
+  # CLI mode - With cleanup
+  python data_simulator.py --cli --read-config --mode dummy --line line1 --cleanup
+        """
+    )
+
+    parser.add_argument('--cli', action='store_true',
+                        help='Run in CLI mode (no GUI)')
+    parser.add_argument('--mode', choices=['dummy', 'real'], default='dummy',
+                        help='Simulation mode: dummy (generate black images) or real (move existing files)')
+    parser.add_argument('--line', choices=['line1', 'line2'], default='line1',
+                        help='Line to simulate: line1 or line2')
+    parser.add_argument('--source',
+                        help='Source folder path (required for real mode)')
+    parser.add_argument('--target',
+                        help='Target folder path (optional with --read-config)')
+    parser.add_argument('--read-config', action='store_true',
+                        help='Auto-detect target path from ChronoView config')
+    parser.add_argument('--show-config', action='store_true',
+                        help='Show ChronoView config paths and exit')
+    parser.add_argument('--cleanup', action='store_true',
+                        help='Clean up test data after simulation')
+
+    args = parser.parse_args()
+
+    if args.cli:
+        # CLI mode
+        if not GUI_AVAILABLE:
+            print("[CLI] Note: GUI not available, running in CLI mode only")
+        simulator = DataSimulator()
+        exit_code = simulator.run_cli(args)
+
+        # Cleanup if requested (use the actual target used during simulation)
+        if args.cleanup and exit_code == 0:
+            target = simulator.target_base  # Use the actual target path (may be auto-detected)
+            print(f"[CLI] Cleaning up test data: {target}")
+            simulator.cleanup_test_data(target)
+
+        sys.exit(exit_code)
+    else:
+        # GUI mode (default)
+        if not GUI_AVAILABLE:
+            print("Error: tkinter is not available. Please install tkinter or use --cli mode.")
+            sys.exit(1)
+        root = tk.Tk()
+        app = SimulatorGUI(root)
+        root.mainloop()

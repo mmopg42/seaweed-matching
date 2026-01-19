@@ -81,7 +81,8 @@ namespace SkillsScripts.UiAutomation
         /// Opens the SettingsDialog by clicking the Settings toolbar button.
         /// </summary>
         /// <remarks>
-        /// Finds the MainWindow, locates the Settings button (text "설정" or "Settings"),
+        /// Tries MainWindow first, then SetupWindow if MainWindow not found.
+        /// Locates the Settings button (text "설정" or "Settings"),
         /// clicks it using InvokePattern, and waits for the SettingsDialog to appear.
         /// </remarks>
         /// <param name="mainWindow">The MainWindow to search within (optional, will find if null)</param>
@@ -89,26 +90,48 @@ namespace SkillsScripts.UiAutomation
         /// <returns>True if the dialog was opened successfully, false otherwise</returns>
         public bool OpenSettingsDialog(Window? mainWindow = null, int timeoutMs = 5000)
         {
-            mainWindow ??= FindMainWindow();
-            if (mainWindow == null)
+            // Check SetupWindow FIRST (before MainWindow)
+            // because FindMainWindow() may return SetupWindow if both exist
+            var setupWindow = _windowFinder.FindSetupWindow();
+
+            // Only look for MainWindow if SetupWindow doesn't exist
+            if (setupWindow == null && mainWindow == null)
             {
-                Console.WriteLine("[ChronoSettingsController] Cannot open SettingsDialog: MainWindow not found");
+                mainWindow = FindMainWindow();
+            }
+
+            // Determine target window
+            Window? targetWindow = setupWindow ?? mainWindow;
+            if (targetWindow == null)
+            {
+                Console.WriteLine("[ChronoSettingsController] Cannot open SettingsDialog: Neither MainWindow nor SetupWindow found");
                 return false;
             }
 
-            Console.WriteLine("[ChronoSettingsController] Attempting to open SettingsDialog via Settings button");
+            Console.WriteLine($"[ChronoSettingsController] Attempting to open SettingsDialog via '{targetWindow.Name}'");
 
-            // Find Settings button in toolbar
-            var settingsButton = FindToolbarButton(mainWindow, "설정");
-            if (settingsButton == null)
+            // Find Settings button - use different method for SetupWindow
+            AutomationElement? settingsButton;
+            if (setupWindow != null)
             {
-                // Try English button text
-                settingsButton = FindToolbarButton(mainWindow, "Settings");
+                // SetupWindow: Settings button has no Name, find by Image child
+                Console.WriteLine("[ChronoSettingsController] Using SetupWindow button detection");
+                settingsButton = FindSetupWindowSettingsButton(setupWindow);
+            }
+            else
+            {
+                // MainWindow: Find by button text
+                Console.WriteLine("[ChronoSettingsController] Using MainWindow button detection");
+                settingsButton = FindToolbarButton(targetWindow, "설정");
+                if (settingsButton == null)
+                {
+                    settingsButton = FindToolbarButton(targetWindow, "Settings");
+                }
             }
 
             if (settingsButton == null)
             {
-                Console.WriteLine("[ChronoSettingsController] Settings button not found in toolbar");
+                Console.WriteLine($"[ChronoSettingsController] Settings button not found in {targetWindow.Name}");
                 return false;
             }
 
@@ -290,6 +313,77 @@ namespace SkillsScripts.UiAutomation
         private AutomationElement? FindButton(Window? window, string buttonText)
         {
             return FindToolbarButton(window, buttonText);
+        }
+
+        /// <summary>
+        /// Finds the Settings button in SetupWindow.
+        /// </summary>
+        /// <remarks>
+        /// SetupWindow's Settings button has no Name, only an Image icon.
+        /// It's identified by checking if it has an Image child element.
+        /// </remarks>
+        /// <param name="setupWindow">The SetupWindow to search within</param>
+        /// <returns>The Settings button element or null if not found</returns>
+        private AutomationElement? FindSetupWindowSettingsButton(Window? setupWindow)
+        {
+            if (setupWindow == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var buttons = setupWindow.FindAllChildren(cf.ByControlType(ControlType.Button));
+
+                Console.WriteLine($"[ChronoSettingsController] Found {buttons.Length} buttons in SetupWindow");
+
+                // Find the first button that contains an Image (Settings button has an icon)
+                foreach (var button in buttons)
+                {
+                    try
+                    {
+                        var imageElement = button.FindFirstDescendant(cf.ByControlType(ControlType.Image));
+                        if (imageElement != null)
+                        {
+                            Console.WriteLine("[ChronoSettingsController] Found SetupWindow Settings button (contains Image)");
+                            return button;
+                        }
+                    }
+                    catch
+                    {
+                        // Skip buttons that can't be searched
+                        continue;
+                    }
+                }
+
+                // Fallback: try by size if Image search fails
+                foreach (var button in buttons)
+                {
+                    try
+                    {
+                        var bounds = button.BoundingRectangle;
+                        if (bounds.Width > 35 && bounds.Width < 45 &&
+                            bounds.Height > 35 && bounds.Height < 45)
+                        {
+                            Console.WriteLine($"[ChronoSettingsController] Found SetupWindow Settings button by size: {bounds.Width}x{bounds.Height}");
+                            return button;
+                        }
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                }
+
+                Console.WriteLine("[ChronoSettingsController] SetupWindow Settings button not found");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoSettingsController] Error finding SetupWindow Settings button: {ex.Message}");
+                return null;
+            }
         }
 
         /// <summary>

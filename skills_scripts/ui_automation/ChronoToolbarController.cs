@@ -65,6 +65,7 @@ namespace SkillsScripts.UiAutomation
 
         /// <summary>
         /// Finds a toolbar button within a window by its button text.
+        /// Searches in ToolBar first, then falls back to searching the entire window.
         /// </summary>
         /// <param name="mainWindow">The Window element to search within</param>
         /// <param name="buttonText">The button text to search for (e.g., "시작", "중지")</param>
@@ -86,19 +87,109 @@ namespace SkillsScripts.UiAutomation
             try
             {
                 var cf = _automation.ConditionFactory;
+
+                // First, try to find ToolBar and search within it
+                var toolBars = mainWindow.FindAllChildren(cf.ByControlType(ControlType.ToolBar));
+                if (toolBars.Length > 0)
+                {
+                    Console.WriteLine($"[ChronoToolbarController] Found {toolBars.Length} ToolBar(s), searching within...");
+                    foreach (var toolBar in toolBars)
+                    {
+                        var toolBarButtons = toolBar.FindAllChildren(cf.ByControlType(ControlType.Button));
+                        Console.WriteLine($"[ChronoToolbarController] ToolBar has {toolBarButtons.Length} buttons");
+                        foreach (var button in toolBarButtons)
+                        {
+                            // Try button.Name first
+                            if (!string.IsNullOrEmpty(button.Name) &&
+                                button.Name.IndexOf(buttonText, StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                Console.WriteLine($"[ChronoToolbarController] Found button by Name in ToolBar: '{button.Name}'");
+                                return button;
+                            }
+
+                            // Try TextBlock children
+                            var textBlocks = button.FindAllChildren(cf.ByControlType(ControlType.Text));
+                            foreach (var textBlock in textBlocks)
+                            {
+                                if (!string.IsNullOrEmpty(textBlock.Name) &&
+                                    textBlock.Name.IndexOf(buttonText, StringComparison.OrdinalIgnoreCase) >= 0)
+                                {
+                                    Console.WriteLine($"[ChronoToolbarController] Found button by child Text in ToolBar: '{textBlock.Name}'");
+                                    return button;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Fallback: search all buttons in window
                 var buttonCondition = cf.ByControlType(ControlType.Button);
                 var buttons = mainWindow.FindAllChildren(buttonCondition);
 
-                Console.WriteLine($"[ChronoToolbarController] Searching for button containing '{buttonText}' among {buttons.Length} buttons");
+                Console.WriteLine($"[ChronoToolbarController] Searching for button containing '{buttonText}' among {buttons.Length} buttons in window");
 
+                int buttonIndex = 0;
                 foreach (var button in buttons)
                 {
+                    // Debug: Print button properties
+                    var bounds = button.BoundingRectangle;
+                    var className = button.ClassName;
+                    var automationId = button.AutomationId;
+                    var isEnabled = button.IsEnabled;
+                    var isOffscreen = button.IsOffscreen;
+
+                    Console.WriteLine($"[ChronoToolbarController] Button {buttonIndex}:");
+                    Console.WriteLine($"  - Name: '{button.Name ?? "(null)"}'");
+                    Console.WriteLine($"  - ClassName: '{className}'");
+                    Console.WriteLine($"  - AutomationId: '{automationId ?? "(null)"}'");
+                    Console.WriteLine($"  - Bounds: {bounds}");
+                    Console.WriteLine($"  - IsEnabled: {isEnabled}, IsOffscreen: {isOffscreen}");
+
+                    // For WPF, try to get the text via LegacyIAccessible
+                    try
+                    {
+                        var legacyPattern = button.Patterns.LegacyIAccessible.Pattern;
+                        if (legacyPattern != null)
+                        {
+                            var value = legacyPattern.Value.Value;
+                            Console.WriteLine($"  - LegacyIAccessible.Value: '{value ?? "(null)"}'");
+                        }
+                    }
+                    catch { }
+
+                    // Try button.Name first
                     if (!string.IsNullOrEmpty(button.Name) &&
                         button.Name.IndexOf(buttonText, StringComparison.OrdinalIgnoreCase) >= 0)
                     {
-                        Console.WriteLine($"[ChronoToolbarController] Found button: '{button.Name}' (AutomationId: '{button.AutomationId ?? "(null)"}')");
+                        Console.WriteLine($"[ChronoToolbarController] Found button by Name: '{button.Name}'");
                         return button;
                     }
+
+                    // Try finding TextBlock children (recursive)
+                    var textBlocks = button.FindAllChildren(cf.ByControlType(ControlType.Text));
+                    foreach (var textBlock in textBlocks)
+                    {
+                        if (!string.IsNullOrEmpty(textBlock.Name) &&
+                            textBlock.Name.IndexOf(buttonText, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            Console.WriteLine($"[ChronoToolbarController] Found button by child Text: '{textBlock.Name}'");
+                            return button;
+                        }
+                    }
+
+                    // Try all descendant elements
+                    var allDescendants = button.FindAllChildren();
+                    foreach (var descendant in allDescendants)
+                    {
+                        if (!string.IsNullOrEmpty(descendant.Name) &&
+                            descendant.Name.IndexOf(buttonText, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            Console.WriteLine($"[ChronoToolbarController] Found button by descendant '{descendant.Name}' (ControlType: {descendant.ControlType})");
+                            return button;
+                        }
+                    }
+
+                    buttonIndex++;
                 }
 
                 Console.WriteLine($"[ChronoToolbarController] No button found containing '{buttonText}'");
@@ -154,14 +245,26 @@ namespace SkillsScripts.UiAutomation
         /// <returns>True if the button was found and clicked successfully, false otherwise</returns>
         public bool ClickToolbarButton(string buttonText)
         {
-            var mainWindow = FindMainWindow();
-            if (mainWindow == null)
+            // Try MainWindow first
+            var window = FindMainWindow();
+
+            // Fallback to SetupWindow (for initial setup screen)
+            if (window == null)
             {
-                Console.WriteLine($"[ChronoToolbarController] Cannot click '{buttonText}' button: MainWindow not found");
+                window = FindSetupWindow();
+                if (window != null)
+                {
+                    Console.WriteLine($"[ChronoToolbarController] MainWindow not found, using SetupWindow");
+                }
+            }
+
+            if (window == null)
+            {
+                Console.WriteLine($"[ChronoToolbarController] Cannot click '{buttonText}' button: No window found");
                 return false;
             }
 
-            var button = FindToolbarButton(mainWindow, buttonText);
+            var button = FindToolbarButton(window, buttonText);
             if (button == null)
             {
                 Console.WriteLine($"[ChronoToolbarController] Button '{buttonText}' not found");
@@ -172,12 +275,81 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Finds the ChronoView SetupWindow.
+        /// </summary>
+        public Window? FindSetupWindow()
+        {
+            return _windowFinder.FindSetupWindow();
+        }
+
+        /// <summary>
         /// Clicks the Start button in the ChronoView MainWindow toolbar.
+        /// Tries multiple button text variations: "모니터링 프로그램 시작" (SetupWindow), "시작" (MainWindow).
+        /// For SetupWindow, also tries finding by button size (Height=55, largest width).
         /// </summary>
         /// <returns>True if the Start button was found and clicked successfully, false otherwise</returns>
         public bool ClickStartButton()
         {
-            return ClickToolbarButton("시작");
+            // Try SetupWindow button text first
+            if (ClickToolbarButton("모니터링 프로그램 시작"))
+            {
+                return true;
+            }
+            // Fallback to MainWindow button text
+            if (ClickToolbarButton("시작"))
+            {
+                return true;
+            }
+            // Last resort: Find by button size (SetupWindow's start button is Height=55, Width=643)
+            return ClickStartButtonBySize();
+        }
+
+        /// <summary>
+        /// Finds and clicks the Start button by its size characteristics.
+        /// SetupWindow's "모니터링 프로그램 시작" button has Height=55 and is the widest button.
+        /// </summary>
+        private bool ClickStartButtonBySize()
+        {
+            using var automation = new UIA3Automation();
+            var window = FindSetupWindow() ?? FindMainWindow();
+            if (window == null)
+            {
+                Console.WriteLine($"[ChronoToolbarController] Cannot find button by size: No window found");
+                return false;
+            }
+
+            var cf = automation.ConditionFactory;
+            var buttons = window.FindAllChildren(cf.ByControlType(ControlType.Button));
+
+            Console.WriteLine($"[ChronoToolbarController] Searching for Start button by size...");
+
+            // Find the largest button with height around 55
+            AutomationElement? largestButton = null;
+            double maxWidth = 0;
+
+            foreach (var button in buttons)
+            {
+                var bounds = button.BoundingRectangle;
+                // Look for button with height ~55 (allowing some tolerance)
+                if (bounds.Height >= 50 && bounds.Height <= 60)
+                {
+                    Console.WriteLine($"[ChronoToolbarController] Found button with Height={bounds.Height}, Width={bounds.Width}");
+                    if (bounds.Width > maxWidth)
+                    {
+                        maxWidth = bounds.Width;
+                        largestButton = button;
+                    }
+                }
+            }
+
+            if (largestButton != null)
+            {
+                Console.WriteLine($"[ChronoToolbarController] Clicking Start button by size (Width={maxWidth})");
+                return ClickButton(largestButton);
+            }
+
+            Console.WriteLine($"[ChronoToolbarController] No Start button found by size");
+            return false;
         }
 
         /// <summary>
