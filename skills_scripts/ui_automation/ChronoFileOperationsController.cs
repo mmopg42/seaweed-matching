@@ -342,6 +342,50 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Selects all rows whose GroupId starts with the specified prefix.
+        /// Uses CheckBox selection pattern consistent with SelectRowByIndex.
+        /// </summary>
+        /// <param name="prefix">GroupId prefix to filter (e.g., "line2_")</param>
+        /// <returns>True if any rows were selected, false otherwise</returns>
+        public bool SelectRowsByPrefix(string prefix)
+        {
+            var dataGrid = FindDataGrid();
+            if (dataGrid == null)
+            {
+                Console.WriteLine("[ChronoFileOperationsController] Cannot select rows by prefix: DataGrid not found");
+                return false;
+            }
+
+            var rows = GetDataRows(dataGrid);
+            var cf = _automation.ConditionFactory;
+            var selectedCount = 0;
+
+            Console.WriteLine($"[ChronoFileOperationsController] Searching for GroupId prefix '{prefix}' among {rows.Length} rows");
+
+            for (int i = 0; i < rows.Length; i++)
+            {
+                var row = rows[i];
+                var cells = row.FindAllChildren(cf.ByControlType(ControlType.Text));
+
+                if (cells.Length > 1)
+                {
+                    var groupId = cells[1].Name ?? "";
+                    if (groupId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var checkBox = FindRowCheckBox(row);
+                        if (checkBox != null && SetCheckBoxState(checkBox, true))
+                        {
+                            selectedCount++;
+                        }
+                    }
+                }
+            }
+
+            Console.WriteLine($"[ChronoFileOperationsController] Selected {selectedCount} rows with prefix '{prefix}'");
+            return selectedCount > 0;
+        }
+
+        /// <summary>
         /// Selects all rows by clicking the SelectAll checkbox in the DataGrid header.
         /// </summary>
         /// <param name="dataGrid">The DataGrid element</param>
@@ -994,8 +1038,8 @@ namespace SkillsScripts.UiAutomation
                                     invokePattern.Invoke();
                                     Console.WriteLine("[ChronoFileOperationsController] Successfully confirmed deletion");
 
-                                    // Wait a bit for the dialog to close
-                                    Thread.Sleep(200);
+                                    // Wait for dialog to close (optimized: 200ms -> 100ms)
+                                    Thread.Sleep(100);
                                     return true;
                                 }
                             }
