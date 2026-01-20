@@ -309,6 +309,13 @@ ui_automation.exe app restart
 # Exit codes: 0=success, 1=error, 2=not_found, 3=timeout
 ```
 
+### Setup Commands (NEW)
+| Intent | Exact Command |
+|--------|--------------|
+| Verify simulator config matches ChronoView | `setup verify-config [--config-path PATH] [--open-settings] [--json]` |
+| Complete setup with cameras and monitoring | `setup complete-full [--verify-config] [--strict] [--json]` |
+| Get camera button states | `setup camera-states --json` |
+
 ## Critical Reminders
 
 1. **DO NOT** execute bash commands directly for testing - delegate to test-executor
