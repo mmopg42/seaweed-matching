@@ -320,6 +320,48 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Waits for the MainWindow to appear after clicking Start button.
+        /// </summary>
+        /// <remarks>
+        /// Uses ChronoWindowFinder.WaitForWindow to wait for "ChronoView Pro" window.
+        /// The MainWindow title is "ChronoView Pro - Desktop Application" (MainWindow.xaml line 14).
+        /// Optionally verifies SetupWindow has closed.
+        /// </remarks>
+        /// <param name="timeoutMs">Maximum time to wait in milliseconds (default: 10000)</param>
+        /// <param name="verifySetupClosed">If true, also verifies SetupWindow is closed (default: true)</param>
+        /// <returns>The MainWindow if found, null if timeout</returns>
+        public Window? WaitForMainWindow(int timeoutMs = 10000, bool verifySetupClosed = true)
+        {
+            Console.WriteLine($"[ChronoSetupWindowController] Waiting for MainWindow (timeout: {timeoutMs}ms)");
+
+            // Optionally verify SetupWindow is closed first
+            if (verifySetupClosed)
+            {
+                var setupWindow = FindSetupWindow();
+                if (setupWindow != null)
+                {
+                    Console.WriteLine("[ChronoSetupWindowController] Note: SetupWindow still exists, waiting for it to close...");
+                    bool setupClosed = _windowFinder.WaitForWindowToClose("Setup", Math.Min(timeoutMs / 2, 5000));
+                    if (!setupClosed)
+                    {
+                        Console.WriteLine("[ChronoSetupWindowController] Warning: SetupWindow did not close within expected time");
+                    }
+                }
+            }
+
+            // Wait for MainWindow
+            var mainWindow = _windowFinder.WaitForWindow("ChronoView Pro", timeoutMs);
+            if (mainWindow != null)
+            {
+                Console.WriteLine($"[ChronoSetupWindowController] MainWindow found: '{mainWindow.Name}'");
+                return mainWindow;
+            }
+
+            Console.WriteLine("[ChronoSetupWindowController] Timeout waiting for MainWindow");
+            return null;
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
