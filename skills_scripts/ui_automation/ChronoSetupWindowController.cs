@@ -276,6 +276,50 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Closes the SetupWindow by clicking the Close button.
+        /// </summary>
+        /// <remarks>
+        /// Finds SetupWindow first if not provided.
+        /// The Close button has AutomationId "SetupCloseButton" (SetupWindow.xaml line 114).
+        /// Waits for the window to close after clicking.
+        /// </remarks>
+        /// <param name="setupWindow">The SetupWindow to close (optional, will find if null)</param>
+        /// <param name="timeoutMs">Maximum time to wait for window to close in milliseconds (default: 5000)</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool CloseWindow(Window? setupWindow = null, int timeoutMs = 5000)
+        {
+            setupWindow ??= FindSetupWindow();
+            if (setupWindow == null)
+            {
+                Console.WriteLine("[ChronoSetupWindowController] Cannot close SetupWindow: not found");
+                return false;
+            }
+
+            var button = FindButtonById(setupWindow, "SetupCloseButton");
+            if (button == null)
+            {
+                return false;
+            }
+
+            if (!ClickButton(button))
+            {
+                return false;
+            }
+
+            // Wait for the window to close
+            Console.WriteLine($"[ChronoSetupWindowController] Waiting for SetupWindow to close (timeout: {timeoutMs}ms)");
+            bool closed = _windowFinder.WaitForWindowToClose("Setup", timeoutMs);
+            if (closed)
+            {
+                Console.WriteLine("[ChronoSetupWindowController] SetupWindow closed successfully");
+                return true;
+            }
+
+            Console.WriteLine("[ChronoSetupWindowController] Timeout waiting for SetupWindow to close");
+            return false;
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
