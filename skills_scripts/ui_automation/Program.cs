@@ -49,6 +49,7 @@ class Program
         registry.RegisterHandler(new TestCommands());
         registry.RegisterHandler(new UtilityCommands());
         registry.RegisterHandler(new AppLifecycleCommands());
+        registry.RegisterHandler(new SetupCommands());
         registry.RegisterAllCommands(rootCommand);
 
         // Parse args to capture global options before command execution
