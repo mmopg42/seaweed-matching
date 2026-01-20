@@ -109,6 +109,90 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Clicks the General Camera launch button.
+        /// </summary>
+        /// <remarks>
+        /// Finds SetupWindow first if not provided.
+        /// The General Camera button has AutomationId "SetupGeneralCameraButton" (SetupWindow.xaml line 264).
+        /// Uses InvokePattern for clicking.
+        /// </remarks>
+        /// <param name="setupWindow">The SetupWindow to search within (optional, will find if null)</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool ClickGeneralCamera(Window? setupWindow = null)
+        {
+            setupWindow ??= FindSetupWindow();
+            if (setupWindow == null)
+            {
+                Console.WriteLine("[ChronoSetupWindowController] Cannot click General Camera button: SetupWindow not found");
+                return false;
+            }
+
+            var button = FindButtonById(setupWindow, "SetupGeneralCameraButton");
+            if (button == null)
+            {
+                return false;
+            }
+
+            return ClickButton(button);
+        }
+
+        /// <summary>
+        /// Clicks the NIR1 Camera launch button.
+        /// </summary>
+        /// <remarks>
+        /// Finds SetupWindow first if not provided.
+        /// The NIR1 button has AutomationId "SetupNir1CameraButton" (SetupWindow.xaml line 322).
+        /// Uses InvokePattern for clicking.
+        /// </remarks>
+        /// <param name="setupWindow">The SetupWindow to search within (optional, will find if null)</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool ClickNir1(Window? setupWindow = null)
+        {
+            setupWindow ??= FindSetupWindow();
+            if (setupWindow == null)
+            {
+                Console.WriteLine("[ChronoSetupWindowController] Cannot click NIR1 button: SetupWindow not found");
+                return false;
+            }
+
+            var button = FindButtonById(setupWindow, "SetupNir1CameraButton");
+            if (button == null)
+            {
+                return false;
+            }
+
+            return ClickButton(button);
+        }
+
+        /// <summary>
+        /// Clicks the NIR2 Camera launch button.
+        /// </summary>
+        /// <remarks>
+        /// Finds SetupWindow first if not provided.
+        /// The NIR2 button has AutomationId "SetupNir2CameraButton" (SetupWindow.xaml line 356).
+        /// Uses InvokePattern for clicking.
+        /// </remarks>
+        /// <param name="setupWindow">The SetupWindow to search within (optional, will find if null)</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool ClickNir2(Window? setupWindow = null)
+        {
+            setupWindow ??= FindSetupWindow();
+            if (setupWindow == null)
+            {
+                Console.WriteLine("[ChronoSetupWindowController] Cannot click NIR2 button: SetupWindow not found");
+                return false;
+            }
+
+            var button = FindButtonById(setupWindow, "SetupNir2CameraButton");
+            if (button == null)
+            {
+                return false;
+            }
+
+            return ClickButton(button);
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
