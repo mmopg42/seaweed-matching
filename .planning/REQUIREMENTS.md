@@ -40,21 +40,21 @@
 - [x] CLI 명령: `setup verify-config` (JSON 출력)
 
 ### PERF-01: 테스트 속도 최적화
-- [ ] 불필요한 connectivity 체크 제거 (기존 명령어에서)
-- [ ] UI 자동화 명령어 직접 실행 (사전 체크 없음)
-- [ ] 병렬 실행 가능한 명령어 그룹화
-- [ ] 타임아웃 기본값 조정 (너무 긴 대기 시간 단축)
+- [x] 불필요한 connectivity 체크 제거 (기존 명령어에서)
+- [x] UI 자동화 명령어 직접 실행 (사전 체크 없음)
+- [x] 병렬 실행 가능한 명령어 그룹화
+- [x] 타임아웃 기본값 조정 (너무 긴 대기 시간 단축)
 
 ### PERF-02: 에이전트 문서 업데이트
-- [ ] test-executor.md에 셋업 워크플로우 추가
-- [ ] test-orchestrator.md에 설정 검증 단계 추가
-- [ ] CLI 명령 참조 테이블 업데이트
+- [x] test-executor.md에 셋업 워크플로우 추가
+- [x] test-orchestrator.md에 설정 검증 단계 추가
+- [x] CLI 명령 참조 테이블 업데이트
 
 ### CLI-01: 새로운 CLI 명령어
-- [ ] `setup open-settings` - SetupWindow에서 설정 열기
-- [ ] `setup complete-full` - 전체 셋업 완료 (카메라 → 설정 확인 → 시작)
-- [ ] `setup verify-config` - 설정값 검증
-- [ ] `setup camera-states` - 카메라 상태 확인
+- [x] `setup open-settings` - SetupWindow에서 설정 열기
+- [x] `setup complete-full` - 전체 셋업 완료 (카메라 → 설정 확인 → 시작)
+- [x] `setup verify-config` - 설정값 검증
+- [x] `setup camera-states` - 카메라 상태 확인
 
 ---
 
@@ -86,9 +86,9 @@
 | SETUP-02 | Phase 22 | ✅ Complete |
 | SETUP-03 | Phase 22 | ✅ Complete |
 | SETUP-04 | Phase 22 | ✅ Complete |
-| PERF-01 | Phase 23 | Pending |
-| PERF-02 | Phase 23 | Pending |
-| CLI-01 | Phase 23 | Pending |
+| PERF-01 | Phase 23 | ✅ Complete |
+| PERF-02 | Phase 23 | ✅ Complete |
+| CLI-01 | Phase 23 | ✅ Complete |
 
 ---
 
