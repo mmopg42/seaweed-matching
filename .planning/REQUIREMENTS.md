@@ -7,37 +7,37 @@
 ## Active Requirements (This Milestone)
 
 ### SETUP-01: SetupWindow 전용 컨트롤러
-- [ ] ChronoSetupWindowController 클래스 생성 (~400 lines)
-- [ ] SetupWindow 찾기 (FindSetupWindow)
-- [ ] 설정 버튼 클릭 (ClickSettingsButton)
-- [ ] 모니터링 시작 버튼 클릭 (ClickStartButton)
-- [ ] 카메라 실행 버튼 클릭 (ClickGeneralCamera, ClickNir1, ClickNir2)
-- [ ] NIR 필터링 토글 (ToggleNirFiltering)
-- [ ] SetupWindow 닫기 (CloseWindow)
+- [x] ChronoSetupWindowController 클래스 생성 (~400 lines)
+- [x] SetupWindow 찾기 (FindSetupWindow)
+- [x] 설정 버튼 클릭 (ClickSettingsButton)
+- [x] 모니터링 시작 버튼 클릭 (ClickStartButton)
+- [x] 카메라 실행 버튼 클릭 (ClickGeneralCamera, ClickNir1, ClickNir2)
+- [x] NIR 필터링 토글 (ToggleNirFiltering)
+- [x] SetupWindow 닫기 (CloseWindow)
 
 ### SETUP-02: 설정 다이얼로그 열기 자동화
-- [ ] SetupWindow에서 설정 버튼 클릭하여 SettingsDialog 열기
-- [ ] SettingsDialog가 열렸는지 확인 (WaitForDialogOpen)
-- [ ] SettingsDialog 닫기 (CloseDialog)
-- [ ] 설정 변경 후 확인 버튼 클릭 (ClickSaveButton)
+- [x] SetupWindow에서 설정 버튼 클릭하여 SettingsDialog 열기
+- [x] SettingsDialog가 열렸는지 확인 (WaitForDialogOpen)
+- [x] SettingsDialog 닫기 (CloseDialog)
+- [x] 설정 변경 후 확인 버튼 클릭 (ClickSaveButton)
 
 ### SETUP-03: 완전한 셋업 완료 워크플로우
-- [ ] 카메라 실행 순서: General → NIR1 → NIR2
-- [ ] NIR 필터링 상태 확인 및 필요시 토글
-- [ ] 설정 확인 (데이터 시뮬레이터 설정과 비교)
-- [ ] 모니터링 시작 버튼 클릭
-- [ ] MainWindow로 전환 확인 (WaitForMainWindow)
-- [ ] 전체 CLI 명령: `setup complete-full`
+- [x] 카메라 실행 순서: General → NIR1 → NIR2
+- [x] NIR 필터링 상태 확인 및 필요시 토글
+- [x] 설정 확인 (데이터 시뮬레이터 설정과 비교)
+- [x] 모니터링 시작 버튼 클릭
+- [x] MainWindow로 전환 확인 (WaitForMainWindow)
+- [x] 전체 CLI 명령: `setup complete-full`
 
 ### SETUP-04: 설정값 검증 (데이터 시뮬레이터 vs ChronoView)
-- [ ] 데이터 시뮬레이터 설정 파일 읽기 (simulator_config.json)
+- [x] 데이터 시뮬레이터 설정 파일 읽기 (simulator_config.json)
   - `source_line1`, `source_line2`, `target_base`, `move_folder`, `trash_folder`
-- [ ] ChronoView WorkflowPanel 경로 읽기 (Line1/Line2)
+- [x] ChronoView WorkflowPanel 경로 읽기 (Line1/Line2)
   - SampleName, MoveNir, MoveAllData
-- [ ] 설정값 비교 로직 구현
+- [x] 설정값 비교 로직 구현
   - 폴더 경로 매칭 확인
   - 필수 설정값 존재 확인
-- [ ] CLI 명령: `setup verify-config` (JSON 출력)
+- [x] CLI 명령: `setup verify-config` (JSON 출력)
 
 ### PERF-01: 테스트 속도 최적화
 - [ ] 불필요한 connectivity 체크 제거 (기존 명령어에서)
@@ -82,10 +82,10 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| SETUP-01 | Phase 22 | Pending |
-| SETUP-02 | Phase 22 | Pending |
-| SETUP-03 | Phase 22 | Pending |
-| SETUP-04 | Phase 22 | Pending |
+| SETUP-01 | Phase 22 | ✅ Complete |
+| SETUP-02 | Phase 22 | ✅ Complete |
+| SETUP-03 | Phase 22 | ✅ Complete |
+| SETUP-04 | Phase 22 | ✅ Complete |
 | PERF-01 | Phase 23 | Pending |
 | PERF-02 | Phase 23 | Pending |
 | CLI-01 | Phase 23 | Pending |

@@ -86,33 +86,21 @@ Windows UI Automation with FlaUI
 - [x] **Phase 20: App Lifecycle Commands** - launch/stop/restart/status commands
 - [x] **Phase 21: Test Executor Agent Updates** - Agent documentation with app commands
 
-### 🚧 Phase 22: Setup Window Controller (v1.3)
+### ✅ Phase 22: Setup Window Controller (v1.3) — Shipped 2026-01-20
 
 **Goal:** SetupWindow 전용 컨트롤러와 설정 다이얼로그 자동화
 
-**Requirements:** SETUP-01, SETUP-02, SETUP-03
+**Requirements:** SETUP-01, SETUP-02, SETUP-03, SETUP-04
 
 **Plans:**
-- [ ] 22-01: ChronoSetupWindowController 클래스 생성 (~400 lines)
-  - SetupWindow 찾기
-  - 설정 버튼 클릭 (SetupSettingsButton)
-  - 모니터링 시작 버튼 클릭 (SetupStartButton)
-  - 카메라 실행 버튼들 (General/NIR1/NIR2)
-  - NIR 필터링 토글
-  - SettingsDialog 열기/닫기 연동
+- [x] 22-01: ChronoSetupWindowController 클래스 생성 (512 lines)
+- [x] 22-02: 완전한 셋업 완료 워크플로우 구현 (SetupCommands.cs)
+- [x] 22-03: 설정값 검증 기능 (SetupConfigVerifier.cs)
 
-- [ ] 22-02: 완전한 셋업 완료 워크플로우 구현
-  - 카메라 실행 순서: General → NIR1 → NIR2
-  - 설정 다이얼로그 열기 및 확인
-  - 모니터링 시작 버튼 클릭
-  - MainWindow 전환 확인
-  - CLI 명령: `setup complete-full`
-
-- [ ] 22-03: 설정값 검증 기능
-  - 데이터 시뮬레이터 설정 파일 읽기 (simulator_config.json)
-  - ChronoView WorkflowPanel 경로 읽기
-  - 설정값 비교 로직
-  - CLI 명령: `setup verify-config --json`
+**Delivered:**
+- ChronoSetupWindowController: 10 public methods for SetupWindow automation
+- SetupCommands: 8 CLI commands (open-settings, camera-*, toggle-nir-filtering, start-monitoring, camera-states, complete-full, verify-config)
+- SetupConfigVerifier: WSL/Windows path normalization, config comparison
 
 ### 📋 Phase 23: Performance & Documentation (v1.3)
 
@@ -150,14 +138,14 @@ Windows UI Automation with FlaUI
 
 | Phase | Milestone | Plans | Status |
 |-------|-----------|-------|--------|
-| 22. Setup Window Controller | v1.3 | 3 | Pending |
+| 22. Setup Window Controller | v1.3 | 3 | ✅ Complete |
 | 23. Performance & Docs | v1.3 | 3 | Pending |
 
 ## Current State
 
-**Status:** 🚧 v1.3 Setup Automation & Test Reliability in progress. Requirements defined, roadmap created.
+**Status:** 🚧 v1.3 Setup Automation & Test Reliability in progress. Phase 22 complete, Phase 23 pending.
 
-**Next Step:** Run `/gsd:plan-phase 22` to start Phase 22 planning.
+**Next Step:** Run `/gsd:plan-phase 23` to start Phase 23 planning.
 
 ---
 
