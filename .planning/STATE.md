@@ -9,12 +9,13 @@ See: .planning/PROJECT.md (updated 2026-01-20)
 
 ## Current Position
 
-**Milestone:** v1.1 Code Quality Refactoring - SHIPPED 2026-01-20
-**Plan:** All 12 plans complete
-**Status:** Milestone complete, ready for next milestone
-**Last activity:** 2026-01-20 — v1.1 milestone archived
+**Milestone:** v1.2 Test Automation Enhancement
+**Phase:** 20 of 22 (App Lifecycle Commands)
+**Plan:** Not started
+**Status:** Ready to plan
+**Last activity:** 2026-01-20 — Milestone v1.2 created
 
-Progress: ████████████ 100% (40/40 plans complete: v1.0 + v1.1)
+Progress: ░░░░░░░░░░ 0% (0/? plans for v1.2)
 
 ## Milestone v1.1 Summary
 
@@ -88,10 +89,12 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: v1.1 milestone complete and archived
-Resume file: .planning/milestones/v1.1-ROADMAP.md
+Stopped at: Milestone v1.2 initialization
+Resume file: None
 
 ## Roadmap Evolution
+
+- Milestone v1.2 created: Test Automation Enhancement, 3 phases (Phase 20-22)
 
 **v1.1 Code Quality Refactoring - SHIPPED**
 
@@ -109,8 +112,8 @@ Resume file: .planning/milestones/v1.1-ROADMAP.md
 **Current State:**
 - All 40 plans complete across 19 phases
 - 2 milestones shipped
-- Ready for next milestone planning
+- v1.2 Test Automation Enhancement initialized (3 phases: 20-22)
 
 ---
 
-*Updated: 2026-01-20 after v1.1 milestone completion*
+*Updated: 2026-01-20 after v1.2 milestone creation*
