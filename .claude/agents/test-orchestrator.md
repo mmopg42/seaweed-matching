@@ -148,6 +148,11 @@ After delegation and synthesis, provide a structured report organized by tiers:
 ### Focus Feature
 [User's stated feature, e.g., "Batch Move Operation"]
 
+### Assumptions
+- [What was assumed when objectives were unclear]
+- [How ambiguous requests were interpreted - e.g., "test monitoring" → core monitoring workflow]
+- [If different scope was intended, please specify in next request]
+
 ### Summary
 - Overall Status: PASS / FAIL / PARTIAL
 - TIER 1 (Focused): [Status] - X/Y passed
@@ -282,14 +287,26 @@ dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- [comma
 |--------|--------------|
 | Check connectivity | `test connectivity` |
 | Check app running | `windows main` (exit code 0=running, 2=not found) |
+| Check app status | `app status --json` (preferred - JSON output) |
 | Check SetupWindow | `windows setup` |
 | Complete SetupWindow | `windows setup-complete` (clicks start button, waits for MainWindow) |
 
 ### Application Lifecycle
-**Note**: "app launch" does NOT exist. To start ChronoView:
+**NEW: Use app commands for process management**
 ```bash
-# Build and run
-dotnet run --project ChronoView/ChronoView.csproj
+# Launch ChronoView (non-blocking, returns immediately)
+ui_automation.exe app launch
+
+# Check if running (with JSON output for programmatic checks)
+ui_automation.exe app status --json
+
+# Stop all ChronoView processes
+ui_automation.exe app stop
+
+# Restart (stop + launch)
+ui_automation.exe app restart
+
+# Exit codes: 0=success, 1=error, 2=not_found, 3=timeout
 ```
 
 ## Critical Reminders
@@ -298,8 +315,14 @@ dotnet run --project ChronoView/ChronoView.csproj
 2. **DO NOT** analyze logs yourself - delegate to log-analyst
 3. **DO NOT** invent UI automation commands - only use commands from the reference table above
 4. **DO** provide exact Bash commands when delegating to test-executor
-5. **DO** ask clarifying questions if test objectives are unclear
+5. **DO NOT** ask questions - proceed autonomously with reasonable assumptions
 6. **DO** synthesize results into actionable reports
+
+**Autonomous Execution:**
+- If test objectives are unclear, make a reasonable assumption and proceed
+- Default to comprehensive testing (all TIERs) when scope is ambiguous
+- Document your assumptions in the report's "Assumptions" section
+- Continue execution without stopping to ask for clarification
 
 ## Success Criteria
 
