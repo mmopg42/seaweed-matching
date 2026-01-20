@@ -85,10 +85,10 @@ None (Windows UI Automation with FlaUI)
 **Goal**: UI Automation CLI에 ChronoView 실행/종료/재시작/상태 확인 명령어 추가
 **Depends on**: Phase 19 (v1.1 complete)
 **Research**: Unlikely (내부 프로세스 관리, 기존 CommandRegistry 패턴 활용)
-**Plans**: TBD
+**Plans**: 1
 
 Plans:
-- [ ] 20-01: TBD (run /gsd:plan-phase 20 to break down)
+- [x] 20-01: AppLifecycleCommands handler (launch/stop/restart/status) — Complete
 
 #### Phase 21: Test Executor Agent Updates
 
@@ -116,20 +116,20 @@ Plans:
 |-----------|--------|-------|--------|---------|
 | v1.0 UI Automation | 1-10 | 28 | ✅ Complete | 2026-01-18 |
 | v1.1 Code Quality | 11-19 | 12 | ✅ Complete | 2026-01-20 |
-| v1.2 Test Automation | 20-22 | 0/? | 🚧 In Progress | - |
+| v1.2 Test Automation | 20-22 | 1/? | 🚧 In Progress | - |
 
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
-| 20. App Lifecycle Commands | v1.2 | 0/? | Not started | - |
+| 20. App Lifecycle Commands | v1.2 | 1 | ✅ Complete | 2026-01-20 |
 | 21. Test Executor Agent Updates | v1.2 | 0/? | Not started | - |
 | 22. Test Data Generator Improvements | v1.2 | 0/? | Not started | - |
 
 ## Current State
 
-**Status:** 🚧 v1.2 Test Automation Enhancement in progress. Phase 20 ready to plan.
+**Status:** 🚧 v1.2 Test Automation Enhancement in progress. Phase 20 complete, Phase 21 ready to plan.
 
-**Next:** `/gsd:plan-phase 20` to create detailed plan for App Lifecycle Commands.
+**Next:** `/gsd:plan-phase 21` to create detailed plan for Test Executor Agent Updates.
 
 ---
 
-*Last updated: 2026-01-20 after v1.2 milestone creation*
+*Last updated: 2026-01-20 after Phase 20 execution*
