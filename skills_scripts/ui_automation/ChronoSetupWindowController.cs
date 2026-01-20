@@ -246,6 +246,36 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Clicks the Start Monitoring button.
+        /// </summary>
+        /// <remarks>
+        /// Finds SetupWindow first if not provided.
+        /// The Start button has AutomationId "SetupStartButton" (SetupWindow.xaml line 432).
+        /// This triggers the transition from SetupWindow to MainWindow.
+        /// Uses InvokePattern for clicking.
+        /// </remarks>
+        /// <param name="setupWindow">The SetupWindow to search within (optional, will find if null)</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool ClickStartButton(Window? setupWindow = null)
+        {
+            setupWindow ??= FindSetupWindow();
+            if (setupWindow == null)
+            {
+                Console.WriteLine("[ChronoSetupWindowController] Cannot click Start button: SetupWindow not found");
+                return false;
+            }
+
+            var button = FindButtonById(setupWindow, "SetupStartButton");
+            if (button == null)
+            {
+                return false;
+            }
+
+            Console.WriteLine("[ChronoSetupWindowController] Clicking Start button - this will transition to MainWindow");
+            return ClickButton(button);
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
