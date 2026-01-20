@@ -48,6 +48,7 @@ class Program
         registry.RegisterHandler(new FileOpsCommands());
         registry.RegisterHandler(new TestCommands());
         registry.RegisterHandler(new UtilityCommands());
+        registry.RegisterHandler(new AppLifecycleCommands());
         registry.RegisterAllCommands(rootCommand);
 
         // Parse args to capture global options before command execution
