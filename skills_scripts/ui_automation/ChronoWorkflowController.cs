@@ -708,10 +708,18 @@ namespace SkillsScripts.UiAutomation
             }
 
             // For Line 2, we need to find the Line 2 StackPanel first
-            // The Line 2 section has "Line 2 설정" header
+            // The Line 2 section has "Line 2 설정" header (Korean) or "Line 2" (English)
             var cf = _automation.ConditionFactory;
+
+            // Try "Line 2 설정" first (Korean), then "Line 2" (English)
             var line2Header = workflowPanel.FindFirstDescendant(
-                cf.ByControlType(ControlType.Text).And(cf.ByName("Line 2", PropertyConditionFlags.IgnoreCase)));
+                cf.ByControlType(ControlType.Text).And(cf.ByName("Line 2 설정", PropertyConditionFlags.IgnoreCase)));
+
+            if (line2Header == null)
+            {
+                line2Header = workflowPanel.FindFirstDescendant(
+                    cf.ByControlType(ControlType.Text).And(cf.ByName("Line 2", PropertyConditionFlags.IgnoreCase)));
+            }
 
             if (line2Header == null)
             {
@@ -869,8 +877,16 @@ namespace SkillsScripts.UiAutomation
 
             // Find Line 2 section first
             var cf = _automation.ConditionFactory;
+
+            // Try "Line 2 설정" first (Korean), then "Line 2" (English)
             var line2Header = workflowPanel.FindFirstDescendant(
-                cf.ByControlType(ControlType.Text).And(cf.ByName("Line 2", PropertyConditionFlags.IgnoreCase)));
+                cf.ByControlType(ControlType.Text).And(cf.ByName("Line 2 설정", PropertyConditionFlags.IgnoreCase)));
+
+            if (line2Header == null)
+            {
+                line2Header = workflowPanel.FindFirstDescendant(
+                    cf.ByControlType(ControlType.Text).And(cf.ByName("Line 2", PropertyConditionFlags.IgnoreCase)));
+            }
 
             if (line2Header == null)
             {
@@ -943,6 +959,86 @@ namespace SkillsScripts.UiAutomation
 
             Console.WriteLine($"[ChronoWorkflowController] Got all paths: {allPaths.Count} lines");
             return allPaths;
+        }
+
+        /// <summary>
+        /// Selects a tab in the MainWindow TabControl.
+        /// </summary>
+        /// <remarks>
+        /// The MainWindow contains a TabControl at Grid.Row="0" with three tabs:
+        /// - "Line 1" (index 0)
+        /// - "Line 2" (index 1)
+        /// - "Combined" (index 2)
+        ///
+        /// This method finds the TabControl and selects the specified tab using SelectionItemPattern.
+        /// The tab selection affects the WorkflowPanel visibility (IsLine1Tab/IsLine2Tab/IsCombinedTab).
+        /// </remarks>
+        /// <param name="tabName">The tab header text: "Line 1", "Line 2", or "Combined"</param>
+        /// <returns>True if the tab was selected successfully, false otherwise</returns>
+        public bool SelectTab(string tabName)
+        {
+            if (string.IsNullOrWhiteSpace(tabName))
+            {
+                Console.WriteLine("[ChronoWorkflowController] Cannot select tab: tabName is null or empty");
+                return false;
+            }
+
+            var mainWindow = FindMainWindow();
+            if (mainWindow == null)
+            {
+                Console.WriteLine("[ChronoWorkflowController] Cannot select tab: MainWindow not found");
+                return false;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+
+                // Find TabControl (ControlType.Tab or by searching for TabItem children)
+                var tabControl = mainWindow.FindFirstDescendant(cf.ByControlType(ControlType.Tab));
+                if (tabControl == null)
+                {
+                    Console.WriteLine("[ChronoWorkflowController] TabControl not found in MainWindow");
+                    return false;
+                }
+
+                Console.WriteLine($"[ChronoWorkflowController] Found TabControl, searching for tab '{tabName}'");
+
+                // Find all TabItem elements
+                var tabItems = tabControl.FindAllChildren(cf.ByControlType(ControlType.TabItem));
+                Console.WriteLine($"[ChronoWorkflowController] Found {tabItems.Length} TabItem(s)");
+
+                foreach (var tabItem in tabItems)
+                {
+                    var header = tabItem.Name ?? "(unnamed)";
+                    Console.WriteLine($"[ChronoWorkflowController] Checking tab: '{header}'");
+
+                    if (header.IndexOf(tabName, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        // Found the target tab, select it using SelectionItemPattern
+                        var selectionPattern = tabItem.Patterns.SelectionItem.Pattern;
+                        if (selectionPattern != null)
+                        {
+                            selectionPattern.Select();
+                            Console.WriteLine($"[ChronoWorkflowController] Successfully selected tab '{tabName}'");
+                            return true;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[ChronoWorkflowController] Tab '{tabName}' does not support SelectionItemPattern");
+                            return false;
+                        }
+                    }
+                }
+
+                Console.WriteLine($"[ChronoWorkflowController] Tab '{tabName}' not found");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoWorkflowController] Error selecting tab '{tabName}': {ex.Message}");
+                return false;
+            }
         }
 
         /// <summary>

@@ -44,16 +44,16 @@ namespace ChronoView.Models
                     {
                         Type = DataType.Cam2,
                         Order = 4,
-                        MinDelaySeconds = 1,
-                        MaxDelaySeconds = 2,
+                        MinDelaySeconds = 0,
+                        MaxDelaySeconds = 1,
                         Enabled = true
                     },
                     new DataSequenceItem
                     {
                         Type = DataType.Cam3,
                         Order = 5,
-                        MinDelaySeconds = 1,
-                        MaxDelaySeconds = 2,
+                        MinDelaySeconds = 0,
+                        MaxDelaySeconds = 1,
                         Enabled = true
                     }
                 }

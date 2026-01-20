@@ -758,6 +758,15 @@
   <data name="Log_Info_MatchExcluded_TimeWindow" xml:space="preserve">
     <value>[MatchExcluded] {0}: {1} -> {2} excluded (reason: {3}, {4})</value>
   </data>
+  <data name="Log_Info_MatchExcluded_AlreadyHasType" xml:space="preserve">
+    <value>[MatchExcluded] {0}: {1} -> {2} excluded (reason: already has same type, candidate: {3}@{4})</value>
+  </data>
+  <data name="Log_Info_MatchExcluded_MissingPredecessor" xml:space="preserve">
+    <value>[MatchExcluded] {0}: {1} -> {2} excluded (reason: missing predecessor type {3}, candidate: {4}@{5})</value>
+  </data>
+  <data name="Log_Info_MatchExcluded_TimeOrder" xml:space="preserve">
+    <value>[MatchExcluded] {0}: {1} -> {2} excluded (reason: time order reversed, new@{3} &lt; candidate@{4})</value>
+  </data>
   <data name="Log_Info_MatchSuccess" xml:space="preserve">
     <value>[MatchSuccess] {0}: {1} -> {2} (reason: {3}, target: {4}, diff: {5}s)</value>
   </data>

@@ -612,9 +612,19 @@ namespace ChronoView.Core.FileWatching
                             newGroupType, newGroup.LineNumber,
                             string.Join(", ", sortedGroups.Select(g => $"{g.GroupId}({ExtractNumericSuffix(g.GroupId)})")));
 
+                        // Track last "AlreadyHasType" candidate for summary logging
+                        (string groupId, string anchorFile, string anchorTime)? lastAlreadyHasType = null;
+
                         foreach (var candidate in sortedGroups)
                         {
-                            if (HasDataType(candidate, newGroupType)) continue;
+                            if (HasDataType(candidate, newGroupType))
+                            {
+                                var candAnchorFile = GetAnchorFileName(candidate);
+                                var candAnchorTime = candidate.Timestamp.ToString("HHmmss");
+                                // Store for later logging (only log the last one)
+                                lastAlreadyHasType = (candidate.GroupId, candAnchorFile, candAnchorTime);
+                                continue;
+                            }
 
                             // ★ 컬럼 내 순서성 체크: 마지막 배정 그룹보다 이후 그룹만 허용 (라인별 분리)
                             var sequenceKey = (newGroupType, newGroup.LineNumber);
@@ -669,14 +679,26 @@ namespace ChronoView.Core.FileWatching
                             // and prevents "anchor-based" accidental matches (especially for camera columns).
                             if (!hasPred && predType != DataType.NIR)
                             {
+                                var candAnchorFile = GetAnchorFileName(candidate);
+                                var candAnchorTime = candidate.Timestamp.ToString("HHmmss");
+                                RaiseLog("Log_Info_MatchExcluded_MissingPredecessor", newGroup.LineNumber, LogSeverity.Info,
+                                    colName, fileName, candidate.GroupId, predType.ToString(), candAnchorFile, candAnchorTime);
                                 _logger.LogTrace("Skipping Candidate {GroupId}: missing predecessor {PredType}", candidate.GroupId, predType);
                                 continue;
                             }
 
                             var timeDiff = (newGroup.Timestamp - comparisonTimestamp).TotalSeconds;
                             bool skipOrdering = (predType == DataType.NIR && !HasDataType(candidate, DataType.NIR));
-                            
-                            if (timeDiff < 0 && !skipOrdering) continue;
+
+                            if (timeDiff < 0 && !skipOrdering)
+                            {
+                                var candAnchorFile = GetAnchorFileName(candidate);
+                                var candAnchorTime = comparisonTimestamp.ToString("HHmmss");
+                                var newGroupTime = newGroup.Timestamp.ToString("HHmmss");
+                                RaiseLog("Log_Info_MatchExcluded_TimeOrder", newGroup.LineNumber, LogSeverity.Info,
+                                    colName, fileName, candidate.GroupId, newGroupTime, candAnchorTime);
+                                continue;
+                            }
 
                             var absDiff = Math.Abs(timeDiff);
                             
@@ -757,6 +779,14 @@ namespace ChronoView.Core.FileWatching
                                 RaiseLog("Log_Info_MatchExcluded_TimeWindow", newGroup.LineNumber, LogSeverity.Info,
                                     colName, fileName, candidate.GroupId, reason, compareDetail);
                             }
+                        }
+
+                        // Log only the last "AlreadyHasType" candidate (if any)
+                        if (lastAlreadyHasType.HasValue)
+                        {
+                            var (groupId, anchorFile, anchorTime) = lastAlreadyHasType.Value;
+                            RaiseLog("Log_Info_MatchExcluded_AlreadyHasType", newGroup.LineNumber, LogSeverity.Info,
+                                colName, fileName, groupId, anchorFile, anchorTime);
                         }
                     }
 

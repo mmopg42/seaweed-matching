@@ -106,6 +106,15 @@
   <data name="Log_Info_MatchExcluded_TimeWindow" xml:space="preserve">
     <value>[매칭제외] {0}: {1} -> {2} 제외 (사유: {3}, {4})</value>
   </data>
+  <data name="Log_Info_MatchExcluded_AlreadyHasType" xml:space="preserve">
+    <value>[매칭제외] {0}: {1} -> {2} 제외 (사유: 이미 동일 타입 보유, 후보: {3}@{4})</value>
+  </data>
+  <data name="Log_Info_MatchExcluded_MissingPredecessor" xml:space="preserve">
+    <value>[매칭제외] {0}: {1} -> {2} 제외 (사유: 선행 타입 {3} 없음, 후보: {4}@{5})</value>
+  </data>
+  <data name="Log_Info_MatchExcluded_TimeOrder" xml:space="preserve">
+    <value>[매칭제외] {0}: {1} -> {2} 제외 (사유: 시간 순서 역전, 신규@{3} &lt; 후보@{4})</value>
+  </data>
   <data name="Log_Info_MatchSuccess" xml:space="preserve">
     <value>[매칭성공] {0}: {1} -> {2} (사유: {3}, 대상: {4}, 시차: {5}초)</value>
   </data>

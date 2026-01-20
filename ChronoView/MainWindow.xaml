@@ -30,7 +30,8 @@
         <ToolBarTray DockPanel.Dock="Top" Background="{StaticResource PanelBackgroundBrush}">
             <ToolBar Background="{StaticResource PanelBackgroundBrush}" 
                      BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1">
-                <Button Style="{StaticResource ToolbarButtonStyle}" Command="{Binding StartCommand}" ToolTip="{x:Static res:Strings.Tooltip_StartMonitoring}">
+                <Button Style="{StaticResource ToolbarButtonStyle}" Command="{Binding StartCommand}" ToolTip="{x:Static res:Strings.Tooltip_StartMonitoring}"
+                        AutomationProperties.AutomationId="ToolbarStartButton">
                     <StackPanel>
                         <Image Source="pack://application:,,,/Resources/Images/start_icon.png"
                                Width="16" Height="16"
@@ -38,7 +39,8 @@
                         <TextBlock Text="시작" FontSize="10"/>
                     </StackPanel>
                 </Button>
-                <Button Style="{StaticResource ToolbarButtonStyle}" Command="{Binding StopCommand}" ToolTip="{x:Static res:Strings.Tooltip_StopMonitoring}">
+                <Button Style="{StaticResource ToolbarButtonStyle}" Command="{Binding StopCommand}" ToolTip="{x:Static res:Strings.Tooltip_StopMonitoring}"
+                        AutomationProperties.AutomationId="ToolbarStopButton">
                     <StackPanel>
                         <Image Source="pack://application:,,,/Resources/Images/stop_icon.png"
                                Width="16" Height="16"
@@ -47,7 +49,8 @@
                     </StackPanel>
                 </Button>
                 <Separator/>
-                <Button Style="{StaticResource ToolbarButtonStyle}" Click="Setup_Click" ToolTip="{x:Static res:Strings.Tooltip_OpenSettings}">
+                <Button Style="{StaticResource ToolbarButtonStyle}" Click="Setup_Click" ToolTip="{x:Static res:Strings.Tooltip_OpenSettings}"
+                        AutomationProperties.AutomationId="ToolbarSettingsButton">
                     <StackPanel>
                         <Image Source="pack://application:,,,/Resources/Images/settings_icon.png" 
                                Width="16" Height="16" 
@@ -55,7 +58,8 @@
                         <TextBlock Text="설정" FontSize="10"/>
                     </StackPanel>
                 </Button>
-                <Button Style="{StaticResource ToolbarButtonStyle}" Command="{Binding RefreshCommand}" ToolTip="{x:Static res:Strings.Tooltip_RefreshData}">
+                <Button Style="{StaticResource ToolbarButtonStyle}" Command="{Binding RefreshCommand}" ToolTip="{x:Static res:Strings.Tooltip_RefreshData}"
+                        AutomationProperties.AutomationId="ToolbarRefreshButton">
                     <StackPanel>
                         <Image Source="pack://application:,,,/Resources/Images/refresh_icon.png"
                                Width="16" Height="16"
@@ -64,7 +68,8 @@
                     </StackPanel>
                 </Button>
                 <Separator/>
-                <Button Style="{StaticResource ToolbarButtonStyle}" Command="{Binding MoveCommand}" ToolTip="{x:Static res:Strings.Tooltip_MoveSelected}">
+                <Button Style="{StaticResource ToolbarButtonStyle}" Command="{Binding MoveCommand}" ToolTip="{x:Static res:Strings.Tooltip_MoveSelected}"
+                        AutomationProperties.AutomationId="ToolbarMoveButton">
                     <StackPanel>
                         <Image Source="pack://application:,,,/Resources/Images/next_icon.png"
                                Width="16" Height="16"
@@ -72,7 +77,8 @@
                         <TextBlock Text="이동" FontSize="10"/>
                     </StackPanel>
                 </Button>
-                <Button Style="{StaticResource ToolbarButtonStyle}" Command="{Binding DeleteCommand}" ToolTip="{x:Static res:Strings.Tooltip_DeleteSelected}">
+                <Button Style="{StaticResource ToolbarButtonStyle}" Command="{Binding DeleteCommand}" ToolTip="{x:Static res:Strings.Tooltip_DeleteSelected}"
+                        AutomationProperties.AutomationId="ToolbarDeleteButton">
                     <StackPanel>
                         <TextBlock Text="🗑" FontSize="16"/>
                         <TextBlock Text="삭제" FontSize="10"/>

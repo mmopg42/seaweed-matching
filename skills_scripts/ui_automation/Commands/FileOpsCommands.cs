@@ -66,6 +66,23 @@ public class FileOpsCommands : ICommandHandler
         }, groupIdOption);
         fileOpsSelectCommand.AddCommand(selectGroupIdCommand);
 
+        // file-ops select prefix: 프리픽스로 행 선택
+        var prefixOption = new Option<string>(
+            ["--prefix", "-p"],
+            "GroupId prefix to filter (e.g., 'line2_')"
+        );
+        var selectPrefixCommand = new Command("prefix", "Select rows by GroupId prefix");
+        selectPrefixCommand.AddOption(prefixOption);
+        selectPrefixCommand.SetHandler((prefix) =>
+        {
+            using var controller = new FileOps();
+            var result = controller.SelectRowsByPrefix(prefix);
+            Console.WriteLine(result ?
+                $"[file-ops-select prefix] Success: Selected rows with prefix '{prefix}'" :
+                $"[file-ops-select prefix] Failed: No rows found with prefix '{prefix}'");
+        }, prefixOption);
+        fileOpsSelectCommand.AddCommand(selectPrefixCommand);
+
         fileOpsCommand.AddCommand(fileOpsSelectCommand);
 
         // file-ops select-all: 모든 행 선택
@@ -161,6 +178,36 @@ public class FileOpsCommands : ICommandHandler
             Console.WriteLine(result ? $"[file-ops-move group-ids] Success: Moved {groupIds.Length} row(s)" : $"[file-ops-move group-ids] Failed: Could not move rows by GroupId");
         }, groupIdsOption);
         fileOpsMoveCommand.AddCommand(moveGroupIdsCommand);
+
+        // file-ops move prefix: 프리픽스로 선택 후 이동
+        var movePrefixOption = new Option<string>(
+            ["--prefix", "-p"],
+            "GroupId prefix to filter (e.g., 'line2_')"
+        );
+        var movePrefixCommand = new Command("prefix", "Select and move rows by GroupId prefix");
+        movePrefixCommand.AddOption(movePrefixOption);
+        movePrefixCommand.SetHandler((prefix) =>
+        {
+            using var controller = new FileOps();
+
+            // 1. Select by prefix
+            if (!controller.SelectRowsByPrefix(prefix))
+            {
+                Console.WriteLine($"[file-ops-move prefix] Failed: No rows found with prefix '{prefix}'");
+                Environment.Exit(EXIT_ERROR);
+            }
+
+            // 2. Small delay for UI update
+            System.Threading.Thread.Sleep(100);
+
+            // 3. Click move button
+            var result = controller.ClickMoveButton();
+            Console.WriteLine(result ?
+                $"[file-ops-move prefix] Success: Move initiated for '{prefix}'" :
+                $"[file-ops-move prefix] Failed: Could not click Move button");
+            Environment.Exit(result ? EXIT_SUCCESS : EXIT_ERROR);
+        }, movePrefixOption);
+        fileOpsMoveCommand.AddCommand(movePrefixCommand);
 
         fileOpsCommand.AddCommand(fileOpsMoveCommand);
 

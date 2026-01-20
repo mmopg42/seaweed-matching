@@ -64,8 +64,27 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Mapping of button text to AutomationId for ChronoView buttons.
+        /// Allows reliable button identification by AutomationId first, falling back to text search.
+        /// </summary>
+        private static readonly Dictionary<string, string[]> ButtonTextToAutomationId = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "시작", new[] { "ToolbarStartButton", "SetupStartButton" } },
+            { "중지", new[] { "ToolbarStopButton" } },
+            { "설정", new[] { "ToolbarSettingsButton", "SetupSettingsButton" } },
+            { "새로고침", new[] { "ToolbarRefreshButton" } },
+            { "이동", new[] { "ToolbarMoveButton" } },
+            { "삭제", new[] { "ToolbarDeleteButton" } },
+            { "모니터링 프로그램 시작", new[] { "SetupStartButton" } },
+            { "일반 카메라", new[] { "SetupGeneralCameraButton" } },
+            { "NIR1 카메라", new[] { "SetupNir1CameraButton" } },
+            { "NIR2 카메라", new[] { "SetupNir2CameraButton" } },
+            { "NIR 필터링", new[] { "SetupNirFilteringButton" } },
+        };
+
+        /// <summary>
         /// Finds a toolbar button within a window by its button text.
-        /// Searches in ToolBar first, then falls back to searching the entire window.
+        /// Searches by AutomationId first, then by Name/Text content.
         /// </summary>
         /// <param name="mainWindow">The Window element to search within</param>
         /// <param name="buttonText">The button text to search for (e.g., "시작", "중지")</param>
@@ -88,7 +107,23 @@ namespace SkillsScripts.UiAutomation
             {
                 var cf = _automation.ConditionFactory;
 
-                // First, try to find ToolBar and search within it
+                // STEP 1: Try to find by AutomationId (most reliable)
+                if (ButtonTextToAutomationId.TryGetValue(buttonText, out var automationIds))
+                {
+                    Console.WriteLine($"[ChronoToolbarController] Searching by AutomationId for '{buttonText}': [{string.Join(", ", automationIds)}]");
+
+                    foreach (var automationId in automationIds)
+                    {
+                        var button = FindButtonByAutomationId(mainWindow, automationId);
+                        if (button != null)
+                        {
+                            Console.WriteLine($"[ChronoToolbarController] Found button by AutomationId '{automationId}'");
+                            return button;
+                        }
+                    }
+                }
+
+                // STEP 2: Fallback to ToolBar search by Name/Text
                 var toolBars = mainWindow.FindAllChildren(cf.ByControlType(ControlType.ToolBar));
                 if (toolBars.Length > 0)
                 {
@@ -567,6 +602,41 @@ namespace SkillsScripts.UiAutomation
                 Thread.Sleep(waitMs);
             }
             return result;
+        }
+
+        /// <summary>
+        /// Finds a button by its AutomationId within the given window.
+        /// This is the most reliable way to find buttons in ChronoView.
+        /// </summary>
+        /// <param name="window">The window to search within</param>
+        /// <param name="automationId">The AutomationId to search for</param>
+        /// <returns>The button if found, null otherwise</returns>
+        private AutomationElement? FindButtonByAutomationId(Window window, string automationId)
+        {
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var condition = new AndCondition(
+                    cf.ByControlType(ControlType.Button),
+                    cf.ByAutomationId(automationId)
+                );
+
+                var button = window.FindFirstDescendant(condition);
+                if (button != null)
+                {
+                    Console.WriteLine($"[ChronoToolbarController] FindButtonByAutomationId: Found button with AutomationId='{automationId}'");
+                }
+                else
+                {
+                    Console.WriteLine($"[ChronoToolbarController] FindButtonByAutomationId: No button found with AutomationId='{automationId}'");
+                }
+                return button;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoToolbarController] FindButtonByAutomationId: Error finding button with AutomationId='{automationId}': {ex.Message}");
+                return null;
+            }
         }
 
         /// <summary>

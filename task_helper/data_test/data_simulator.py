@@ -1342,7 +1342,9 @@ class DataSimulator:
             cv_config: ChronoView config dict (if None, will read)
 
         Returns:
-            Path to use as target for simulation, or None
+            Path to use as target for simulation, or None.
+            Returns the parent directory of watch paths (the date folder),
+            since the simulator adds subdirectories like 'normal1', 'cam1', etc.
         """
         if cv_config is None:
             cv_config = self.read_chronoview_config()
@@ -1350,22 +1352,32 @@ class DataSimulator:
         if not cv_config:
             return None
 
+        # First, try to get base_path directly (this is the date folder)
+        path = cv_config.get('base_path')
+        if path:
+            return path
+
+        # If base_path is not set, derive it from specific watch paths
+        # All watch paths share the same parent (date folder)
         # For Line 1: prefer Normal1, fallback to Camera1, then NIR1
         if line == 'line1':
-            path = (cv_config.get('normal1') or
-                    cv_config.get('camera1') or
-                    cv_config.get('nir1'))
+            specific_path = (cv_config.get('normal1') or
+                            cv_config.get('camera1') or
+                            cv_config.get('nir1'))
         # For Line 2: prefer Normal2, fallback to Camera4, then NIR2
         else:
-            path = (cv_config.get('normal2') or
-                    cv_config.get('camera4') or
-                    cv_config.get('nir2'))
+            specific_path = (cv_config.get('normal2') or
+                            cv_config.get('camera4') or
+                            cv_config.get('nir2'))
 
-        # Only use base_path as absolute last resort
-        if not path:
-            path = cv_config.get('base_path')
+        # Extract parent directory from the specific path
+        # e.g., "...\20260120\normal1" -> "...\20260120"
+        if specific_path:
+            parent_dir = os.path.dirname(specific_path)
+            if parent_dir:
+                return parent_dir
 
-        return path if path else None
+        return None
 
     def show_chronoview_config(self):
         """Display ChronoView configuration paths.
@@ -1446,6 +1458,11 @@ class DataSimulator:
             return 1
 
         self.use_dummy_data = (args.mode == 'dummy')
+
+        # Handle delayed creation flag
+        if hasattr(args, 'delayed') and args.delayed:
+            self.delay_normal_creation = True
+            print("[CLI] Delayed file creation enabled (10-40s random delay)")
 
         if args.mode == 'real':
             if not args.source:
@@ -2235,6 +2252,8 @@ Examples:
                         help='Show ChronoView config paths and exit')
     parser.add_argument('--cleanup', action='store_true',
                         help='Clean up test data after simulation')
+    parser.add_argument('--delayed', action='store_true',
+                        help='Enable delayed file creation (10-40s random delay)')
 
     args = parser.parse_args()
 

@@ -292,6 +292,27 @@ public class WorkflowCommands : ICommandHandler
 
         workflowCommand.AddCommand(workflowPathCommand);
 
+        // workflow select-tab: Select a tab in MainWindow TabControl
+        var tabNameArgument = new Argument<string>("tab", "Tab name: 'Line 1', 'Line 2', or 'Combined'");
+        var wfSelectTabCommand = new Command("select-tab", "Select a tab in MainWindow TabControl");
+        wfSelectTabCommand.AddArgument(tabNameArgument);
+        wfSelectTabCommand.SetHandler((tabName) =>
+        {
+            using var controller = new Workflow();
+            var result = controller.SelectTab(tabName);
+            if (result)
+            {
+                Console.WriteLine($"[workflow-select-tab] Success: Selected tab '{tabName}'");
+                Environment.Exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                Console.WriteLine($"[workflow-select-tab] Failed: Could not select tab '{tabName}'");
+                Environment.Exit(EXIT_ERROR);
+            }
+        }, tabNameArgument);
+        workflowCommand.AddCommand(wfSelectTabCommand);
+
         rootCommand.AddCommand(workflowCommand);
 
         // logs 명령: LogPanel 데이터 읽기 및 필터링

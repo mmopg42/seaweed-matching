@@ -195,7 +195,7 @@ public class MatchingSettings
     /// When true: Folders must end with _0 (Line 1) or _1 (Line 2).
     /// When false: Line is determined by parent path (Normal1Path vs Normal2Path).
     /// </summary>
-    public bool UseFolderSuffix { get; set; } = false;
+    public bool UseFolderSuffix { get; set; } = true;
 
     // ============================================================
     // Line 1 Paths (NIR1, Normal1, Camera 1-3)
