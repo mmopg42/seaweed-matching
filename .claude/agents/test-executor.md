@@ -199,6 +199,22 @@ ui_automation.exe windows setup-complete
 # If it failed (setup window not needed), continue with test
 ```
 
+### Pattern 5: Setup Workflow (NEW)
+```bash
+# Verify configuration before starting (optional but recommended)
+ui_automation.exe setup verify-config --config-path path/to/simulator_config.json --json
+
+# Complete full setup workflow (launch cameras, verify config, start monitoring)
+ui_automation.exe setup complete-full --verify-config --json
+
+# With verification step first, then full workflow:
+ui_automation.exe setup verify-config --open-settings --json
+ui_automation.exe setup complete-full --json
+```
+
+The `--verify-config` flag in `complete-full` runs config verification as a pre-step.
+Use `--strict` to fail on config mismatches instead of continuing.
+
 ## What to Report
 
 After execution, provide a TIER-organized report:
