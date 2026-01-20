@@ -11,11 +11,31 @@ See: .planning/PROJECT.md (updated 2026-01-20)
 
 **Milestone:** v1.3 Setup Automation & Test Reliability
 **Phase:** 22 of 23 (Setup Window Controller)
-**Plan:** 22-01 ChronoSetupWindowController Class - COMPLETE
-**Status:** ChronoSetupWindowController class created (10/10 tasks complete)
-**Last activity:** 2026-01-20 — Plan 22-01 executed, ChronoSetupWindowController created
+**Plan:** 22-02 Complete Setup Workflow - COMPLETE
+**Status:** SetupCommands handler with 7 commands for full setup automation
+**Last activity:** 2026-01-20 — Plan 22-02 executed, SetupCommands created
 
-Progress: ██████░░░░ 40% (2/5 phases complete for v1.3)
+Progress: ██████████ 100% (2/2 plans complete for Phase 22)
+
+## Plan 22-02 Summary
+
+**Timeline:** 1 day (2026-01-20)
+**Deliverables:**
+- SetupCommands.cs (762 lines)
+- 7 CLI commands for SetupWindow automation
+- Program.cs registration complete
+
+**Commits:** 2 atomic commits
+
+**Commands:**
+- `setup open-settings` - Open SettingsDialog
+- `setup camera-general` - Launch General Camera
+- `setup camera-nir1` - Launch NIR1 Camera
+- `setup camera-nir2` - Launch NIR2 Camera
+- `setup toggle-nir-filtering` - Toggle/set NIR filtering
+- `setup camera-states` - Query button states
+- `setup start-monitoring` - Click Start, wait for MainWindow
+- `setup complete-full` - Execute full workflow
 
 ## Plan 22-01 Summary
 
@@ -76,7 +96,8 @@ Decisions from all phases are logged in PROJECT.md.
 |-------|----------|-----------|
 | 1-21 | UIA3 + Modular Commands | Stable automation foundation |
 | 22-01 | SetupWindowController | Dedicated class for setup workflow |
-| 22-02 | Config verification | Data simulator vs ChronoView settings (pending) |
+| 22-02 | SetupCommands CLI handler | 7 commands for complete setup automation |
+| 23 | Config verification | Data simulator vs ChronoView settings (pending) |
 
 ### Deferred Issues
 
@@ -85,9 +106,9 @@ None.
 ### Pending Todos
 
 - [x] Create ChronoSetupWindowController class
-- [ ] Implement setup complete-full workflow (Plan 22-02)
+- [x] Implement setup complete-full workflow (Plan 22-02)
 - [ ] Add config verification logic
-- [ ] Update agent documentation
+- [ ] Update agent documentation with setup commands
 - [ ] Optimize test execution speed
 
 ### Blockers/Concerns
@@ -105,8 +126,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Plan 22-01 complete, ready for Plan 22-02 (Setup Complete Workflow)
-Resume file: .planning/phases/22-setup-window-controller/22-01-SUMMARY.md
+Stopped at: Plan 22-02 complete, Phase 22 fully delivered
+Resume file: .planning/phases/22-setup-window-controller/22-02-SUMMARY.md
 
 ## Roadmap Evolution
 
@@ -133,10 +154,10 @@ Resume file: .planning/phases/22-setup-window-controller/22-01-SUMMARY.md
 - Full archive: .planning/milestones/v1.0-ROADMAP.md
 
 **Current State:**
-- Plan 22-01 complete: ChronoSetupWindowController (511 lines, 10 methods)
-- Plan 22-02 pending: Setup Complete Workflow implementation
-- v1.3 Setup Automation & Test Reliability in progress (40% complete)
+- Phase 22 complete: ChronoSetupWindowController + SetupCommands (1,273 lines total)
+- 10 controller methods + 7 CLI commands
+- v1.3 Setup Automation & Test Reliability: Phase 22/23 complete
 
 ---
 
-*Updated: 2026-01-20 after Plan 22-01 completion*
+*Updated: 2026-01-20 after Plan 22-02 completion*
