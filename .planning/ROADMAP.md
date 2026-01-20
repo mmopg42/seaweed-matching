@@ -99,7 +99,7 @@ Windows UI Automation with FlaUI
 
 **Delivered:**
 - ChronoSetupWindowController: 10 public methods for SetupWindow automation
-- SetupCommands: 8 CLI commands (open-settings, camera-*, toggle-nir-filtering, start-monitoring, camera-states, complete-full, verify-config)
+- SetupCommands: 2 CLI commands (complete-full, verify-config)
 - SetupConfigVerifier: WSL/Windows path normalization, config comparison
 
 ### 📋 Phase 23: Performance & Documentation (v1.3)
@@ -109,21 +109,22 @@ Windows UI Automation with FlaUI
 **Requirements:** PERF-01, PERF-02, CLI-01
 
 **Plans:**
-- [ ] 23-01: 테스트 속도 최적화
-  - 불필요한 connectivity 체크 제거
-  - UI 자동화 명령어 직접 실행 (사전 체크 제거)
-  - 타임아웃 기본값 조정
+- [ ] 23-01: Test Speed Optimization
+  - Optimize inter-operation delays (reduce 200ms to 100ms where appropriate)
+  - Update test-executor.md to emphasize direct execution
+  - Verify all safety checks remain intact
 
-- [ ] 23-02: 에이전트 문서 업데이트
-  - test-executor.md에 셋업 워크플로우 추가
-  - test-orchestrator.md에 설정 검증 단계 추가
-  - CLI 명령 참조 테이블 업데이트
+- [ ] 23-02: Agent Documentation Update
+  - Add setup commands to test-executor.md CLI reference
+  - Add setup workflow pattern (Pattern 5)
+  - Add setup commands to test-orchestrator.md
+  - Document config verification step
 
-- [ ] 23-03: CLI 명령어 등록
-  - `setup open-settings`
-  - `setup complete-full`
-  - `setup verify-config`
-  - `setup camera-states`
+- [ ] 23-03: CLI Command Registration
+  - Verify `setup verify-config` is registered
+  - Verify `setup complete-full` is registered
+  - Add `setup open-settings` if missing
+  - Add `setup camera-states` if missing
 
 ---
 
@@ -139,14 +140,14 @@ Windows UI Automation with FlaUI
 | Phase | Milestone | Plans | Status |
 |-------|-----------|-------|--------|
 | 22. Setup Window Controller | v1.3 | 3 | ✅ Complete |
-| 23. Performance & Docs | v1.3 | 3 | Pending |
+| 23. Performance & Docs | v1.3 | 3 | 📋 Planned |
 
 ## Current State
 
-**Status:** 🚧 v1.3 Setup Automation & Test Reliability in progress. Phase 22 complete, Phase 23 pending.
+**Status:** 🚧 v1.3 Setup Automation & Test Reliability in progress. Phase 22 complete, Phase 23 planned.
 
-**Next Step:** Run `/gsd:plan-phase 23` to start Phase 23 planning.
+**Next Step:** Run `/gsd:execute-phase 23` to execute Phase 23 plans.
 
 ---
 
-*Last updated: 2026-01-20 - v1.3 Roadmap created*
+*Last updated: 2026-01-20 - Phase 23 plans created*
