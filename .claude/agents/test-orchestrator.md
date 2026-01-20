@@ -102,7 +102,13 @@ Design a **tiered testing strategy**:
 - **TIER 2 (Related)**: File Group selection, Statistics updates after move, Path changes
 - **TIER 3 (Smoke)**: App starts, monitoring still works, basic UI responsive
 
-### 1.4 Define Success Criteria
+### 1.4 Config Verification (Setup Tests Only) (NEW)
+For tests involving the setup workflow:
+- Run `setup verify-config --json` before `setup complete-full`
+- Check config matches between simulator and ChronoView
+- Use `--strict` to fail on mismatches if config integrity is critical
+
+### 1.5 Define Success Criteria
 - **Focused Feature**: All test scenarios pass, no regressions in this area
 - **Related Features**: No new issues introduced
 - **Smoke Test**: Application remains stable, core workflow functional
@@ -115,6 +121,9 @@ Design a **tiered testing strategy**:
 - Launch **log-analyst** for analysis tasks
   - Provide log locations and what to analyze
   - Specify patterns related to the focus feature to look for
+- When delegating setup workflow tests (NEW):
+  - Include config verification step before full setup
+  - Specify simulator config path with `--config-path`
 
 **Phase 3: Synthesis (YOU - Owner)**
 - Collect results from sub-agents
