@@ -81,11 +81,115 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Clicks the Settings button in the SetupWindow title bar.
+        /// </summary>
+        /// <remarks>
+        /// Finds SetupWindow first if not provided.
+        /// The Settings button has AutomationId "SetupSettingsButton" (SetupWindow.xaml line 41).
+        /// Uses InvokePattern for clicking.
+        /// </remarks>
+        /// <param name="setupWindow">The SetupWindow to search within (optional, will find if null)</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool ClickSettingsButton(Window? setupWindow = null)
+        {
+            setupWindow ??= FindSetupWindow();
+            if (setupWindow == null)
+            {
+                Console.WriteLine("[ChronoSetupWindowController] Cannot click Settings button: SetupWindow not found");
+                return false;
+            }
+
+            var button = FindButtonById(setupWindow, "SetupSettingsButton");
+            if (button == null)
+            {
+                return false;
+            }
+
+            return ClickButton(button);
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
         {
             _automation?.Dispose();
         }
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Finds a button element within a window by its AutomationId.
+        /// </summary>
+        /// <param name="window">The window to search within</param>
+        /// <param name="automationId">The AutomationId to find</param>
+        /// <returns>The button element if found, null otherwise</returns>
+        private AutomationElement? FindButtonById(Window? window, string automationId)
+        {
+            if (window == null)
+            {
+                Console.WriteLine($"[ChronoSetupWindowController] Cannot find button: window is null");
+                return null;
+            }
+
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var buttonCondition = cf.ByControlType(ControlType.Button)
+                    .And(cf.ByAutomationId(automationId));
+                var button = window.FindFirstDescendant(buttonCondition);
+
+                if (button == null)
+                {
+                    Console.WriteLine($"[ChronoSetupWindowController] Button with AutomationId '{automationId}' not found");
+                    return null;
+                }
+
+                Console.WriteLine($"[ChronoSetupWindowController] Found button with AutomationId '{automationId}'");
+                return button;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoSetupWindowController] Error finding button by AutomationId '{automationId}': {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Clicks a button element using FlaUI's InvokePattern.
+        /// </summary>
+        /// <param name="button">The button element to click</param>
+        /// <returns>True if successful, false if button is null or click failed</returns>
+        private bool ClickButton(AutomationElement? button)
+        {
+            if (button == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                var buttonId = button.AutomationId ?? button.Name ?? "(unnamed)";
+                Console.WriteLine($"[ChronoSetupWindowController] Clicking button: '{buttonId}'");
+
+                var invokePattern = button.Patterns.Invoke.Pattern;
+                if (invokePattern == null)
+                {
+                    Console.WriteLine($"[ChronoSetupWindowController] Failed to get InvokePattern for button '{buttonId}'");
+                    return false;
+                }
+
+                invokePattern.Invoke();
+                Console.WriteLine($"[ChronoSetupWindowController] Successfully clicked button: '{buttonId}'");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoSetupWindowController] Error clicking button: {ex.Message}");
+                return false;
+            }
+        }
+
+        #endregion
     }
 }
