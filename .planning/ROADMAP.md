@@ -6,7 +6,7 @@ FlaUI.UIA3 기반으로 ChronoView WPF 데스크톱 애플리케이션을 자동
 
 ## Domain Expertise
 
-None (Windows UI Automation with FlaUI)
+Windows UI Automation with FlaUI
 
 ## Milestones
 
@@ -40,13 +40,23 @@ None (Windows UI Automation with FlaUI)
 
 **Delivered:**
 - AppLifecycleCommands handler with launch/stop/restart/status commands
-- Test-executor and test-orchestrator documentation updated with app lifecycle commands
+- Test-executor and test-orchestrator documentation updated with app commands
 - Fully autonomous test capability - agents can now launch, control, and terminate ChronoView programmatically
+
+### 🚧 v1.3 Setup Automation & Test Reliability (In Progress)
+
+**Phases:** 22-23 (2 phases) | **Timeline:** TBD | **LOC:** TBD
+
+**Goals:**
+- SetupWindow 완전 자동화
+- 설정값 검증 (데이터 시뮬레이터 vs ChronoView)
+- 테스트 속도 최적화
 
 ---
 
-<details>
-<summary>📦 Completed Phases (1-10)</summary>
+## Phases
+
+### ✅ Phase 1-10: v1.0 UI Automation (Shipped)
 
 - [x] **Phase 1: FlaUI 인프라** - FlaUI 5.x 기반 C# CLI 도구 빌드 및 기반 구축
 - [x] **Phase 2: 윈도우 탐지** - ChronoView 메인 윈도우 및 대화상자 식별
@@ -59,10 +69,7 @@ None (Windows UI Automation with FlaUI)
 - [x] **Phase 9: CLI 인터페이스** - Agent 호출 가능한 명령줄 인터페이스
 - [x] **Phase 10: 테스트 에이전트** - 스킬을 사용하는 자동화 테스트 에이전트
 
-</details>
-
-<details>
-<summary>📦 Completed Phases (11-21)</summary>
+### ✅ Phase 11-19: v1.1 Code Quality (Shipped)
 
 - [x] **Phase 11: Commands Architecture** - ICommandHandler interface and CommandRegistry
 - [x] **Phase 12: Windows Commands** - 6 window detection commands extracted
@@ -73,10 +80,64 @@ None (Windows UI Automation with FlaUI)
 - [x] **Phase 17: Test & Scenario Commands** - Test/scenario/batch orchestration
 - [x] **Phase 18: Config & Utility Commands** - Inspect and config commands
 - [x] **Phase 19: Main Cleanup** - Final cleanup and verification
-- [x] **Phase 20: App Lifecycle Commands** - launch/stop/restart/status commands
-- [x] **Phase 21: Test Executor Updates** - Agent documentation with app commands
 
-</details>
+### ✅ Phase 20-21: v1.2 Test Automation (Shipped)
+
+- [x] **Phase 20: App Lifecycle Commands** - launch/stop/restart/status commands
+- [x] **Phase 21: Test Executor Agent Updates** - Agent documentation with app commands
+
+### 🚧 Phase 22: Setup Window Controller (v1.3)
+
+**Goal:** SetupWindow 전용 컨트롤러와 설정 다이얼로그 자동화
+
+**Requirements:** SETUP-01, SETUP-02, SETUP-03
+
+**Plans:**
+- [ ] 22-01: ChronoSetupWindowController 클래스 생성 (~400 lines)
+  - SetupWindow 찾기
+  - 설정 버튼 클릭 (SetupSettingsButton)
+  - 모니터링 시작 버튼 클릭 (SetupStartButton)
+  - 카메라 실행 버튼들 (General/NIR1/NIR2)
+  - NIR 필터링 토글
+  - SettingsDialog 열기/닫기 연동
+
+- [ ] 22-02: 완전한 셋업 완료 워크플로우 구현
+  - 카메라 실행 순서: General → NIR1 → NIR2
+  - 설정 다이얼로그 열기 및 확인
+  - 모니터링 시작 버튼 클릭
+  - MainWindow 전환 확인
+  - CLI 명령: `setup complete-full`
+
+- [ ] 22-03: 설정값 검증 기능
+  - 데이터 시뮬레이터 설정 파일 읽기 (simulator_config.json)
+  - ChronoView WorkflowPanel 경로 읽기
+  - 설정값 비교 로직
+  - CLI 명령: `setup verify-config --json`
+
+### 📋 Phase 23: Performance & Documentation (v1.3)
+
+**Goal:** 테스트 속도 최적화와 에이전트 문서 업데이트
+
+**Requirements:** PERF-01, PERF-02, CLI-01
+
+**Plans:**
+- [ ] 23-01: 테스트 속도 최적화
+  - 불필요한 connectivity 체크 제거
+  - UI 자동화 명령어 직접 실행 (사전 체크 제거)
+  - 타임아웃 기본값 조정
+
+- [ ] 23-02: 에이전트 문서 업데이트
+  - test-executor.md에 셋업 워크플로우 추가
+  - test-orchestrator.md에 설정 검증 단계 추가
+  - CLI 명령 참조 테이블 업데이트
+
+- [ ] 23-03: CLI 명령어 등록
+  - `setup open-settings`
+  - `setup complete-full`
+  - `setup verify-config`
+  - `setup camera-states`
+
+---
 
 ## Progress
 
@@ -85,18 +146,19 @@ None (Windows UI Automation with FlaUI)
 | v1.0 UI Automation | 1-10 | 28 | ✅ Complete | 2026-01-18 |
 | v1.1 Code Quality | 11-19 | 12 | ✅ Complete | 2026-01-20 |
 | v1.2 Test Automation | 20-21 | 2 | ✅ Complete | 2026-01-20 |
+| v1.3 Setup & Perf | 22-23 | 6 | 🚧 In Progress | TBD |
 
-| Phase | Milestone | Plans | Status | Completed |
-|-------|-----------|-------|--------|-----------|
-| 20. App Lifecycle Commands | v1.2 | 1 | ✅ Complete | 2026-01-20 |
-| 21. Test Executor Agent Updates | v1.2 | 1 | ✅ Complete | 2026-01-20 |
+| Phase | Milestone | Plans | Status |
+|-------|-----------|-------|--------|
+| 22. Setup Window Controller | v1.3 | 3 | Pending |
+| 23. Performance & Docs | v1.3 | 3 | Pending |
 
 ## Current State
 
-**Status:** ✅ v1.2 Test Automation Enhancement shipped. All planned features complete.
+**Status:** 🚧 v1.3 Setup Automation & Test Reliability in progress. Requirements defined, roadmap created.
 
-**Data Simulator:** Existing `data_simulator.py` retained - works with test-executor as-is.
+**Next Step:** Run `/gsd:plan-phase 22` to start Phase 22 planning.
 
 ---
 
-*Last updated: 2026-01-20 - v1.2 Shipped*
+*Last updated: 2026-01-20 - v1.3 Roadmap created*

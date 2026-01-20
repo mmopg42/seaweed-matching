@@ -23,7 +23,16 @@ FlaUI.UIA3 기반 ChronoView WPF 데스크톱 애플리케이션 자동화 도�
 
 ### Active
 
-None currently. All v1.0 and v1.1 requirements validated.
+**Current Milestone: v1.3 Setup Automation & Test Reliability**
+
+**Goal:** SetupWindow 완전 자동화와 테스트 신뢰성/속도 개선
+
+**Target features:**
+- [ ] SetupWindow 전용 컨트롤러 구현
+- [ ] 설정 다이얼로그 열기/닫기 자동화
+- [ ] 완전한 셋업 완료 워크플로우 (카메라 실행 → 설정 확인 → 모니터링 시작)
+- [ ] 데이터 시뮬레이터 설정값과 ChronoView 설정값 비교 검증
+- [ ] 테스트 속도 최적화 (불필요한 체크 제거, 명령어 병렬화)
 
 ### Out of Scope
 
@@ -33,18 +42,37 @@ None currently. All v1.0 and v1.1 requirements validated.
 
 ## Context
 
-**Current State (v1.1 shipped):**
+**Current State (v1.2 shipped):**
 - `skills_scripts/ui_automation/`에 FlaUI 기반 C# 프로젝트 (~11,600 LOC)
 - FlaUI.UIA3 5.0.0, System.CommandLine 2.0.0-beta4
 - 10개 모듈형 커맨드 핸들러 클래스 (각각 < 600 lines)
 - Program.cs: 60 lines (98.3% reduction from original 3,611 lines)
+- AppLifecycleCommands: launch/stop/restart/status 명령
 
 **ChronoView UI 구조:**
 - 메인 윈도우: MainWindow (제목: "ChronoView Pro")
+- 셋업 윈도우: SetupWindow (제목: "Setup - ChronoView Pro")
+  - 설정 버튼 (SetupSettingsButton) - 설정 다이얼로그 열기
+  - 모니터링 시작 버튼 (SetupStartButton) - "모니터링 프로그램 시작"
+  - 카메라 실행 버튼들 (SetupGeneralCameraButton, SetupNir1CameraButton, SetupNir2CameraButton)
 - 툴바: 시작(StartCommand), 중지(StopCommand), 설정, 새로고침(RefreshCommand), 이동(MoveCommand), 삭제(DeleteCommand)
-- 대화상자: SetupWindow, SettingsDialog, ImagePreviewWindow
+- 대화상자: SettingsDialog, ImagePreviewWindow
 - 컨트롤: WorkflowPanel, StatisticsPanel, FileGroupDataGrid, LogPanel
 - 상태 표시줄: StatusMessage, TotalGroups, FailedCount, ProgressValue
+
+**데이터 시뮬레이터 설정 (task_helper/data_test/data_simulator.py):**
+- `source_line1`: Line 1 소스 폴더 (예: Z:\윤태경\seaweed\program\data\2025_A046)
+- `source_line2`: Line 2 소스 폴더
+- `target_base`: 타겟 베이스 폴더
+- `move_folder`: 이동 폴더
+- `trash_folder`: 휴지통 폴더
+
+**ChronoView 설정 구조 (ApplicationConfiguration.cs):**
+- `FolderPaths`: Dictionary<string, string> - 모니터링 폴더 경로들
+- `WorkflowSettings.Line1Settings.SampleName`: 샘플 이름
+- `WorkflowSettings.Line1Settings.MoveNir`: NIR 이동 여부
+- `WorkflowSettings.Line1Settings.MoveAllData`: 전체 데이터 이동 여부
+- `WorkflowSettings.Line2Settings.*`: Line 2 설정 (동일 구조)
 
 ## Constraints
 
@@ -52,6 +80,7 @@ None currently. All v1.0 and v1.1 requirements validated.
 - **실행**: Claude Agent에서 호출 가능해야 함
 - **자동화 방식**: FlaUI UIA3 단일 방식 채택
 - **목적**: 테스트 에이전트로 활용
+- **파일 크기**: 각 파일 600줄 미만 유지
 
 ## Key Decisions
 
@@ -65,4 +94,4 @@ None currently. All v1.0 and v1.1 requirements validated.
 | Pure migration approach | Original code copied verbatim for compatibility | ✓ Good — zero regressions |
 
 ---
-*Last updated: 2026-01-20 after v1.1 milestone completion*
+*Last updated: 2026-01-20 after v1.3 milestone initialization*
