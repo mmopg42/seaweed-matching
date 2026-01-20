@@ -326,6 +326,11 @@ ui_automation.exe app stop
 ui_automation.exe app restart
 ui_automation.exe app status --json
 
+# == Setup Commands (NEW) ==
+ui_automation.exe setup verify-config [--config-path PATH] [--open-settings] [--json]
+ui_automation.exe setup complete-full [--verify-config] [--strict] [--json]
+ui_automation.exe setup camera-states --json
+
 # == Windows (Minimal Use) ==
 ui_automation.exe windows main
 ui_automation.exe windows setup
