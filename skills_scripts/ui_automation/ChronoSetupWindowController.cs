@@ -362,6 +362,69 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Gets the current state of all camera launch buttons.
+        /// </summary>
+        /// <remarks>
+        /// Finds SetupWindow first if not provided.
+        /// Returns a dictionary with keys: "general", "nir1", "nir2".
+        /// Each value is true if the button exists and is enabled, false otherwise.
+        /// Useful for verifying camera program availability before automation.
+        /// </remarks>
+        /// <param name="setupWindow">The SetupWindow to search within (optional, will find if null)</param>
+        /// <returns>Dictionary of camera names to enabled state</returns>
+        public Dictionary<string, bool> GetCameraStates(Window? setupWindow = null)
+        {
+            var states = new Dictionary<string, bool>();
+            setupWindow ??= FindSetupWindow();
+            if (setupWindow == null)
+            {
+                Console.WriteLine("[ChronoSetupWindowController] Cannot get camera states: SetupWindow not found");
+                return states;
+            }
+
+            // Check General Camera button
+            var generalButton = FindButtonById(setupWindow, "SetupGeneralCameraButton");
+            states["general"] = generalButton != null && IsButtonEnabled(generalButton);
+
+            // Check NIR1 button
+            var nir1Button = FindButtonById(setupWindow, "SetupNir1CameraButton");
+            states["nir1"] = nir1Button != null && IsButtonEnabled(nir1Button);
+
+            // Check NIR2 button
+            var nir2Button = FindButtonById(setupWindow, "SetupNir2CameraButton");
+            states["nir2"] = nir2Button != null && IsButtonEnabled(nir2Button);
+
+            Console.WriteLine($"[ChronoSetupWindowController] Camera states: general={states["general"]}, nir1={states["nir1"]}, nir2={states["nir2"]}");
+            return states;
+        }
+
+        /// <summary>
+        /// Checks if a button is enabled.
+        /// </summary>
+        /// <param name="button">The button to check</param>
+        /// <returns>True if enabled, false if disabled or null</returns>
+        private bool IsButtonEnabled(AutomationElement? button)
+        {
+            if (button == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                if (button.Properties.IsEnabled.IsSupported)
+                {
+                    return button.Properties.IsEnabled.ValueOrDefault;
+                }
+                return true; // Assume enabled if property not supported
+            }
+            catch
+            {
+                return true; // Assume enabled on error
+            }
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
