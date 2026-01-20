@@ -11,17 +11,33 @@ See: .planning/PROJECT.md (updated 2026-01-20)
 
 **Milestone:** v1.3 Setup Automation & Test Reliability
 **Phase:** 22 of 23 (Setup Window Controller)
-**Plan:** 22-02 Complete Setup Workflow - COMPLETE
-**Status:** SetupCommands handler with 7 commands for full setup automation
-**Last activity:** 2026-01-20 — Plan 22-02 executed, SetupCommands created
+**Plan:** 22-03 Settings Verification - COMPLETE
+**Status:** Configuration verification for simulator vs ChronoView settings
+**Last activity:** 2026-01-20 — Plan 22-03 executed, SetupConfigVerifier created
 
-Progress: ██████████ 100% (2/2 plans complete for Phase 22)
+Progress: ████████░░ 80% (3/3 plans complete for Phase 22, Phase 23 pending)
+
+## Plan 22-03 Summary
+
+**Timeline:** 1 day (2026-01-20)
+**Deliverables:**
+- SetupConfigVerifier.cs (518 lines)
+- SetupCommands.cs (301 lines) - verify-config and complete-full commands
+- Path normalization for WSL/Windows compatibility
+
+**Commits:** 2 atomic commits
+
+**Features:**
+- `setup verify-config` - Compare simulator and ChronoView settings
+- `setup complete-full --verify-config` - Full workflow with config verification
+- Path normalization: `/mnt/c/...` ↔ `C:\...`
+- JSON output for programmatic consumption
 
 ## Plan 22-02 Summary
 
 **Timeline:** 1 day (2026-01-20)
 **Deliverables:**
-- SetupCommands.cs (762 lines)
+- SetupCommands.cs initial version (762 lines)
 - 7 CLI commands for SetupWindow automation
 - Program.cs registration complete
 
@@ -97,7 +113,7 @@ Decisions from all phases are logged in PROJECT.md.
 | 1-21 | UIA3 + Modular Commands | Stable automation foundation |
 | 22-01 | SetupWindowController | Dedicated class for setup workflow |
 | 22-02 | SetupCommands CLI handler | 7 commands for complete setup automation |
-| 23 | Config verification | Data simulator vs ChronoView settings (pending) |
+| 22-03 | SetupConfigVerifier | Data simulator vs ChronoView settings validation |
 
 ### Deferred Issues
 
@@ -107,7 +123,7 @@ None.
 
 - [x] Create ChronoSetupWindowController class
 - [x] Implement setup complete-full workflow (Plan 22-02)
-- [ ] Add config verification logic
+- [x] Add config verification logic (Plan 22-03)
 - [ ] Update agent documentation with setup commands
 - [ ] Optimize test execution speed
 
@@ -120,20 +136,22 @@ None.
 
 **Root Causes:**
 - ~~SetupWindow 전용 컨트롤러 부재~~ (resolved)
-- 설정 다이얼로그 자동화 불완전
+- ~~데이터 시뮬레이터 설정 검증 부재~~ (resolved with SetupConfigVerifier)
 - 불필요한 사전 체크로 인한 지연
 
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Plan 22-02 complete, Phase 22 fully delivered
-Resume file: .planning/phases/22-setup-window-controller/22-02-SUMMARY.md
+Stopped at: Plan 22-03 complete, Phase 22 fully delivered
+Resume file: .planning/phases/22-setup-window-controller/22-03-SUMMARY.md
 
 ## Roadmap Evolution
 
 - Milestone v1.3 created: Setup Automation & Test Reliability, 2 phases (Phase 22-23)
 - Plan 22-01 complete: ChronoSetupWindowController class
-- Plan 22-02 pending: Setup Complete Workflow
+- Plan 22-02 complete: Setup Complete Workflow
+- Plan 22-03 complete: Settings Verification
+- Phase 22 fully delivered (3/3 plans complete)
 
 **v1.2 Test Automation Enhancement - SHIPPED**
 
@@ -154,10 +172,10 @@ Resume file: .planning/phases/22-setup-window-controller/22-02-SUMMARY.md
 - Full archive: .planning/milestones/v1.0-ROADMAP.md
 
 **Current State:**
-- Phase 22 complete: ChronoSetupWindowController + SetupCommands (1,273 lines total)
-- 10 controller methods + 7 CLI commands
-- v1.3 Setup Automation & Test Reliability: Phase 22/23 complete
+- Phase 22 complete: ChronoSetupWindowController + SetupCommands + SetupConfigVerifier (2,092 lines total)
+- 10 controller methods + 9 CLI commands + config verification
+- v1.3 Setup Automation & Test Reliability: Phase 22/23 complete (Phase 23 pending)
 
 ---
 
-*Updated: 2026-01-20 after Plan 22-02 completion*
+*Updated: 2026-01-20 after Plan 22-03 completion*
