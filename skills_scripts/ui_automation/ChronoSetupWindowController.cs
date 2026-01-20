@@ -193,6 +193,59 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Toggles the NIR filtering state.
+        /// </summary>
+        /// <remarks>
+        /// Finds SetupWindow first if not provided.
+        /// The NIR Filtering button has AutomationId "SetupNirFilteringButton" (SetupWindow.xaml line 390).
+        /// Button text shows "NIR 필터: ON" or "NIR 필터: OFF".
+        /// If targetState is specified, only clicks if current state != target.
+        /// </remarks>
+        /// <param name="targetState">Optional target state (true=ON, false=OFF, null=toggle regardless)</param>
+        /// <param name="setupWindow">The SetupWindow to search within (optional, will find if null)</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool ToggleNirFiltering(bool? targetState = null, Window? setupWindow = null)
+        {
+            setupWindow ??= FindSetupWindow();
+            if (setupWindow == null)
+            {
+                Console.WriteLine("[ChronoSetupWindowController] Cannot toggle NIR filtering: SetupWindow not found");
+                return false;
+            }
+
+            var button = FindButtonById(setupWindow, "SetupNirFilteringButton");
+            if (button == null)
+            {
+                return false;
+            }
+
+            // If targetState is specified, check current state first
+            if (targetState.HasValue)
+            {
+                try
+                {
+                    var buttonText = button.Name ?? string.Empty;
+                    bool isCurrentlyOn = buttonText.IndexOf("ON", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                        buttonText.IndexOf("켜짐", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                    if (isCurrentlyOn == targetState.Value)
+                    {
+                        Console.WriteLine($"[ChronoSetupWindowController] NIR filtering already in desired state: {(targetState.Value ? "ON" : "OFF")}");
+                        return true;
+                    }
+
+                    Console.WriteLine($"[ChronoSetupWindowController] Toggling NIR filtering: {(isCurrentlyOn ? "ON" : "OFF")} -> {(targetState.Value ? "ON" : "OFF")}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ChronoSetupWindowController] Error reading NIR filtering state: {ex.Message}");
+                }
+            }
+
+            return ClickButton(button);
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
