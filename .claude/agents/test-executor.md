@@ -389,6 +389,37 @@ ui_automation.exe file-ops delete group-ids --group-ids "id1,id2"
 ui_automation.exe file-ops wait move --timeout 30000
 ```
 
+### Parallel Execution Groups (PERF-01)
+
+Commands that operate on independent windows can run in parallel:
+
+**Group A - Read-only queries (can parallelize):**
+- `workflow camera-states --json`
+- `setup camera-states --json`
+- `app info --json`
+- `settings get --key <key> --json`
+
+**Group B - Independent operations:**
+- `workflow launch-camera <camera>` (different cameras)
+- `settings-dialog set --key <key> --value <value>` (different keys)
+
+**Sequential execution required:**
+- All file operations (move, delete, copy)
+- State-changing workflow commands (start/stop monitoring, open dialogs)
+- Commands that require specific window focus
+
+**Implementation pattern:**
+```bash
+# Parallel read queries (safe)
+ui_automation.exe workflow camera-states --json &
+ui_automation.exe setup camera-states --json &
+wait
+
+# Sequential state changes (required)
+ui_automation.exe workflow launch-camera general
+ui_automation.exe workflow launch-camera nir1
+```
+
 ## Cleanup Responsibilities
 
 After each test execution:
