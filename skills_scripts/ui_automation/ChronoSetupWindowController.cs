@@ -59,6 +59,28 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// Finds the ChronoView SetupWindow.
+        /// </summary>
+        /// <remarks>
+        /// Reuses ChronoWindowFinder.FindSetupWindow() which searches for
+        /// windows containing "Setup" in their title.
+        /// The SetupWindow has Title="Setup - ChronoView Pro" (SetupWindow.xaml line 4).
+        /// </remarks>
+        /// <returns>The SetupWindow if found, null otherwise</returns>
+        public Window? FindSetupWindow()
+        {
+            var window = _windowFinder.FindSetupWindow();
+            if (window == null)
+            {
+                Console.WriteLine("[ChronoSetupWindowController] SetupWindow not found");
+                return null;
+            }
+
+            Console.WriteLine($"[ChronoSetupWindowController] SetupWindow found: '{window.Name}'");
+            return window;
+        }
+
+        /// <summary>
         /// Releases resources used by the UIA3 automation.
         /// </summary>
         public void Dispose()
