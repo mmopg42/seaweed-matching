@@ -34,14 +34,14 @@ None (Windows UI Automation with FlaUI)
 
 **[→ Full details: milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)**
 
-### 🚧 v1.2 Test Automation Enhancement (In Progress)
+### ✅ v1.2 Test Automation Enhancement (Shipped: 2026-01-20)
 
-**Phases:** 20-22 (estimated 3-6 plans) | **Goal:** 완전 자율 테스트를 위한 앱 실행 자동화
+**Phases:** 20-21 (2 plans) | **Timeline:** 1 day | **LOC:** ~150
 
-**Planned:**
-- App lifecycle commands (launch/terminate/restart/status)
-- Test executor agent improvements to use new app commands
-- Test data generator enhancements
+**Delivered:**
+- AppLifecycleCommands handler with launch/stop/restart/status commands
+- Test-executor and test-orchestrator documentation updated with app lifecycle commands
+- Fully autonomous test capability - agents can now launch, control, and terminate ChronoView programmatically
 
 ---
 
@@ -62,7 +62,7 @@ None (Windows UI Automation with FlaUI)
 </details>
 
 <details>
-<summary>📦 Completed Phases (11-19)</summary>
+<summary>📦 Completed Phases (11-21)</summary>
 
 - [x] **Phase 11: Commands Architecture** - ICommandHandler interface and CommandRegistry
 - [x] **Phase 12: Windows Commands** - 6 window detection commands extracted
@@ -73,42 +73,10 @@ None (Windows UI Automation with FlaUI)
 - [x] **Phase 17: Test & Scenario Commands** - Test/scenario/batch orchestration
 - [x] **Phase 18: Config & Utility Commands** - Inspect and config commands
 - [x] **Phase 19: Main Cleanup** - Final cleanup and verification
+- [x] **Phase 20: App Lifecycle Commands** - launch/stop/restart/status commands
+- [x] **Phase 21: Test Executor Updates** - Agent documentation with app commands
 
 </details>
-
-### 🚧 v1.2 Test Automation Enhancement (In Progress)
-
-**Milestone Goal:** 완전 자율 테스트를 위한 앱 실행 자동화 — CLI에서 ChronoView 실행/종료/재시작/상태 확인 기능을 추가하여 test-executor 에이전트가 독립적으로 ChronoView를 제어하고 테스트할 수 있게 함
-
-#### Phase 20: App Lifecycle Commands
-
-**Goal**: UI Automation CLI에 ChronoView 실행/종료/재시작/상태 확인 명령어 추가
-**Depends on**: Phase 19 (v1.1 complete)
-**Research**: Unlikely (내부 프로세스 관리, 기존 CommandRegistry 패턴 활용)
-**Plans**: 1
-
-Plans:
-- [x] 20-01: AppLifecycleCommands handler (launch/stop/restart/status) — Complete
-
-#### Phase 21: Test Executor Agent Updates
-
-**Goal**: test-executor 에이전트가 새 app 명령어를 사용하도록 업데이트
-**Depends on**: Phase 20
-**Research**: Unlikely (에이전트 스크립트 패턴 수정)
-**Plans**: TBD
-
-Plans:
-- [ ] 21-01: TBD (run /gsd:plan-phase 21 to break down)
-
-#### Phase 22: Test Data Generator Improvements
-
-**Goal**: data_simulator.py 개선 (구체적 내용은 진행 중 정의)
-**Depends on**: Phase 21
-**Research**: Unlikely (내부 Python 스크립트 개선)
-**Plans**: TBD
-
-Plans:
-- [ ] 22-01: TBD (run /gsd:plan-phase 22 to break down)
 
 ## Progress
 
@@ -116,20 +84,19 @@ Plans:
 |-----------|--------|-------|--------|---------|
 | v1.0 UI Automation | 1-10 | 28 | ✅ Complete | 2026-01-18 |
 | v1.1 Code Quality | 11-19 | 12 | ✅ Complete | 2026-01-20 |
-| v1.2 Test Automation | 20-22 | 1/? | 🚧 In Progress | - |
+| v1.2 Test Automation | 20-21 | 2 | ✅ Complete | 2026-01-20 |
 
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
 | 20. App Lifecycle Commands | v1.2 | 1 | ✅ Complete | 2026-01-20 |
-| 21. Test Executor Agent Updates | v1.2 | 0/? | Not started | - |
-| 22. Test Data Generator Improvements | v1.2 | 0/? | Not started | - |
+| 21. Test Executor Agent Updates | v1.2 | 1 | ✅ Complete | 2026-01-20 |
 
 ## Current State
 
-**Status:** 🚧 v1.2 Test Automation Enhancement in progress. Phase 20 complete, Phase 21 ready to plan.
+**Status:** ✅ v1.2 Test Automation Enhancement shipped. All planned features complete.
 
-**Next:** `/gsd:plan-phase 21` to create detailed plan for Test Executor Agent Updates.
+**Data Simulator:** Existing `data_simulator.py` retained - works with test-executor as-is.
 
 ---
 
-*Last updated: 2026-01-20 after Phase 20 execution*
+*Last updated: 2026-01-20 - v1.2 Shipped*
