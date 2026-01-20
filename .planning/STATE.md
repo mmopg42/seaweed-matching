@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-20)
 
 **Milestone:** v1.2 Test Automation Enhancement
 **Phase:** 20 of 22 (App Lifecycle Commands)
-**Plan:** Not started
-**Status:** Ready to plan
-**Last activity:** 2026-01-20 — Milestone v1.2 created
+**Plan:** 01 of ? (App Lifecycle Commands implementation)
+**Status:** Plan 01 complete
+**Last activity:** 2026-01-20 — AppLifecycleCommands handler implemented
 
-Progress: ░░░░░░░░░░ 0% (0/? plans for v1.2)
+Progress: ███░░░░░░░░ 33% (1/3 plans for v1.2)
 
 ## Milestone v1.1 Summary
 
@@ -29,7 +29,7 @@ Progress: ░░░░░░░░░░ 0% (0/? plans for v1.2)
 **Handler Classes:**
 - CommandRegistry, LegacyCommands, WindowsCommands, ToolbarCommands
 - DataPanelCommands, WorkflowCommands, SettingsCommands, FileOpsCommands
-- TestCommands, UtilityCommands
+- TestCommands, UtilityCommands, AppLifecycleCommands (v1.2)
 
 ## Milestone v1.0 Summary
 
@@ -73,6 +73,8 @@ Decisions from all phases are logged in PROJECT.md.
 | 12-18 | Extract to handler classes | Each command group in focused, single-responsibility class |
 | 19-01 | Remove historical comments | Clean Program.cs for final minimal state |
 | 19-02 | Verification before ship | Confirm zero behavioral regressions |
+| 20-01 | Non-blocking process launch for app commands | Task.Run wrapper allows test agents to continue without waiting |
+| 20-01 | Process.GetProcessesByName without .exe extension | API returns process name only, extension causes no matches |
 
 ### Deferred Issues
 
@@ -89,8 +91,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Milestone v1.2 initialization
-Resume file: None
+Stopped at: Plan 20-01 complete (AppLifecycleCommands implemented)
+Resume file: .planning/phases/20-app-lifecycle-commands/20-01-SUMMARY.md
 
 ## Roadmap Evolution
 
@@ -112,8 +114,11 @@ Resume file: None
 **Current State:**
 - All 40 plans complete across 19 phases
 - 2 milestones shipped
-- v1.2 Test Automation Enhancement initialized (3 phases: 20-22)
+- v1.2 Test Automation Enhancement in progress (1/3 plans complete: 20-01)
+
+**v1.2 Progress:**
+- Plan 20-01: AppLifecycleCommands handler with launch/stop/restart/status commands
 
 ---
 
-*Updated: 2026-01-20 after v1.2 milestone creation*
+*Updated: 2026-01-20 after plan 20-01 completion*
