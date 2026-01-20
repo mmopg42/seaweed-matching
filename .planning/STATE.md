@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-01-20)
 ## Current Position
 
 **Milestone:** v1.2 Test Automation Enhancement
-**Phase:** 20 of 22 (App Lifecycle Commands)
-**Plan:** 01 of ? (App Lifecycle Commands implementation)
+**Phase:** 21 of 22 (Test Executor Updates)
+**Plan:** 01 of 1 (Update agent documentation with app commands)
 **Status:** Plan 01 complete
-**Last activity:** 2026-01-20 — AppLifecycleCommands handler implemented
+**Last activity:** 2026-01-20 — Agent documentation updated with app lifecycle commands
 
-Progress: ███░░░░░░░░ 33% (1/3 plans for v1.2)
+Progress: ██████░░░░ 67% (2/3 plans for v1.2)
 
 ## Milestone v1.1 Summary
 
@@ -75,6 +75,8 @@ Decisions from all phases are logged in PROJECT.md.
 | 19-02 | Verification before ship | Confirm zero behavioral regressions |
 | 20-01 | Non-blocking process launch for app commands | Task.Run wrapper allows test agents to continue without waiting |
 | 20-01 | Process.GetProcessesByName without .exe extension | API returns process name only, extension causes no matches |
+| 21-01 | Use app launch in test agent documentation | Replaces dotnet run with non-blocking app launch command |
+| 21-01 | Document app status --json for connectivity checks | JSON output enables programmatic status verification |
 
 ### Deferred Issues
 
@@ -91,8 +93,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Plan 20-01 complete (AppLifecycleCommands implemented)
-Resume file: .planning/phases/20-app-lifecycle-commands/20-01-SUMMARY.md
+Stopped at: Plan 21-01 complete (Agent documentation updated with app commands)
+Resume file: .planning/phases/21-test-executor-updates/21-01-SUMMARY.md
 
 ## Roadmap Evolution
 
@@ -112,13 +114,14 @@ Resume file: .planning/phases/20-app-lifecycle-commands/20-01-SUMMARY.md
 - Full archive: .planning/milestones/v1.0-ROADMAP.md
 
 **Current State:**
-- All 40 plans complete across 19 phases
+- All 41 plans complete across 20 phases
 - 2 milestones shipped
-- v1.2 Test Automation Enhancement in progress (1/3 plans complete: 20-01)
+- v1.2 Test Automation Enhancement in progress (2/3 plans complete: 20-01, 21-01)
 
 **v1.2 Progress:**
 - Plan 20-01: AppLifecycleCommands handler with launch/stop/restart/status commands
+- Plan 21-01: Updated test-executor and test-orchestrator documentation with app commands
 
 ---
 
-*Updated: 2026-01-20 after plan 20-01 completion*
+*Updated: 2026-01-20 after plan 21-01 completion*
