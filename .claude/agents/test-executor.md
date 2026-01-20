@@ -85,7 +85,7 @@ python task_helper/data_test/data_simulator.py --cli --read-config --mode dummy 
 
 ## Execution Patterns (OPTIMIZED)
 
-**CRITICAL: Use the CLI executable directly when available for speed.**
+**CRITICAL: Use the CLI executable directly when available for speed. All CLI commands should be executed directly without pre-checks.**
 
 ```bash
 # Prefer using built exe (faster than dotnet run)
@@ -95,6 +95,12 @@ cd C:\workspace\seaweed\gui_kiro_v2
 # Fall back to dotnet run if exe not built
 dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- [command]
 ```
+
+**Execution Philosophy: Execute first, verify on failure**
+
+- Pre-checks (connectivity, window detection) add unnecessary overhead
+- Execute commands directly - handle failures only when they occur
+- Connectivity checks are only for debugging, not normal flow
 
 ### Toolbar Operations (Direct, No Pre-checks)
 ```bash
@@ -332,6 +338,8 @@ If execution fails:
 - Exit code 2 (not found) → Skip this check
 - Same error twice → Report and continue
 - Timeout after 1 retry → Report and continue
+
+**Pre-checks before commands add unnecessary overhead. Execute commands directly first.**
 
 ## CLI Command Quick Reference
 
