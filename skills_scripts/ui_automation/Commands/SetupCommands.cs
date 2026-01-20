@@ -246,6 +246,118 @@ public class SetupCommands : ICommandHandler
         }, verifyConfigIntegrationOption, configPathForIntegrationOption, strictIntegrationOption, jsonOption);
         setupCommand.AddCommand(completeFullCommand);
 
+        // setup open-settings: Open SettingsDialog from SetupWindow
+        var openSettingsCommand = new Command("open-settings", "SetupWindow에서 설정 다이얼로그 열기");
+        openSettingsCommand.AddOption(jsonOption);
+        openSettingsCommand.SetHandler((json) =>
+        {
+            using var controller = new SetupController();
+
+            // Find SetupWindow first
+            var setupWindow = controller.FindSetupWindow();
+            if (setupWindow == null)
+            {
+                if (json)
+                {
+                    PrintJsonOutput(new
+                    {
+                        success = false,
+                        error = "SetupWindow not found"
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("[setup open-settings] SetupWindow not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
+                return;
+            }
+
+            // Click the Settings button
+            bool success = controller.ClickSettingsButton();
+
+            if (json)
+            {
+                PrintJsonOutput(new
+                {
+                    success = success,
+                    data = new
+                    {
+                        settingsOpened = success
+                    }
+                });
+            }
+            else
+            {
+                if (success)
+                {
+                    Console.WriteLine("[setup open-settings] SettingsDialog opened successfully");
+                }
+                else
+                {
+                    Console.WriteLine("[setup open-settings] Failed to open SettingsDialog");
+                }
+            }
+
+            Environment.Exit(success ? EXIT_SUCCESS : EXIT_ERROR);
+        }, jsonOption);
+        setupCommand.AddCommand(openSettingsCommand);
+
+        // setup camera-states: Get camera button states from SetupWindow
+        var cameraStatesCommand = new Command("camera-states", "카메라 버튼 상태 확인 (general, nir1, nir2)");
+        cameraStatesCommand.AddOption(jsonOption);
+        cameraStatesCommand.SetHandler((json) =>
+        {
+            using var controller = new SetupController();
+
+            // Find SetupWindow first
+            var setupWindow = controller.FindSetupWindow();
+            if (setupWindow == null)
+            {
+                if (json)
+                {
+                    PrintJsonOutput(new
+                    {
+                        success = false,
+                        error = "SetupWindow not found"
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("[setup camera-states] SetupWindow not found");
+                }
+                Environment.Exit(EXIT_NOT_FOUND);
+                return;
+            }
+
+            // Get camera states
+            var states = controller.GetCameraStates();
+
+            if (json)
+            {
+                PrintJsonOutput(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        general = states.TryGetValue("general", out var general) ? general : false,
+                        nir1 = states.TryGetValue("nir1", out var nir1) ? nir1 : false,
+                        nir2 = states.TryGetValue("nir2", out var nir2) ? nir2 : false
+                    }
+                });
+            }
+            else
+            {
+                Console.WriteLine("[setup camera-states] Camera button states:");
+                Console.WriteLine($"  General Camera: {(states.TryGetValue("general", out var g) && g ? "Enabled" : "Disabled")}");
+                Console.WriteLine($"  NIR1 Camera: {(states.TryGetValue("nir1", out var n1) && n1 ? "Enabled" : "Disabled")}");
+                Console.WriteLine($"  NIR2 Camera: {(states.TryGetValue("nir2", out var n2) && n2 ? "Enabled" : "Disabled")}");
+            }
+
+            Environment.Exit(EXIT_SUCCESS);
+        }, jsonOption);
+        setupCommand.AddCommand(cameraStatesCommand);
+
         rootCommand.AddCommand(setupCommand);
     }
 
