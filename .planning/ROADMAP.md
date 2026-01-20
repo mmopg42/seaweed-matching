@@ -22,11 +22,17 @@ None (Windows UI Automation with FlaUI)
 
 **[→ Full details: milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md)**
 
-### 🚧 v1.1 Code Quality Refactoring (In Progress)
+### ✅ v1.1 Code Quality Refactoring (Shipped: 2026-01-20)
 
-**Phases:** 11-19 | **Focus:** Maintainability & Agent Efficiency
+**Phases:** 11-19 (12 plans) | **Timeline:** 2 days | **LOC:** ~11,600
 
-**Goal:** Refactor Program.cs (3,604 lines) into focused modules under 500 lines each for better maintainability and AI agent comprehension.
+**Delivered:**
+- CommandRegistry architecture with ICommandHandler interface
+- 10 modular handler classes (each < 600 lines)
+- Program.cs reduced from 3,611 to 60 lines (98.3% reduction)
+- Zero behavioral regressions - all CLI commands verified working
+
+**[→ Full details: milestones/v1.1-ROADMAP.md](milestones/v1.1-ROADMAP.md)**
 
 ---
 
@@ -46,136 +52,34 @@ None (Windows UI Automation with FlaUI)
 
 </details>
 
+<details>
+<summary>📦 Completed Phases (11-19)</summary>
+
+- [x] **Phase 11: Commands Architecture** - ICommandHandler interface and CommandRegistry
+- [x] **Phase 12: Windows Commands** - 6 window detection commands extracted
+- [x] **Phase 13: Toolbar Commands** - 9 toolbar operations extracted
+- [x] **Phase 14: Data Panel Commands** - Stats and datagrid commands extracted
+- [x] **Phase 15: Workflow & Settings Commands** - 11 workflow + 19 settings commands
+- [x] **Phase 16: File Operations Commands** - 9 file operations extracted
+- [x] **Phase 17: Test & Scenario Commands** - Test/scenario/batch orchestration
+- [x] **Phase 18: Config & Utility Commands** - Inspect and config commands
+- [x] **Phase 19: Main Cleanup** - Final cleanup and verification
+
+</details>
+
 ## Progress
 
 | Milestone | Phases | Plans | Status | Shipped |
 |-----------|--------|-------|--------|---------|
 | v1.0 UI Automation | 1-10 | 28 | ✅ Complete | 2026-01-18 |
-| v1.1 Code Quality | 11-19 | 19/30 | 🚧 In Progress | - |
+| v1.1 Code Quality | 11-19 | 12 | ✅ Complete | 2026-01-20 |
 
 ## Current State
 
-**Status:** Phase 18 complete. Config and utility commands extracted.
+**Status:** v1.1 milestone complete. Program.cs at 60 lines (98.3% reduction from 3,611).
 
-**Next:** Execute Phase 19 with `/gsd:execute-phase 19`
-
-**Note:** Program.cs now at 67 lines - **goal FAR exceeded** (target was 500 lines)!
+**Next:** `/gsd:discuss-milestone` to plan v1.2 or next milestone.
 
 ---
 
-### 🚧 v1.1 Code Quality Refactoring (In Progress)
-
-**Milestone Goal:** Refactor Program.cs (3,604 lines → ~500 lines per file) for maintainability and AI agent comprehension.
-
-#### Phase 11: Commands Architecture ✅
-
-**Goal**: Design and implement the command registration architecture
-**Depends on**: Phase 10 (previous milestone complete)
-**Research**: Unlikely (System.CommandLine patterns established)
-**Plans**: 2 plans
-
-Plans:
-- [x] 11-01: Create Commands/ infrastructure with ICommandHandler interface
-- [x] 11-02: Extract legacy commands (detect, list, find, click) to LegacyCommands.cs
-
-**Shipped:** 2026-01-19 | Program.cs: 3611 → 3429 lines (-182)
-
-#### Phase 12: Windows Commands ✅
-
-**Goal**: Extract all window-related commands to dedicated module
-**Depends on**: Phase 11
-**Research**: Unlikely (existing ChronoWindowFinder patterns)
-**Plans**: 1 plan
-
-Plans:
-- [x] 12-01: Extract windows/* commands to WindowsCommands.cs (~400 lines)
-
-**Shipped:** 2026-01-19 | Program.cs: 3429 → 3054 lines (-375)
-
-#### Phase 13: Toolbar Commands ✅
-
-**Goal**: Extract toolbar control commands
-**Depends on**: Phase 11
-**Research**: Unlikely (existing ChronoToolbarController patterns)
-**Plans**: 1 plan
-
-Plans:
-- [x] 13-01: Extract toolbar/* and click/* commands to ToolbarCommands.cs (~300 lines)
-
-**Shipped:** 2026-01-19 | Program.cs: 3054 → 2871 lines (-183)
-
-#### Phase 14: Data Panel Commands ✅
-
-**Goal**: Extract stats and datagrid commands
-**Depends on**: Phase 11
-**Research**: Unlikely (existing ChronoDataPanelReader patterns)
-**Plans**: 1 plan
-
-Plans:
-- [x] 14-01: Extract stats/* and datagrid/* commands to DataPanelCommands.cs (~500 lines)
-
-**Shipped:** 2026-01-19 | Program.cs: 2871 → 2477 lines (-394)
-
-#### Phase 15: Workflow & Settings Commands ✅
-
-**Goal**: Extract workflow, logs, and settings-dialog commands
-**Depends on**: Phase 11
-**Research**: Unlikely (existing controller patterns)
-**Plans**: 2 plans
-
-Plans:
-- [x] 15-01: Extract workflow/* and logs/* commands to WorkflowCommands.cs (~400 lines)
-- [x] 15-02: Extract settings-dialog/* and console-logs/* to SettingsCommands.cs (~500 lines)
-
-**Shipped:** 2026-01-19 | Program.cs: 2477 → 1406 lines (-1,071)
-
-#### Phase 16: File Operations Commands ✅
-
-**Goal**: Extract file-ops commands
-**Depends on**: Phase 11
-**Research**: Unlikely (existing ChronoFileOperationsController patterns)
-**Plans**: 1 plan
-
-Plans:
-- [x] 16-01: Extract file-ops/* commands to FileOpsCommands.cs (~400 lines)
-
-**Shipped:** 2026-01-19 | Program.cs: 1406 → 1126 lines (-280)
-
-#### Phase 17: Test & Scenario Commands ✅
-
-**Goal**: Extract test, scenario, and batch commands
-**Depends on**: Phase 11
-**Research**: Unlikely (high-level orchestration, existing patterns)
-**Plans**: 1 plan
-
-Plans:
-- [x] 17-01: Extract test/*, scenario/*, and batch/* commands to TestCommands.cs (~600 lines)
-
-**Shipped:** 2026-01-19 | Program.cs: 1126 → 368 lines (-758)
-
-#### Phase 18: Config & Utility Commands ✅
-
-**Goal**: Extract remaining config and inspect commands
-**Depends on**: Phase 11
-**Research**: Unlikely (utility commands)
-**Plans**: 1 plan
-
-Plans:
-- [x] 18-01: Extract config/* and inspect/* commands to UtilityCommands.cs (~200 lines)
-
-**Shipped:** 2026-01-19 | Program.cs: 368 → 67 lines (-301)
-
-#### Phase 19: Main Cleanup
-
-**Goal**: Finalize Program.cs as thin coordinator and verify all tests pass
-**Depends on**: Phases 11-18
-**Research**: Unlikely (coordination, verification)
-**Plans**: 2 plans
-
-Plans:
-- [ ] 19-01: Refactor Program.cs to command registration only (<100 lines)
-- [ ] 19-02: Run full test suite, verify CLI behavior unchanged
-
----
-
-*Last updated: 2026-01-19 after Phase 18 completion*
+*Last updated: 2026-01-20 after v1.1 milestone completion*

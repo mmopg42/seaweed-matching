@@ -2,19 +2,33 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-19)
+See: .planning/PROJECT.md (updated 2026-01-20)
 
 **Core value:** UI 요소 식별 및 조작 — ChronoView의 모든 UI 요소를 안정적으로 식별하고 조작
-**Current focus:** Phase 19 — Main Cleanup (COMPLETE)
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-**Milestone:** v1.1 Code Quality Refactoring (Phase 19 of 19) - COMPLETE
-**Plan:** 19-02 (CLI Verification) - COMPLETE
-**Status:** Phase 19 complete - ALL PHASES COMPLETE
-**Last activity:** 2026-01-20 — Phase 19-02 completed (CLI verification)
+**Milestone:** v1.1 Code Quality Refactoring - SHIPPED 2026-01-20
+**Plan:** All 12 plans complete
+**Status:** Milestone complete, ready for next milestone
+**Last activity:** 2026-01-20 — v1.1 milestone archived
 
-Progress: ████████████ 100% (40/40 plans complete: v1.0 done, v1.1 complete)
+Progress: ████████████ 100% (40/40 plans complete: v1.0 + v1.1)
+
+## Milestone v1.1 Summary
+
+**Timeline:** 2 days (2026-01-19 → 2026-01-20)
+**Deliverables:**
+- CommandRegistry architecture with ICommandHandler interface
+- 10 modular handler classes (each < 600 lines)
+- Program.cs reduced from 3,611 to 60 lines (98.3% reduction)
+- Zero behavioral regressions - all CLI commands verified working
+
+**Handler Classes:**
+- CommandRegistry, LegacyCommands, WindowsCommands, ToolbarCommands
+- DataPanelCommands, WorkflowCommands, SettingsCommands, FileOpsCommands
+- TestCommands, UtilityCommands
 
 ## Milestone v1.0 Summary
 
@@ -51,97 +65,52 @@ Decisions from all phases are logged in PROJECT.md.
 |-------|----------|-----------|
 | 1 | FlaUI.UIA3 5.0.0 with net10.0-windows | Same version as ChronoView for consistency |
 | 1 | System.CommandLine 2.0.0-beta4 | Modern Microsoft CLI library for .NET 10 |
-| 2 | Substring matching for all dialog finders | Borderless windows may have title detection quirks |
-| 2 | Dedicated ChronoWindowFinder class | Cohesive window detection API |
-| 3 | Toolbar button finding by Korean text | Buttons have Korean labels ("시작", "중지", etc.) |
-| 3 | ChronoToolbarController class | Dedicated controller following ChronoWindowFinder pattern |
-| 4 | DataGrid via ControlType.DataItem | WPF DataGrid rows appear as DataItem |
-| 5 | ValuePattern for TextBox I/O | ValuePattern.SetValue() for write with Name fallback |
-| 6 | Bilingual support (English/Korean) | English first with Korean fallback for robustness |
-| 7 | DataItem pattern for log row extraction | LogPanel rows appear as DataItem with Text children |
-| 8 | Confirmation dialog via window enumeration | MessageBox dialogs appear as Window elements |
-| 9 | Exit code constants pattern | SUCCESS=0, ERROR=1, NOT_FOUND=2, TIMEOUT=3, INVALID_ARGUMENT=4 |
-| 9 | JSON output wrapper format | { success, data: {...} } or { success, error, errorCode } |
-| 10 | Python subprocess test agent | Language-agnostic, leverages --json output |
-| 10 | Pydantic for JSON validation | Type-safe SuccessResponse/ErrorResponse models |
-| 11-01 | ICommandHandler interface with RegisterCommands(RootCommand) | Enables modular command registration pattern |
-| 11-01 | CommandRegistry class using List<ICommandHandler> | Centralized handler aggregation for Program.cs |
-| 11-01 | Infrastructure-first approach | Add registry before migrating commands (minimizes risk) |
-| 11-02 | LegacyCommands class with detect/list/find/click commands | First command group migrated from Program.cs |
-| 11-02 | Pure migration approach (no refactoring) | Original handler code copied verbatim for compatibility |
-| 11-02 | Registry.RegisterAllCommands() after inline commands | Maintains command order in help output |
-| 12-01 | WindowsCommands class with 6 window detection commands | Second command group migrated from Program.cs |
-| 12-01 | Private helper methods in handler classes | PrintJsonOutput, TryGetAutomationId kept local to handlers |
-| 13-01 | ToolbarCommands class with 9 toolbar commands | Third command group migrated from Program.cs |
-| 14-01 | DataPanelCommands class with 7 data panel commands | Fourth command group migrated from Program.cs |
-| 14-01 | Use ChronoDataPanelReader directly in DataPanelCommands | DataPanelCommands uses DataReader alias for direct API access |
-| 15-01 | WorkflowCommands class with 11 workflow and log commands | Fifth command group migrated from Program.cs |
-| 15-01 | Use ChronoWorkflowController and ChronoDataPanelReader in WorkflowCommands | WorkflowCommands uses Workflow and DataReader aliases |
-| 15-02 | SettingsCommands class with 19 settings and console log commands | Sixth command group migrated from Program.cs |
-| 15-02 | Use ChronoSettingsController and ConsoleLogsReader in SettingsCommands | SettingsCommands uses Settings and ConsoleLogs aliases |
-| 16-01 | FileOpsCommands class with 9 file operations command groups | Seventh command group migrated from Program.cs |
-| 16-01 | Use ChronoFileOperationsController directly in FileOpsCommands | FileOpsCommands uses FileOps alias for direct API access |
-| 16-01 | Keep rowsOption and groupIdsOption in Program.cs | These options are shared by scenario and batch commands |
-| 17-01 | TestCommands class with 9 test/scenario/batch command groups | Eighth command group migrated from Program.cs |
-| 17-01 | TestCommands orchestrates multiple controllers for end-to-end workflows | Coordinates Finder, Toolbar, Workflow, DataReader, Settings, FileOps |
-| 17-01 | Local helper methods in TestCommands instead of using Program.cs methods | PrintJsonOutput and PrintOutput implemented as private static methods |
-| 18-01 | UtilityCommands class with 5 inspect/config command groups | Ninth command group migrated from Program.cs |
-| 18-01 | UtilityCommands provides file I/O and UI inspection access | Inspect commands for UI structure, config commands for direct file reading |
-| 18-01 | Remove all unused code from Program.cs | Removed unused usings, exit code constants, and helper methods |
-| 19-01 | Remove historical phase comments from Program.cs | Removed 8 phase-specific comments, kept architectural comment |
-| 19-01 | Keep Program.cs minimal with only essential documentation | Final state: 60 lines with clean structure |
+| 2-10 | UI Automation patterns | Window detection, toolbar control, data panel reading, etc. |
+| 11-01 | ICommandHandler interface | Enables modular command registration pattern |
+| 11-01 | CommandRegistry class | Centralized handler aggregation for Program.cs |
+| 11-02 | Pure migration approach | Original handler code copied verbatim for compatibility |
+| 12-18 | Extract to handler classes | Each command group in focused, single-responsibility class |
+| 19-01 | Remove historical comments | Clean Program.cs for final minimal state |
+| 19-02 | Verification before ship | Confirm zero behavioral regressions |
 
 ### Deferred Issues
 
-None yet.
+None.
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-None yet.
+None.
 
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Phase 19-02 completed, ALL PHASES COMPLETE
-Resume file: .planning/phases/19-main-cleanup/19-02-SUMMARY.md
+Stopped at: v1.1 milestone complete and archived
+Resume file: .planning/milestones/v1.1-ROADMAP.md
 
 ## Roadmap Evolution
 
-- Milestone v1.1 created: Code quality refactoring, 9 phases (Phase 11-19)
-- Goal: Refactor Program.cs from 3,604 lines to ~500 lines per module
-- Phase 11-02: Program.cs reduced from 3611 to 3429 lines (182 line reduction)
-- Phase 12-01: Program.cs reduced from 3429 to 3054 lines (375 line reduction)
-- Phase 13-01: Program.cs reduced from 3054 to 2871 lines (183 line reduction)
-- Phase 14-01: Program.cs reduced from 2871 to 2477 lines (394 line reduction)
-- Phase 15-01: Program.cs reduced from 2477 to 2045 lines (432 line reduction)
-- Phase 15-02: Program.cs reduced from 2045 to 1406 lines (639 line reduction)
-- Phase 16-01: Program.cs reduced from 1406 to 1126 lines (280 line reduction)
-- Phase 17-01: Program.cs reduced from 1126 to 368 lines (758 line reduction)
-- Phase 18-01: Program.cs reduced from 368 to 67 lines (301 line reduction)
-- Phase 19-01: Program.cs reduced from 67 to 60 lines (7 line reduction)
-- Total reduction: 3,544 lines (~98.3% reduction from original 3,604 lines)
-- **Program.cs now at 60 lines, FAR EXCEEDING the 500 line target**
-- **Goal achieved: All command groups successfully extracted, final cleanup complete**
+**v1.1 Code Quality Refactoring - SHIPPED**
 
-**Final Program.cs structure (60 lines):**
-- XML summary documentation
-- Namespace declaration
-- Static fields for global options (s_isQuiet, s_isVerbose)
-- Main method with:
-  - RootCommand creation
-  - Global options setup (--quiet, --verbose)
-  - CommandRegistry instantiation
-  - All 9 handler registrations
-  - Parse and invoke logic
+- Program.cs: 3,611 → 60 lines (98.3% reduction)
+- 10 modular handler classes created
+- All 30+ CLI commands verified working
+- Full archive: .planning/milestones/v1.1-ROADMAP.md
 
-All commands have been extracted to modular handlers via CommandRegistry pattern.
-Historical phase comments removed. Final state is clean and minimal.
+**v1.0 ChronoView UI Automation - SHIPPED**
+
+- 73 days development (2025-11-06 → 2026-01-18)
+- ~11,600 LOC C# + Python test agent
+- Full archive: .planning/milestones/v1.0-ROADMAP.md
+
+**Current State:**
+- All 40 plans complete across 19 phases
+- 2 milestones shipped
+- Ready for next milestone planning
 
 ---
 
-*Updated: 2026-01-20 after Phase 19-02 completion - ALL PHASES COMPLETE*
-*CLI verification passed - all commands working, no behavioral regressions*
+*Updated: 2026-01-20 after v1.1 milestone completion*
