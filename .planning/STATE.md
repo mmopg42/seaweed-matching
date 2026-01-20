@@ -5,17 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-01-20)
 
 **Core value:** UI 요소 식별 및 조작 — ChronoView의 모든 UI 요소를 안정적으로 식별하고 조작
-**Current focus:** Phase 22 - Setup Automation
+**Current focus:** Phase 23 - Performance Documentation
 
 ## Current Position
 
 **Milestone:** v1.3 Setup Automation & Test Reliability
-**Phase:** 22 of 23 (Setup Window Controller)
-**Plan:** 22-03 Settings Verification - COMPLETE
-**Status:** Configuration verification for simulator vs ChronoView settings
-**Last activity:** 2026-01-20 — Plan 22-03 executed, SetupConfigVerifier created
+**Phase:** 23 of 23 (Performance Documentation)
+**Plan:** 23-02 Agent Documentation Update - COMPLETE
+**Status:** Setup workflow commands documented in test-executor and test-orchestrator
+**Last activity:** 2026-01-20 — Plan 23-02 executed, agent docs updated with setup commands
 
-Progress: ████████░░ 80% (3/3 plans complete for Phase 22, Phase 23 pending)
+Progress: ████████░░ 87% (1/3 plans complete for Phase 23, Phase 22 complete)
+
+## Plan 23-02 Summary
+
+**Timeline:** 1 day (2026-01-20)
+**Deliverables:**
+- test-executor.md updated with Setup Commands section
+- test-executor.md updated with Pattern 5: Setup Workflow
+- test-orchestrator.md updated with Setup Commands section
+- test-orchestrator.md updated with Config Verification guidance
+
+**Commits:** 4 atomic commits
+
+**Features:**
+- CLI reference for setup verify-config command
+- CLI reference for setup complete-full workflow
+- Config verification step documented for orchestration
+- Table format for concise command reference
 
 ## Plan 22-03 Summary
 
@@ -124,7 +141,7 @@ None.
 - [x] Create ChronoSetupWindowController class
 - [x] Implement setup complete-full workflow (Plan 22-02)
 - [x] Add config verification logic (Plan 22-03)
-- [ ] Update agent documentation with setup commands
+- [x] Update agent documentation with setup commands
 - [ ] Optimize test execution speed
 
 ### Blockers/Concerns
@@ -142,8 +159,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-20
-Stopped at: Plan 22-03 complete, Phase 22 fully delivered
-Resume file: .planning/phases/22-setup-window-controller/22-03-SUMMARY.md
+Stopped at: Plan 23-02 complete, Phase 23 in progress (1/3 plans done)
+Resume file: .planning/phases/23-performance-documentation/23-02-SUMMARY.md
 
 ## Roadmap Evolution
 
@@ -151,7 +168,9 @@ Resume file: .planning/phases/22-setup-window-controller/22-03-SUMMARY.md
 - Plan 22-01 complete: ChronoSetupWindowController class
 - Plan 22-02 complete: Setup Complete Workflow
 - Plan 22-03 complete: Settings Verification
+- Plan 23-02 complete: Agent Documentation Update
 - Phase 22 fully delivered (3/3 plans complete)
+- Phase 23 in progress (1/3 plans complete)
 
 **v1.2 Test Automation Enhancement - SHIPPED**
 
@@ -173,9 +192,10 @@ Resume file: .planning/phases/22-setup-window-controller/22-03-SUMMARY.md
 
 **Current State:**
 - Phase 22 complete: ChronoSetupWindowController + SetupCommands + SetupConfigVerifier (2,092 lines total)
-- 10 controller methods + 9 CLI commands + config verification
-- v1.3 Setup Automation & Test Reliability: Phase 22/23 complete (Phase 23 pending)
+- Phase 23 in progress: Agent documentation updated with setup commands
+- 10 controller methods + 9 CLI commands + config verification + documented workflow
+- v1.3 Setup Automation & Test Reliability: Phase 22 complete, Phase 23 (1/3)
 
 ---
 
-*Updated: 2026-01-20 after Plan 22-03 completion*
+*Updated: 2026-01-20 after Plan 23-02 completion*
