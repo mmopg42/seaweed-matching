@@ -5,6 +5,7 @@ using UiAuto = SkillsScripts.UiAutomation.UiAutomation;
 using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
 using static UiAutomation.Commands.ExitCodes;
+using static UiAutomation.Commands.JsonResponseHelper;
 
 namespace UiAutomation.Commands;
 
@@ -153,21 +154,38 @@ public class UtilityCommands : ICommandHandler
 
         // config path: Config 파일 위치 확인
         var configPathCommand = new Command("path", "Config 파일 위치 확인");
+        var jsonPathOption = new Option<bool>(["--json", "-j"], "JSON 형식으로 출력");
+        configPathCommand.AddOption(jsonPathOption);
         configPathCommand.SetHandler((InvocationContext context) =>
         {
             try
             {
+                var json = context.ParseResult.GetValueForOption(jsonPathOption);
                 var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
                 var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
+                var exists = File.Exists(configPath);
 
-                Console.WriteLine($"[Config Path] {configPath}");
-                Console.WriteLine($"[Exists] {File.Exists(configPath)}");
-
-                if (File.Exists(configPath))
+                if (json)
                 {
-                    var fileInfo = new FileInfo(configPath);
-                    Console.WriteLine($"[Size] {fileInfo.Length} bytes");
-                    Console.WriteLine($"[Modified] {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+                    PrintSuccess(new
+                    {
+                        path = configPath,
+                        exists = exists,
+                        size = exists ? new FileInfo(configPath).Length : 0,
+                        modified = exists ? new FileInfo(configPath).LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss") : null
+                    });
+                }
+                else
+                {
+                    Console.WriteLine($"[Config Path] {configPath}");
+                    Console.WriteLine($"[Exists] {exists}");
+
+                    if (exists)
+                    {
+                        var fileInfo = new FileInfo(configPath);
+                        Console.WriteLine($"[Size] {fileInfo.Length} bytes");
+                        Console.WriteLine($"[Modified] {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+                    }
                 }
 
                 context.ExitCode = SUCCESS;
@@ -195,7 +213,15 @@ public class UtilityCommands : ICommandHandler
 
                 if (!File.Exists(configPath))
                 {
-                    Console.WriteLine($"[Config] File not found: {configPath}");
+                    if (json)
+                    {
+                        PrintError($"Config file not found: {configPath}", NOT_FOUND,
+                            "Ensure ChronoView has been run at least once to generate config.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[Config] File not found: {configPath}");
+                    }
                     context.ExitCode = NOT_FOUND;
                     return;
                 }
@@ -204,20 +230,26 @@ public class UtilityCommands : ICommandHandler
 
                 if (json)
                 {
-                    // Pretty print JSON
+                    // Parse and return in standard format
+                    using var jsonDoc = JsonDocument.Parse(jsonContent);
+                    PrintSuccess(new
+                    {
+                        path = configPath,
+                        content = jsonDoc.RootElement
+                    });
+                }
+                else
+                {
+                    // Pretty print JSON for human reading
                     using var jsonDoc = JsonDocument.Parse(jsonContent);
                     var prettyJson = JsonSerializer.Serialize(jsonDoc, new JsonSerializerOptions
                     {
                         WriteIndented = true
                     });
-                    Console.WriteLine(prettyJson);
-                }
-                else
-                {
                     Console.WriteLine($"[Config] Reading from: {configPath}");
                     Console.WriteLine();
                     Console.WriteLine("=== Raw JSON ===");
-                    Console.WriteLine(jsonContent);
+                    Console.WriteLine(prettyJson);
                 }
 
                 context.ExitCode = SUCCESS;
@@ -233,16 +265,27 @@ public class UtilityCommands : ICommandHandler
         // config get: 특정 설정 값 읽기 (경로 등)
         var configGetCommand = new Command("get", "특정 설정 값 읽기");
         var keyOption = new Option<string>(["--key", "-k"], "설정 키 (예: folderPaths.line1SampleName)");
+        var jsonGetOption = new Option<bool>(["--json", "-j"], "JSON 형식으로 출력");
         configGetCommand.AddOption(keyOption);
+        configGetCommand.AddOption(jsonGetOption);
         configGetCommand.SetHandler((InvocationContext context) =>
         {
             try
             {
                 var key = context.ParseResult.GetValueForOption(keyOption);
+                var json = context.ParseResult.GetValueForOption(jsonGetOption);
 
                 if (string.IsNullOrEmpty(key))
                 {
-                    Console.WriteLine("[Config] --key parameter is required");
+                    if (json)
+                    {
+                        PrintError("--key parameter is required", INVALID_ARGUMENT,
+                            "Provide a config key like: folderPaths.line1SampleName");
+                    }
+                    else
+                    {
+                        Console.WriteLine("[Config] --key parameter is required");
+                    }
                     context.ExitCode = INVALID_ARGUMENT;
                     return;
                 }
@@ -252,7 +295,15 @@ public class UtilityCommands : ICommandHandler
 
                 if (!File.Exists(configPath))
                 {
-                    Console.WriteLine($"[Config] File not found: {configPath}");
+                    if (json)
+                    {
+                        PrintError($"Config file not found: {configPath}", NOT_FOUND,
+                            "Ensure ChronoView has been run at least once to generate config.");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[Config] File not found: {configPath}");
+                    }
                     context.ExitCode = NOT_FOUND;
                     return;
                 }
@@ -273,13 +324,32 @@ public class UtilityCommands : ICommandHandler
                     }
                     else
                     {
-                        Console.WriteLine($"[Config] Key not found: {key}");
+                        if (json)
+                        {
+                            PrintError($"Config key not found: {key}", NOT_FOUND,
+                                "Use 'config read --json' to see available keys.");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[Config] Key not found: {key}");
+                        }
                         context.ExitCode = NOT_FOUND;
                         return;
                     }
                 }
 
-                Console.WriteLine($"[{key}] {current}");
+                if (json)
+                {
+                    PrintSuccess(new
+                    {
+                        key = key,
+                        value = current
+                    });
+                }
+                else
+                {
+                    Console.WriteLine($"[{key}] {current}");
+                }
                 context.ExitCode = SUCCESS;
             }
             catch (Exception ex)
