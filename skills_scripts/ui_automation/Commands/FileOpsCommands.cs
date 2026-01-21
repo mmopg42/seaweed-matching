@@ -1,8 +1,8 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
-using System.Text.Json;
 using FileOps = SkillsScripts.UiAutomation.ChronoFileOperationsController;
 using static UiAutomation.Commands.ExitCodes;
+using static UiAutomation.Commands.JsonResponseHelper;
 
 namespace UiAutomation.Commands;
 
@@ -164,14 +164,10 @@ public class FileOpsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            count = selectedRows.Count,
-                            selectedRows = selectedRows
-                        }
+                        count = selectedRows.Count,
+                        selectedRows = selectedRows
                     });
                 }
                 else
@@ -186,7 +182,8 @@ public class FileOpsCommands : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[file-ops-selected] Error: {ex.Message}");
+                PrintError($"Failed to get selected rows: {ex.Message}", ERROR,
+                    "Ensure DataGrid is accessible and ChronoView is running.");
                 context.ExitCode = ERROR;
             }
         });
@@ -407,15 +404,19 @@ public class FileOpsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    if (result)
                     {
-                        success = result,
-                        data = new
+                        PrintSuccess(new
                         {
-                            action = "confirm-dialog",
-                            confirmed = result
-                        }
-                    });
+                            action = "delete_confirm",
+                            confirmed = true
+                        });
+                    }
+                    else
+                    {
+                        PrintError("Confirmation dialog not found", NOT_FOUND,
+                            "No delete confirmation dialog appeared. Ensure a delete operation was triggered.");
+                    }
                 }
                 else
                 {
@@ -425,7 +426,8 @@ public class FileOpsCommands : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[file-ops-confirm] Error: {ex.Message}");
+                PrintError($"Failed to handle confirmation dialog: {ex.Message}", ERROR,
+                    "Ensure the confirmation dialog is visible and accessible.");
                 context.ExitCode = ERROR;
             }
         });
@@ -451,14 +453,10 @@ public class FileOpsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = result,
-                        data = new
-                        {
-                            groupId = groupId,
-                            verified = result
-                        }
+                        groupId = groupId,
+                        verified = result
                     });
                 }
                 else
@@ -469,7 +467,8 @@ public class FileOpsCommands : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[file-ops-verify deleted] Error: {ex.Message}");
+                PrintError($"Failed to verify deletion: {ex.Message}", ERROR,
+                    "Ensure the GroupId is valid and DataGrid is accessible.");
                 context.ExitCode = ERROR;
             }
         });
@@ -495,15 +494,11 @@ public class FileOpsCommands : ICommandHandler
                 if (json)
                 {
                     var currentCount = controller.GetDataRowCountAfterOperation();
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = result,
-                        data = new
-                        {
-                            originalCount = originalCount,
-                            currentCount = currentCount,
-                            changed = result
-                        }
+                        originalCount = originalCount,
+                        currentCount = currentCount,
+                        changed = result
                     });
                 }
                 else
@@ -515,7 +510,8 @@ public class FileOpsCommands : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[file-ops-verify row-count] Error: {ex.Message}");
+                PrintError($"Failed to verify row count: {ex.Message}", ERROR,
+                    "Ensure DataGrid is accessible and row counting is functional.");
                 context.ExitCode = ERROR;
             }
         });
@@ -524,18 +520,5 @@ public class FileOpsCommands : ICommandHandler
         fileOpsCommand.AddCommand(fileOpsVerifyCommand);
 
         rootCommand.AddCommand(fileOpsCommand);
-    }
-
-    /// <summary>
-    /// Prints output in JSON format for programmatic access.
-    /// </summary>
-    private static void PrintJsonOutput(object data)
-    {
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true
-        };
-        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(data, options));
     }
 }
