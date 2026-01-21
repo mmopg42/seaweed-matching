@@ -142,7 +142,7 @@ Windows UI Automation with FlaUI
 5. test-executor-skills.md documents complete skill registry
 
 Plans:
-- [ ] 28-01-PLAN.md — Create skill registry document with all 90+ skill definitions
+- [x] 28-01-PLAN.md — Create skill registry document with all 90+ skill definitions
 
 #### Phase 29: Orchestrator Skill Integration
 
@@ -150,7 +150,7 @@ Plans:
 
 **Depends on:** Phase 28 (skills defined)
 **Research:** Unlikely (delegation pattern established in Phase 27)
-**Plans:** TBD
+**Plans:** 1 plan
 
 **Requirements:** ORCH-01 through ORCH-05
 
@@ -160,6 +160,9 @@ Plans:
 3. "No Command Construction" prohibition added with examples
 4. Delegation template uses skill names
 5. Orchestrator documentation explicitly forbids CLI command construction
+
+Plans:
+- [ ] 29-01-PLAN.md — Update test-orchestrator with skill-based delegation format, prohibition section, and skill reference
 
 #### Phase 30: Executor Skill Translation
 
@@ -223,7 +226,7 @@ Plans:
 | v1.2 Test Automation | 20-21 | 2 | ✅ Complete | 2026-01-20 |
 | v1.3 Setup & Perf | 22-23 | 6 | ✅ Complete | 2026-01-20 |
 | v1.4 Agent Architecture | 24-27 | 8 | ✅ Complete | 2026-01-21 |
-| v1.5 CLI Skill Encapsulation | 28-32 | 1 | 🚧 In progress | - |
+| v1.5 CLI Skill Encapsulation | 28-32 | 2 | 🚧 In progress | - |
 
 | Phase | Milestone | Plans | Status |
 |-------|-----------|-------|--------|
@@ -234,17 +237,17 @@ Plans:
 | 26. Log Path Finder | v1.4 | 2 | ✅ Complete |
 | 27. Delegation Fix | v1.4 | 2 | ✅ Complete |
 | 28. Skill Registry | v1.5 | 1 | ✅ Complete |
-| 29. Orchestrator Integration | v1.5 | TBD | Not started |
+| 29. Orchestrator Integration | v1.5 | 1 | Not started |
 | 30. Executor Translation | v1.5 | TBD | Not started |
 | 31. CLI Schema | v1.5 | TBD | Not started |
 | 32. Dry-Run Mode | v1.5 | TBD | Not started |
 
 ## Current State
 
-**Status:** 🚧 v1.5 CLI Skill Encapsulation - Phase 28 complete, Phase 29 ready to plan.
+**Status:** 🚧 v1.5 CLI Skill Encapsulation - Phase 29 planned, ready for execution.
 
-**Next Step:** Run `/gsd:plan-phase 29` to update test-orchestrator with skill integration.
+**Next Step:** Run `/gsd:execute-phase 29` to update test-orchestrator with skill-based delegation.
 
 ---
 
-*Last updated: 2026-01-21 - Phase 28 complete*
+*Last updated: 2026-01-21 - Phase 29 planned*
