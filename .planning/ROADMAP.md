@@ -137,7 +137,7 @@ Windows UI Automation with FlaUI
 | v1.1 Code Quality | 11-19 | 12 | ✅ Complete | 2026-01-20 |
 | v1.2 Test Automation | 20-21 | 2 | ✅ Complete | 2026-01-20 |
 | v1.3 Setup & Perf | 22-23 | 6 | ✅ Complete | 2026-01-20 |
-| v1.4 Agent Architecture | 24-27 | 8 | 🔄 In Progress | — |
+| v1.4 Agent Architecture | 24-27 | 8 | ✅ Complete | 2026-01-21 |
 
 | Phase | Milestone | Plans | Status |
 |-------|-----------|-------|--------|
@@ -146,13 +146,13 @@ Windows UI Automation with FlaUI
 | 24. Error Diagnosis | v1.4 | 2 | ✅ Complete |
 | 25. Simulator Status | v1.4 | 2 | ✅ Complete |
 | 26. Log Path Finder | v1.4 | 2 | ✅ Complete |
-| 27. Delegation Fix | v1.4 | 2 | ○ Pending |
+| 27. Delegation Fix | v1.4 | 2 | ✅ Complete |
 
 ## Current State
 
-**Status:** 🔄 v1.4 Test Agent Architecture & Reliability in progress.
+**Status:** ✅ v1.4 Test Agent Architecture & Reliability complete.
 
-**Next Step:** Run `/gsd:execute-phase 27` to execute Phase 27 plans.
+**Next Step:** Run `/gsd:complete-milestone` to archive Milestone v1.4.
 
 ---
 
@@ -225,22 +225,28 @@ Windows UI Automation with FlaUI
 
 ---
 
-### ○ Phase 27: Orchestrator Delegation Fix (v1.4) — Ready for Execution
+### ✅ Phase 27: Orchestrator Delegation Fix (v1.4) — Shipped 2026-01-21
 
 **Goal:** Orchestrator 역할 분할 수정 (Fix test-orchestrator delegation pattern)
 
 **Requirements:** DELEGATE-01
 
 **Plans:**
-- [ ] 27-01: Add explicit Bash tool prohibitions to test-orchestrator.md
-  - Add "NEVER use Bash for Execution" section with forbidden examples
-  - Add "Delegation Issues" section to reporting format
-  - Strengthen Critical Reminders with cross-references
-- [ ] 27-02: Verify delegation pattern through code review and test execution
-  - Run grep patterns to confirm all sections present
-  - Optional: Execute test-orchestrator to observe delegation behavior
-  - Human verification checkpoint
+- [x] 27-01: Add explicit Bash tool prohibitions to test-orchestrator.md
+  - Added "NEVER use Bash Tool for Execution" section (77 lines)
+  - Added "Delegation Issues" section to reporting format (16 lines)
+  - Strengthened Critical Reminders with cross-references (8 lines)
+  - File grew from 352 to 446 lines (+94 lines, +26.7%)
+- [x] 27-02: Verify delegation pattern through code review
+  - All 5 grep patterns passed verification
+  - Human verification checkpoint approved
+
+**Delivered:**
+- Explicit Bash tool prohibitions with 6 forbidden pattern categories
+- Delegation Issues section in reporting format for failure tracking
+- ABSOLUTE PROHIBITION cross-referenced from Critical Reminders
+- test-orchestrator.md: 446 lines with strong delegation pattern enforcement
 
 ---
 
-*Last updated: 2026-01-21 - Phase 27 plans created, ready for execution*
+*Last updated: 2026-01-21 - Phase 27 complete, Milestone v1.4 complete*
