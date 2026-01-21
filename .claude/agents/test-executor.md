@@ -801,6 +801,141 @@ After each test execution:
 
 Remember: Your job is to **execute efficiently**. Minimize CLI calls. Skip unnecessary checks. The test-orchestrator will synthesize your results with log-analyst's findings.
 
+## Dry-Run Mode
+
+Dry-run mode enables safe command validation without execution. Use dry-run to verify skill names, parameter syntax, and schema compliance before running real commands.
+
+### Usage
+
+Add `--dry-run` flag to any CLI command:
+
+```bash
+ui_automation.exe app launch --dry-run
+ui_automation.exe toolbar start --json --dry-run
+ui_automation.exe file-ops move rows --rows 0,1,2 --dry-run
+```
+
+### What Dry-Run Validates
+
+Dry-run is like a compiler - it validates syntax without running the program:
+
+**Validates:**
+- Skill name exists in test-executor-skills.md registry
+- Required arguments are provided
+- Argument types match schema (int, string, bool, array)
+- Flag names are valid
+
+**Skips:**
+- Runtime state checks (is app running?)
+- UI automation (no window interaction)
+- Process operations (no launch/stop)
+- File system access (no file reads)
+
+### Success Response
+
+On successful validation, dry-run returns the command that would execute:
+
+```json
+{
+  "success": true,
+  "dryRun": true,
+  "timestamp": "2026-01-22T00:30:20Z",
+  "data": {
+    "skill": "APP_LAUNCH",
+    "cli": "app launch",
+    "args": {}
+  }
+}
+```
+
+Key fields:
+- `dryRun: true` - Distinguishes from real execution
+- `data.skill` - Validated skill name from registry
+- `data.cli` - CLI command that would execute
+- `data.args` - Arguments that would be passed
+
+### Error Response
+
+On validation failure, dry-run returns error with suggestion:
+
+```json
+{
+  "success": false,
+  "dryRun": true,
+  "error": "Unknown skill: APP_LAUNCHX",
+  "errorCode": 4,
+  "retryable": false,
+  "suggestion": "Did you mean: APP_LAUNCH? See .claude/agents/test-executor-skills.md",
+  "timestamp": "2026-01-22T00:30:20Z"
+}
+```
+
+Key fields:
+- `errorCode: 4` - INVALID_ARGUMENT (all dry-run errors)
+- `retryable: false` - Syntax errors never succeed on retry
+- `suggestion` - Helpful hint for common errors
+
+### Validation Error Types
+
+| Error | ErrorCode | Example | Suggestion |
+|-------|-----------|---------|------------|
+| Unknown skill | 4 | `APP_LAUNCHX` | "Did you mean: APP_LAUNCH?" |
+| Missing required arg | 4 | Missing `--rows` | "Required: --rows <indices>" |
+| Invalid flag name | 4 | `--invalid-flag` | "Valid flags: --rows, --json" |
+| Type mismatch | 4 | `--rows abc` | "--rows requires integers" |
+
+### Workflow Example
+
+**Before real execution:**
+
+1. **Validate syntax with dry-run:**
+   ```bash
+   ui_automation.exe file-ops move rows --rows 0,1,2 --dry-run
+   # Returns: {"success": true, "dryRun": true, "data": {...}}
+   ```
+
+2. **If validation passes, execute:**
+   ```bash
+   ui_automation.exe file-ops move rows --rows 0,1,2 --json
+   # Performs actual move operation
+   ```
+
+3. **If validation fails, fix and retry:**
+   ```bash
+   ui_automation.exe file-ops move rowsX --rows 0,1,2 --dry-run
+   # Returns: {"error": "Unknown subcommand: rowsX", ...}
+   # Fix: Change rowsX to rows
+   ```
+
+### When to Use Dry-Run
+
+**Use dry-run:**
+- Before executing commands in automated tests
+- When validating skill names from orchestrator
+- During development of new test scenarios
+- When debugging command construction issues
+
+**Skip dry-run:**
+- When running already-verified commands
+- In production test execution (performance)
+- When command has no arguments (simple commands)
+
+### Integration with Skill Translation
+
+Dry-run integrates with skill translation workflow:
+
+```
+Orchestrator: "Execute skill: FILE_OPS_MOVE_ROWS with args: {...}"
+    ↓
+Executor: Parse skill, validate against registry
+    ↓
+Executor: ui_automation.exe file-ops move rows --dry-run
+    ↓
+CLI: Validate skill exists, return DryRunResponse
+    ↓
+Executor: If dryRun: true, proceed to real execution
+```
+
 ## JSON Response Schemas
 
 All CLI commands with `--json` flag return standardized JSON responses that test-executor can reliably parse.
