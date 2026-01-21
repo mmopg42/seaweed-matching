@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -20,6 +21,44 @@ namespace SkillsScripts.UiAutomation
         {
             var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             return Path.Combine(localAppData, LogBasePath);
+        }
+
+        /// <summary>
+        /// 가장 최신 날짜의 로그 폴더 경로를 가져옵니다.
+        /// 폴더명이 yyyyMMdd 형식인 폴더만 검색하며, 폴더명의 문자열 비교로 최신 폴더를 결정합니다.
+        /// </summary>
+        /// <returns>최신 로그 폴더의 전체 경로, 유효한 폴더가 없으면 null</returns>
+        public string? GetLatestLogDateFolder()
+        {
+            var logDir = GetLogDirectory();
+
+            if (!Directory.Exists(logDir))
+            {
+                return null;
+            }
+
+            var subdirectories = Directory.GetDirectories(logDir);
+            string? latestFolder = null;
+
+            foreach (var subDir in subdirectories)
+            {
+                var folderName = Path.GetFileName(subDir);
+
+                // 폴더명이 yyyyMMdd 형식인지 확인 (길이 검사 + DateTime.TryParseExact)
+                if (folderName.Length != 8 ||
+                    !DateTime.TryParseExact(folderName, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+                {
+                    continue; // 날짜 형식이 아닌 폴더는 건너뜀
+                }
+
+                // 문자열 비교로 최신 폴더 결정 (yyyyMMdd 형식이므로 문자열 정렬과 날짜 정렬이 일치)
+                if (latestFolder == null || string.Compare(folderName, latestFolder, StringComparison.Ordinal) > 0)
+                {
+                    latestFolder = folderName;
+                }
+            }
+
+            return latestFolder != null ? Path.Combine(logDir, latestFolder) : null;
         }
 
         /// <summary>
