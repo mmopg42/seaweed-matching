@@ -137,18 +137,102 @@ Windows UI Automation with FlaUI
 | v1.1 Code Quality | 11-19 | 12 | ✅ Complete | 2026-01-20 |
 | v1.2 Test Automation | 20-21 | 2 | ✅ Complete | 2026-01-20 |
 | v1.3 Setup & Perf | 22-23 | 6 | ✅ Complete | 2026-01-20 |
+| v1.4 Agent Architecture | 24-27 | 8 | 🔄 In Progress | — |
 
 | Phase | Milestone | Plans | Status |
 |-------|-----------|-------|--------|
 | 22. Setup Window Controller | v1.3 | 3 | ✅ Complete |
 | 23. Performance & Docs | v1.3 | 3 | ✅ Complete |
+| 24. Error Diagnosis | v1.4 | 2 | 📋 Planned |
+| 25. Simulator Status | v1.4 | 2 | 📋 Planned |
+| 26. Log Path Finder | v1.4 | 2 | ○ Pending |
+| 27. Delegation Fix | v1.4 | 2 | ○ Pending |
 
 ## Current State
 
-**Status:** ✅ v1.3 Setup Automation & Test Reliability complete. All phases delivered.
+**Status:** 🔄 v1.4 Test Agent Architecture & Reliability in progress.
 
-**Next Step:** Run `/gsd:complete-milestone` to archive milestone v1.3.
+**Next Step:** Run `/gsd:execute-phase 24` to execute Phase 24 plans.
 
 ---
 
-*Last updated: 2026-01-20 - Phase 23 complete, v1.3 milestone delivered*
+### ✅ Phase 22: Setup Window Controller (v1.3) — Shipped 2026-01-20
+
+**Goal:** SetupWindow 전용 컨트롤러와 설정 다이얼로그 자동화
+
+**Requirements:** SETUP-01, SETUP-02, SETUP-03, SETUP-04
+
+**Plans:**
+- [x] 22-01: ChronoSetupWindowController 클래스 생성 (512 lines)
+- [x] 22-02: 완전한 셋업 완료 워크플로우 구현 (SetupCommands.cs)
+- [x] 22-03: 설정값 검증 기능 (SetupConfigVerifier.cs)
+
+### ✅ Phase 23: Performance & Documentation (v1.3) — Shipped 2026-01-20
+
+**Goal:** 테스트 속도 최적화와 에이전트 문서 업데이트
+
+**Requirements:** PERF-01, PERF-02, CLI-01
+
+### 📋 Phase 24: Error Diagnosis (v1.4) — Ready to Execute
+
+**Goal:** Exit Code 1 에러 원인 분석 및 해결
+
+**Requirements:** ERROR-01
+
+**Plans:**
+- [ ] 24-01: Centralized Error Handler (ExitCodes.cs + Program.cs wrapper)
+  - Create ExitCodes.cs with SUCCESS=0, ERROR=1, NOT_FOUND=2, TIMEOUT=3, INVALID_ARGUMENT=4
+  - Add try-catch wrapper around InvokeAsync in Program.cs
+  - Write structured error messages to stderr with exception type, message, and command
+- [ ] 24-02: Command Handler Refactoring (return-based exit codes)
+  - Refactor all 10 command handler classes to return int instead of Environment.Exit()
+  - Replace 144 Environment.Exit() calls with return statements
+  - Wrap handlers in try-catch for local error context
+
+**Expected Outcome:**
+- Unhandled exceptions produce detailed error messages on stderr
+- Exit code 1 errors now include exception type and message
+- FlaUI exceptions caught and formatted with context
+- Verbose mode shows stack traces for debugging
+
+### 📋 Phase 25: Simulator Status Endpoint (v1.4) — Ready to Execute
+
+**Goal:** data_simulator.py에 --status endpoint 추가
+
+**Requirements:** STATUS-01
+
+**Plans:**
+- [ ] 25-01: --status endpoint 구현 (data_simulator.py)
+  - Add --status CLI argument
+  - Add get_status() method to DataSimulator class
+  - Return JSON with status, progress, items_created, simulation_id, last_activity
+  - Add last_activity_time tracking in __init__ and simulation methods
+- [ ] 25-02: test-executor에 --status 사용 추가
+  - Document --status command in test-executor.md
+  - Add Status Response Format subsection
+  - Add Pattern 6: Status-Based Simulation Wait
+  - Update Pattern 2 to use status polling
+
+### ○ Phase 26: Dynamic Log Path Discovery (v1.4) — Pending
+
+**Goal:** 로그 경로 동적 해결
+
+**Requirements:** LOG-01
+
+**Plans:**
+- [ ] 26-01: 동적 로그 폴더 finder 구현
+- [ ] 26-02: log-analyst에 동적 경로 해결 추가
+
+### ○ Phase 27: Orchestrator Delegation Fix (v1.4) — Pending
+
+**Goal:** Orchestrator 역할 분할 수정
+
+**Requirements:** DELEGATE-01
+
+**Plans:**
+- [ ] 27-01: test-orchestrator 위임 패턴 수정
+- [ ] 27-02: 위임 패턴 검증 테스트
+
+---
+
+*Last updated: 2026-01-21 - Phase 25 planned, ready for execution*
