@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-21)
 ## Current Position
 
 Phase: 32 of 32 (Dry Run Mode)
-Plan: 2 of 2 in current phase
+Plan: 3 of 3 in current phase
 Status: Phase complete
-Last activity: 2026-01-22 — Completed 32-02: Dry-Run Command Integration
+Last activity: 2026-01-22 — Completed 32-03: Dry-Run Documentation
 
-Progress: [█████████░░░░░░░░░] 45.9% (63/135 plans estimated)
+Progress: [█████████░░░░░░░░░] 46.7% (66/141 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 63
+- Total plans completed: 66
 - Average duration: ~44 min
-- Total execution time: ~46.5 hours
+- Total execution time: ~48.5 hours
 
 **By Phase:**
 
@@ -32,10 +32,10 @@ Progress: [█████████░░░░░░░░░] 45.9% (63/135
 | v1.2 (20-21) | 2 | ~1h | ~30 min |
 | v1.3 (22-23) | 6 | ~4h | ~40 min |
 | v1.4 (24-27) | 8 | ~5h | ~38 min |
-| v1.5 (28-32) | 8 | ~2.8h | ~21 min |
+| v1.5 (28-32) | 11 | ~3.5h | ~19 min |
 
 **Recent Trend:**
-- Last 5 phases: 6-3-2-2-2 plans
+- Last 5 phases: 6-3-2-2-3 plans
 - Trend: Stable
 
 *Updated: 2026-01-22*
@@ -75,6 +75,10 @@ Recent decisions affecting current work:
 - [Phase 32-02] SkillMapping dictionary with 90+ CLI command to skill name mappings
 - [Phase 32-02] Empty skill name ('') for orchestration/scenario commands without direct skill mapping
 - [Phase 32-02] All ~90 command handlers now support --dry-run validation mode
+- [Phase 32-03] Dry-run documentation added to test-executor.md with usage, validation, and response schemas
+- [Phase 32-03] Dry-Run Response Schema subsection added to JSON Response Schemas with TypeScript interface
+- [Phase 32-03] Dry-run validation reference added to test-orchestrator.md delegation pattern
+- [Phase 32-03] Cross-reference from test-orchestrator.md to test-executor.md dry-run section
 
 ### Deferred Issues
 
@@ -91,5 +95,5 @@ None currently blocking.
 ## Session Continuity
 
 Last session: 2026-01-22
-Stopped at: Completed 32-02: Dry-Run Command Integration (Phase 32 complete)
+Stopped at: Completed 32-03: Dry-Run Documentation (Phase 32 complete)
 Resume file: None
