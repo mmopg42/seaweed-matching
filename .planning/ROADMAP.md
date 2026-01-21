@@ -144,7 +144,7 @@ Windows UI Automation with FlaUI
 | 22. Setup Window Controller | v1.3 | 3 | ✅ Complete |
 | 23. Performance & Docs | v1.3 | 3 | ✅ Complete |
 | 24. Error Diagnosis | v1.4 | 2 | ✅ Complete |
-| 25. Simulator Status | v1.4 | 2 | 📋 Planned |
+| 25. Simulator Status | v1.4 | 2 | ✅ Complete |
 | 26. Log Path Finder | v1.4 | 2 | 📋 Planned |
 | 27. Delegation Fix | v1.4 | 2 | ○ Pending |
 
@@ -152,7 +152,34 @@ Windows UI Automation with FlaUI
 
 **Status:** 🔄 v1.4 Test Agent Architecture & Reliability in progress.
 
-**Next Step:** Run `/gsd:execute-phase 25` to execute Phase 25 plans.
+**Next Step:** Run `/gsd:execute-phase 26` to execute Phase 26 plans.
+
+---
+
+### ✅ Phase 25: Simulator Status Endpoint (v1.4) — Shipped 2026-01-21
+
+**Goal:** data_simulator.py에 --status endpoint 추가
+
+**Requirements:** STATUS-01
+
+**Plans:**
+- [x] 25-01: --status endpoint 구현 (data_simulator.py)
+  - Added --status CLI argument
+  - Added get_status(), _update_state(), _load_state() methods to DataSimulator class
+  - Returns JSON with status, progress, items_created, simulation_id, last_activity
+  - State file persistence in simulation_state.json
+- [x] 25-02: test-executor에 --status 사용 추가
+  - Documented --status command in test-executor.md
+  - Added Status Response Format subsection
+  - Added Pattern 6: Status-Based Simulation Wait
+  - Updated Pattern 2 to use status polling
+  - Added Windows PowerShell polling example
+
+**Delivered:**
+- State file persistence with simulation_state.json for cross-process status queries
+- --status CLI flag returning JSON with all 5 required fields
+- test-executor.md updated with polling patterns for background simulation execution
+- Bash and PowerShell examples for cross-platform compatibility
 
 ---
 
@@ -173,63 +200,6 @@ Windows UI Automation with FlaUI
 - 262 context.ExitCode assignments, 99 catch blocks with Console.Error.WriteLine
 
 ---
-
-### ✅ Phase 22: Setup Window Controller (v1.3) — Shipped 2026-01-20
-
-**Goal:** SetupWindow 전용 컨트롤러와 설정 다이얼로그 자동화
-
-**Requirements:** SETUP-01, SETUP-02, SETUP-03, SETUP-04
-
-**Plans:**
-- [x] 22-01: ChronoSetupWindowController 클래스 생성 (512 lines)
-- [x] 22-02: 완전한 셋업 완료 워크플로우 구현 (SetupCommands.cs)
-- [x] 22-03: 설정값 검증 기능 (SetupConfigVerifier.cs)
-
-### ✅ Phase 23: Performance & Documentation (v1.3) — Shipped 2026-01-20
-
-**Goal:** 테스트 속도 최적화와 에이전트 문서 업데이트
-
-**Requirements:** PERF-01, PERF-02, CLI-01
-
-### ✅ Phase 24: Error Diagnosis (v1.4) — Shipped 2026-01-21
-
-**Goal:** Exit Code 1 에러 원인 분석 및 해결
-
-**Requirements:** ERROR-01
-
-**Plans:**
-- [x] 24-01: Centralized Error Handler (ExitCodes.cs + Program.cs wrapper)
-  - Created ExitCodes.cs with SUCCESS=0, ERROR=1, NOT_FOUND=2, TIMEOUT=3, INVALID_ARGUMENT=4
-  - Added try-catch wrapper around InvokeAsync in Program.cs
-  - Structured error messages to stderr with exception type, message, and command
-- [x] 24-02: Command Handler Refactoring (return-based exit codes)
-  - Refactored all 10 command handler classes to use context.ExitCode
-  - Replaced 262 Environment.Exit() calls with context.ExitCode assignments
-  - Added 99 try-catch wrappers for local error context
-
-**Delivered:**
-- Unhandled exceptions produce detailed error messages on stderr
-- Exit code errors include exception type and message
-- FlaUI exceptions caught and formatted with context
-- Verbose mode shows stack traces for debugging
-
-### 📋 Phase 25: Simulator Status Endpoint (v1.4) — Ready to Execute
-
-**Goal:** data_simulator.py에 --status endpoint 추가
-
-**Requirements:** STATUS-01
-
-**Plans:**
-- [ ] 25-01: --status endpoint 구현 (data_simulator.py)
-  - Add --status CLI argument
-  - Add get_status() method to DataSimulator class
-  - Return JSON with status, progress, items_created, simulation_id, last_activity
-  - Add last_activity_time tracking in __init__ and simulation methods
-- [ ] 25-02: test-executor에 --status 사용 추가
-  - Document --status command in test-executor.md
-  - Add Status Response Format subsection
-  - Add Pattern 6: Status-Based Simulation Wait
-  - Update Pattern 2 to use status polling
 
 ### 📋 Phase 26: Dynamic Log Path Discovery (v1.4) — Ready to Execute
 
@@ -263,4 +233,4 @@ Windows UI Automation with FlaUI
 
 ---
 
-*Last updated: 2026-01-21 - Phase 24 complete, Phase 25 ready for execution*
+*Last updated: 2026-01-21 - Phase 25 complete, Phase 26 ready for execution*
