@@ -1,8 +1,10 @@
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Text.Json;
 using SetupVerifier = SkillsScripts.UiAutomation.SetupConfigVerifier;
 using SetupController = SkillsScripts.UiAutomation.ChronoSetupWindowController;
 using SkillsScripts.UiAutomation;
+using static UiAutomation.Commands.ExitCodes;
 
 namespace UiAutomation.Commands;
 
@@ -13,12 +15,6 @@ namespace UiAutomation.Commands;
 /// </summary>
 public class SetupCommands : ICommandHandler
 {
-    // Exit code constants matching Program.cs
-    private const int EXIT_SUCCESS = 0;
-    private const int EXIT_ERROR = 1;
-    private const int EXIT_NOT_FOUND = 2;
-    private const int EXIT_TIMEOUT = 3;
-    private const int EXIT_INVALID_ARGUMENT = 4;
 
     // Default simulator config path
     private const string DefaultSimulatorConfigPath = "task_helper/data_test/dist/simulator_config.json";
@@ -61,37 +57,44 @@ public class SetupCommands : ICommandHandler
         verifyConfigCommand.AddOption(openSettingsOption);
         verifyConfigCommand.AddOption(strictOption);
         verifyConfigCommand.AddOption(jsonOption);
-        verifyConfigCommand.SetHandler((configPath, openSettings, strict, json) =>
+        verifyConfigCommand.SetHandler((InvocationContext context) =>
         {
-            var actualConfigPath = configPath ?? DefaultSimulatorConfigPath;
-            using var verifier = new SetupVerifier(actualConfigPath);
-
-            var result = verifier.Verify(openSettingsIfNeeded: openSettings);
-
-            if (json)
+            try
             {
-                Console.WriteLine(result.ToJson());
-            }
-            else
-            {
-                PrintVerificationResult(result);
-            }
+                var configPath = context.ParseResult.GetValueForOption(configPathOption);
+                var openSettings = context.ParseResult.GetValueForOption(openSettingsOption);
+                var strict = context.ParseResult.GetValueForOption(strictOption);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-            // Determine exit code
-            int exitCode = EXIT_SUCCESS;
-            if (!result.Success)
-            {
-                exitCode = strict ? EXIT_ERROR : EXIT_SUCCESS;
-            }
+                var actualConfigPath = configPath ?? DefaultSimulatorConfigPath;
+                using var verifier = new SetupVerifier(actualConfigPath);
 
-            // Handle missing config file
-            if (result.Error == "Simulator config file not found")
-            {
-                exitCode = EXIT_NOT_FOUND;
-            }
+                var result = verifier.Verify(openSettingsIfNeeded: openSettings);
 
-            Environment.Exit(exitCode);
-        }, configPathOption, openSettingsOption, strictOption, jsonOption);
+                if (json)
+                {
+                    Console.WriteLine(result.ToJson());
+                }
+                else
+                {
+                    PrintVerificationResult(result);
+                }
+
+                // Determine exit code
+                if (result.Error == "Simulator config file not found")
+                {
+                    context.ExitCode = NOT_FOUND;
+                    return;
+                }
+
+                context.ExitCode = result.Success ? SUCCESS : (strict ? ERROR : SUCCESS);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[setup verify-config] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         setupCommand.AddCommand(verifyConfigCommand);
 
         // setup complete-full: Complete setup workflow with optional config verification
@@ -114,248 +117,281 @@ public class SetupCommands : ICommandHandler
         completeFullCommand.AddOption(configPathForIntegrationOption);
         completeFullCommand.AddOption(strictIntegrationOption);
         completeFullCommand.AddOption(jsonOption);
-        completeFullCommand.SetHandler((verifyConfig, configPath, strict, json) =>
+        completeFullCommand.SetHandler((InvocationContext context) =>
         {
-            // Step 1: Config verification (if requested)
-            if (verifyConfig)
+            try
             {
-                Console.WriteLine("[setup complete-full] Running configuration verification...");
+                var verifyConfig = context.ParseResult.GetValueForOption(verifyConfigIntegrationOption);
+                var configPath = context.ParseResult.GetValueForOption(configPathForIntegrationOption);
+                var strict = context.ParseResult.GetValueForOption(strictIntegrationOption);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-                var actualConfigPath = configPath ?? DefaultSimulatorConfigPath;
-                using var verifier = new SetupVerifier(actualConfigPath);
-                var verifyResult = verifier.Verify(openSettingsIfNeeded: true);
-
-                if (json)
+                // Step 1: Config verification (if requested)
+                if (verifyConfig)
                 {
-                    Console.WriteLine(verifyResult.ToJson());
-                }
-                else
-                {
-                    PrintVerificationResult(verifyResult);
-                }
+                    Console.WriteLine("[setup complete-full] Running configuration verification...");
 
-                // Check if verification failed
-                if (!verifyResult.Success)
-                {
-                    Console.WriteLine("[setup complete-full] Configuration verification failed");
+                    var actualConfigPath = configPath ?? DefaultSimulatorConfigPath;
+                    using var verifier = new SetupVerifier(actualConfigPath);
+                    var verifyResult = verifier.Verify(openSettingsIfNeeded: true);
 
-                    if (strict)
+                    if (json)
                     {
-                        Console.WriteLine("[setup complete-full] Aborting due to strict mode");
-                        Environment.Exit(EXIT_ERROR);
-                        return;
+                        Console.WriteLine(verifyResult.ToJson());
                     }
                     else
                     {
-                        Console.WriteLine("[setup complete-full] Continuing despite mismatches (use --strict to abort)");
+                        PrintVerificationResult(verifyResult);
+                    }
+
+                    // Check if verification failed
+                    if (!verifyResult.Success)
+                    {
+                        Console.WriteLine("[setup complete-full] Configuration verification failed");
+
+                        if (strict)
+                        {
+                            Console.WriteLine("[setup complete-full] Aborting due to strict mode");
+                            context.ExitCode = ERROR;
+                            return;
+                        }
+                        else
+                        {
+                            Console.WriteLine("[setup complete-full] Continuing despite mismatches (use --strict to abort)");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("[setup complete-full] Configuration verification passed");
                     }
                 }
-                else
+
+                // Step 2: Execute complete-full workflow
+                using var controller = new SetupController();
+
+                // Find SetupWindow
+                var setupWindow = controller.FindSetupWindow();
+                if (setupWindow == null)
                 {
-                    Console.WriteLine("[setup complete-full] Configuration verification passed");
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "SetupWindow not found"
+                        });
+                    }
+                    else
+                    {
+                        Console.WriteLine("[setup complete-full] SetupWindow not found");
+                    }
+                    context.ExitCode = NOT_FOUND;
+                    return;
                 }
-            }
 
-            // Step 2: Execute complete-full workflow
-            using var controller = new SetupController();
+                // Launch cameras
+                Console.WriteLine("[setup complete-full] Launching cameras...");
+                controller.ClickGeneralCamera();
+                controller.ClickNir1();
+                controller.ClickNir2();
 
-            // Find SetupWindow
-            var setupWindow = controller.FindSetupWindow();
-            if (setupWindow == null)
-            {
+                // Toggle NIR filtering if needed
+                var states = controller.GetCameraStates();
+                string nirFilteringState = states.TryGetValue("NirFiltering", out var nirVal) ? nirVal.ToString() : "unknown";
+                Console.WriteLine($"[setup complete-full] Camera states: NirFiltering={nirFilteringState}");
+
+                // Click Start button
+                Console.WriteLine("[setup complete-full] Clicking Start button...");
+                bool startSuccess = controller.ClickStartButton();
+
+                if (!startSuccess)
+                {
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "Failed to click Start button"
+                        });
+                    }
+                    else
+                    {
+                        Console.WriteLine("[setup complete-full] Failed to click Start button");
+                    }
+                    context.ExitCode = ERROR;
+                    return;
+                }
+
+                // Wait for MainWindow
+                Console.WriteLine("[setup complete-full] Waiting for MainWindow...");
+                var mainWindow = controller.WaitForMainWindow();
+                bool mainWindowAppeared = mainWindow != null;
+
                 if (json)
                 {
                     PrintJsonOutput(new
                     {
-                        success = false,
-                        error = "SetupWindow not found"
+                        success = mainWindowAppeared,
+                        data = new
+                        {
+                            completed = true,
+                            configVerified = verifyConfig,
+                            mainWindowAppeared = mainWindowAppeared
+                        }
                     });
                 }
                 else
                 {
-                    Console.WriteLine("[setup complete-full] SetupWindow not found");
-                }
-                Environment.Exit(EXIT_NOT_FOUND);
-                return;
-            }
-
-            // Launch cameras
-            Console.WriteLine("[setup complete-full] Launching cameras...");
-            controller.ClickGeneralCamera();
-            controller.ClickNir1();
-            controller.ClickNir2();
-
-            // Toggle NIR filtering if needed
-            var states = controller.GetCameraStates();
-            string nirFilteringState = states.TryGetValue("NirFiltering", out var nirVal) ? nirVal.ToString() : "unknown";
-            Console.WriteLine($"[setup complete-full] Camera states: NirFiltering={nirFilteringState}");
-
-            // Click Start button
-            Console.WriteLine("[setup complete-full] Clicking Start button...");
-            bool startSuccess = controller.ClickStartButton();
-
-            if (!startSuccess)
-            {
-                if (json)
-                {
-                    PrintJsonOutput(new
+                    if (mainWindowAppeared)
                     {
-                        success = false,
-                        error = "Failed to click Start button"
-                    });
-                }
-                else
-                {
-                    Console.WriteLine("[setup complete-full] Failed to click Start button");
-                }
-                Environment.Exit(EXIT_ERROR);
-                return;
-            }
-
-            // Wait for MainWindow
-            Console.WriteLine("[setup complete-full] Waiting for MainWindow...");
-            var mainWindow = controller.WaitForMainWindow();
-            bool mainWindowAppeared = mainWindow != null;
-
-            if (json)
-            {
-                PrintJsonOutput(new
-                {
-                    success = mainWindowAppeared,
-                    data = new
-                    {
-                        completed = true,
-                        configVerified = verifyConfig,
-                        mainWindowAppeared = mainWindowAppeared
+                        Console.WriteLine("[setup complete-full] Setup completed successfully, MainWindow is now active");
                     }
-                });
-            }
-            else
-            {
-                if (mainWindowAppeared)
-                {
-                    Console.WriteLine("[setup complete-full] Setup completed successfully, MainWindow is now active");
+                    else
+                    {
+                        Console.WriteLine("[setup complete-full] Start clicked but MainWindow did not appear");
+                    }
                 }
-                else
-                {
-                    Console.WriteLine("[setup complete-full] Start clicked but MainWindow did not appear");
-                }
-            }
 
-            Environment.Exit(mainWindowAppeared ? EXIT_SUCCESS : EXIT_TIMEOUT);
-        }, verifyConfigIntegrationOption, configPathForIntegrationOption, strictIntegrationOption, jsonOption);
+                context.ExitCode = mainWindowAppeared ? SUCCESS : TIMEOUT;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[setup complete-full] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         setupCommand.AddCommand(completeFullCommand);
 
         // setup open-settings: Open SettingsDialog from SetupWindow
         var openSettingsCommand = new Command("open-settings", "SetupWindow에서 설정 다이얼로그 열기");
         openSettingsCommand.AddOption(jsonOption);
-        openSettingsCommand.SetHandler((json) =>
+        openSettingsCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new SetupController();
-
-            // Find SetupWindow first
-            var setupWindow = controller.FindSetupWindow();
-            if (setupWindow == null)
+            try
             {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+
+                using var controller = new SetupController();
+
+                // Find SetupWindow first
+                var setupWindow = controller.FindSetupWindow();
+                if (setupWindow == null)
+                {
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "SetupWindow not found"
+                        });
+                    }
+                    else
+                    {
+                        Console.WriteLine("[setup open-settings] SetupWindow not found");
+                    }
+                    context.ExitCode = NOT_FOUND;
+                    return;
+                }
+
+                // Click the Settings button
+                bool success = controller.ClickSettingsButton();
+
                 if (json)
                 {
                     PrintJsonOutput(new
                     {
-                        success = false,
-                        error = "SetupWindow not found"
+                        success = success,
+                        data = new
+                        {
+                            settingsOpened = success
+                        }
                     });
                 }
                 else
                 {
-                    Console.WriteLine("[setup open-settings] SetupWindow not found");
-                }
-                Environment.Exit(EXIT_NOT_FOUND);
-                return;
-            }
-
-            // Click the Settings button
-            bool success = controller.ClickSettingsButton();
-
-            if (json)
-            {
-                PrintJsonOutput(new
-                {
-                    success = success,
-                    data = new
+                    if (success)
                     {
-                        settingsOpened = success
+                        Console.WriteLine("[setup open-settings] SettingsDialog opened successfully");
                     }
-                });
-            }
-            else
-            {
-                if (success)
-                {
-                    Console.WriteLine("[setup open-settings] SettingsDialog opened successfully");
+                    else
+                    {
+                        Console.WriteLine("[setup open-settings] Failed to open SettingsDialog");
+                    }
                 }
-                else
-                {
-                    Console.WriteLine("[setup open-settings] Failed to open SettingsDialog");
-                }
-            }
 
-            Environment.Exit(success ? EXIT_SUCCESS : EXIT_ERROR);
-        }, jsonOption);
+                context.ExitCode = success ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[setup open-settings] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         setupCommand.AddCommand(openSettingsCommand);
 
         // setup camera-states: Get camera button states from SetupWindow
         var cameraStatesCommand = new Command("camera-states", "카메라 버튼 상태 확인 (general, nir1, nir2)");
         cameraStatesCommand.AddOption(jsonOption);
-        cameraStatesCommand.SetHandler((json) =>
+        cameraStatesCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new SetupController();
-
-            // Find SetupWindow first
-            var setupWindow = controller.FindSetupWindow();
-            if (setupWindow == null)
+            try
             {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+
+                using var controller = new SetupController();
+
+                // Find SetupWindow first
+                var setupWindow = controller.FindSetupWindow();
+                if (setupWindow == null)
+                {
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "SetupWindow not found"
+                        });
+                    }
+                    else
+                    {
+                        Console.WriteLine("[setup camera-states] SetupWindow not found");
+                    }
+                    context.ExitCode = NOT_FOUND;
+                    return;
+                }
+
+                // Get camera states
+                var states = controller.GetCameraStates();
+
                 if (json)
                 {
                     PrintJsonOutput(new
                     {
-                        success = false,
-                        error = "SetupWindow not found"
+                        success = true,
+                        data = new
+                        {
+                            general = states.TryGetValue("general", out var general) ? general : false,
+                            nir1 = states.TryGetValue("nir1", out var nir1) ? nir1 : false,
+                            nir2 = states.TryGetValue("nir2", out var nir2) ? nir2 : false
+                        }
                     });
                 }
                 else
                 {
-                    Console.WriteLine("[setup camera-states] SetupWindow not found");
+                    Console.WriteLine("[setup camera-states] Camera button states:");
+                    Console.WriteLine($"  General Camera: {(states.TryGetValue("general", out var g) && g ? "Enabled" : "Disabled")}");
+                    Console.WriteLine($"  NIR1 Camera: {(states.TryGetValue("nir1", out var n1) && n1 ? "Enabled" : "Disabled")}");
+                    Console.WriteLine($"  NIR2 Camera: {(states.TryGetValue("nir2", out var n2) && n2 ? "Enabled" : "Disabled")}");
                 }
-                Environment.Exit(EXIT_NOT_FOUND);
-                return;
+
+                context.ExitCode = SUCCESS;
             }
-
-            // Get camera states
-            var states = controller.GetCameraStates();
-
-            if (json)
+            catch (Exception ex)
             {
-                PrintJsonOutput(new
-                {
-                    success = true,
-                    data = new
-                    {
-                        general = states.TryGetValue("general", out var general) ? general : false,
-                        nir1 = states.TryGetValue("nir1", out var nir1) ? nir1 : false,
-                        nir2 = states.TryGetValue("nir2", out var nir2) ? nir2 : false
-                    }
-                });
+                Console.Error.WriteLine($"[setup camera-states] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-            else
-            {
-                Console.WriteLine("[setup camera-states] Camera button states:");
-                Console.WriteLine($"  General Camera: {(states.TryGetValue("general", out var g) && g ? "Enabled" : "Disabled")}");
-                Console.WriteLine($"  NIR1 Camera: {(states.TryGetValue("nir1", out var n1) && n1 ? "Enabled" : "Disabled")}");
-                Console.WriteLine($"  NIR2 Camera: {(states.TryGetValue("nir2", out var n2) && n2 ? "Enabled" : "Disabled")}");
-            }
-
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+        });
         setupCommand.AddCommand(cameraStatesCommand);
 
         rootCommand.AddCommand(setupCommand);
