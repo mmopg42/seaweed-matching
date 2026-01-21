@@ -145,7 +145,7 @@ Windows UI Automation with FlaUI
 | 23. Performance & Docs | v1.3 | 3 | ✅ Complete |
 | 24. Error Diagnosis | v1.4 | 2 | 📋 Planned |
 | 25. Simulator Status | v1.4 | 2 | 📋 Planned |
-| 26. Log Path Finder | v1.4 | 2 | ○ Pending |
+| 26. Log Path Finder | v1.4 | 2 | 📋 Planned |
 | 27. Delegation Fix | v1.4 | 2 | ○ Pending |
 
 ## Current State
@@ -213,15 +213,25 @@ Windows UI Automation with FlaUI
   - Add Pattern 6: Status-Based Simulation Wait
   - Update Pattern 2 to use status polling
 
-### ○ Phase 26: Dynamic Log Path Discovery (v1.4) — Pending
+### 📋 Phase 26: Dynamic Log Path Discovery (v1.4) — Ready to Execute
 
-**Goal:** 로그 경로 동적 해결
+**Goal:** 로그 경로 동적 해결 (Automatic log folder discovery)
 
 **Requirements:** LOG-01
 
 **Plans:**
 - [ ] 26-01: 동적 로그 폴더 finder 구현
+  - Add GetLatestLogDateFolder() method to ConsoleLogsReader.cs
+  - Add GetLogFilesFromLatest() method to ConsoleLogsReader.cs
+  - Add --latest flag to console-logs list/tail/search commands
 - [ ] 26-02: log-analyst에 동적 경로 해결 추가
+  - Update .claude/commands/test/logs.md with --latest examples
+  - Update .claude/agents/log-analyst.md with automatic discovery guidance
+
+**Expected Outcome:**
+- Users can query latest logs without specifying date folder
+- log-analyst agent can discover log paths automatically
+- yyyyMMdd folder pattern validation via DateTime.TryParseExact
 
 ### ○ Phase 27: Orchestrator Delegation Fix (v1.4) — Pending
 
@@ -235,4 +245,4 @@ Windows UI Automation with FlaUI
 
 ---
 
-*Last updated: 2026-01-21 - Phase 25 planned, ready for execution*
+*Last updated: 2026-01-21 - Phase 26 planned, ready for execution*
