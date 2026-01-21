@@ -11,10 +11,10 @@ See: .planning/PROJECT.md (updated 2026-01-21)
 
 **Milestone:** v1.4 Test Agent Architecture & Reliability
 **Phase:** 25 (Simulator Status)
-**Plan:** 01 (Status CLI Endpoint)
+**Plan:** 02 (Status Documentation)
 **Status:** Complete
 
-Progress: ████████░░ 50% (Phase 25: 1/2 plans complete)
+Progress: ██████████ 100% (Phase 25: 2/2 plans complete)
 
 ## Plan 24-01 Summary
 
@@ -72,6 +72,26 @@ Progress: ████████░░ 50% (Phase 25: 1/2 plans complete)
 - _load_state() - Reads simulation state from JSON file
 - get_status() - Returns current status (idle if no state file)
 - --status CLI flag - Returns JSON with status, progress, items_created, simulation_id, last_activity
+
+## Plan 25-02 Summary
+
+**Timeline:** 2 min (2026-01-21)
+**Deliverables:**
+- test-executor.md updated with --status command documentation
+- State file location documented (simulation_state.json)
+- Status response JSON format documented with 5 fields
+- Pattern 6: Status-Based Simulation Wait with bash polling
+- Windows PowerShell polling example for cross-platform compatibility
+- Pattern 2 updated to use status polling instead of blind wait
+
+**Commits:** 3 atomic commits
+
+**Features:**
+- --status command example in Test Data Generator section
+- State file persistence documentation (Windows script and EXE paths)
+- Status JSON format: status, progress, items_created, simulation_id, last_activity
+- Bash polling pattern with background execution (&)
+- PowerShell polling pattern with Start-Process and Select-String
 
 ## Plan 23-01 Summary
 
@@ -227,6 +247,9 @@ Decisions from all phases are logged in PROJECT.md.
 | 25-01 | State file persistence | simulation_state.json in config_dir enables cross-process status queries |
 | 25-01 | Cleanup-on-start pattern | Remove old state file before simulation to prevent stale status |
 | 25-01 | Independent --status flag | Works without --cli, reads state file without blocking |
+| 25-02 | Status polling patterns | Background execution with &/Start-Process for cross-process status queries |
+| 25-02 | Bash polling via grep | Simple JSON parsing without jq dependency |
+| 25-02 | PowerShell polling | Select-String regex-based JSON parsing for Windows |
 
 ### Deferred Issues
 
@@ -260,8 +283,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed Phase 25-01 (Status CLI Endpoint)
-Resume file: None (Phase 25-01 complete, ready for 25-02)
+Stopped at: Completed Phase 25-02 (Status Documentation)
+Resume file: None (Phase 25 complete, ready for Phase 26)
 
 ## Roadmap Evolution
 
@@ -274,10 +297,10 @@ Resume file: None (Phase 25-01 complete, ready for 25-02)
 - Phase 22 complete: ChronoSetupWindowController + SetupCommands + SetupConfigVerifier (2,092 lines total)
 - Phase 23 complete: Performance optimization + CLI-01 commands (open-settings, camera-states)
 - Phase 24 complete: Error Diagnosis with centralized ExitCodes and InvocationContext pattern
-- Phase 25-01 complete: Simulator status CLI endpoint with state file persistence
-- 10 controller methods + 11 CLI commands + config verification + optimized execution patterns + centralized error handling + status query
+- Phase 25 complete: Simulator status CLI endpoint + documentation with polling patterns
+- 10 controller methods + 11 CLI commands + config verification + optimized execution patterns + centralized error handling + status query + polling patterns
 - v1.3 Setup Automation & Test Reliability: Phase 22 complete, Phase 23 complete
-- v1.4 Test Agent Architecture & Reliability: Phase 24 complete (100%), Phase 25 in progress (50%)
+- v1.4 Test Agent Architecture & Reliability: Phase 24 complete (100%), Phase 25 complete (100%)
 
 **v1.2 Test Automation Enhancement - SHIPPED**
 
@@ -299,4 +322,4 @@ Resume file: None (Phase 25-01 complete, ready for 25-02)
 
 ---
 
-*Updated: 2026-01-21 after Phase 25-01 completion - Phase 25: 1/2 plans complete*
+*Updated: 2026-01-21 after Phase 25-02 completion - Phase 25: 2/2 plans complete*
