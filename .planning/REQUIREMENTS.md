@@ -1,63 +1,99 @@
-# Milestone v1.4 Requirements
+# Requirements: ChronoView CLI Skill Encapsulation
 
-## Test Agent Architecture & Reliability
+**Defined:** 2026-01-21
+**Core Value:** UI 요소 식별 및 조작 — ChronoView의 모든 UI 요소를 안정적으로 식별하고 조작
 
----
+## v1.5 Requirements
 
-## Active Requirements (This Milestone)
+Requirements for CLI Skill Encapsulation & Delegation Fix milestone. Each maps to roadmap phases.
 
-### ERROR-01: Exit Code 진단 및 해결
-- [x] Exit Code 1이 발생하는 원인 파악
-- [x] 에러 메시지 개선 (현재: "Error: Exit code 1"만 출력)
-- [x] 어떤 명령어가 실패했는지 명확히 표시
-- [x] 실패 사유를 설명하는 메시지 추가
+### Skill Registry (SKILL)
 
-### STATUS-01: Data Simulator Status Endpoint
-- [x] `--status` CLI 옵션 추가
-- [x] JSON 형식으로 상태 반환
-  ```json
-  {
-    "status": "running|completed|idle|error",
-    "progress": 85.5,
-    "items_created": 376,
-    "simulation_id": "uuid",
-    "last_activity": "2026-01-21T18:30:45"
-  }
-  ```
-- [x] 현재 실행 중인 시뮬레이션 ID 추적
-- [x] 완료 여부를 불리언이 아닌 상태로 반환
+- [ ] **SKILL-01**: All 30+ CLI commands have corresponding skill definitions
+- [ ] **SKILL-02**: Each skill has semantic name (intent-based, not CLI-based)
+- [ ] **SKILL-03**: Skill definition includes exact CLI command pattern
+- [ ] **SKILL-04**: Skill definition includes parameter schema
+- [ ] **SKILL-05**: Skill registry is documented in test-executor-skills.md
+- [ ] **SKILL-06**: Skills organized by category (Lifecycle, Workflow, Settings, Window, Data, Diagnostic)
 
-### LOG-01: 동적 로그 경로 해결
-- [x] `%APPDATA%\ChronoView\Logs\` 하위에서 최신 폴더 자동 탐색
-- [x] 날짜별 폴더 `{YYYYMMDD}` 자동 검색 로직
-- [x] log-analyst 에이전트에 동적 경로 해결 추가
-- [x] Windows/WSL 경로 호환성 유지
+### Orchestrator Delegation (ORCH)
 
-### DELEGATE-01: Orchestrator 역할 분할 수정
-- [x] test-orchestrator가 직접 Bash 명령 실행하지 않도록 수정
-- [x] 실행 작업은 test-executor에게 위임
-- [x] 로그 분석은 log-analyst에게 위임
-- [x] orchestrator는 시나리오 정의와 결과 종합만 담당
-- [x] 위임 패턴 검증 테스트 통과
+- [ ] **ORCH-01**: Orchestrator uses skill names only (no CLI commands in delegation)
+- [ ] **ORCH-02**: test-orchestrator.md updated with skill reference section
+- [ ] **ORCH-03**: "No Command Construction" prohibition added with examples
+- [ ] **ORCH-04**: Delegation template updated to use skill names
+- [ ] **ORCH-05**: Orchestrator cannot construct CLI commands (documentation prohibition)
 
----
+### Executor Translation (EXEC)
+
+- [ ] **EXEC-01**: test-executor.md includes skill-to-CLI translation patterns
+- [ ] **EXEC-02**: Executor validates skill names against registry
+- [ ] **EXEC-03**: Executor reports error for unknown skills
+- [ ] **EXEC-04**: Retry logic respects skill `retryable` flag
+- [ ] **EXEC-05**: Error handling includes skill context in messages
+
+### CLI Schema Standardization (SCHEMA)
+
+- [ ] **SCHEMA-01**: Standardized JSON response format across all commands
+- [ ] **SCHEMA-02**: Consistent error reporting with `success`, `data/error`, `errorCode` fields
+- [ ] **SCHEMA-03**: Error responses include `retryable` boolean
+- [ ] **SCHEMA-04**: Error responses include `suggestion` string for common failures
+- [ ] **SCHEMA-05**: JSON schemas documented for each command category
+
+### Dry-Run Mode (DRYRUN)
+
+- [ ] **DRYRUN-01**: `--dry-run` flag added to all CLI commands
+- [ ] **DRYRUN-02**: Dry-run returns command that would execute without execution
+- [ ] **DRYRUN-03**: Dry-run validates parameter syntax
+- [ ] **DRYRUN-04**: Dry-run validates skill exists (in executor)
+- [ ] **DRYRUN-05**: Dry-run documented in test-executor.md
+
+## v2 Requirements
+
+Deferred to future release. Tracked but not in current roadmap.
+
+### Skill Composition (COMPOSE)
+
+- **COMPOSE-01**: Composite skills combine multiple commands
+- **COMPOSE-02**: Multi-command workflow skills
+- **COMPOSE-03**: State validation chains
+
+### Advanced Features (ADVANCED)
+
+- **ADV-01**: Conditional execution based on application state
+- **ADV-02**: Fallback chains (try primary, fall back to alternative)
+- **ADV-03**: Skill versioning for CLI evolution
 
 ## Out of Scope
 
-- ChronoView 소스 코드 수정 — 외부 자동화만
-- 테스트 에이전트 완전 재작성 — 점진적 개선만
+Explicitly excluded. Documented to prevent scope creep.
 
----
+| Feature | Reason |
+|---------|--------|
+| Live CLI Discovery (parsing --help) | Fragile, static registry more reliable |
+| Natural Language Parsing | LLMs already handle intent-to-skill mapping |
+| Remote Skill Execution | Adds latency, security risk; keep local |
+| Dynamic Skill Generation | Unpredictable, hard to debug; define explicitly |
+| Stateful Skills | Hard to reason about; keep stateless |
+| Auto-Retry Without Orchestrator Input | CLI failures may need human intervention |
 
 ## Traceability
 
-| REQ-ID | Phase | Status |
-|--------|-------|--------|
-| ERROR-01 | Phase 24 | Complete |
-| STATUS-01 | Phase 25 | Complete |
-| LOG-01 | Phase 26 | Complete |
-| DELEGATE-01 | Phase 27 | Complete |
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| SKILL-01 through SKILL-06 | Phase 28 | Pending |
+| ORCH-01 through ORCH-05 | Phase 29 | Pending |
+| EXEC-01 through EXEC-05 | Phase 30 | Pending |
+| SCHEMA-01 through SCHEMA-05 | Phase 31 | Pending |
+| DRYRUN-01 through DRYRUN-05 | Phase 32 | Pending |
+
+**Coverage:**
+- v1.5 requirements: 25 total
+- Mapped to phases: 25
+- Unmapped: 0 ✓
 
 ---
-
-*Created: 2026-01-21*
+*Requirements defined: 2026-01-21*
+*Last updated: 2026-01-21 after initial definition*
