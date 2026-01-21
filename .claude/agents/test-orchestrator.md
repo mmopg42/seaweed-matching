@@ -247,6 +247,22 @@ After delegation and synthesis, provide a structured report organized by tiers:
 
 ---
 
+### Delegation Issues
+
+**Status:** NONE / DETECTED
+
+If any delegation failures occurred:
+- test-executor: [success / failed / retried]
+- log-analyst: [success / failed / retried]
+
+**If delegation failed:**
+- Which sub-agent: [test-executor or log-analyst]
+- Error: [what went wrong - error message or description]
+- Retry attempt: [result if retried - e.g., "retry succeeded" or "retry also failed"]
+- Impact: [how this affects the test results - e.g., "TIER 1 execution incomplete", "log analysis skipped"]
+
+---
+
 ### TIER 1: Focused Feature - [Feature Name]
 **Status:** PASS / FAIL / PARTIAL
 
