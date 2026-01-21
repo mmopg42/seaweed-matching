@@ -233,7 +233,7 @@ Plans:
 | 25. Simulator Status | v1.4 | 2 | ✅ Complete |
 | 26. Log Path Finder | v1.4 | 2 | ✅ Complete |
 | 27. Delegation Fix | v1.4 | 2 | ✅ Complete |
-| 28. Skill Registry | v1.5 | 1 | 📋 Ready to execute |
+| 28. Skill Registry | v1.5 | 1 | ✅ Complete |
 | 29. Orchestrator Integration | v1.5 | TBD | Not started |
 | 30. Executor Translation | v1.5 | TBD | Not started |
 | 31. CLI Schema | v1.5 | TBD | Not started |
@@ -241,10 +241,10 @@ Plans:
 
 ## Current State
 
-**Status:** 🚧 v1.5 CLI Skill Encapsulation phase 28 planned.
+**Status:** 🚧 v1.5 CLI Skill Encapsulation - Phase 28 complete, Phase 29 ready to plan.
 
-**Next Step:** Run `/gsd:execute-phase 28` to create the skill registry.
+**Next Step:** Run `/gsd:plan-phase 29` to update test-orchestrator with skill integration.
 
 ---
 
-*Last updated: 2026-01-21 - Phase 28 plan created*
+*Last updated: 2026-01-21 - Phase 28 complete*
