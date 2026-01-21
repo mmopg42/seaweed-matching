@@ -5,6 +5,7 @@ using SetupVerifier = SkillsScripts.UiAutomation.SetupConfigVerifier;
 using SetupController = SkillsScripts.UiAutomation.ChronoSetupWindowController;
 using SkillsScripts.UiAutomation;
 using static UiAutomation.Commands.ExitCodes;
+using static UiAutomation.Commands.JsonResponseHelper;
 
 namespace UiAutomation.Commands;
 
@@ -73,7 +74,22 @@ public class SetupCommands : ICommandHandler
 
                 if (json)
                 {
-                    Console.WriteLine(result.ToJson());
+                    if (result.Success)
+                    {
+                        // Parse existing JSON and wrap in standard format
+                        PrintSuccess(new
+                        {
+                            verified = true,
+                            matched = result.Matched,
+                            mismatches = result.Mismatches,
+                            missing = result.Missing
+                        });
+                    }
+                    else
+                    {
+                        PrintError(result.Error ?? "Verification failed", ERROR,
+                            "Check config paths match between simulator and ChronoView.");
+                    }
                 }
                 else
                 {
@@ -137,7 +153,21 @@ public class SetupCommands : ICommandHandler
 
                     if (json)
                     {
-                        Console.WriteLine(verifyResult.ToJson());
+                        if (verifyResult.Success)
+                        {
+                            PrintSuccess(new
+                            {
+                                verified = true,
+                                matched = verifyResult.Matched,
+                                mismatches = verifyResult.Mismatches,
+                                missing = verifyResult.Missing
+                            });
+                        }
+                        else
+                        {
+                            PrintError(verifyResult.Error ?? "Verification failed", ERROR,
+                                "Check config paths match between simulator and ChronoView.");
+                        }
                     }
                     else
                     {
@@ -175,11 +205,8 @@ public class SetupCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "SetupWindow not found"
-                        });
+                        PrintError("SetupWindow not found", NOT_FOUND,
+                            "Setup may have been completed. Try 'windows main --json' to check MainWindow.");
                     }
                     else
                     {
@@ -208,11 +235,8 @@ public class SetupCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "Failed to click Start button"
-                        });
+                        PrintError("Failed to click Start button", ERROR,
+                            "Start button may be disabled or not found. Check SetupWindow state.");
                     }
                     else
                     {
@@ -229,16 +253,20 @@ public class SetupCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    if (mainWindowAppeared)
                     {
-                        success = mainWindowAppeared,
-                        data = new
+                        PrintSuccess(new
                         {
                             completed = true,
                             configVerified = verifyConfig,
-                            mainWindowAppeared = mainWindowAppeared
-                        }
-                    });
+                            mainWindowAppeared = true
+                        });
+                    }
+                    else
+                    {
+                        PrintError("MainWindow did not appear after clicking start", TIMEOUT,
+                            "The application may be initializing. Wait a few seconds and try 'windows main --json'.");
+                    }
                 }
                 else
                 {
@@ -279,11 +307,8 @@ public class SetupCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "SetupWindow not found"
-                        });
+                        PrintError("SetupWindow not found", NOT_FOUND,
+                            "SetupWindow may have already been completed. Try 'windows main --json'.");
                     }
                     else
                     {
@@ -298,14 +323,18 @@ public class SetupCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    if (success)
                     {
-                        success = success,
-                        data = new
+                        PrintSuccess(new
                         {
-                            settingsOpened = success
-                        }
-                    });
+                            settingsOpened = true
+                        });
+                    }
+                    else
+                    {
+                        PrintError("Settings button not found in SetupWindow", ERROR,
+                            "SetupWindow may have already been completed.");
+                    }
                 }
                 else
                 {
@@ -346,11 +375,8 @@ public class SetupCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "SetupWindow not found"
-                        });
+                        PrintError("SetupWindow not found", NOT_FOUND,
+                            "Setup may have been completed. Try 'workflow camera-states --json'.");
                     }
                     else
                     {
@@ -365,23 +391,19 @@ public class SetupCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            general = states.TryGetValue("general", out var general) ? general : false,
-                            nir1 = states.TryGetValue("nir1", out var nir1) ? nir1 : false,
-                            nir2 = states.TryGetValue("nir2", out var nir2) ? nir2 : false
-                        }
+                        general = states.TryGetValue("General", out var g) && g,
+                        nir1 = states.TryGetValue("Nir1", out var n1) && n1,
+                        nir2 = states.TryGetValue("Nir2", out var n2) && n2
                     });
                 }
                 else
                 {
                     Console.WriteLine("[setup camera-states] Camera button states:");
-                    Console.WriteLine($"  General Camera: {(states.TryGetValue("general", out var g) && g ? "Enabled" : "Disabled")}");
-                    Console.WriteLine($"  NIR1 Camera: {(states.TryGetValue("nir1", out var n1) && n1 ? "Enabled" : "Disabled")}");
-                    Console.WriteLine($"  NIR2 Camera: {(states.TryGetValue("nir2", out var n2) && n2 ? "Enabled" : "Disabled")}");
+                    Console.WriteLine($"  General Camera: {(states.TryGetValue("General", out var g) && g ? "Enabled" : "Disabled")}");
+                    Console.WriteLine($"  NIR1 Camera: {(states.TryGetValue("Nir1", out var n1) && n1 ? "Enabled" : "Disabled")}");
+                    Console.WriteLine($"  NIR2 Camera: {(states.TryGetValue("Nir2", out var n2) && n2 ? "Enabled" : "Disabled")}");
                 }
 
                 context.ExitCode = SUCCESS;
@@ -439,16 +461,5 @@ public class SetupCommands : ICommandHandler
                 Console.WriteLine($"    - {missing}");
             }
         }
-    }
-
-    /// <summary>
-    /// Print JSON output with consistent formatting for programmatic consumption
-    /// </summary>
-    private static void PrintJsonOutput(object data)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(data, new JsonSerializerOptions
-        {
-            WriteIndented = false
-        }));
     }
 }
