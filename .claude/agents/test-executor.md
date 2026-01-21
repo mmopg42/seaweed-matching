@@ -35,6 +35,215 @@ TIER 3: Core Smoke Test (Sanity Check)
 
 **Execution Order:** Always execute TIER 1 → TIER 2 → TIER 3
 
+## Skill Translation
+
+When test-orchestrator delegates tasks to you, it expresses intent using **skill names** rather than raw CLI commands. Your role is to translate these semantic skill names into executable CLI commands.
+
+**The Translation Flow:**
+```
+Orchestrator (Intent) → Executor (Translation) → CLI (Implementation)
+"Execute skill: APP_LAUNCH" → Parse & Validate → "ui_automation.exe app launch"
+```
+
+### Prompt Format
+
+Orchestrator sends prompts in this structured format:
+
+```
+Execute skill: SKILL_NAME [with args: {...}]
+```
+
+**Examples:**
+- `Execute skill: APP_LAUNCH` → No arguments needed
+- `Execute skill: FILE_OPS_MOVE_ROWS with args: {"rows": [0,1,2]}` → With arguments
+- `Execute skill: SETTINGS_DIALOG_PATH_GET_ALL with args: {"json": true}` → With flags
+
+### Prompt Parsing
+
+Use a regex pattern to extract skill name and arguments:
+
+```regex
+@"Execute\s+skill:\s*(?<skill>[A-Z_][A-Z0-9_]*)(?:\s+with\s+args:\s*(?<args>\{.*?\}))?"
+```
+
+**Parse Examples:**
+| Input | skillName | args |
+|-------|-----------|------|
+| `Execute skill: APP_LAUNCH` | `APP_LAUNCH` | `""` (empty) |
+| `Execute skill: FILE_OPS_MOVE_ROWS with args: {"rows": [0,1,2]}` | `FILE_OPS_MOVE_ROWS` | `{"rows": [0,1,2]}` |
+| `Execute skill: TOOLBAR_START` | `TOOLBAR_START` | `""` (empty) |
+
+### Skill Validation
+
+Before executing any CLI command, **validate the skill name** against the registry:
+
+1. **Check registry:** Read `test-executor-skills.md` to verify the skill exists
+2. **Parse args:** If args provided, parse JSON and validate against skill's parameter schema
+3. **On success:** Proceed to CLI construction
+4. **On failure:** Return error with suggestions (see Unknown Skill Error Handling below)
+
+**Validation Pseudocode:**
+```
+if skill not in test-executor-skills.md:
+    find similar skills using Levenshtein distance
+    return error with suggestions
+```
+
+### CLI Construction
+
+Once validated, construct the CLI command:
+
+1. **Lookup CLI template:** Read the `cli` field from the skill registry
+2. **Substitute arguments:** Replace placeholders with actual values
+3. **Add JSON flag:** Append `--json` if the skill supports it (most do)
+4. **Execute:** Run via Bash tool using `ui_automation.exe`
+
+**Example Translation:**
+```
+Skill: FILE_OPS_MOVE_ROWS
+Args:  {"rows": [0, 1, 2]}
+
+Step 1: Lookup CLI template
+  → "file-ops move rows --rows <indices>"
+
+Step 2: Substitute args
+  → "file-ops move rows --rows 0,1,2"
+
+Step 3: Add --json flag
+  → "file-ops move rows --rows 0,1,2 --json"
+
+Step 4: Execute
+  → ui_automation.exe file-ops move rows --rows 0,1,2 --json
+```
+
+### Unknown Skill Error Handling
+
+When an unknown skill is received, respond with a helpful error including suggestions:
+
+**Error Response Format:**
+```json
+{
+  "error": "Unknown skill: APP_LAUNCHC",
+  "errorCode": 4,
+  "suggestions": ["APP_LAUNCH", "APP_STOP", "APP_RESTART"],
+  "validSkills": ["APP_LAUNCH", "APP_STOP", "APP_RESTART", "APP_STATUS"],
+  "category": "APP",
+  "retryable": false
+}
+```
+
+**Suggestion Logic:**
+- Find top 3 skills with lowest Levenshtein distance (string similarity)
+- Also show all skills in the same category (inferred from skill name prefix)
+- Direct user to check `test-executor-skills.md` for complete registry
+
+**Example Error Message:**
+```
+Unknown skill: FILE_OPS_MOVE_ROWS_INVALID
+
+Did you mean:
+  - FILE_OPS_MOVE_ROWS (move by row indices)
+  - FILE_OPS_MOVE_GROUP_IDS (move by GroupIds)
+  - FILE_OPS_MOVE_PREFIX (move by prefix)
+
+See test-executor-skills.md for complete skill registry.
+```
+
+### Error Context
+
+When a skill execution fails, always include context in your error response:
+
+**Required Fields:**
+- `skill`: The skill name that failed
+- `cli`: The CLI command that was executed
+- `exitCode`: The exit code from CLI
+- `error`: Human-readable error message
+- `suggestion`: Actionable suggestion for common failures
+- `retryable`: Whether this skill can be retried
+
+**Example Error Response:**
+```json
+{
+  "skill": "TOOLBAR_START",
+  "cli": "ui_automation.exe toolbar start",
+  "exitCode": 3,
+  "error": "Timeout waiting for Start button",
+  "suggestion": "Check if MainWindow is active. Try 'WINDOWS_MAIN' first.",
+  "retryable": true
+}
+```
+
+**Skill Registry:** See `test-executor-skills.md` for all 92 available skills.
+
+### Skill Translation Workflow
+
+**Complete Workflow Example:**
+
+Orchestrator sends:
+```
+Execute skill: FILE_OPS_MOVE_ROWS with args: {"rows": [0, 1, 2]}
+```
+
+Executor reasoning:
+```
+1. Parse prompt:
+   - skillName = "FILE_OPS_MOVE_ROWS"
+   - args = {"rows": [0, 1, 2]}
+
+2. Validate:
+   - Check test-executor-skills.md → FILE_OPS_MOVE_ROWS exists (PASS)
+   - Args schema validated (PASS)
+
+3. Lookup CLI template:
+   - "file-ops move rows --rows <indices>"
+
+4. Substitute args:
+   - --rows 0,1,2
+
+5. Add --json flag:
+   - "file-ops move rows --rows 0,1,2 --json"
+
+6. Execute:
+   - ui_automation.exe file-ops move rows --rows 0,1,2 --json
+
+7. Parse response and return to orchestrator
+```
+
+**Success Response:**
+```json
+{
+  "skill": "FILE_OPS_MOVE_ROWS",
+  "success": true,
+  "data": {
+    "selected": 3,
+    "moved": 3
+  }
+}
+```
+
+**Error Response (unknown skill):**
+```json
+{
+  "skill": "FILE_OPS_MOVE_ROWS_INVALID",
+  "error": "Unknown skill: FILE_OPS_MOVE_ROWS_INVALID",
+  "errorCode": 4,
+  "suggestions": ["FILE_OPS_MOVE_ROWS", "FILE_OPS_MOVE_GROUP_IDS", "FILE_OPS_MOVE_PREFIX"],
+  "retryable": false
+}
+```
+
+**Error Response (execution failure):**
+```json
+{
+  "skill": "FILE_OPS_MOVE_ROWS",
+  "cli": "ui_automation.exe file-ops move rows --rows 0,1,2 --json",
+  "exitCode": 3,
+  "error": "No matching rows found",
+  "suggestion": "Verify row indices exist in DataGrid. Try 'DATA_PANEL_ROWS' first.",
+  "retryable": false
+}
+```
+
 ## Your Responsibilities
 
 1. **Build & Run Management**
@@ -431,11 +640,24 @@ ui_automation.exe toolbar start           # Start monitoring (cameras optional)
 ## Error Handling (Streamlined)
 
 If execution fails:
-1. Note the command and exit code
-2. Check if app is still running (`test connectivity` - once only)
-3. If app crashed: report and suggest restart
-4. If command failed: report failure with exit code
-5. **DO NOT** retry multiple times - move on to next test
+1. Note the skill name, CLI command, and exit code
+2. Include skill context in error report (see Skill Translation → Error Context)
+3. Check if app is still running (`test connectivity` - once only)
+4. If app crashed: report and suggest restart
+5. If command failed: report failure with exit code
+6. **DO NOT** retry multiple times - move on to next test
+
+**Skill-aware error response example:**
+```json
+{
+  "skill": "TOOLBAR_START",
+  "cli": "ui_automation.exe toolbar start",
+  "exitCode": 3,
+  "error": "Timeout waiting for Start button",
+  "suggestion": "Check if MainWindow is active. Try 'WINDOWS_MAIN' first.",
+  "retryable": true
+}
+```
 
 ## Troubleshooting Common Errors
 
@@ -459,20 +681,28 @@ If execution fails:
 
 ## Timeout and Retry Guidelines (REDUCED)
 
+**Skill Retryable Flag:**
+Some skills are marked as non-retryable in the registry (e.g., delete operations).
+Before retrying, check the skill's retryable status from test-executor-skills.md.
+- If `retryable=false`: Do NOT retry on failure
+- If `retryable=true` or unspecified: Follow retry limits below
+
 **Maximum Retry Limits:**
-| Operation Type | Max Retries | Total Attempts |
-|----------------|-------------|----------------|
-| App Launch | 1 | 2 |
-| App Stop | 0 | 1 |
-| UI Automation | 1 | 2 (REDUCED from 3) |
-| Connectivity Check | 0 | 1 (REDUCED from 3) |
-| Data Generation | 1 | 2 |
+| Operation Type | Max Retries | Total Attempts | Respects retryable |
+|----------------|-------------|----------------|-------------------|
+| App Launch | 1 | 2 | yes |
+| App Stop | 0 | 1 | yes |
+| UI Automation | 1 | 2 | yes |
+| Delete Operations | 0 | 1 | ALWAYS (non-retryable) |
+| Connectivity Check | 0 | 1 | yes |
+| Data Generation | 1 | 2 | yes |
 
 **When to STOP immediately:**
 - Exit code 127 (command not found) → Don't retry
 - Exit code 2 (not found) → Skip this check
 - Same error twice → Report and continue
 - Timeout after 1 retry → Report and continue
+- Skill marked as non-retryable → Do not retry
 
 **Pre-checks before commands add unnecessary overhead. Execute commands directly first.**
 
@@ -570,3 +800,416 @@ After each test execution:
 - Ready for log-analyst to review
 
 Remember: Your job is to **execute efficiently**. Minimize CLI calls. Skip unnecessary checks. The test-orchestrator will synthesize your results with log-analyst's findings.
+
+## JSON Response Schemas
+
+All CLI commands with `--json` flag return standardized JSON responses that test-executor can reliably parse.
+
+### Standard Success Response
+
+```json
+{
+  "success": true,
+  "data": {
+    // Command-specific data fields
+  },
+  "timestamp": "2026-01-21T12:34:56.789Z"
+}
+```
+
+### Standard Error Response
+
+```json
+{
+  "success": false,
+  "error": "Human-readable error message",
+  "errorCode": 1,
+  "retryable": true,
+  "suggestion": "Actionable suggestion for recovery",
+  "timestamp": "2026-01-21T12:34:56.789Z"
+}
+```
+
+### Exit Codes and Retryable Status
+
+| Exit Code | Name | Retryable | Typical Suggestion |
+|-----------|------|-----------|-------------------|
+| 0 | SUCCESS | false | Operation completed successfully |
+| 1 | ERROR | true | Transient error - may retry after delay |
+| 2 | NOT_FOUND | false | Resource not found - check state before retry |
+| 3 | TIMEOUT | true | Operation timed out - UI may be busy |
+| 4 | INVALID_ARGUMENT | false | Fix arguments before retry |
+
+### Response Parsing Pattern
+
+When parsing CLI responses in test-executor:
+
+1. **Parse top-level `success` field:**
+   - `true`: Extract `data` field for command-specific results
+   - `false`: Extract `error`, `errorCode`, `retryable`, `suggestion`
+
+2. **Check `retryable` before retrying:**
+   - If `retryable: true`: May retry with backoff
+   - If `retryable: false`: Report error, do not retry
+
+3. **Use `suggestion` for error context:**
+   - Include in error report to orchestrator
+   - May contain next steps or diagnostic commands
+
+### Category-Specific Schemas
+
+#### APP Category
+
+**app launch:**
+```json
+{
+  "success": true,
+  "data": {
+    "launched": true,
+    "processId": 12345
+  },
+  "timestamp": "..."
+}
+```
+
+**app status:**
+```json
+{
+  "success": true,
+  "data": {
+    "isRunning": true,
+    "processCount": 1,
+    "processIds": [12345],
+    "mainWindowTitles": ["ChronoView Pro"]
+  },
+  "timestamp": "..."
+}
+```
+
+#### DATA_PANEL Category
+
+**stats:**
+```json
+{
+  "success": true,
+  "data": {
+    "source": "StatisticsPanel",
+    "statistics": {
+      "NIR1": "10",
+      "Normal1": "5",
+      ...
+    }
+  },
+  "timestamp": "..."
+}
+```
+
+**datagrid data:**
+```json
+{
+  "success": true,
+  "data": {
+    "rowCount": 10,
+    "data": [
+      {
+        "GroupId": "line1_20250121_123456",
+        "NIR1": "/path/to/nir1.tif",
+        ...
+      }
+    ]
+  },
+  "timestamp": "..."
+}
+```
+
+#### FILE_OPS Category
+
+**file-ops selected:**
+```json
+{
+  "success": true,
+  "data": {
+    "count": 3,
+    "selectedRows": [0, 1, 2]
+  },
+  "timestamp": "..."
+}
+```
+
+**file-ops move rows:**
+```json
+{
+  "success": true,
+  "data": {
+    "selected": 3,
+    "moved": 3
+  },
+  "timestamp": "..."
+}
+```
+
+#### TEST Category
+
+**test connectivity:**
+```json
+{
+  "success": true,
+  "data": {
+    "connected": true,
+    "windowFound": true,
+    "appName": "ChronoView Pro",
+    "timestamp": "2026-01-21T12:34:56.789Z"
+  },
+  "timestamp": "..."
+}
+```
+
+**test capabilities:**
+```json
+{
+  "success": true,
+  "data": {
+    "windows": [...],
+    "controllers": [...],
+    "commands": [...]
+  },
+  "timestamp": "..."
+}
+```
+
+**test datagrid:**
+```json
+{
+  "success": true,
+  "data": {
+    "accessible": true,
+    "rowCount": 10,
+    "headers": ["GroupId", "NIR1", ...]
+  },
+  "timestamp": "..."
+}
+```
+
+#### UTILITY Category
+
+**config path:**
+```json
+{
+  "success": true,
+  "data": {
+    "path": "C:\\Users\\...\\config.json",
+    "exists": true,
+    "size": 1234,
+    "modified": "2026-01-21 12:34:56"
+  },
+  "timestamp": "..."
+}
+```
+
+**config read:**
+```json
+{
+  "success": true,
+  "data": {
+    "path": "C:\\Users\\...\\config.json",
+    "content": { ... }
+  },
+  "timestamp": "..."
+}
+```
+
+**config get:**
+```json
+{
+  "success": true,
+  "data": {
+    "key": "folderPaths.line1SampleName",
+    "value": "/path/to/value"
+  },
+  "timestamp": "..."
+}
+```
+
+#### WINDOWS Category
+
+**windows main:**
+```json
+{
+  "success": true,
+  "data": {
+    "found": true,
+    "windowType": "MainWindow",
+    "title": "ChronoView Pro",
+    "className": "Window",
+    "automationId": "MainWindow"
+  },
+  "timestamp": "..."
+}
+```
+
+#### WORKFLOW Category
+
+**workflow camera-states:**
+```json
+{
+  "success": true,
+  "data": {
+    "source": "WorkflowPanel",
+    "count": 3,
+    "states": {
+      "General": true,
+      "Nir1": false,
+      "Nir2": false
+    }
+  },
+  "timestamp": "..."
+}
+```
+
+#### SETUP Category
+
+**setup verify-config:**
+```json
+{
+  "success": true,
+  "data": {
+    "verified": true,
+    "matched": ["key1", "key2"],
+    "mismatches": [],
+    "missing": []
+  },
+  "timestamp": "..."
+}
+```
+
+**setup complete-full:**
+```json
+{
+  "success": true,
+  "data": {
+    "completed": true,
+    "configVerified": true,
+    "mainWindowAppeared": true
+  },
+  "timestamp": "..."
+}
+```
+
+**setup camera-states:**
+```json
+{
+  "success": true,
+  "data": {
+    "general": true,
+    "nir1": false,
+    "nir2": false
+  },
+  "timestamp": "..."
+}
+```
+
+#### BATCH Category
+
+**batch select-and-move:**
+```json
+{
+  "success": true,
+  "data": {
+    "selected": 3,
+    "moved": 3,
+    "duration": "completed"
+  },
+  "timestamp": "..."
+}
+```
+
+**batch select-and-delete:**
+```json
+{
+  "success": true,
+  "data": {
+    "selected": 3,
+    "deleted": 3,
+    "confirmed": true
+  },
+  "timestamp": "..."
+}
+```
+
+**batch export-all:**
+```json
+{
+  "success": true,
+  "data": {
+    "timestamp": "2026-01-21T12:34:56.789Z",
+    "statistics": {...},
+    "dataGrid": {
+      "rowCount": 10,
+      "rows": [...]
+    },
+    "cameraStates": {...}
+  },
+  "timestamp": "..."
+}
+```
+
+### Error Response Examples
+
+**Window not found (NOT_FOUND):**
+```json
+{
+  "success": false,
+  "error": "MainWindow not found",
+  "errorCode": 2,
+  "retryable": false,
+  "suggestion": "Ensure ChronoView is running. Try 'app status --json' to check.",
+  "timestamp": "2026-01-21T12:34:56.789Z"
+}
+```
+
+**Timeout (TIMEOUT):**
+```json
+{
+  "success": false,
+  "error": "Timeout waiting for Start button",
+  "errorCode": 3,
+  "retryable": true,
+  "suggestion": "The UI may be busy. Wait a few seconds and retry.",
+  "timestamp": "2026-01-21T12:34:56.789Z"
+}
+```
+
+**Invalid argument (INVALID_ARGUMENT):**
+```json
+{
+  "success": false,
+  "error": "Row index 10 out of range",
+  "errorCode": 4,
+  "retryable": false,
+  "suggestion": "Valid range is 0-5. Try 'datagrid rows --json' to check.",
+  "timestamp": "2026-01-21T12:34:56.789Z"
+}
+```
+
+### C# Type Definitions
+
+The C# codebase uses these record types (see `JsonResponseModels.cs`):
+
+```csharp
+// Success response with data payload
+public record SuccessResponse<T>(
+    bool Success,
+    T Data,
+    string Timestamp
+);
+
+// Error response with retryable hint
+public record ErrorResponse(
+    bool Success,
+    string Error,
+    int ErrorCode,
+    bool Retryable,
+    string? Suggestion = null,
+    string? Timestamp = null
+);
+```
