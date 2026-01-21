@@ -92,6 +92,26 @@ namespace SkillsScripts.UiAutomation
         }
 
         /// <summary>
+        /// 가장 최신 날짜 폴더에서 로그 파일 목록을 가져옵니다.
+        /// GetLatestLogDateFolder()와 GetLogFiles()를 조합한 편의 메서드입니다.
+        /// </summary>
+        /// <returns>최신 날짜 폴더의 로그 파일 경로 목록 (수정 시간 내림차순), 유효한 폴더가 없으면 빈 배열</returns>
+        public string[] GetLogFilesFromLatest()
+        {
+            var latestFolder = GetLatestLogDateFolder();
+
+            if (latestFolder == null || !Directory.Exists(latestFolder))
+            {
+                return Array.Empty<string>();
+            }
+
+            var files = Directory.GetFiles(latestFolder, "*.log", SearchOption.TopDirectoryOnly);
+
+            // 수정 시간 내림차순 정렬 (최신 파일 먼저)
+            return files.OrderByDescending(f => File.GetLastWriteTime(f)).ToArray();
+        }
+
+        /// <summary>
         /// 로그 파일의 마지막 N줄을 읽습니다.
         /// FileShare.ReadWrite 모드를 사용하여 실행 중인 프로세스가 파일을 잠그고 있어도 읽을 수 있습니다.
         /// </summary>
