@@ -26,17 +26,39 @@ FlaUI.UIA3 기반 ChronoView WPF 데스크톱 애플리케이션 자동화 도�
 - ✓ 데이터 시뮬레이터 설정값 비교 검증 — v1.3
 - ✓ 테스트 속도 최적화 — v1.3
 
+### Validated
+
+- ✓ FlaUI.UIA3 기반 UI 자동화 스킬 구현 — v1.0
+- ✓ ChronoView WPF 애플리케이션 구조 파악 완료 — v1.0
+- ✓ MVVM 아키텍처 이해 — MainWindow, DashboardViewModel, 각종 Dialog 구조 확인 — v1.0
+- ✓ 상태 확인 스킬 구현 — FileGroups, StatusMessage, 통계 정보 읽기 — v1.0
+- ✓ 스킬 실행 인터페이스 — Claude Agent가 호출 가능한 명령줄 인터페이스 — v1.0
+- ✓ 테스트 에이전트 구현 — 스킬을 사용하여 ChronoView를 자동 테스트하는 에이전트 — v1.0
+- ✓ CommandRegistry 아키텍처 — 모듈형 커맨드 핸들러 구조 — v1.1
+- ✓ 10개 핸들러 클래스 — 각각 600줄 미만의 단일 책임 클래스 — v1.1
+- ✓ SetupWindow 전용 컨트롤러 구현 — v1.3
+- ✓ 설정 다이얼로그 열기/닫기 자동화 — v1.3
+- ✓ 완전한 셋업 완료 워크플로우 — v1.3
+- ✓ 데이터 시뮬레이터 설정값 비교 검증 — v1.3
+- ✓ 테스트 속도 최적화 — v1.3
+- ✓ 중앙화된 에러 핸들러 — ExitCodes.cs + Program.cs wrapper — v1.4
+- ✓ 명령어 핸들러 리팩토링 — InvocationContext.ExitCode 패턴 — v1.4
+- ✓ 데이터 시뮬레이터 상태 endpoint — --status JSON 반환 — v1.4
+- ✓ 동적 로그 경로 해결 — GetLatestLogDateFolder() + --latest 플래그 — v1.4
+- ✓ Orchestrator 위임 패턴 수정 — Bash 사용 금지 문서화 — v1.4
+
 ### Active
 
-**Current Milestone: v1.4 Test Agent Architecture & Reliability**
+**Current Milestone: v1.5 CLI Skill Encapsulation & Delegation Fix**
 
-**Goal:** 테스트 에이전트의 올바른 역할 분할과 신뢰성 개선
+**Goal:** CLI 명령어를 스킬로 캡슐화하여 오케스트레이터가 의도(intent)만 전달하도록 수정
 
 **Target features:**
-- [ ] Exit Code 1 에러 원인 분석 및 명확한 에러 메시지
-- [ ] data_simulator.py에 --status endpoint 추가 (JSON 반환)
-- [ ] 로그 경로 동적 해결 (날짜별 폴더 자동 탐색)
-- [ ] test-orchestrator 역할 분할 수정 (executor/log-analyst 위임)
+- [ ] 30+ CLI 명령어에 대한 스킬 레지스트리 정의
+- [ ] 오케스트레이터가 스킬 이름만 사용하도록 수정 (CLI 명령어 직접 사용 금지)
+- [ ] 익스큐터가 스킬→CLI 변환을 담당
+- [ ] CLI JSON 스키마 표준화
+- [ ] --dry-run 모드 추가
 
 ### Out of Scope
 
@@ -98,4 +120,4 @@ FlaUI.UIA3 기반 ChronoView WPF 데스크톱 애플리케이션 자동화 도�
 | Pure migration approach | Original code copied verbatim for compatibility | ✓ Good — zero regressions |
 
 ---
-*Last updated: 2026-01-21 after v1.4 milestone initialization*
+*Last updated: 2026-01-21 after v1.5 milestone initialization*

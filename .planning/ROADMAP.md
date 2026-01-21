@@ -54,6 +54,17 @@ Windows UI Automation with FlaUI
 - Test execution speed optimization (20-30% faster via delay reduction and parallel patterns)
 - Agent documentation updated with setup workflow patterns
 
+### ✅ v1.4 Test Agent Architecture & Reliability (Shipped: 2026-01-21)
+
+**Phases:** 24-27 (4 phases) | **Timeline:** 1 day | **LOC:** ~150
+
+**Delivered:**
+- ExitCodes.cs with 5 centralized exit code constants
+- Program.cs error handling wrapper for structured error output
+- data_simulator.py --status endpoint for state persistence
+- Dynamic log path discovery with --latest flag
+- test-orchestrator delegation pattern fix with explicit Bash prohibitions
+
 ---
 
 ## Phases
@@ -88,44 +99,115 @@ Windows UI Automation with FlaUI
 - [x] **Phase 20: App Lifecycle Commands** - launch/stop/restart/status commands
 - [x] **Phase 21: Test Executor Agent Updates** - Agent documentation with app commands
 
-### ✅ Phase 22: Setup Window Controller (v1.3) — Shipped 2026-01-20
+### ✅ Phase 22-23: v1.3 Setup & Performance (Shipped)
 
-**Goal:** SetupWindow 전용 컨트롤러와 설정 다이얼로그 자동화
+- [x] **Phase 22: Setup Window Controller** - SetupWindow automation and settings dialog
+- [x] **Phase 23: Performance & Documentation** - Test speed optimization and agent docs
 
-**Requirements:** SETUP-01, SETUP-02, SETUP-03, SETUP-04
+### ✅ Phase 24-27: v1.4 Agent Architecture (Shipped)
 
-**Plans:**
-- [x] 22-01: ChronoSetupWindowController 클래스 생성 (512 lines)
-- [x] 22-02: 완전한 셋업 완료 워크플로우 구현 (SetupCommands.cs)
-- [x] 22-03: 설정값 검증 기능 (SetupConfigVerifier.cs)
+- [x] **Phase 24: Error Diagnosis** - Exit Code 1 analysis and centralized error handling
+- [x] **Phase 25: Simulator Status Endpoint** - data_simulator.py --status endpoint
+- [x] **Phase 26: Dynamic Log Path Discovery** - Automatic log folder discovery
+- [x] **Phase 27: Orchestrator Delegation Fix** - Bash tool prohibitions in test-orchestrator
 
-**Delivered:**
-- ChronoSetupWindowController: 10 public methods for SetupWindow automation
-- SetupCommands: 2 CLI commands (complete-full, verify-config)
-- SetupConfigVerifier: WSL/Windows path normalization, config comparison
+---
 
-### ✅ Phase 23: Performance & Documentation (v1.3) — Shipped 2026-01-20
+### 🚧 v1.5 CLI Skill Encapsulation (In Progress)
 
-**Goal:** 테스트 속도 최적화와 에이전트 문서 업데이트
+**Milestone Goal:** AI agents use semantic skill names for test automation instead of constructing CLI commands directly. This creates a clean separation: orchestrators define WHAT to test (intent), executors handle HOW to execute it (implementation).
 
-**Requirements:** PERF-01, PERF-02, CLI-01
+**Success Criteria:**
+- Orchestrator agents never construct CLI commands (prohibition enforced in docs)
+- All 30+ CLI commands mapped to semantic skill names
+- Executor validates skills before execution and reports unknown skills
+- JSON responses standardized with retryable and suggestion fields
+- Dry-run mode enables safe command validation
 
-**Plans:**
-- [x] 23-01: Test Speed Optimization
-  - Reduced dialog close delay from 200ms to 100ms
-  - Added "Parallel Execution Groups" section
-  - Documented "Execute first, verify on failure" pattern
+#### Phase 28: Skill Registry Definition
 
-- [x] 23-02: Agent Documentation Update
-  - Added Setup Commands to test-executor.md CLI reference
-  - Added Pattern 5: Setup Workflow
-  - Added Setup Commands to test-orchestrator.md
-  - Added config verification workflow guidance
+**Goal:** Create semantic skill definitions for all 30+ CLI commands
 
-- [x] 23-03: CLI Command Registration
-  - Implemented `setup open-settings` command
-  - Implemented `setup camera-states` command
-  - All CLI-01 requirements satisfied
+**Depends on:** Phase 27 (delegation pattern established)
+**Research:** Unlikely (skills map 1:1 to existing CLI commands)
+**Plans:** TBD
+
+**Requirements:** SKILL-01 through SKILL-06
+
+**Success Criteria:**
+1. All 30+ CLI commands have corresponding skill definitions
+2. Each skill has semantic name (intent-based, not CLI-based)
+3. Skill definition includes exact CLI command pattern and parameter schema
+4. Skills organized by category (Lifecycle, Workflow, Settings, Window, Data, Diagnostic)
+5. test-executor-skills.md documents complete skill registry
+
+#### Phase 29: Orchestrator Skill Integration
+
+**Goal:** Update test-orchestrator to use skill names only (no CLI commands)
+
+**Depends on:** Phase 28 (skills defined)
+**Research:** Unlikely (delegation pattern established in Phase 27)
+**Plans:** TBD
+
+**Requirements:** ORCH-01 through ORCH-05
+
+**Success Criteria:**
+1. Orchestrator uses skill names only (no CLI commands in delegation)
+2. test-orchestrator.md includes skill reference section (names and descriptions)
+3. "No Command Construction" prohibition added with examples
+4. Delegation template uses skill names
+5. Orchestrator documentation explicitly forbids CLI command construction
+
+#### Phase 30: Executor Skill Translation
+
+**Goal:** Enable executor to translate skill names to CLI commands
+
+**Depends on:** Phase 28 (skills defined), Phase 29 (orchestrator using skills)
+**Research:** Unlikely (translation is straightforward lookup)
+**Plans:** TBD
+
+**Requirements:** EXEC-01 through EXEC-05
+
+**Success Criteria:**
+1. test-executor.md includes skill-to-CLI translation patterns
+2. Executor validates skill names against registry before execution
+3. Executor reports error for unknown skills with helpful message
+4. Retry logic respects skill `retryable` flag
+5. Error handling includes skill context in messages
+
+#### Phase 31: CLI Schema Standardization
+
+**Goal:** Standardize JSON response format across all commands
+
+**Depends on:** Phase 28 (skill definitions include schema expectations)
+**Research:** Unlikely (schema standardization is well-defined)
+**Plans:** TBD
+
+**Requirements:** SCHEMA-01 through SCHEMA-05
+
+**Success Criteria:**
+1. All CLI commands return standardized JSON with success, data/error, errorCode fields
+2. Error responses include retryable boolean for recoverable failures
+3. Error responses include suggestion string for common failures
+4. JSON schemas documented for each command category
+5. Executor can reliably parse all command responses
+
+#### Phase 32: Dry-Run Mode
+
+**Goal:** Add --dry-run flag for safe command validation
+
+**Depends on:** Phase 31 (standardized schemas)
+**Research:** Unlikely (dry-run is standard CLI pattern)
+**Plans:** TBD
+
+**Requirements:** DRYRUN-01 through DRYRUN-05
+
+**Success Criteria:**
+1. All CLI commands support --dry-run flag
+2. Dry-run returns command that would execute without execution
+3. Dry-run validates parameter syntax before returning
+4. Dry-run validates skill exists (in executor)
+5. test-executor.md documents dry-run usage patterns
 
 ---
 
@@ -138,6 +220,7 @@ Windows UI Automation with FlaUI
 | v1.2 Test Automation | 20-21 | 2 | ✅ Complete | 2026-01-20 |
 | v1.3 Setup & Perf | 22-23 | 6 | ✅ Complete | 2026-01-20 |
 | v1.4 Agent Architecture | 24-27 | 8 | ✅ Complete | 2026-01-21 |
+| v1.5 CLI Skill Encapsulation | 28-32 | TBD | 🚧 In progress | - |
 
 | Phase | Milestone | Plans | Status |
 |-------|-----------|-------|--------|
@@ -147,106 +230,18 @@ Windows UI Automation with FlaUI
 | 25. Simulator Status | v1.4 | 2 | ✅ Complete |
 | 26. Log Path Finder | v1.4 | 2 | ✅ Complete |
 | 27. Delegation Fix | v1.4 | 2 | ✅ Complete |
+| 28. Skill Registry | v1.5 | TBD | Not started |
+| 29. Orchestrator Integration | v1.5 | TBD | Not started |
+| 30. Executor Translation | v1.5 | TBD | Not started |
+| 31. CLI Schema | v1.5 | TBD | Not started |
+| 32. Dry-Run Mode | v1.5 | TBD | Not started |
 
 ## Current State
 
-**Status:** ✅ v1.4 Test Agent Architecture & Reliability complete.
+**Status:** 🚧 v1.5 CLI Skill Encapsulation planning complete.
 
-**Next Step:** Run `/gsd:complete-milestone` to archive Milestone v1.4.
-
----
-
-### ✅ Phase 25: Simulator Status Endpoint (v1.4) — Shipped 2026-01-21
-
-**Goal:** data_simulator.py에 --status endpoint 추가
-
-**Requirements:** STATUS-01
-
-**Plans:**
-- [x] 25-01: --status endpoint 구현 (data_simulator.py)
-  - Added --status CLI argument
-  - Added get_status(), _update_state(), _load_state() methods to DataSimulator class
-  - Returns JSON with status, progress, items_created, simulation_id, last_activity
-  - State file persistence in simulation_state.json
-- [x] 25-02: test-executor에 --status 사용 추가
-  - Documented --status command in test-executor.md
-  - Added Status Response Format subsection
-  - Added Pattern 6: Status-Based Simulation Wait
-  - Updated Pattern 2 to use status polling
-  - Added Windows PowerShell polling example
-
-**Delivered:**
-- State file persistence with simulation_state.json for cross-process status queries
-- --status CLI flag returning JSON with all 5 required fields
-- test-executor.md updated with polling patterns for background simulation execution
-- Bash and PowerShell examples for cross-platform compatibility
+**Next Step:** Run `/gsd:plan-phase 28` to begin Skill Registry Definition.
 
 ---
 
-### ✅ Phase 24: Error Diagnosis (v1.4) — Shipped 2026-01-21
-
-**Goal:** Exit Code 1 에러 원인 분석 및 해결
-
-**Requirements:** ERROR-01
-
-**Plans:**
-- [x] 24-01: Centralized Error Handler (ExitCodes.cs + Program.cs wrapper)
-- [x] 24-02: Command Handler Refactoring (return-based exit codes)
-
-**Delivered:**
-- ExitCodes.cs with 5 centralized exit code constants (SUCCESS, ERROR, NOT_FOUND, TIMEOUT, INVALID_ARGUMENT)
-- Program.cs with try-catch wrapper around InvokeAsync for structured error output
-- All 10 command handlers refactored to use context.ExitCode instead of Environment.Exit()
-- 262 context.ExitCode assignments, 99 catch blocks with Console.Error.WriteLine
-
----
-
-### ✅ Phase 26: Dynamic Log Path Discovery (v1.4) — Shipped 2026-01-21
-
-**Goal:** 로그 경로 동적 해결 (Automatic log folder discovery)
-
-**Requirements:** LOG-01
-
-**Plans:**
-- [x] 26-01: 동적 로그 폴더 finder 구현
-  - Added GetLatestLogDateFolder() method to ConsoleLogsReader.cs
-  - Added GetLogFilesFromLatest() method to ConsoleLogsReader.cs
-  - Added --latest flag to console-logs list/tail/search commands
-- [x] 26-02: log-analyst에 동적 경로 해결 추가
-  - Updated .claude/commands/test/logs.md with --latest examples
-  - Updated .claude/agents/log-analyst.md with automatic discovery guidance
-
-**Delivered:**
-- GetLatestLogDateFolder() using DateTime.TryParseExact for yyyyMMdd validation
-- GetLogFilesFromLatest() convenience method for automatic log file enumeration
-- --latest flag for console-logs commands with proper precedence (--date > --latest > default)
-- test/logs.md updated with automatic discovery examples and guidance
-- log-analyst.md updated with Log Discovery Strategy section
-
----
-
-### ✅ Phase 27: Orchestrator Delegation Fix (v1.4) — Shipped 2026-01-21
-
-**Goal:** Orchestrator 역할 분할 수정 (Fix test-orchestrator delegation pattern)
-
-**Requirements:** DELEGATE-01
-
-**Plans:**
-- [x] 27-01: Add explicit Bash tool prohibitions to test-orchestrator.md
-  - Added "NEVER use Bash Tool for Execution" section (77 lines)
-  - Added "Delegation Issues" section to reporting format (16 lines)
-  - Strengthened Critical Reminders with cross-references (8 lines)
-  - File grew from 352 to 446 lines (+94 lines, +26.7%)
-- [x] 27-02: Verify delegation pattern through code review
-  - All 5 grep patterns passed verification
-  - Human verification checkpoint approved
-
-**Delivered:**
-- Explicit Bash tool prohibitions with 6 forbidden pattern categories
-- Delegation Issues section in reporting format for failure tracking
-- ABSOLUTE PROHIBITION cross-referenced from Critical Reminders
-- test-orchestrator.md: 446 lines with strong delegation pattern enforcement
-
----
-
-*Last updated: 2026-01-21 - Phase 27 complete, Milestone v1.4 complete*
+*Last updated: 2026-01-21 - v1.5 roadmap created*
