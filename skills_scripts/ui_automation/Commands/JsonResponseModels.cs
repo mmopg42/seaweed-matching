@@ -1,10 +1,9 @@
-using System.Text.Json;
-
 namespace UiAutomation.Commands;
 
 /// <summary>
 /// Standardized JSON response models for ChronoView CLI.
 /// All commands return consistent response format for reliable parsing.
+/// Property names are converted to camelCase via JsonNamingPolicy.CamelCase in JsonResponseHelper.
 /// </summary>
 public static class JsonResponseModels
 {
@@ -14,7 +13,7 @@ public static class JsonResponseModels
     public record SuccessResponse<T>(
         bool Success,
         T Data,
-        [property: JsonPropertyName("timestamp")] string Timestamp
+        string Timestamp
     );
 
     /// <summary>
@@ -23,10 +22,10 @@ public static class JsonResponseModels
     public record ErrorResponse(
         bool Success,
         string Error,
-        [property: JsonPropertyName("errorCode")] int ErrorCode,
-        [property: JsonPropertyName("retryable")] bool Retryable,
-        [property: JsonPropertyName("suggestion")] string? Suggestion = null,
-        [property: JsonPropertyName("timestamp")] string? Timestamp = null
+        int ErrorCode,
+        bool Retryable,
+        string? Suggestion = null,
+        string? Timestamp = null
     );
 
     /// <summary>
@@ -35,10 +34,10 @@ public static class JsonResponseModels
     public record Response<T>(
         bool Success,
         T? Data,
-        [property: JsonPropertyName("error")] string? Error = null,
-        [property: JsonPropertyName("errorCode")] int? ErrorCode = null,
-        [property: JsonPropertyName("retryable")] bool? Retryable = null,
-        [property: JsonPropertyName("suggestion")] string? Suggestion = null
+        string? Error = null,
+        int? ErrorCode = null,
+        bool? Retryable = null,
+        string? Suggestion = null
     );
 
     /// <summary>
@@ -46,6 +45,6 @@ public static class JsonResponseModels
     /// </summary>
     public record EmptySuccess(
         bool Success,
-        [property: JsonPropertyName("timestamp")] string Timestamp
+        string Timestamp
     );
 }
