@@ -1,8 +1,8 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Diagnostics;
-using System.Text.Json;
 using static UiAutomation.Commands.ExitCodes;
+using static UiAutomation.Commands.JsonResponseHelper;
 
 namespace UiAutomation.Commands;
 
@@ -48,14 +48,10 @@ public class AppLifecycleCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
+                        PrintSuccess(new
                         {
-                            success = true,
-                            data = new
-                            {
-                                launched = true,
-                                processId
-                            }
+                            launched = true,
+                            processId
                         });
                     }
                     else
@@ -68,12 +64,8 @@ public class AppLifecycleCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "Failed to launch ChronoView",
-                            errorCode = ERROR
-                        });
+                        PrintError("Failed to launch ChronoView", ERROR,
+                            "Check if ChronoView is already running. Try 'app status --json'.");
                     }
                     else
                     {
@@ -104,14 +96,10 @@ public class AppLifecycleCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
+                        PrintSuccess(new
                         {
-                            success = true,
-                            data = new
-                            {
-                                stopped = true,
-                                processesStopped = stoppedCount
-                            }
+                            stopped = true,
+                            processesStopped = stoppedCount
                         });
                     }
                     else
@@ -124,12 +112,8 @@ public class AppLifecycleCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "No ChronoView processes found running",
-                            errorCode = NOT_FOUND
-                        });
+                        PrintError("No ChronoView processes found running", NOT_FOUND,
+                            "Ensure ChronoView was launched before stopping.");
                     }
                     else
                     {
@@ -160,15 +144,11 @@ public class AppLifecycleCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
+                        PrintSuccess(new
                         {
-                            success = true,
-                            data = new
-                            {
-                                restarted = true,
-                                processesStopped = result.StoppedCount,
-                                newProcessId = result.ProcessId
-                            }
+                            restarted = true,
+                            processesStopped = result.StoppedCount,
+                            newProcessId = result.ProcessId
                         });
                     }
                     else
@@ -181,16 +161,8 @@ public class AppLifecycleCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "Failed to restart ChronoView",
-                            errorCode = ERROR,
-                            data = new
-                            {
-                                processesStopped = result.StoppedCount
-                            }
-                        });
+                        PrintError("Failed to restart ChronoView", ERROR,
+                            "Stopped existing processes but launch failed. Try 'app launch'.");
                     }
                     else
                     {
@@ -221,16 +193,12 @@ public class AppLifecycleCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
+                        PrintSuccess(new
                         {
-                            success = true,
-                            data = new
-                            {
-                                isRunning = true,
-                                processCount = status.ProcessCount,
-                                processIds = status.ProcessIds,
-                                mainWindowTitles = status.MainWindowTitles
-                            }
+                            isRunning = true,
+                            processCount = status.ProcessCount,
+                            processIds = status.ProcessIds,
+                            mainWindowTitles = status.MainWindowTitles
                         });
                     }
                     else
@@ -247,16 +215,12 @@ public class AppLifecycleCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
+                        PrintSuccess(new
                         {
-                            success = true,
-                            data = new
-                            {
-                                isRunning = false,
-                                processCount = 0,
-                                processIds = Array.Empty<int>(),
-                                mainWindowTitles = Array.Empty<string>()
-                            }
+                            isRunning = false,
+                            processCount = 0,
+                            processIds = Array.Empty<int>(),
+                            mainWindowTitles = Array.Empty<string>()
                         });
                     }
                     else
@@ -442,17 +406,6 @@ public class AppLifecycleCommands : ICommandHandler
                 MainWindowTitles = Array.Empty<string>()
             };
         }
-    }
-
-    /// <summary>
-    /// Print JSON output with consistent formatting for programmatic consumption
-    /// </summary>
-    private static void PrintJsonOutput(object data)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(data, new JsonSerializerOptions
-        {
-            WriteIndented = false
-        }));
     }
 
     /// <summary>
