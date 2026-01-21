@@ -57,6 +57,32 @@ class Program
         s_isQuiet = parseResult.GetValueForOption(quietOption) == true;
         s_isVerbose = parseResult.GetValueForOption(verboseOption) == true;
 
-        return await rootCommand.InvokeAsync(args);
+        try
+        {
+            return await rootCommand.InvokeAsync(args);
+        }
+        catch (Exception ex)
+        {
+            // Check if this is a FlaUI exception by namespace
+            string errorType = ex.GetType().Namespace?.Contains("FlaUI") == true
+                ? "[UI Automation Error]"
+                : "[Error]";
+
+            WriteError($"{errorType} {ex.GetType().Name}: {ex.Message}");
+            WriteError($"Command: {string.Join(" ", args)}");
+            if (s_isVerbose)
+            {
+                WriteError($"Stack trace: {ex.StackTrace}");
+            }
+            return ExitCodes.ERROR;
+        }
+    }
+
+    /// <summary>
+    /// Writes error message to stderr.
+    /// </summary>
+    static void WriteError(string message)
+    {
+        Console.Error.WriteLine(message);
     }
 }
