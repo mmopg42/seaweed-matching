@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-21)
 ## Current Position
 
 Phase: 32 of 32 (Dry Run Mode)
-Plan: 1 of 1 in current phase
-Status: In progress
-Last activity: 2026-01-22 — Completed 32-01: Dry-Run Infrastructure
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-01-22 — Completed 32-02: Dry-Run Command Integration
 
-Progress: [█████████░░░░░░░░░] 45.2% (62/135 plans estimated)
+Progress: [█████████░░░░░░░░░] 45.9% (63/135 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 62
+- Total plans completed: 63
 - Average duration: ~44 min
-- Total execution time: ~46 hours
+- Total execution time: ~46.5 hours
 
 **By Phase:**
 
@@ -32,7 +32,7 @@ Progress: [█████████░░░░░░░░░] 45.2% (62/135
 | v1.2 (20-21) | 2 | ~1h | ~30 min |
 | v1.3 (22-23) | 6 | ~4h | ~40 min |
 | v1.4 (24-27) | 8 | ~5h | ~38 min |
-| v1.5 (28-32) | 7 | ~2.4h | ~21 min |
+| v1.5 (28-32) | 8 | ~2.8h | ~21 min |
 
 **Recent Trend:**
 - Last 5 phases: 6-3-2-2-2 plans
@@ -70,6 +70,11 @@ Recent decisions affecting current work:
 - [Phase 32-01] DryRunValidator class with skill name validation against test-executor-skills.md registry
 - [Phase 32-01] Levenshtein distance algorithm for similar skill suggestions (threshold: 3)
 - [Phase 32-01] INVALID_ARGUMENT exit code (4) with retryable: false for validation errors
+- [Phase 32-02] Global --dry-run option added to Program.cs with s_isDryRun state tracking
+- [Phase 32-02] DryRunHandler.CheckDryRun pattern for consistent early-return in all command handlers
+- [Phase 32-02] SkillMapping dictionary with 90+ CLI command to skill name mappings
+- [Phase 32-02] Empty skill name ('') for orchestration/scenario commands without direct skill mapping
+- [Phase 32-02] All ~90 command handlers now support --dry-run validation mode
 
 ### Deferred Issues
 
@@ -86,5 +91,5 @@ None currently blocking.
 ## Session Continuity
 
 Last session: 2026-01-22
-Stopped at: Completed 32-01: Dry-Run Infrastructure
+Stopped at: Completed 32-02: Dry-Run Command Integration (Phase 32 complete)
 Resume file: None
