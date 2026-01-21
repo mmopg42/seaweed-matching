@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-21)
 ## Current Position
 
 Phase: 31 of 32 (CLI Schema Standardization)
-Plan: 1 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-01-21 — Completed 31-01: JSON Response Infrastructure
+Last activity: 2026-01-21 — Completed 31-03: Workflow, Settings, FileOps Commands Migration
 
-Progress: [█████████░░░░░░░░░] 42.9% (58/135 plans estimated)
+Progress: [█████████░░░░░░░░░] 43.7% (59/135 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 58
+- Total plans completed: 59
 - Average duration: ~45 min
-- Total execution time: ~44 hours
+- Total execution time: ~44.5 hours
 
 **By Phase:**
 
@@ -32,7 +32,7 @@ Progress: [█████████░░░░░░░░░] 42.9% (58/135
 | v1.2 (20-21) | 2 | ~1h | ~30 min |
 | v1.3 (22-23) | 6 | ~4h | ~40 min |
 | v1.4 (24-27) | 8 | ~5h | ~38 min |
-| v1.5 (28-32) | 3 | ~1.1h | ~22 min |
+| v1.5 (28-32) | 4 | ~1.4h | ~21 min |
 
 **Recent Trend:**
 - Last 5 phases: 6-3-2-2-2 plans
@@ -56,6 +56,8 @@ Recent decisions affecting current work:
 - [Phase 31] JSON responses use standardized format: SuccessResponse<T>, ErrorResponse with retryable/suggestion fields
 - [Phase 31] JsonResponseHelper provides PrintSuccess/PrintError with auto-retryable from ExitCodes.IsRetryable()
 - [Phase 31] ISO 8601 timestamps in 'o' format for all JSON responses for debugging and audit trails
+- [Phase 31-03] WORKFLOW, LOGS, SETTINGS_DIALOG, CONSOLE_LOGS, FILE_OPS commands migrated to JsonResponseHelper
+- [Phase 31-03] Error suggestions context-specific: LogPanel accessibility, file availability, dialog state
 
 ### Deferred Issues
 
@@ -72,5 +74,5 @@ None currently blocking.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed 31-01: JSON Response Infrastructure
+Stopped at: Completed 31-03: Workflow, Settings, FileOps Commands Migration
 Resume file: None
