@@ -195,13 +195,21 @@ ui_automation.exe app launch
 ui_automation.exe app status --json
 ```
 
-### Pattern 2: File Monitoring Test (OPTIMIZED - 3 steps only)
+### Pattern 2: File Monitoring Test (OPTIMIZED - with status polling)
 ```bash
 # 1. Start monitoring directly (no pre-checks)
 ui_automation.exe toolbar start
 
-# 2. Generate test data
-python task_helper/data_test/data_simulator.py --cli --read-config --mode dummy --line line1
+# 2. Start simulation in background and poll for completion
+python task_helper/data_test/data_simulator.py --cli --read-config --mode dummy --line line1 &
+
+# Wait for completion using status polling
+for i in {1..60}; do
+  STATUS=$(python task_helper/data_test/data_simulator.py --status)
+  STATE=$(echo "$STATUS" | grep -o '"status": "[^"]*"' | cut -d'"' -f4)
+  [ "$STATE" = "completed" ] && break
+  sleep 5
+done
 
 # 3. Stop monitoring
 ui_automation.exe toolbar stop
@@ -253,6 +261,50 @@ The `--verify-config` flag in `complete-full` runs config verification as a pre-
 Use `--strict` to fail on config mismatches instead of continuing.
 
 **TEST ENVIRONMENT NOTE:** In environments without camera programs installed, use `windows setup-complete` instead of `setup complete-full` to avoid camera launch timeouts.
+
+### Pattern 6: Status-Based Simulation Wait (NEW)
+
+**Critical:** Start simulation in BACKGROUND, then poll status from separate process.
+
+```bash
+# Start simulation in background (non-blocking)
+python task_helper/data_test/data_simulator.py --cli --read-config --mode dummy --line line1 &
+SIM_PID=$!
+
+# Poll for completion (max 5 minutes)
+for i in {1..60}; do
+  STATUS=$(python task_helper/data_test/data_simulator.py --status)
+  STATE=$(echo "$STATUS" | grep -o '"status": "[^"]*"' | cut -d'"' -f4)
+
+  if [ "$STATE" = "completed" ]; then
+    echo "Simulation completed successfully"
+    break
+  elif [ "$STATE" = "error" ]; then
+    echo "Simulation failed!"
+    break
+  elif [ "$STATE" = "idle" ]; then
+    echo "Simulation never started (state file missing)"
+    break
+  fi
+
+  # Extract and show progress
+  PROGRESS=$(echo "$STATUS" | grep -o '"progress": [0-9.]*' | cut -d' ' -f2)
+  echo "Progress: ${PROGRESS}%"
+  sleep 5
+done
+
+# Clean up background process if still running
+kill $SIM_PID 2>/dev/null
+```
+
+**Why background?** The state file is updated DURING simulation. If you run in foreground,
+you can't query status from another process until it completes.
+
+**Alternative: Quick status check (single query)**
+```bash
+# Check current status without waiting
+python task_helper/data_test/data_simulator.py --status
+```
 
 ## What to Report
 
