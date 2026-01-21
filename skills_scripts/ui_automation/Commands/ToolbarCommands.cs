@@ -1,8 +1,8 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
-using System.Text.Json;
 using Toolbar = SkillsScripts.UiAutomation.ChronoToolbarController;
 using static UiAutomation.Commands.ExitCodes;
+using static UiAutomation.Commands.JsonResponseHelper;
 
 namespace UiAutomation.Commands;
 
@@ -29,20 +29,41 @@ public class ToolbarCommands : ICommandHandler
 
         // toolbar start: Start 버튼 클릭
         var toolbarStartCommand = new Command("start", "Start 버튼 클릭");
+        toolbarStartCommand.AddOption(jsonOption);
         toolbarStartCommand.SetHandler((InvocationContext context) =>
         {
             try
             {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
                 using var controller = new Toolbar();
                 var result = controller.ClickStartButton();
                 if (result)
                 {
-                    PrintOutput("[toolbar-start] Success: Start button clicked");
+                    if (json)
+                    {
+                        PrintSuccess(new
+                        {
+                            clicked = true,
+                            button = "Start"
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[toolbar-start] Success: Start button clicked");
+                    }
                     context.ExitCode = SUCCESS;
                 }
                 else
                 {
-                    PrintOutput("[toolbar-start] Failed: Could not click Start button");
+                    if (json)
+                    {
+                        PrintError("'Start' button not found or not clickable", NOT_FOUND,
+                            "Check if MainWindow is active. Try 'windows main --json' first.");
+                    }
+                    else
+                    {
+                        PrintOutput("[toolbar-start] Failed: Could not click Start button");
+                    }
                     context.ExitCode = ERROR;
                 }
             }
@@ -56,20 +77,41 @@ public class ToolbarCommands : ICommandHandler
 
         // toolbar stop: Stop 버튼 클릭
         var toolbarStopCommand = new Command("stop", "Stop 버튼 클릭");
+        toolbarStopCommand.AddOption(jsonOption);
         toolbarStopCommand.SetHandler((InvocationContext context) =>
         {
             try
             {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
                 using var controller = new Toolbar();
                 var result = controller.ClickStopButton();
                 if (result)
                 {
-                    PrintOutput("[toolbar-stop] Success: Stop button clicked");
+                    if (json)
+                    {
+                        PrintSuccess(new
+                        {
+                            clicked = true,
+                            button = "Stop"
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[toolbar-stop] Success: Stop button clicked");
+                    }
                     context.ExitCode = SUCCESS;
                 }
                 else
                 {
-                    PrintOutput("[toolbar-stop] Failed: Could not click Stop button");
+                    if (json)
+                    {
+                        PrintError("'Stop' button not found or not clickable", NOT_FOUND,
+                            "Check if MainWindow is active. Try 'windows main --json' first.");
+                    }
+                    else
+                    {
+                        PrintOutput("[toolbar-stop] Failed: Could not click Stop button");
+                    }
                     context.ExitCode = ERROR;
                 }
             }
@@ -83,20 +125,41 @@ public class ToolbarCommands : ICommandHandler
 
         // toolbar settings: Settings (Setup) 버튼 클릭
         var toolbarSettingsCommand = new Command("settings", "Settings (Setup) 버튼 클릭");
+        toolbarSettingsCommand.AddOption(jsonOption);
         toolbarSettingsCommand.SetHandler((InvocationContext context) =>
         {
             try
             {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
                 using var controller = new Toolbar();
                 var result = controller.ClickSettingsButton();
                 if (result)
                 {
-                    PrintOutput("[toolbar-settings] Success: Settings button clicked");
+                    if (json)
+                    {
+                        PrintSuccess(new
+                        {
+                            clicked = true,
+                            button = "Settings"
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[toolbar-settings] Success: Settings button clicked");
+                    }
                     context.ExitCode = SUCCESS;
                 }
                 else
                 {
-                    PrintOutput("[toolbar-settings] Failed: Could not click Settings button");
+                    if (json)
+                    {
+                        PrintError("'Settings' button not found or not clickable", NOT_FOUND,
+                            "Check if MainWindow is active. Try 'windows main --json' first.");
+                    }
+                    else
+                    {
+                        PrintOutput("[toolbar-settings] Failed: Could not click Settings button");
+                    }
                     context.ExitCode = ERROR;
                 }
             }
@@ -110,20 +173,41 @@ public class ToolbarCommands : ICommandHandler
 
         // toolbar refresh: Refresh 버튼 클릭
         var toolbarRefreshCommand = new Command("refresh", "Refresh 버튼 클릭");
+        toolbarRefreshCommand.AddOption(jsonOption);
         toolbarRefreshCommand.SetHandler((InvocationContext context) =>
         {
             try
             {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
                 using var controller = new Toolbar();
                 var result = controller.ClickRefreshButton();
                 if (result)
                 {
-                    PrintOutput("[toolbar-refresh] Success: Refresh button clicked");
+                    if (json)
+                    {
+                        PrintSuccess(new
+                        {
+                            clicked = true,
+                            button = "Refresh"
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[toolbar-refresh] Success: Refresh button clicked");
+                    }
                     context.ExitCode = SUCCESS;
                 }
                 else
                 {
-                    PrintOutput("[toolbar-refresh] Failed: Could not click Refresh button");
+                    if (json)
+                    {
+                        PrintError("'Refresh' button not found or not clickable", NOT_FOUND,
+                            "Check if MainWindow is active. Try 'windows main --json' first.");
+                    }
+                    else
+                    {
+                        PrintOutput("[toolbar-refresh] Failed: Could not click Refresh button");
+                    }
                     context.ExitCode = ERROR;
                 }
             }
@@ -137,20 +221,41 @@ public class ToolbarCommands : ICommandHandler
 
         // toolbar move: Move 버튼 클릭
         var toolbarMoveCommand = new Command("move", "Move 버튼 클릭");
+        toolbarMoveCommand.AddOption(jsonOption);
         toolbarMoveCommand.SetHandler((InvocationContext context) =>
         {
             try
             {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
                 using var controller = new Toolbar();
                 var result = controller.ClickMoveButton();
                 if (result)
                 {
-                    PrintOutput("[toolbar-move] Success: Move button clicked");
+                    if (json)
+                    {
+                        PrintSuccess(new
+                        {
+                            clicked = true,
+                            button = "Move"
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[toolbar-move] Success: Move button clicked");
+                    }
                     context.ExitCode = SUCCESS;
                 }
                 else
                 {
-                    PrintOutput("[toolbar-move] Failed: Could not click Move button");
+                    if (json)
+                    {
+                        PrintError("'Move' button not found or not clickable", NOT_FOUND,
+                            "Check if MainWindow is active. Try 'windows main --json' first.");
+                    }
+                    else
+                    {
+                        PrintOutput("[toolbar-move] Failed: Could not click Move button");
+                    }
                     context.ExitCode = ERROR;
                 }
             }
@@ -164,20 +269,41 @@ public class ToolbarCommands : ICommandHandler
 
         // toolbar delete: Delete 버튼 클릭
         var toolbarDeleteCommand = new Command("delete", "Delete 버튼 클릭");
+        toolbarDeleteCommand.AddOption(jsonOption);
         toolbarDeleteCommand.SetHandler((InvocationContext context) =>
         {
             try
             {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
                 using var controller = new Toolbar();
                 var result = controller.ClickDeleteButton();
                 if (result)
                 {
-                    PrintOutput("[toolbar-delete] Success: Delete button clicked");
+                    if (json)
+                    {
+                        PrintSuccess(new
+                        {
+                            clicked = true,
+                            button = "Delete"
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[toolbar-delete] Success: Delete button clicked");
+                    }
                     context.ExitCode = SUCCESS;
                 }
                 else
                 {
-                    PrintOutput("[toolbar-delete] Failed: Could not click Delete button");
+                    if (json)
+                    {
+                        PrintError("'Delete' button not found or not clickable", NOT_FOUND,
+                            "Check if MainWindow is active. Try 'windows main --json' first.");
+                    }
+                    else
+                    {
+                        PrintOutput("[toolbar-delete] Failed: Could not click Delete button");
+                    }
                     context.ExitCode = ERROR;
                 }
             }
@@ -203,14 +329,10 @@ public class ToolbarCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            count = buttons.Length,
-                            buttons = buttons
-                        }
+                        count = buttons.Length,
+                        buttons = buttons
                     });
                 }
                 else
@@ -235,22 +357,43 @@ public class ToolbarCommands : ICommandHandler
         var buttonTextArgument = new Argument<string>("text", "버튼 텍스트 (예: '시작', '중지', '설정')");
         var toolbarClickCommand = new Command("click", "지정한 텍스트의 버튼 클릭");
         toolbarClickCommand.AddArgument(buttonTextArgument);
+        toolbarClickCommand.AddOption(jsonOption);
         toolbarClickCommand.SetHandler((InvocationContext context) =>
         {
             try
             {
                 var text = context.ParseResult.GetValueForArgument(buttonTextArgument);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
                 using var controller = new Toolbar();
                 var result = controller.ClickToolbarButton(text);
                 if (result)
                 {
-                    PrintOutput($"[toolbar-click] Success: Button '{text}' clicked");
+                    if (json)
+                    {
+                        PrintSuccess(new
+                        {
+                            clicked = true,
+                            button = text
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput($"[toolbar-click] Success: Button '{text}' clicked");
+                    }
                     context.ExitCode = SUCCESS;
                 }
                 else
                 {
-                    PrintOutput($"[toolbar-click] Failed: Could not click button '{text}'");
+                    if (json)
+                    {
+                        PrintError($"Button '{text}' not found", NOT_FOUND,
+                            "Use 'toolbar list --json' to see available buttons.");
+                    }
+                    else
+                    {
+                        PrintOutput($"[toolbar-click] Failed: Could not click button '{text}'");
+                    }
                     context.ExitCode = ERROR;
                 }
             }
@@ -265,15 +408,28 @@ public class ToolbarCommands : ICommandHandler
         // toolbar enabled: 버튼 활성화 상태 확인
         var toolbarEnabledCommand = new Command("enabled", "버튼 활성화 상태 확인");
         toolbarEnabledCommand.AddArgument(buttonTextArgument);
+        toolbarEnabledCommand.AddOption(jsonOption);
         toolbarEnabledCommand.SetHandler((InvocationContext context) =>
         {
             try
             {
                 var text = context.ParseResult.GetValueForArgument(buttonTextArgument);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
                 using var controller = new Toolbar();
                 var isEnabled = controller.IsButtonEnabled(text);
-                PrintOutput(isEnabled ? $"[toolbar-enabled] Button '{text}' is enabled" : $"[toolbar-enabled] Button '{text}' is disabled");
+                if (json)
+                {
+                    PrintSuccess(new
+                    {
+                        button = text,
+                        enabled = isEnabled
+                    });
+                }
+                else
+                {
+                    PrintOutput(isEnabled ? $"[toolbar-enabled] Button '{text}' is enabled" : $"[toolbar-enabled] Button '{text}' is disabled");
+                }
                 context.ExitCode = SUCCESS;
             }
             catch (Exception ex)
@@ -285,17 +441,6 @@ public class ToolbarCommands : ICommandHandler
         toolbarCommand.AddCommand(toolbarEnabledCommand);
 
         rootCommand.AddCommand(toolbarCommand);
-    }
-
-    /// <summary>
-    /// Print JSON output with consistent formatting for programmatic consumption
-    /// </summary>
-    private static void PrintJsonOutput(object data)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(data, new JsonSerializerOptions
-        {
-            WriteIndented = false
-        }));
     }
 
     /// <summary>
