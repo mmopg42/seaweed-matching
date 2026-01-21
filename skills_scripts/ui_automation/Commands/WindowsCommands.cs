@@ -7,6 +7,7 @@ using UiAuto = SkillsScripts.UiAutomation.UiAutomation;
 using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
 using static UiAutomation.Commands.ExitCodes;
 using static UiAutomation.Commands.JsonResponseHelper;
+using static UiAutomation.Commands.DryRunHandler;
 
 namespace UiAutomation.Commands;
 
@@ -36,6 +37,12 @@ public class WindowsCommands : ICommandHandler
         mainCommand.AddOption(jsonOption);
         mainCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WINDOWS_MAIN", "windows main"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -92,6 +99,12 @@ public class WindowsCommands : ICommandHandler
         setupCommand.AddOption(jsonOption);
         setupCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WINDOWS_SETUP", "windows setup"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -148,6 +161,12 @@ public class WindowsCommands : ICommandHandler
         setupCompleteCommand.AddOption(jsonOption);
         setupCompleteCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WINDOWS_SETUP_COMPLETE", "windows setup-complete"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -257,6 +276,12 @@ public class WindowsCommands : ICommandHandler
         settingsCommand.AddOption(jsonOption);
         settingsCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WINDOWS_SETTINGS", "windows settings"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -313,6 +338,12 @@ public class WindowsCommands : ICommandHandler
         previewCommand.AddOption(jsonOption);
         previewCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WINDOWS_PREVIEW", "windows preview"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -369,6 +400,12 @@ public class WindowsCommands : ICommandHandler
         allCommand.AddOption(jsonOption);
         allCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WINDOWS_ALL", "windows all"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);

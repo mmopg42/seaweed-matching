@@ -6,6 +6,7 @@ using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
 using static UiAutomation.Commands.ExitCodes;
 using static UiAutomation.Commands.JsonResponseHelper;
+using static UiAutomation.Commands.DryRunHandler;
 
 namespace UiAutomation.Commands;
 
@@ -39,6 +40,12 @@ public class UtilityCommands : ICommandHandler
         var inspectWorkflowCommand = new Command("workflow", "WorkflowPanel 구조 검사");
         inspectWorkflowCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "UTILITY_INSPECT_WORKFLOW", "inspect workflow"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var automation = new UiAuto();
@@ -81,6 +88,12 @@ public class UtilityCommands : ICommandHandler
         var inspectLogCommand = new Command("log", "LogPanel 구조 검사");
         inspectLogCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "UTILITY_INSPECT_LOG", "inspect log"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var reader = new SkillsScripts.UiAutomation.ChronoDataPanelReader();
@@ -158,6 +171,12 @@ public class UtilityCommands : ICommandHandler
         configPathCommand.AddOption(jsonPathOption);
         configPathCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "UTILITY_CONFIG_PATH", "config path"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonPathOption);
@@ -204,6 +223,12 @@ public class UtilityCommands : ICommandHandler
         configReadCommand.AddOption(jsonConfigOption);
         configReadCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "UTILITY_CONFIG_READ", "config read"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonConfigOption);
@@ -270,6 +295,12 @@ public class UtilityCommands : ICommandHandler
         configGetCommand.AddOption(jsonGetOption);
         configGetCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "UTILITY_CONFIG_GET", "config get"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var key = context.ParseResult.GetValueForOption(keyOption);

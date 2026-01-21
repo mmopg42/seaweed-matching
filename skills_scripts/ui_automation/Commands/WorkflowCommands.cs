@@ -5,6 +5,7 @@ using Workflow = SkillsScripts.UiAutomation.ChronoWorkflowController;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
 using static UiAutomation.Commands.ExitCodes;
 using static UiAutomation.Commands.JsonResponseHelper;
+using static UiAutomation.Commands.DryRunHandler;
 
 namespace UiAutomation.Commands;
 
@@ -34,6 +35,12 @@ public class WorkflowCommands : ICommandHandler
         var wfLaunchGeneralCommand = new Command("launch-general", "General Camera 버튼 클릭");
         wfLaunchGeneralCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WORKFLOW_LAUNCH_GENERAL", "workflow launch-general"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new Workflow();
@@ -61,6 +68,12 @@ public class WorkflowCommands : ICommandHandler
         var wfLaunchNirCommand = new Command("launch-nir", "NIR 1 Camera 버튼 클릭");
         wfLaunchNirCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WORKFLOW_LAUNCH_NIR", "workflow launch-nir"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new Workflow();
@@ -88,6 +101,12 @@ public class WorkflowCommands : ICommandHandler
         var wfLaunchNir2Command = new Command("launch-nir2", "NIR 2 Camera 버튼 클릭");
         wfLaunchNir2Command.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WORKFLOW_LAUNCH_NIR2", "workflow launch-nir2"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new Workflow();
@@ -115,6 +134,12 @@ public class WorkflowCommands : ICommandHandler
         var wfToggleFilteringCommand = new Command("toggle-filtering", "NIR Filtering 토글");
         wfToggleFilteringCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WORKFLOW_TOGGLE_FILTERING", "workflow toggle-filtering"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new Workflow();
@@ -143,6 +168,12 @@ public class WorkflowCommands : ICommandHandler
         wfCameraStatesCommand.AddOption(jsonOption);
         wfCameraStatesCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WORKFLOW_CAMERA_STATES", "workflow camera-states"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -184,6 +215,12 @@ public class WorkflowCommands : ICommandHandler
         pathGetLine1Command.AddOption(jsonOption);
         pathGetLine1Command.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WORKFLOW_PATH_GET_LINE1", "workflow path get-line1"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -221,6 +258,12 @@ public class WorkflowCommands : ICommandHandler
         pathGetLine2Command.AddOption(jsonOption);
         pathGetLine2Command.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WORKFLOW_PATH_GET_LINE2", "workflow path get-line2"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -258,6 +301,12 @@ public class WorkflowCommands : ICommandHandler
         pathGetAllCommand.AddOption(jsonOption);
         pathGetAllCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WORKFLOW_PATH_GET_ALL", "workflow path get-all"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -302,6 +351,12 @@ public class WorkflowCommands : ICommandHandler
         pathSetLine1Command.AddArgument(pathValueArgument);
         pathSetLine1Command.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WORKFLOW_PATH_SET_LINE1", "workflow path set-line1"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var type = context.ParseResult.GetValueForArgument(pathTypeArgument);
@@ -334,6 +389,12 @@ public class WorkflowCommands : ICommandHandler
         pathSetLine2Command.AddArgument(pathValueArgument);
         pathSetLine2Command.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WORKFLOW_PATH_SET_LINE2", "workflow path set-line2"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var type = context.ParseResult.GetValueForArgument(pathTypeArgument);
@@ -368,6 +429,12 @@ public class WorkflowCommands : ICommandHandler
         wfSelectTabCommand.AddArgument(tabNameArgument);
         wfSelectTabCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "WORKFLOW_SELECT_TAB", "workflow select-tab"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var tabName = context.ParseResult.GetValueForArgument(tabNameArgument);
@@ -403,6 +470,12 @@ public class WorkflowCommands : ICommandHandler
         logsGetCommand.AddOption(jsonOption);
         logsGetCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "LOGS_GET", "logs get"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -451,6 +524,12 @@ public class WorkflowCommands : ICommandHandler
         logsTailCommand.AddOption(jsonOption);
         logsTailCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "LOGS_TAIL", "logs tail"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var count = context.ParseResult.GetValueForArgument(countArgument);
@@ -504,6 +583,12 @@ public class WorkflowCommands : ICommandHandler
         logsFilterCommand.AddOption(jsonOption);
         logsFilterCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "LOGS_FILTER", "logs filter"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var level = context.ParseResult.GetValueForOption(levelOption);
@@ -553,6 +638,12 @@ public class WorkflowCommands : ICommandHandler
         logsSearchCommand.AddOption(jsonOption);
         logsSearchCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "LOGS_SEARCH", "logs search"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var text = context.ParseResult.GetValueForArgument(searchTextArgument);

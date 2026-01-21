@@ -3,6 +3,7 @@ using System.CommandLine.Invocation;
 using FileOps = SkillsScripts.UiAutomation.ChronoFileOperationsController;
 using static UiAutomation.Commands.ExitCodes;
 using static UiAutomation.Commands.JsonResponseHelper;
+using static UiAutomation.Commands.DryRunHandler;
 
 namespace UiAutomation.Commands;
 
@@ -43,6 +44,12 @@ public class FileOpsCommands : ICommandHandler
         selectRowIndexCommand.AddOption(rowIndexOption);
         selectRowIndexCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_SELECT_ROW_INDEX", "file-ops select row-index"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var rowIndex = context.ParseResult.GetValueForOption(rowIndexOption);
@@ -68,6 +75,12 @@ public class FileOpsCommands : ICommandHandler
         selectGroupIdCommand.AddOption(groupIdOption);
         selectGroupIdCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_SELECT_GROUP_ID", "file-ops select group-id"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var groupId = context.ParseResult.GetValueForOption(groupIdOption);
@@ -93,6 +106,12 @@ public class FileOpsCommands : ICommandHandler
         selectPrefixCommand.AddOption(prefixOption);
         selectPrefixCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_SELECT_PREFIX", "file-ops select prefix"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var prefix = context.ParseResult.GetValueForOption(prefixOption);
@@ -117,6 +136,12 @@ public class FileOpsCommands : ICommandHandler
         var fileOpsSelectAllCommand = new Command("select-all", "모든 행 선택 (SelectAll 체크박스 클릭)");
         fileOpsSelectAllCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_SELECT_ALL", "file-ops select-all"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new FileOps();
@@ -136,6 +161,12 @@ public class FileOpsCommands : ICommandHandler
         var fileOpsClearSelectionCommand = new Command("clear-selection", "모든 행 선택 해제");
         fileOpsClearSelectionCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_CLEAR_SELECTION", "file-ops clear-selection"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new FileOps();
@@ -156,6 +187,12 @@ public class FileOpsCommands : ICommandHandler
         fileOpsSelectedCommand.AddOption(jsonOption);
         fileOpsSelectedCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_SELECTED", "file-ops selected"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -201,6 +238,12 @@ public class FileOpsCommands : ICommandHandler
         moveRowsCommand.AddOption(rowsOption);
         moveRowsCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_MOVE_ROWS", "file-ops move rows"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var rows = context.ParseResult.GetValueForOption(rowsOption);
@@ -234,6 +277,12 @@ public class FileOpsCommands : ICommandHandler
         moveGroupIdsCommand.AddOption(groupIdsOption);
         moveGroupIdsCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_MOVE_GROUP_IDS", "file-ops move group-ids"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var groupIds = context.ParseResult.GetValueForOption(groupIdsOption);
@@ -259,6 +308,12 @@ public class FileOpsCommands : ICommandHandler
         movePrefixCommand.AddOption(movePrefixOption);
         movePrefixCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_MOVE_PREFIX", "file-ops move prefix"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var prefix = context.ParseResult.GetValueForOption(movePrefixOption);
@@ -300,6 +355,12 @@ public class FileOpsCommands : ICommandHandler
         deleteRowsCommand.AddOption(rowsOption);
         deleteRowsCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_DELETE_ROWS", "file-ops delete rows"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var rows = context.ParseResult.GetValueForOption(rowsOption);
@@ -321,6 +382,12 @@ public class FileOpsCommands : ICommandHandler
         deleteGroupIdsCommand.AddOption(groupIdsOption);
         deleteGroupIdsCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_DELETE_GROUP_IDS", "file-ops delete group-ids"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var groupIds = context.ParseResult.GetValueForOption(groupIdsOption);
@@ -352,6 +419,12 @@ public class FileOpsCommands : ICommandHandler
         waitMoveCommand.AddOption(timeoutOption);
         waitMoveCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_WAIT_MOVE", "file-ops wait move"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var timeout = context.ParseResult.GetValueForOption(timeoutOption);
@@ -373,6 +446,12 @@ public class FileOpsCommands : ICommandHandler
         waitDeleteCommand.AddOption(timeoutOption);
         waitDeleteCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_WAIT_DELETE", "file-ops wait delete"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var timeout = context.ParseResult.GetValueForOption(timeoutOption);
@@ -396,6 +475,12 @@ public class FileOpsCommands : ICommandHandler
         fileOpsConfirmCommand.AddOption(jsonOption);
         fileOpsConfirmCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_CONFIRM", "file-ops confirm"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -443,6 +528,12 @@ public class FileOpsCommands : ICommandHandler
         verifyDeletedCommand.AddOption(jsonOption);
         verifyDeletedCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_VERIFY_DELETED", "file-ops verify deleted"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var groupId = context.ParseResult.GetValueForArgument(groupIdArgument);
@@ -482,6 +573,12 @@ public class FileOpsCommands : ICommandHandler
         rowCountWaitCommand.AddOption(jsonOption);
         rowCountWaitCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "FILE_OPS_VERIFY_ROW_COUNT", "file-ops verify row-count"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var originalCount = context.ParseResult.GetValueForArgument(originalCountArgument);

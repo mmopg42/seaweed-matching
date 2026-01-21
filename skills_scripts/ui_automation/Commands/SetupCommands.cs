@@ -6,6 +6,7 @@ using SetupController = SkillsScripts.UiAutomation.ChronoSetupWindowController;
 using SkillsScripts.UiAutomation;
 using static UiAutomation.Commands.ExitCodes;
 using static UiAutomation.Commands.JsonResponseHelper;
+using static UiAutomation.Commands.DryRunHandler;
 
 namespace UiAutomation.Commands;
 
@@ -60,6 +61,12 @@ public class SetupCommands : ICommandHandler
         verifyConfigCommand.AddOption(jsonOption);
         verifyConfigCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETUP_VERIFY_CONFIG", "setup verify-config"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var configPath = context.ParseResult.GetValueForOption(configPathOption);
@@ -135,6 +142,12 @@ public class SetupCommands : ICommandHandler
         completeFullCommand.AddOption(jsonOption);
         completeFullCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETUP_COMPLETE_FULL", "setup complete-full"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var verifyConfig = context.ParseResult.GetValueForOption(verifyConfigIntegrationOption);
@@ -295,6 +308,12 @@ public class SetupCommands : ICommandHandler
         openSettingsCommand.AddOption(jsonOption);
         openSettingsCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETUP_OPEN_SETTINGS", "setup open-settings"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -363,6 +382,12 @@ public class SetupCommands : ICommandHandler
         cameraStatesCommand.AddOption(jsonOption);
         cameraStatesCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETUP_CAMERA_STATES", "setup camera-states"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);

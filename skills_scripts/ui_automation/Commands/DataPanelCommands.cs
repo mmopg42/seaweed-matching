@@ -6,6 +6,7 @@ using FlaUI.Core.Definitions;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
 using static UiAutomation.Commands.ExitCodes;
 using static UiAutomation.Commands.JsonResponseHelper;
+using static UiAutomation.Commands.DryRunHandler;
 
 namespace UiAutomation.Commands;
 
@@ -32,6 +33,12 @@ public class DataPanelCommands : ICommandHandler
         statsCommand.AddOption(jsonOption);
         statsCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "DATA_PANEL_STATS", "stats"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -108,6 +115,12 @@ public class DataPanelCommands : ICommandHandler
         dgHeadersCommand.AddOption(jsonOption);
         dgHeadersCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "DATA_PANEL_HEADERS", "datagrid headers"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -176,6 +189,12 @@ public class DataPanelCommands : ICommandHandler
         dgRowsCommand.AddOption(jsonOption);
         dgRowsCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "DATA_PANEL_ROWS", "datagrid rows"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -239,6 +258,12 @@ public class DataPanelCommands : ICommandHandler
         dgDataCommand.AddOption(jsonOption);
         dgDataCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "DATA_PANEL_DATA", "datagrid data"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -296,6 +321,12 @@ public class DataPanelCommands : ICommandHandler
         dgInfoCommand.AddOption(jsonOption);
         dgInfoCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "DATA_PANEL_INFO", "datagrid info"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -368,6 +399,12 @@ public class DataPanelCommands : ICommandHandler
         dgCellCommand.AddOption(jsonOption);
         dgCellCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "DATA_PANEL_CELL", "datagrid cell"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var row = context.ParseResult.GetValueForArgument(rowArgument);
@@ -455,6 +492,12 @@ public class DataPanelCommands : ICommandHandler
         var dgExportCommand = new Command("export", "모든 DataGrid 데이터를 JSON으로 내보내기");
         dgExportCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "DATA_PANEL_EXPORT", "datagrid export"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var reader = new DataReader();

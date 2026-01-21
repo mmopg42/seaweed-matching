@@ -5,6 +5,7 @@ using Settings = SkillsScripts.UiAutomation.ChronoSettingsController;
 using ConsoleLogs = SkillsScripts.UiAutomation.ConsoleLogsReader;
 using static UiAutomation.Commands.ExitCodes;
 using static UiAutomation.Commands.JsonResponseHelper;
+using static UiAutomation.Commands.DryRunHandler;
 
 namespace UiAutomation.Commands;
 
@@ -49,6 +50,12 @@ public class SettingsCommands : ICommandHandler
         consoleLogsListCommand.AddOption(jsonOption);
         consoleLogsListCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "CONSOLE_LOGS_LIST", "console-logs list"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var dateFilter = context.ParseResult.GetValueForOption(dateFilterOption);
@@ -138,6 +145,12 @@ public class SettingsCommands : ICommandHandler
         consoleLogsTailCommand.AddOption(jsonOption);
         consoleLogsTailCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "CONSOLE_LOGS_TAIL", "console-logs tail"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var count = context.ParseResult.GetValueForArgument(tailCountArgument);
@@ -233,6 +246,12 @@ public class SettingsCommands : ICommandHandler
         consoleLogsSearchCommand.AddOption(jsonOption);
         consoleLogsSearchCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "CONSOLE_LOGS_SEARCH", "console-logs search"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var text = context.ParseResult.GetValueForArgument(consoleSearchTextArgument);
@@ -326,6 +345,12 @@ public class SettingsCommands : ICommandHandler
         var settingsOpenCommand = new Command("open", "SettingsDialog 열기 (Settings 버튼 클릭)");
         settingsOpenCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_OPEN", "settings-dialog open"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new Settings();
@@ -353,6 +378,12 @@ public class SettingsCommands : ICommandHandler
         var settingsCloseCommand = new Command("close", "SettingsDialog 닫기 (Cancel 버튼 클릭)");
         settingsCloseCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_CLOSE", "settings-dialog close"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new Settings();
@@ -380,6 +411,12 @@ public class SettingsCommands : ICommandHandler
         var settingsInspectCommand = new Command("inspect", "SettingsDialog 구조 검사");
         settingsInspectCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_INSPECT", "settings-dialog inspect"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new Settings();
@@ -407,6 +444,12 @@ public class SettingsCommands : ICommandHandler
         settingsStatusCommand.AddOption(jsonOption);
         settingsStatusCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_STATUS", "settings-dialog status"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -443,6 +486,12 @@ public class SettingsCommands : ICommandHandler
         settingsPathGetAllCommand.AddOption(jsonOption);
         settingsPathGetAllCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_PATH_GET_ALL", "settings-dialog path get-all"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -493,6 +542,12 @@ public class SettingsCommands : ICommandHandler
         settingsPathGetLine1Command.AddOption(jsonOption);
         settingsPathGetLine1Command.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_PATH_GET_LINE1", "settings-dialog path get-line1"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -531,6 +586,12 @@ public class SettingsCommands : ICommandHandler
         settingsPathGetLine2Command.AddOption(jsonOption);
         settingsPathGetLine2Command.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_PATH_GET_LINE2", "settings-dialog path get-line2"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -569,6 +630,12 @@ public class SettingsCommands : ICommandHandler
         settingsPathGetOutputCommand.AddOption(jsonOption);
         settingsPathGetOutputCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_PATH_GET_OUTPUT", "settings-dialog path get-output"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -602,6 +669,12 @@ public class SettingsCommands : ICommandHandler
         settingsPathGetQuarantineCommand.AddOption(jsonOption);
         settingsPathGetQuarantineCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_PATH_GET_QUARANTINE", "settings-dialog path get-quarantine"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -638,6 +711,12 @@ public class SettingsCommands : ICommandHandler
         settingsPathSetCommand.AddArgument(settingsPathValueArgument);
         settingsPathSetCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_PATH_SET", "settings-dialog path set"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var key = context.ParseResult.GetValueForArgument(settingsPathKeyArgument);
@@ -712,6 +791,12 @@ public class SettingsCommands : ICommandHandler
         checkboxGetCommand.AddOption(jsonOption);
         checkboxGetCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_CHECKBOX_GET", "settings-dialog checkbox get"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var name = context.ParseResult.GetValueForArgument(checkboxNameArgument);
@@ -749,6 +834,12 @@ public class SettingsCommands : ICommandHandler
         checkboxSetCommand.AddArgument(checkboxValueArgument);
         checkboxSetCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_CHECKBOX_SET", "settings-dialog checkbox set"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var name = context.ParseResult.GetValueForArgument(checkboxNameArgument);
@@ -780,6 +871,12 @@ public class SettingsCommands : ICommandHandler
         checkboxListCommand.AddOption(jsonOption);
         checkboxListCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_CHECKBOX_LIST", "settings-dialog checkbox list"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -822,6 +919,12 @@ public class SettingsCommands : ICommandHandler
         var actionSaveCommand = new Command("save", "Save/OK 버튼 클릭 (dialog closes)");
         actionSaveCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_ACTION_SAVE", "settings-dialog action save"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new Settings();
@@ -841,6 +944,12 @@ public class SettingsCommands : ICommandHandler
         var actionApplyCommand = new Command("apply", "Apply 버튼 클릭 (dialog stays open)");
         actionApplyCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_ACTION_APPLY", "settings-dialog action apply"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new Settings();
@@ -860,6 +969,12 @@ public class SettingsCommands : ICommandHandler
         var actionCancelCommand = new Command("cancel", "Cancel 버튼 클릭 (dialog closes)");
         actionCancelCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_ACTION_CANCEL", "settings-dialog action cancel"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new Settings();
@@ -879,6 +994,12 @@ public class SettingsCommands : ICommandHandler
         var actionResetCommand = new Command("reset", "Reset/Defaults 버튼 클릭 (dialog stays open)");
         actionResetCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "SETTINGS_DIALOG_ACTION_RESET", "settings-dialog action reset"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 using var controller = new Settings();

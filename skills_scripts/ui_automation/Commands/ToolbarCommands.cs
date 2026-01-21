@@ -3,6 +3,7 @@ using System.CommandLine.Invocation;
 using Toolbar = SkillsScripts.UiAutomation.ChronoToolbarController;
 using static UiAutomation.Commands.ExitCodes;
 using static UiAutomation.Commands.JsonResponseHelper;
+using static UiAutomation.Commands.DryRunHandler;
 
 namespace UiAutomation.Commands;
 
@@ -32,6 +33,12 @@ public class ToolbarCommands : ICommandHandler
         toolbarStartCommand.AddOption(jsonOption);
         toolbarStartCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "TOOLBAR_START", "toolbar start"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -80,6 +87,12 @@ public class ToolbarCommands : ICommandHandler
         toolbarStopCommand.AddOption(jsonOption);
         toolbarStopCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "TOOLBAR_STOP", "toolbar stop"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -128,6 +141,12 @@ public class ToolbarCommands : ICommandHandler
         toolbarSettingsCommand.AddOption(jsonOption);
         toolbarSettingsCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "TOOLBAR_SETTINGS", "toolbar settings"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -176,6 +195,12 @@ public class ToolbarCommands : ICommandHandler
         toolbarRefreshCommand.AddOption(jsonOption);
         toolbarRefreshCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "TOOLBAR_REFRESH", "toolbar refresh"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -224,6 +249,12 @@ public class ToolbarCommands : ICommandHandler
         toolbarMoveCommand.AddOption(jsonOption);
         toolbarMoveCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "TOOLBAR_MOVE", "toolbar move"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -272,6 +303,12 @@ public class ToolbarCommands : ICommandHandler
         toolbarDeleteCommand.AddOption(jsonOption);
         toolbarDeleteCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "TOOLBAR_DELETE", "toolbar delete"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -320,6 +357,12 @@ public class ToolbarCommands : ICommandHandler
         toolbarListCommand.AddOption(jsonOption);
         toolbarListCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "TOOLBAR_LIST", "toolbar list"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -360,6 +403,12 @@ public class ToolbarCommands : ICommandHandler
         toolbarClickCommand.AddOption(jsonOption);
         toolbarClickCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "TOOLBAR_CLICK", "toolbar click"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var text = context.ParseResult.GetValueForArgument(buttonTextArgument);
@@ -411,6 +460,12 @@ public class ToolbarCommands : ICommandHandler
         toolbarEnabledCommand.AddOption(jsonOption);
         toolbarEnabledCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "TOOLBAR_ENABLED", "toolbar enabled"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var text = context.ParseResult.GetValueForArgument(buttonTextArgument);

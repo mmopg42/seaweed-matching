@@ -9,6 +9,7 @@ using Settings = SkillsScripts.UiAutomation.ChronoSettingsController;
 using FileOps = SkillsScripts.UiAutomation.ChronoFileOperationsController;
 using static UiAutomation.Commands.ExitCodes;
 using static UiAutomation.Commands.JsonResponseHelper;
+using static UiAutomation.Commands.DryRunHandler;
 
 namespace UiAutomation.Commands;
 
@@ -55,6 +56,12 @@ public class TestCommands : ICommandHandler
         testConnectivityCommand.AddOption(jsonOption);
         testConnectivityCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "TEST_CONNECTIVITY", "test connectivity"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -111,6 +118,12 @@ public class TestCommands : ICommandHandler
         testCapabilitiesCommand.AddOption(jsonOption);
         testCapabilitiesCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "TEST_CAPABILITIES", "test capabilities"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -200,6 +213,12 @@ public class TestCommands : ICommandHandler
         testDatagridCommand.AddOption(jsonOption);
         testDatagridCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "TEST_DATAGRID", "test datagrid"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -262,6 +281,14 @@ public class TestCommands : ICommandHandler
         scenarioStartMonitoringCommand.AddOption(jsonOption);
         scenarioStartMonitoringCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            // Note: This is a scenario command (orchestration), not directly mapped to a skill
+            // Use empty skill name to skip validation in dry-run mode
+            if (CheckDryRun(context, "", "scenario start-monitoring"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -368,6 +395,13 @@ public class TestCommands : ICommandHandler
         scenarioConfigurePathsCommand.AddOption(jsonOption);
         scenarioConfigurePathsCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            // Note: This is a scenario command (orchestration), not directly mapped to a skill
+            if (CheckDryRun(context, "", "scenario configure-paths"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var line1Nir = context.ParseResult.GetValueForOption(line1NirOption);
@@ -507,6 +541,13 @@ public class TestCommands : ICommandHandler
         scenarioMoveGroupsCommand.AddOption(jsonOption);
         scenarioMoveGroupsCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            // Note: This is a scenario command (orchestration), not directly mapped to a skill
+            if (CheckDryRun(context, "", "scenario move-groups"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var rows = context.ParseResult.GetValueForOption(rowsOption);
@@ -602,6 +643,12 @@ public class TestCommands : ICommandHandler
         batchSelectAndMoveCommand.AddOption(jsonOption);
         batchSelectAndMoveCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "BATCH_SELECT_AND_MOVE", "batch select-and-move"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var startIndex = context.ParseResult.GetValueForOption(startIndexOption);
@@ -703,6 +750,12 @@ public class TestCommands : ICommandHandler
         batchSelectAndDeleteCommand.AddOption(jsonOption);
         batchSelectAndDeleteCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "BATCH_SELECT_AND_DELETE", "batch select-and-delete"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var startIndex = context.ParseResult.GetValueForOption(startIndexOption);
@@ -804,6 +857,12 @@ public class TestCommands : ICommandHandler
         batchExportAllCommand.AddOption(jsonOption);
         batchExportAllCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "BATCH_EXPORT_ALL", "batch export-all"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
