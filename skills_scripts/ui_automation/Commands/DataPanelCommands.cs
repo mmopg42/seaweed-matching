@@ -5,6 +5,7 @@ using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
 using static UiAutomation.Commands.ExitCodes;
+using static UiAutomation.Commands.JsonResponseHelper;
 
 namespace UiAutomation.Commands;
 
@@ -40,12 +41,8 @@ public class DataPanelCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "MainWindow not found",
-                            errorCode = NOT_FOUND
-                        });
+                        PrintError("MainWindow not found", NOT_FOUND,
+                            "Ensure ChronoView is running. Try 'windows main --json'.");
                     }
                     else
                     {
@@ -60,12 +57,8 @@ public class DataPanelCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "StatisticsPanel not found",
-                            errorCode = NOT_FOUND
-                        });
+                        PrintError("StatisticsPanel not found", NOT_FOUND,
+                            "StatisticsPanel may be disabled or hidden.");
                     }
                     else
                     {
@@ -77,14 +70,10 @@ public class DataPanelCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            source = "StatisticsPanel",
-                            statistics = statistics
-                        }
+                        source = "StatisticsPanel",
+                        statistics = statistics
                     });
                 }
                 else
@@ -128,7 +117,8 @@ public class DataPanelCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new { success = false, error = "MainWindow not found", errorCode = NOT_FOUND });
+                        PrintError("MainWindow not found", NOT_FOUND,
+                            "Ensure ChronoView is running. Try 'windows main --json'.");
                     }
                     else
                     {
@@ -143,7 +133,8 @@ public class DataPanelCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new { success = false, error = "DataGrid not found", errorCode = NOT_FOUND });
+                        PrintError("DataGrid not found", NOT_FOUND,
+                            "DataGrid may be disabled or no data is available.");
                     }
                     else
                     {
@@ -156,10 +147,10 @@ public class DataPanelCommands : ICommandHandler
                 var headers = reader.GetDataGridHeaders(dataGrid);
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new { columnCount = headers.Count, columns = headers }
+                        columnCount = headers.Count,
+                        columns = headers
                     });
                 }
                 else
@@ -194,7 +185,8 @@ public class DataPanelCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new { success = false, error = "MainWindow not found", errorCode = NOT_FOUND });
+                        PrintError("MainWindow not found", NOT_FOUND,
+                            "Ensure ChronoView is running. Try 'windows main --json'.");
                     }
                     else
                     {
@@ -209,7 +201,8 @@ public class DataPanelCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new { success = false, error = "DataGrid not found", errorCode = NOT_FOUND });
+                        PrintError("DataGrid not found", NOT_FOUND,
+                            "DataGrid may be disabled or no data is available.");
                     }
                     else
                     {
@@ -222,10 +215,9 @@ public class DataPanelCommands : ICommandHandler
                 var rowCount = reader.GetDataRowCount(dataGrid);
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new { rowCount = rowCount }
+                        rowCount = rowCount
                     });
                 }
                 else
@@ -256,7 +248,8 @@ public class DataPanelCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new { success = false, error = "MainWindow not found", errorCode = NOT_FOUND });
+                        PrintError("MainWindow not found", NOT_FOUND,
+                            "Ensure ChronoView is running. Try 'windows main --json'.");
                     }
                     else
                     {
@@ -269,10 +262,10 @@ public class DataPanelCommands : ICommandHandler
                 var allData = reader.GetAllData(mainWindow);
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new { rowCount = allData.Count, data = allData }
+                        rowCount = allData.Count,
+                        data = allData
                     });
                 }
                 else
@@ -312,7 +305,8 @@ public class DataPanelCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new { success = false, error = "MainWindow not found", errorCode = NOT_FOUND });
+                        PrintError("MainWindow not found", NOT_FOUND,
+                            "Ensure ChronoView is running. Try 'windows main --json'.");
                     }
                     else
                     {
@@ -327,7 +321,8 @@ public class DataPanelCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new { success = false, error = "DataGrid not found", errorCode = NOT_FOUND });
+                        PrintError("DataGrid not found", NOT_FOUND,
+                            "DataGrid may be disabled or no data is available.");
                     }
                     else
                     {
@@ -342,10 +337,11 @@ public class DataPanelCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new { columnCount = headers.Count, rowCount = rowCount, columns = headers }
+                        columnCount = headers.Count,
+                        rowCount = rowCount,
+                        columns = headers
                     });
                 }
                 else
