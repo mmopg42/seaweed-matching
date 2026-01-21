@@ -91,15 +91,4 @@ public static class JsonResponseHelper
         );
         Console.WriteLine(JsonSerializer.Serialize(response, JsonOptions));
     }
-
-    /// <summary>
-    /// Print legacy-compatible response (converts existing anonymous object pattern)
-    /// </summary>
-    /// <remarks>
-    /// Temporary helper for migration. Commands should migrate to typed PrintSuccess/PrintError.
-    /// </remarks>
-    public static void PrintLegacy(object data)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(data, JsonOptions));
-    }
 }
