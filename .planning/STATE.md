@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-21)
 ## Current Position
 
 **Milestone:** v1.4 Test Agent Architecture & Reliability
-**Phase:** 24 (Error Diagnosis)
-**Plan:** 02 (Command Handler Refactoring)
+**Phase:** 25 (Simulator Status)
+**Plan:** 01 (Status CLI Endpoint)
 **Status:** Complete
 
-Progress: ██████████ 100% (Phase 24: 2/2 plans complete)
+Progress: ████████░░ 50% (Phase 25: 1/2 plans complete)
 
 ## Plan 24-01 Summary
 
@@ -54,6 +54,24 @@ Progress: ██████████ 100% (Phase 24: 2/2 plans complete)
 - DataPanelCommands.cs - stats, datagrid command handlers
 - WorkflowCommands.cs - workflow and logs command handlers
 - SettingsCommands.cs - console-logs and settings-dialog handlers
+
+## Plan 25-01 Summary
+
+**Timeline:** 8 min (2026-01-21)
+**Deliverables:**
+- State file persistence (simulation_state.json) for cross-process status queries
+- --status CLI argument for querying simulation status
+- State updates integrated into run_line1_simulation and run_line2_simulation methods
+- State file cleanup on simulation start to prevent stale status
+
+**Commits:** 3 atomic commits
+
+**Features:**
+- _get_state_file_path() - Returns path to simulation_state.json
+- _update_state() - Writes simulation state to JSON file
+- _load_state() - Reads simulation state from JSON file
+- get_status() - Returns current status (idle if no state file)
+- --status CLI flag - Returns JSON with status, progress, items_created, simulation_id, last_activity
 
 ## Plan 23-01 Summary
 
@@ -206,6 +224,9 @@ Decisions from all phases are logged in PROJECT.md.
 | 23-03 | Complete CLI-01 commands | Expose ChronoSetupWindowController methods via CLI |
 | 24-01 | Centralized error handling | Try-catch wrapper at Program.cs for better diagnostics |
 | 24-02 | Return-based exit codes | Use InvocationContext.ExitCode for System.CommandLine beta4 compatibility |
+| 25-01 | State file persistence | simulation_state.json in config_dir enables cross-process status queries |
+| 25-01 | Cleanup-on-start pattern | Remove old state file before simulation to prevent stale status |
+| 25-01 | Independent --status flag | Works without --cli, reads state file without blocking |
 
 ### Deferred Issues
 
@@ -239,8 +260,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed Phase 24-02 (Command Handler Refactoring)
-Resume file: None (Phase 24 complete)
+Stopped at: Completed Phase 25-01 (Status CLI Endpoint)
+Resume file: None (Phase 25-01 complete, ready for 25-02)
 
 ## Roadmap Evolution
 
@@ -253,9 +274,10 @@ Resume file: None (Phase 24 complete)
 - Phase 22 complete: ChronoSetupWindowController + SetupCommands + SetupConfigVerifier (2,092 lines total)
 - Phase 23 complete: Performance optimization + CLI-01 commands (open-settings, camera-states)
 - Phase 24 complete: Error Diagnosis with centralized ExitCodes and InvocationContext pattern
-- 10 controller methods + 11 CLI commands + config verification + optimized execution patterns + centralized error handling
+- Phase 25-01 complete: Simulator status CLI endpoint with state file persistence
+- 10 controller methods + 11 CLI commands + config verification + optimized execution patterns + centralized error handling + status query
 - v1.3 Setup Automation & Test Reliability: Phase 22 complete, Phase 23 complete
-- v1.4 Test Agent Architecture & Reliability: Phase 24 complete (100%)
+- v1.4 Test Agent Architecture & Reliability: Phase 24 complete (100%), Phase 25 in progress (50%)
 
 **v1.2 Test Automation Enhancement - SHIPPED**
 
@@ -277,4 +299,4 @@ Resume file: None (Phase 24 complete)
 
 ---
 
-*Updated: 2026-01-21 after Phase 24-02 completion - 2/2 plans complete*
+*Updated: 2026-01-21 after Phase 25-01 completion - Phase 25: 1/2 plans complete*
