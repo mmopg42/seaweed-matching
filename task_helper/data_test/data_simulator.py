@@ -274,7 +274,7 @@ class DataSimulator:
         # Scan normal folder - _0 folders are renamed to _1 for Line2
         normal_path = os.path.join(source_folder, 'normal')
         if os.path.exists(normal_path):
-            normal_target_root = 'normal2' if self.split_normal_folders else 'normal'
+            normal_target_root = 'normal2'
             for folder_name in os.listdir(normal_path):
                 if folder_name.endswith('_0'):  # Source has _0 folders
                     folder_path = os.path.join(normal_path, folder_name)
