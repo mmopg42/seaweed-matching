@@ -1,6 +1,8 @@
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Text.Json;
 using FileOps = SkillsScripts.UiAutomation.ChronoFileOperationsController;
+using static UiAutomation.Commands.ExitCodes;
 
 namespace UiAutomation.Commands;
 
@@ -11,10 +13,6 @@ namespace UiAutomation.Commands;
 /// </summary>
 public class FileOpsCommands : ICommandHandler
 {
-    // Exit code constants matching Program.cs
-    private const int EXIT_SUCCESS = 0;
-    private const int EXIT_ERROR = 1;
-
     /// <summary>
     /// Registers all file operations commands with the root command.
     /// </summary>
@@ -43,12 +41,22 @@ public class FileOpsCommands : ICommandHandler
         );
         var selectRowIndexCommand = new Command("row-index", "특정 인덱스의 행 선택");
         selectRowIndexCommand.AddOption(rowIndexOption);
-        selectRowIndexCommand.SetHandler((rowIndex) =>
+        selectRowIndexCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.SelectRowByIndex(rowIndex);
-            Console.WriteLine(result ? $"[file-ops-select row-index] Success: Row {rowIndex} selected" : $"[file-ops-select row-index] Failed: Could not select row {rowIndex}");
-        }, rowIndexOption);
+            try
+            {
+                var rowIndex = context.ParseResult.GetValueForOption(rowIndexOption);
+                using var controller = new FileOps();
+                var result = controller.SelectRowByIndex(rowIndex);
+                Console.WriteLine(result ? $"[file-ops-select row-index] Success: Row {rowIndex} selected" : $"[file-ops-select row-index] Failed: Could not select row {rowIndex}");
+                context.ExitCode = result ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[file-ops-select row-index] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         fileOpsSelectCommand.AddCommand(selectRowIndexCommand);
 
         // file-ops select --group-id: GroupId로 행 선택
@@ -58,12 +66,22 @@ public class FileOpsCommands : ICommandHandler
         );
         var selectGroupIdCommand = new Command("group-id", "GroupId로 행 선택");
         selectGroupIdCommand.AddOption(groupIdOption);
-        selectGroupIdCommand.SetHandler((groupId) =>
+        selectGroupIdCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.SelectRowByGroupId(groupId);
-            Console.WriteLine(result ? $"[file-ops-select group-id] Success: Row with GroupId '{groupId}' selected" : $"[file-ops-select group-id] Failed: Could not select row with GroupId '{groupId}'");
-        }, groupIdOption);
+            try
+            {
+                var groupId = context.ParseResult.GetValueForOption(groupIdOption);
+                using var controller = new FileOps();
+                var result = controller.SelectRowByGroupId(groupId);
+                Console.WriteLine(result ? $"[file-ops-select group-id] Success: Row with GroupId '{groupId}' selected" : $"[file-ops-select group-id] Failed: Could not select row with GroupId '{groupId}'");
+                context.ExitCode = result ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[file-ops-select group-id] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         fileOpsSelectCommand.AddCommand(selectGroupIdCommand);
 
         // file-ops select prefix: 프리픽스로 행 선택
@@ -73,68 +91,105 @@ public class FileOpsCommands : ICommandHandler
         );
         var selectPrefixCommand = new Command("prefix", "Select rows by GroupId prefix");
         selectPrefixCommand.AddOption(prefixOption);
-        selectPrefixCommand.SetHandler((prefix) =>
+        selectPrefixCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.SelectRowsByPrefix(prefix);
-            Console.WriteLine(result ?
-                $"[file-ops-select prefix] Success: Selected rows with prefix '{prefix}'" :
-                $"[file-ops-select prefix] Failed: No rows found with prefix '{prefix}'");
-        }, prefixOption);
+            try
+            {
+                var prefix = context.ParseResult.GetValueForOption(prefixOption);
+                using var controller = new FileOps();
+                var result = controller.SelectRowsByPrefix(prefix);
+                Console.WriteLine(result ?
+                    $"[file-ops-select prefix] Success: Selected rows with prefix '{prefix}'" :
+                    $"[file-ops-select prefix] Failed: No rows found with prefix '{prefix}'");
+                context.ExitCode = result ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[file-ops-select prefix] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         fileOpsSelectCommand.AddCommand(selectPrefixCommand);
 
         fileOpsCommand.AddCommand(fileOpsSelectCommand);
 
         // file-ops select-all: 모든 행 선택
         var fileOpsSelectAllCommand = new Command("select-all", "모든 행 선택 (SelectAll 체크박스 클릭)");
-        fileOpsSelectAllCommand.SetHandler(() =>
+        fileOpsSelectAllCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.SelectAllRows();
-            Console.WriteLine(result ? "[file-ops-select-all] Success: All rows selected" : "[file-ops-select-all] Failed: Could not select all rows");
+            try
+            {
+                using var controller = new FileOps();
+                var result = controller.SelectAllRows();
+                Console.WriteLine(result ? "[file-ops-select-all] Success: All rows selected" : "[file-ops-select-all] Failed: Could not select all rows");
+                context.ExitCode = result ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[file-ops-select-all] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
         });
         fileOpsCommand.AddCommand(fileOpsSelectAllCommand);
 
         // file-ops clear-selection: 선택 해제
         var fileOpsClearSelectionCommand = new Command("clear-selection", "모든 행 선택 해제");
-        fileOpsClearSelectionCommand.SetHandler(() =>
+        fileOpsClearSelectionCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.ClearSelection();
-            Console.WriteLine(result ? "[file-ops-clear-selection] Success: Selection cleared" : "[file-ops-clear-selection] Failed: Could not clear selection");
+            try
+            {
+                using var controller = new FileOps();
+                var result = controller.ClearSelection();
+                Console.WriteLine(result ? "[file-ops-clear-selection] Success: Selection cleared" : "[file-ops-clear-selection] Failed: Could not clear selection");
+                context.ExitCode = result ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[file-ops-clear-selection] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
         });
         fileOpsCommand.AddCommand(fileOpsClearSelectionCommand);
 
         // file-ops selected: 선택된 행 목록 조회
         var fileOpsSelectedCommand = new Command("selected", "선택된 행 인덱스 목록 조회");
         fileOpsSelectedCommand.AddOption(jsonOption);
-        fileOpsSelectedCommand.SetHandler((json) =>
+        fileOpsSelectedCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var selectedRows = controller.GetSelectedRows();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new FileOps();
+                var selectedRows = controller.GetSelectedRows();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        count = selectedRows.Count,
-                        selectedRows = selectedRows
-                    }
-                });
-            }
-            else
-            {
-                Console.WriteLine($"[file-ops-selected] Found {selectedRows.Count} selected row(s):");
-                foreach (var index in selectedRows)
-                {
-                    Console.WriteLine($"  - Row {index}");
+                        success = true,
+                        data = new
+                        {
+                            count = selectedRows.Count,
+                            selectedRows = selectedRows
+                        }
+                    });
                 }
+                else
+                {
+                    Console.WriteLine($"[file-ops-selected] Found {selectedRows.Count} selected row(s):");
+                    foreach (var index in selectedRows)
+                    {
+                        Console.WriteLine($"  - Row {index}");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[file-ops-selected] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         fileOpsCommand.AddCommand(fileOpsSelectedCommand);
 
         // file-ops move: 이동 작업
@@ -147,21 +202,30 @@ public class FileOpsCommands : ICommandHandler
         );
         var moveRowsCommand = new Command("rows", "행 인덱스로 선택 후 이동");
         moveRowsCommand.AddOption(rowsOption);
-        moveRowsCommand.SetHandler((rows) =>
+        moveRowsCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.SelectAndMoveRows(rows);
-            if (result)
+            try
             {
-                Console.WriteLine($"[file-ops-move rows] Success: Moved {rows.Length} row(s)");
-                Environment.Exit(EXIT_SUCCESS);
+                var rows = context.ParseResult.GetValueForOption(rowsOption);
+                using var controller = new FileOps();
+                var result = controller.SelectAndMoveRows(rows);
+                if (result)
+                {
+                    Console.WriteLine($"[file-ops-move rows] Success: Moved {rows.Length} row(s)");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine($"[file-ops-move rows] Failed: Could not move rows");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"[file-ops-move rows] Failed: Could not move rows");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[file-ops-move rows] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-        }, rowsOption);
+        });
         fileOpsMoveCommand.AddCommand(moveRowsCommand);
 
         // file-ops move --group-ids: GroupId로 이동
@@ -171,12 +235,22 @@ public class FileOpsCommands : ICommandHandler
         );
         var moveGroupIdsCommand = new Command("group-ids", "GroupId로 선택 후 이동");
         moveGroupIdsCommand.AddOption(groupIdsOption);
-        moveGroupIdsCommand.SetHandler((groupIds) =>
+        moveGroupIdsCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.SelectAndMoveByGroupIds(groupIds);
-            Console.WriteLine(result ? $"[file-ops-move group-ids] Success: Moved {groupIds.Length} row(s)" : $"[file-ops-move group-ids] Failed: Could not move rows by GroupId");
-        }, groupIdsOption);
+            try
+            {
+                var groupIds = context.ParseResult.GetValueForOption(groupIdsOption);
+                using var controller = new FileOps();
+                var result = controller.SelectAndMoveByGroupIds(groupIds);
+                Console.WriteLine(result ? $"[file-ops-move group-ids] Success: Moved {groupIds.Length} row(s)" : $"[file-ops-move group-ids] Failed: Could not move rows by GroupId");
+                context.ExitCode = result ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[file-ops-move group-ids] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         fileOpsMoveCommand.AddCommand(moveGroupIdsCommand);
 
         // file-ops move prefix: 프리픽스로 선택 후 이동
@@ -186,27 +260,37 @@ public class FileOpsCommands : ICommandHandler
         );
         var movePrefixCommand = new Command("prefix", "Select and move rows by GroupId prefix");
         movePrefixCommand.AddOption(movePrefixOption);
-        movePrefixCommand.SetHandler((prefix) =>
+        movePrefixCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-
-            // 1. Select by prefix
-            if (!controller.SelectRowsByPrefix(prefix))
+            try
             {
-                Console.WriteLine($"[file-ops-move prefix] Failed: No rows found with prefix '{prefix}'");
-                Environment.Exit(EXIT_ERROR);
+                var prefix = context.ParseResult.GetValueForOption(movePrefixOption);
+                using var controller = new FileOps();
+
+                // 1. Select by prefix
+                if (!controller.SelectRowsByPrefix(prefix))
+                {
+                    Console.WriteLine($"[file-ops-move prefix] Failed: No rows found with prefix '{prefix}'");
+                    context.ExitCode = ERROR;
+                    return;
+                }
+
+                // 2. Small delay for UI update
+                System.Threading.Thread.Sleep(100);
+
+                // 3. Click move button
+                var result = controller.ClickMoveButton();
+                Console.WriteLine(result ?
+                    $"[file-ops-move prefix] Success: Move initiated for '{prefix}'" :
+                    $"[file-ops-move prefix] Failed: Could not click Move button");
+                context.ExitCode = result ? SUCCESS : ERROR;
             }
-
-            // 2. Small delay for UI update
-            System.Threading.Thread.Sleep(100);
-
-            // 3. Click move button
-            var result = controller.ClickMoveButton();
-            Console.WriteLine(result ?
-                $"[file-ops-move prefix] Success: Move initiated for '{prefix}'" :
-                $"[file-ops-move prefix] Failed: Could not click Move button");
-            Environment.Exit(result ? EXIT_SUCCESS : EXIT_ERROR);
-        }, movePrefixOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[file-ops-move prefix] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         fileOpsMoveCommand.AddCommand(movePrefixCommand);
 
         fileOpsCommand.AddCommand(fileOpsMoveCommand);
@@ -217,23 +301,43 @@ public class FileOpsCommands : ICommandHandler
         // file-ops delete --rows: 행 인덱스로 삭제
         var deleteRowsCommand = new Command("rows", "행 인덱스로 선택 후 삭제");
         deleteRowsCommand.AddOption(rowsOption);
-        deleteRowsCommand.SetHandler((rows) =>
+        deleteRowsCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.SelectAndDeleteRows(rows);
-            Console.WriteLine(result ? $"[file-ops-delete rows] Success: Deleted {rows.Length} row(s)" : $"[file-ops-delete rows] Failed: Could not delete rows");
-        }, rowsOption);
+            try
+            {
+                var rows = context.ParseResult.GetValueForOption(rowsOption);
+                using var controller = new FileOps();
+                var result = controller.SelectAndDeleteRows(rows);
+                Console.WriteLine(result ? $"[file-ops-delete rows] Success: Deleted {rows.Length} row(s)" : $"[file-ops-delete rows] Failed: Could not delete rows");
+                context.ExitCode = result ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[file-ops-delete rows] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         fileOpsDeleteCommand.AddCommand(deleteRowsCommand);
 
         // file-ops delete --group-ids: GroupId로 삭제
         var deleteGroupIdsCommand = new Command("group-ids", "GroupId로 선택 후 삭제");
         deleteGroupIdsCommand.AddOption(groupIdsOption);
-        deleteGroupIdsCommand.SetHandler((groupIds) =>
+        deleteGroupIdsCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.SelectAndDeleteByGroupIds(groupIds);
-            Console.WriteLine(result ? $"[file-ops-delete group-ids] Success: Deleted {groupIds.Length} row(s)" : $"[file-ops-delete group-ids] Failed: Could not delete rows by GroupId");
-        }, groupIdsOption);
+            try
+            {
+                var groupIds = context.ParseResult.GetValueForOption(groupIdsOption);
+                using var controller = new FileOps();
+                var result = controller.SelectAndDeleteByGroupIds(groupIds);
+                Console.WriteLine(result ? $"[file-ops-delete group-ids] Success: Deleted {groupIds.Length} row(s)" : $"[file-ops-delete group-ids] Failed: Could not delete rows by GroupId");
+                context.ExitCode = result ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[file-ops-delete group-ids] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         fileOpsDeleteCommand.AddCommand(deleteGroupIdsCommand);
 
         fileOpsCommand.AddCommand(fileOpsDeleteCommand);
@@ -249,23 +353,43 @@ public class FileOpsCommands : ICommandHandler
         );
         var waitMoveCommand = new Command("move", "이동 작업 완료 대기");
         waitMoveCommand.AddOption(timeoutOption);
-        waitMoveCommand.SetHandler((timeout) =>
+        waitMoveCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.WaitForMoveComplete(timeout);
-            Console.WriteLine(result ? $"[file-ops-wait move] Success: Move operation completed" : $"[file-ops-wait move] Failed: Timeout waiting for move operation");
-        }, timeoutOption);
+            try
+            {
+                var timeout = context.ParseResult.GetValueForOption(timeoutOption);
+                using var controller = new FileOps();
+                var result = controller.WaitForMoveComplete(timeout);
+                Console.WriteLine(result ? $"[file-ops-wait move] Success: Move operation completed" : $"[file-ops-wait move] Failed: Timeout waiting for move operation");
+                context.ExitCode = result ? SUCCESS : TIMEOUT;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[file-ops-wait move] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         fileOpsWaitCommand.AddCommand(waitMoveCommand);
 
         // file-ops wait delete: 삭제 작업 완료 대기
         var waitDeleteCommand = new Command("delete", "삭제 작업 완료 대기");
         waitDeleteCommand.AddOption(timeoutOption);
-        waitDeleteCommand.SetHandler((timeout) =>
+        waitDeleteCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.WaitForDeleteComplete(timeout);
-            Console.WriteLine(result ? $"[file-ops-wait delete] Success: Delete operation completed" : $"[file-ops-wait delete] Failed: Timeout waiting for delete operation");
-        }, timeoutOption);
+            try
+            {
+                var timeout = context.ParseResult.GetValueForOption(timeoutOption);
+                using var controller = new FileOps();
+                var result = controller.WaitForDeleteComplete(timeout);
+                Console.WriteLine(result ? $"[file-ops-wait delete] Success: Delete operation completed" : $"[file-ops-wait delete] Failed: Timeout waiting for delete operation");
+                context.ExitCode = result ? SUCCESS : TIMEOUT;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[file-ops-wait delete] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         fileOpsWaitCommand.AddCommand(waitDeleteCommand);
 
         fileOpsCommand.AddCommand(fileOpsWaitCommand);
@@ -273,29 +397,38 @@ public class FileOpsCommands : ICommandHandler
         // file-ops confirm: 확인 대화상자 처리
         var fileOpsConfirmCommand = new Command("confirm", "확인 대화상자 찾기 및 클릭");
         fileOpsConfirmCommand.AddOption(jsonOption);
-        fileOpsConfirmCommand.SetHandler((json) =>
+        fileOpsConfirmCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.HandleDeleteConfirmationDialog();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new FileOps();
+                var result = controller.HandleDeleteConfirmationDialog();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = result,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        action = "confirm-dialog",
-                        confirmed = result
-                    }
-                });
+                        success = result,
+                        data = new
+                        {
+                            action = "confirm-dialog",
+                            confirmed = result
+                        }
+                    });
+                }
+                else
+                {
+                    Console.WriteLine(result ? "[file-ops-confirm] Success: Confirmation dialog handled" : "[file-ops-confirm] Failed: Could not handle confirmation dialog");
+                }
+                context.ExitCode = result ? SUCCESS : ERROR;
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine(result ? "[file-ops-confirm] Success: Confirmation dialog handled" : "[file-ops-confirm] Failed: Could not handle confirmation dialog");
+                Console.Error.WriteLine($"[file-ops-confirm] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-            Environment.Exit(result ? EXIT_SUCCESS : EXIT_ERROR);
-        }, jsonOption);
+        });
         fileOpsCommand.AddCommand(fileOpsConfirmCommand);
 
         // file-ops verify: 삭제 검증
@@ -306,29 +439,40 @@ public class FileOpsCommands : ICommandHandler
         var verifyDeletedCommand = new Command("deleted", "GroupId로 그룹 삭제 검증");
         verifyDeletedCommand.AddArgument(groupIdArgument);
         verifyDeletedCommand.AddOption(jsonOption);
-        verifyDeletedCommand.SetHandler((groupId, json) =>
+        verifyDeletedCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.VerifyGroupDeleted(groupId);
+            try
+            {
+                var groupId = context.ParseResult.GetValueForArgument(groupIdArgument);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                using var controller = new FileOps();
+                var result = controller.VerifyGroupDeleted(groupId);
+
+                if (json)
                 {
-                    success = result,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        groupId = groupId,
-                        verified = result
-                    }
-                });
+                        success = result,
+                        data = new
+                        {
+                            groupId = groupId,
+                            verified = result
+                        }
+                    });
+                }
+                else
+                {
+                    Console.WriteLine(result ? $"[file-ops-verify deleted] Success: GroupId '{groupId}' has been deleted" : $"[file-ops-verify deleted] Failed: GroupId '{groupId}' still exists");
+                }
+                context.ExitCode = result ? SUCCESS : ERROR;
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine(result ? $"[file-ops-verify deleted] Success: GroupId '{groupId}' has been deleted" : $"[file-ops-verify deleted] Failed: GroupId '{groupId}' still exists");
+                Console.Error.WriteLine($"[file-ops-verify deleted] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-            Environment.Exit(result ? EXIT_SUCCESS : EXIT_ERROR);
-        }, groupIdArgument, jsonOption);
+        });
         fileOpsVerifyCommand.AddCommand(verifyDeletedCommand);
 
         // file-ops verify row-count: 행 개수 변화 검증
@@ -337,32 +481,44 @@ public class FileOpsCommands : ICommandHandler
         rowCountWaitCommand.AddArgument(originalCountArgument);
         rowCountWaitCommand.AddOption(timeoutOption);
         rowCountWaitCommand.AddOption(jsonOption);
-        rowCountWaitCommand.SetHandler((originalCount, timeout, json) =>
+        rowCountWaitCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
-            var result = controller.WaitForRowCountChange(originalCount, timeout);
+            try
+            {
+                var originalCount = context.ParseResult.GetValueForArgument(originalCountArgument);
+                var timeout = context.ParseResult.GetValueForOption(timeoutOption);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-            if (json)
-            {
-                var currentCount = controller.GetDataRowCountAfterOperation();
-                PrintJsonOutput(new
+                using var controller = new FileOps();
+                var result = controller.WaitForRowCountChange(originalCount, timeout);
+
+                if (json)
                 {
-                    success = result,
-                    data = new
+                    var currentCount = controller.GetDataRowCountAfterOperation();
+                    PrintJsonOutput(new
                     {
-                        originalCount = originalCount,
-                        currentCount = currentCount,
-                        changed = result
-                    }
-                });
+                        success = result,
+                        data = new
+                        {
+                            originalCount = originalCount,
+                            currentCount = currentCount,
+                            changed = result
+                        }
+                    });
+                }
+                else
+                {
+                    var currentCount = controller.GetDataRowCountAfterOperation();
+                    Console.WriteLine(result ? $"[file-ops-verify row-count] Success: Row count changed from {originalCount} to {currentCount}" : $"[file-ops-verify row-count] Failed: Row count did not change (still {currentCount})");
+                }
+                context.ExitCode = result ? SUCCESS : ERROR;
             }
-            else
+            catch (Exception ex)
             {
-                var currentCount = controller.GetDataRowCountAfterOperation();
-                Console.WriteLine(result ? $"[file-ops-verify row-count] Success: Row count changed from {originalCount} to {currentCount}" : $"[file-ops-verify row-count] Failed: Row count did not change (still {currentCount})");
+                Console.Error.WriteLine($"[file-ops-verify row-count] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-            Environment.Exit(result ? EXIT_SUCCESS : EXIT_ERROR);
-        }, originalCountArgument, timeoutOption, jsonOption);
+        });
         fileOpsVerifyCommand.AddCommand(rowCountWaitCommand);
 
         fileOpsCommand.AddCommand(fileOpsVerifyCommand);

@@ -1,6 +1,8 @@
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Diagnostics;
 using System.Text.Json;
+using static UiAutomation.Commands.ExitCodes;
 
 namespace UiAutomation.Commands;
 
@@ -11,12 +13,6 @@ namespace UiAutomation.Commands;
 /// </summary>
 public class AppLifecycleCommands : ICommandHandler
 {
-    // Exit code constants matching Program.cs
-    private const int EXIT_SUCCESS = 0;
-    private const int EXIT_ERROR = 1;
-    private const int EXIT_NOT_FOUND = 2;
-    private const int EXIT_TIMEOUT = 3;
-
     // ChronoView process name (without .exe extension for GetProcessesByName)
     private const string CHRONOVIEW_PROCESS_NAME = "ChronoView";
 
@@ -41,205 +37,241 @@ public class AppLifecycleCommands : ICommandHandler
         // app launch: ChronoView 실행
         var launchCommand = new Command("launch", "ChronoView 앱 실행");
         launchCommand.AddOption(jsonOption);
-        launchCommand.SetHandler(async (json) =>
+        launchCommand.SetHandler(async (InvocationContext context) =>
         {
-            int processId = await LaunchChronoViewAsync();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                int processId = await LaunchChronoViewAsync();
 
-            if (processId > 0)
-            {
-                if (json)
+                if (processId > 0)
                 {
-                    PrintJsonOutput(new
+                    if (json)
                     {
-                        success = true,
-                        data = new
+                        PrintJsonOutput(new
                         {
-                            launched = true,
-                            processId
-                        }
-                    });
-                }
-                else
-                {
-                    PrintOutput($"[app launch] ChronoView launched with PID: {processId}");
-                }
-                Environment.Exit(EXIT_SUCCESS);
-            }
-            else
-            {
-                if (json)
-                {
-                    PrintJsonOutput(new
+                            success = true,
+                            data = new
+                            {
+                                launched = true,
+                                processId
+                            }
+                        });
+                    }
+                    else
                     {
-                        success = false,
-                        error = "Failed to launch ChronoView",
-                        errorCode = EXIT_ERROR
-                    });
+                        PrintOutput($"[app launch] ChronoView launched with PID: {processId}");
+                    }
+                    context.ExitCode = SUCCESS;
                 }
                 else
                 {
-                    PrintOutput("[app launch] Failed to launch ChronoView");
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "Failed to launch ChronoView",
+                            errorCode = ERROR
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[app launch] Failed to launch ChronoView");
+                    }
+                    context.ExitCode = ERROR;
                 }
-                Environment.Exit(EXIT_ERROR);
             }
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[app launch] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         appCommand.AddCommand(launchCommand);
 
         // app stop: ChronoView 중지
         var stopCommand = new Command("stop", "모든 ChronoView 프로세스 중지");
         stopCommand.AddOption(jsonOption);
-        stopCommand.SetHandler((json) =>
+        stopCommand.SetHandler((InvocationContext context) =>
         {
-            int stoppedCount = StopChronoViewProcesses();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                int stoppedCount = StopChronoViewProcesses();
 
-            if (stoppedCount > 0)
-            {
-                if (json)
+                if (stoppedCount > 0)
                 {
-                    PrintJsonOutput(new
+                    if (json)
                     {
-                        success = true,
-                        data = new
+                        PrintJsonOutput(new
                         {
-                            stopped = true,
-                            processesStopped = stoppedCount
-                        }
-                    });
-                }
-                else
-                {
-                    PrintOutput($"[app stop] Stopped {stoppedCount} ChronoView process(es)");
-                }
-                Environment.Exit(EXIT_SUCCESS);
-            }
-            else
-            {
-                if (json)
-                {
-                    PrintJsonOutput(new
+                            success = true,
+                            data = new
+                            {
+                                stopped = true,
+                                processesStopped = stoppedCount
+                            }
+                        });
+                    }
+                    else
                     {
-                        success = false,
-                        error = "No ChronoView processes found running",
-                        errorCode = EXIT_NOT_FOUND
-                    });
+                        PrintOutput($"[app stop] Stopped {stoppedCount} ChronoView process(es)");
+                    }
+                    context.ExitCode = SUCCESS;
                 }
                 else
                 {
-                    PrintOutput("[app stop] No ChronoView processes found running");
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "No ChronoView processes found running",
+                            errorCode = NOT_FOUND
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[app stop] No ChronoView processes found running");
+                    }
+                    context.ExitCode = NOT_FOUND;
                 }
-                Environment.Exit(EXIT_NOT_FOUND);
             }
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[app stop] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         appCommand.AddCommand(stopCommand);
 
         // app restart: ChronoView 재시작
         var restartCommand = new Command("restart", "ChronoView 재시작 (중지 후 실행)");
         restartCommand.AddOption(jsonOption);
-        restartCommand.SetHandler(async (json) =>
+        restartCommand.SetHandler(async (InvocationContext context) =>
         {
-            var result = await RestartChronoViewAsync();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                var result = await RestartChronoViewAsync();
 
-            if (result.Success)
-            {
-                if (json)
+                if (result.Success)
                 {
-                    PrintJsonOutput(new
+                    if (json)
                     {
-                        success = true,
-                        data = new
+                        PrintJsonOutput(new
                         {
-                            restarted = true,
-                            processesStopped = result.StoppedCount,
-                            newProcessId = result.ProcessId
-                        }
-                    });
+                            success = true,
+                            data = new
+                            {
+                                restarted = true,
+                                processesStopped = result.StoppedCount,
+                                newProcessId = result.ProcessId
+                            }
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput($"[app restart] Restarted ChronoView: stopped {result.StoppedCount} process(es), new PID: {result.ProcessId}");
+                    }
+                    context.ExitCode = SUCCESS;
                 }
                 else
                 {
-                    PrintOutput($"[app restart] Restarted ChronoView: stopped {result.StoppedCount} process(es), new PID: {result.ProcessId}");
-                }
-                Environment.Exit(EXIT_SUCCESS);
-            }
-            else
-            {
-                if (json)
-                {
-                    PrintJsonOutput(new
+                    if (json)
                     {
-                        success = false,
-                        error = "Failed to restart ChronoView",
-                        errorCode = EXIT_ERROR,
-                        data = new
+                        PrintJsonOutput(new
                         {
-                            processesStopped = result.StoppedCount
-                        }
-                    });
+                            success = false,
+                            error = "Failed to restart ChronoView",
+                            errorCode = ERROR,
+                            data = new
+                            {
+                                processesStopped = result.StoppedCount
+                            }
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput($"[app restart] Failed to restart (stopped {result.StoppedCount} processes, launch failed)");
+                    }
+                    context.ExitCode = ERROR;
                 }
-                else
-                {
-                    PrintOutput($"[app restart] Failed to restart (stopped {result.StoppedCount} processes, launch failed)");
-                }
-                Environment.Exit(EXIT_ERROR);
             }
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[app restart] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         appCommand.AddCommand(restartCommand);
 
         // app status: ChronoView 상태 확인
         var statusCommand = new Command("status", "ChronoView 실행 상태 확인");
         statusCommand.AddOption(jsonOption);
-        statusCommand.SetHandler((json) =>
+        statusCommand.SetHandler((InvocationContext context) =>
         {
-            var status = GetChronoViewStatus();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                var status = GetChronoViewStatus();
 
-            if (status.IsRunning)
-            {
-                if (json)
+                if (status.IsRunning)
                 {
-                    PrintJsonOutput(new
+                    if (json)
                     {
-                        success = true,
-                        data = new
+                        PrintJsonOutput(new
                         {
-                            isRunning = true,
-                            processCount = status.ProcessCount,
-                            processIds = status.ProcessIds,
-                            mainWindowTitles = status.MainWindowTitles
-                        }
-                    });
-                }
-                else
-                {
-                    PrintOutput($"[app status] ChronoView is running: {status.ProcessCount} process(es)");
-                    foreach (var pid in status.ProcessIds)
-                    {
-                        PrintOutput($"  - PID: {pid}");
+                            success = true,
+                            data = new
+                            {
+                                isRunning = true,
+                                processCount = status.ProcessCount,
+                                processIds = status.ProcessIds,
+                                mainWindowTitles = status.MainWindowTitles
+                            }
+                        });
                     }
-                }
-                Environment.Exit(EXIT_SUCCESS);
-            }
-            else
-            {
-                if (json)
-                {
-                    PrintJsonOutput(new
+                    else
                     {
-                        success = true,
-                        data = new
+                        PrintOutput($"[app status] ChronoView is running: {status.ProcessCount} process(es)");
+                        foreach (var pid in status.ProcessIds)
                         {
-                            isRunning = false,
-                            processCount = 0,
-                            processIds = Array.Empty<int>(),
-                            mainWindowTitles = Array.Empty<string>()
+                            PrintOutput($"  - PID: {pid}");
                         }
-                    });
+                    }
+                    context.ExitCode = SUCCESS;
                 }
                 else
                 {
-                    PrintOutput("[app status] ChronoView is not running");
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = true,
+                            data = new
+                            {
+                                isRunning = false,
+                                processCount = 0,
+                                processIds = Array.Empty<int>(),
+                                mainWindowTitles = Array.Empty<string>()
+                            }
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[app status] ChronoView is not running");
+                    }
+                    context.ExitCode = NOT_FOUND;
                 }
-                Environment.Exit(EXIT_NOT_FOUND);
             }
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[app status] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         appCommand.AddCommand(statusCommand);
 
         rootCommand.AddCommand(appCommand);
