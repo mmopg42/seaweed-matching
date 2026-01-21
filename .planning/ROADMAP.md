@@ -162,15 +162,15 @@ Plans:
 5. Orchestrator documentation explicitly forbids CLI command construction
 
 Plans:
-- [ ] 29-01-PLAN.md — Update test-orchestrator with skill-based delegation format, prohibition section, and skill reference
+- [x] 29-01-PLAN.md — Update test-orchestrator with skill-based delegation format, prohibition section, and skill reference
 
 #### Phase 30: Executor Skill Translation
 
 **Goal:** Enable executor to translate skill names to CLI commands
 
 **Depends on:** Phase 28 (skills defined), Phase 29 (orchestrator using skills)
-**Research:** Unlikely (translation is straightforward lookup)
-**Plans:** TBD
+**Research:** Complete (30-RESEARCH.md provides patterns)
+**Plans:** 1 plan
 
 **Requirements:** EXEC-01 through EXEC-05
 
@@ -180,6 +180,9 @@ Plans:
 3. Executor reports error for unknown skills with helpful message
 4. Retry logic respects skill `retryable` flag
 5. Error handling includes skill context in messages
+
+Plans:
+- [ ] 30-01-PLAN.md — Add skill translation documentation to test-executor.md with parsing, validation, error handling, and retryable flag support
 
 #### Phase 31: CLI Schema Standardization
 
@@ -226,7 +229,7 @@ Plans:
 | v1.2 Test Automation | 20-21 | 2 | ✅ Complete | 2026-01-20 |
 | v1.3 Setup & Perf | 22-23 | 6 | ✅ Complete | 2026-01-20 |
 | v1.4 Agent Architecture | 24-27 | 8 | ✅ Complete | 2026-01-21 |
-| v1.5 CLI Skill Encapsulation | 28-32 | 2 | 🚧 In progress | - |
+| v1.5 CLI Skill Encapsulation | 28-32 | 3 | 🚧 In progress | - |
 
 | Phase | Milestone | Plans | Status |
 |-------|-----------|-------|--------|
@@ -237,17 +240,17 @@ Plans:
 | 26. Log Path Finder | v1.4 | 2 | ✅ Complete |
 | 27. Delegation Fix | v1.4 | 2 | ✅ Complete |
 | 28. Skill Registry | v1.5 | 1 | ✅ Complete |
-| 29. Orchestrator Integration | v1.5 | 1 | Not started |
-| 30. Executor Translation | v1.5 | TBD | Not started |
+| 29. Orchestrator Integration | v1.5 | 1 | ✅ Complete |
+| 30. Executor Translation | v1.5 | 1 | Ready |
 | 31. CLI Schema | v1.5 | TBD | Not started |
 | 32. Dry-Run Mode | v1.5 | TBD | Not started |
 
 ## Current State
 
-**Status:** 🚧 v1.5 CLI Skill Encapsulation - Phase 29 planned, ready for execution.
+**Status:** 🚧 v1.5 CLI Skill Encapsulation - Phase 30 planned, ready for execution.
 
-**Next Step:** Run `/gsd:execute-phase 29` to update test-orchestrator with skill-based delegation.
+**Next Step:** Run `/gsd:execute-phase 30` to add skill translation documentation to test-executor.md.
 
 ---
 
-*Last updated: 2026-01-21 - Phase 29 planned*
+*Last updated: 2026-01-21 - Phase 30 planned*
