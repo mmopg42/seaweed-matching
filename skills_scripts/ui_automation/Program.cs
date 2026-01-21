@@ -11,6 +11,7 @@ class Program
     // Global options state
     static bool s_isQuiet = false;
     static bool s_isVerbose = false;
+    static bool s_isDryRun = false;
 
     static async Task<int> Main(string[] args)
     {
@@ -31,9 +32,17 @@ class Program
             Arity = ArgumentArity.ZeroOrOne
         };
 
+        var dryRunOption = new Option<bool>(
+            ["--dry-run"],
+            "Validate command syntax without execution")
+        {
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
         // Add global options to root
         rootCommand.AddGlobalOption(quietOption);
         rootCommand.AddGlobalOption(verboseOption);
+        rootCommand.AddGlobalOption(dryRunOption);
 
         // CommandRegistry for modular command registration (Phase 11-01+)
         var registry = new CommandRegistry();
@@ -56,6 +65,7 @@ class Program
         var parseResult = rootCommand.Parse(args);
         s_isQuiet = parseResult.GetValueForOption(quietOption) == true;
         s_isVerbose = parseResult.GetValueForOption(verboseOption) == true;
+        s_isDryRun = parseResult.GetValueForOption(dryRunOption) == true;
 
         try
         {
@@ -77,6 +87,11 @@ class Program
             return ExitCodes.ERROR;
         }
     }
+
+    /// <summary>
+    /// Gets whether dry-run mode is active.
+    /// </summary>
+    public static bool IsDryRun => s_isDryRun;
 
     /// <summary>
     /// Writes error message to stderr.
