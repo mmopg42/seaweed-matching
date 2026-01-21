@@ -16,6 +16,21 @@ See: .planning/PROJECT.md (updated 2026-01-21)
 
 Progress: ██████████ 100% (Phase 26: 2/2 plans complete)
 
+## Plan 26-01 Summary
+
+**Timeline:** 4 min (2026-01-21)
+**Deliverables:**
+- GetLatestLogDateFolder() method in ConsoleLogsReader.cs
+- GetLogFilesFromLatest() convenience method
+- --latest flag for console-logs list, tail, and search commands
+
+**Commits:** 3 atomic commits
+
+**Features:**
+- DateTime.TryParseExact for yyyyMMdd folder validation
+- Empty directory handling (returns Array.Empty<string>())
+- Flag precedence: --date > --latest > default
+
 ## Plan 26-02 Summary
 
 **Timeline:** 1 min (2026-01-21)
