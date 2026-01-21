@@ -223,16 +223,24 @@ Windows UI Automation with FlaUI
 - test/logs.md updated with automatic discovery examples and guidance
 - log-analyst.md updated with Log Discovery Strategy section
 
-### ○ Phase 27: Orchestrator Delegation Fix (v1.4) — Pending
+---
 
-**Goal:** Orchestrator 역할 분할 수정
+### ○ Phase 27: Orchestrator Delegation Fix (v1.4) — Ready for Execution
+
+**Goal:** Orchestrator 역할 분할 수정 (Fix test-orchestrator delegation pattern)
 
 **Requirements:** DELEGATE-01
 
 **Plans:**
-- [ ] 27-01: test-orchestrator 위임 패턴 수정
-- [ ] 27-02: 위임 패턴 검증 테스트
+- [ ] 27-01: Add explicit Bash tool prohibitions to test-orchestrator.md
+  - Add "NEVER use Bash for Execution" section with forbidden examples
+  - Add "Delegation Issues" section to reporting format
+  - Strengthen Critical Reminders with cross-references
+- [ ] 27-02: Verify delegation pattern through code review and test execution
+  - Run grep patterns to confirm all sections present
+  - Optional: Execute test-orchestrator to observe delegation behavior
+  - Human verification checkpoint
 
 ---
 
-*Last updated: 2026-01-21 - Phase 26 complete, Phase 27 ready for execution*
+*Last updated: 2026-01-21 - Phase 27 plans created, ready for execution*
