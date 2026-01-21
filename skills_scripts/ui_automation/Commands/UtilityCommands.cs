@@ -1,8 +1,10 @@
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Text.Json;
 using UiAuto = SkillsScripts.UiAutomation.UiAutomation;
 using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
+using static UiAutomation.Commands.ExitCodes;
 
 namespace UiAutomation.Commands;
 
@@ -14,13 +16,6 @@ namespace UiAutomation.Commands;
 /// </summary>
 public class UtilityCommands : ICommandHandler
 {
-    // Exit code constants
-    private const int EXIT_SUCCESS = 0;
-    private const int EXIT_ERROR = 1;
-    private const int EXIT_NOT_FOUND = 2;
-    private const int EXIT_TIMEOUT = 3;
-    private const int EXIT_INVALID_ARGUMENT = 4;
-
     /// <summary>
     /// Registers all inspect and config commands with the root command.
     /// </summary>
@@ -41,88 +36,110 @@ public class UtilityCommands : ICommandHandler
 
         // inspect workflow: WorkflowPanel 구조 검사
         var inspectWorkflowCommand = new Command("workflow", "WorkflowPanel 구조 검사");
-        inspectWorkflowCommand.SetHandler(() =>
+        inspectWorkflowCommand.SetHandler((InvocationContext context) =>
         {
-            using var automation = new UiAuto();
-            var mainWindow = automation.FindChronoViewMainWindow();
-            if (mainWindow == null)
+            try
             {
-                Console.WriteLine("[inspect-workflow] Failed: MainWindow not found");
-                return;
-            }
+                using var automation = new UiAuto();
+                var mainWindow = automation.FindChronoViewMainWindow();
+                if (mainWindow == null)
+                {
+                    Console.WriteLine("[inspect-workflow] Failed: MainWindow not found");
+                    context.ExitCode = NOT_FOUND;
+                    return;
+                }
 
-            var workflowPanel = automation.FindWorkflowPanel(mainWindow);
-            if (workflowPanel == null)
+                var workflowPanel = automation.FindWorkflowPanel(mainWindow);
+                if (workflowPanel == null)
+                {
+                    Console.WriteLine("[inspect-workflow] Failed: WorkflowPanel not found");
+                    context.ExitCode = NOT_FOUND;
+                    return;
+                }
+
+                Console.WriteLine("[inspect-workflow] WorkflowPanel found - listing element tree (depth=3):");
+                Console.WriteLine();
+                Console.WriteLine("=== Key Elements to Identify ===");
+                Console.WriteLine("  - Camera status buttons (General, NIR, NIR2, NIR Filtering)");
+                Console.WriteLine("  - Path TextBox controls (Line1SampleName, Line1MoveNir, Line1MoveAllData, etc.)");
+                Console.WriteLine("  - Expander headers (Camera Status, Sample Move Settings, Data Status)");
+                Console.WriteLine();
+                Console.WriteLine("=== Element Tree ===");
+                automation.ListElements(workflowPanel, maxDepth: 3);
+                context.ExitCode = SUCCESS;
+            }
+            catch (Exception ex)
             {
-                Console.WriteLine("[inspect-workflow] Failed: WorkflowPanel not found");
-                return;
+                Console.Error.WriteLine($"[inspect-workflow] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-
-            Console.WriteLine("[inspect-workflow] WorkflowPanel found - listing element tree (depth=3):");
-            Console.WriteLine();
-            Console.WriteLine("=== Key Elements to Identify ===");
-            Console.WriteLine("  - Camera status buttons (General, NIR, NIR2, NIR Filtering)");
-            Console.WriteLine("  - Path TextBox controls (Line1SampleName, Line1MoveNir, Line1MoveAllData, etc.)");
-            Console.WriteLine("  - Expander headers (Camera Status, Sample Move Settings, Data Status)");
-            Console.WriteLine();
-            Console.WriteLine("=== Element Tree ===");
-            automation.ListElements(workflowPanel, maxDepth: 3);
         });
         inspectCommand.AddCommand(inspectWorkflowCommand);
 
         // inspect log: LogPanel 구조 검사
         var inspectLogCommand = new Command("log", "LogPanel 구조 검사");
-        inspectLogCommand.SetHandler(() =>
+        inspectLogCommand.SetHandler((InvocationContext context) =>
         {
-            using var reader = new SkillsScripts.UiAutomation.ChronoDataPanelReader();
-            var mainWindow = reader.FindMainWindow();
-            if (mainWindow == null)
+            try
             {
-                Console.WriteLine("[inspect-log] Failed: MainWindow not found");
-                return;
-            }
-
-            var logPanel = reader.FindLogPanel(mainWindow);
-            if (logPanel == null)
-            {
-                Console.WriteLine("[inspect-log] Failed: LogPanel not found");
-                return;
-            }
-
-            Console.WriteLine("[inspect-log] LogPanel found - listing element tree (depth=2):");
-            Console.WriteLine();
-            Console.WriteLine("=== Key Elements to Identify ===");
-            Console.WriteLine("  - LogDataGrid (DataGrid with Severity, Time, Source, Message columns)");
-            Console.WriteLine("  - SearchBox (TextBox for search filtering)");
-            Console.WriteLine("  - LevelFilter (ComboBox with: All, Debug, Info, Warning, Error)");
-            Console.WriteLine("  - AutoScrollCheckBox (CheckBox for auto-scroll toggle)");
-            Console.WriteLine("  - Action buttons (Clear, QuickSave, OpenLogFolder, Close)");
-            Console.WriteLine();
-
-            // Get log summary
-            var logDataGrid = reader.FindLogDataGrid(logPanel);
-            if (logDataGrid != null)
-            {
-                Console.WriteLine("=== LogDataGrid Summary ===");
-                Console.WriteLine($"  - ControlType: {logDataGrid.ControlType}");
-                Console.WriteLine($"  - Name: '{logDataGrid.Name ?? "(unnamed)"}'");
-                Console.WriteLine($"  - ClassName: '{logDataGrid.ClassName ?? "(null)"}'");
-                Console.WriteLine($"  - AutomationId: '{logDataGrid.AutomationId ?? "(null)"}'");
-
-                var headers = reader.GetLogHeaders(logPanel);
-                if (headers.Count > 0)
+                using var reader = new SkillsScripts.UiAutomation.ChronoDataPanelReader();
+                var mainWindow = reader.FindMainWindow();
+                if (mainWindow == null)
                 {
-                    Console.WriteLine($"  - Columns: {string.Join(", ", headers)}");
+                    Console.WriteLine("[inspect-log] Failed: MainWindow not found");
+                    context.ExitCode = NOT_FOUND;
+                    return;
                 }
 
-                var rowCount = reader.GetLogRowCount(logPanel);
-                Console.WriteLine($"  - Row count: {rowCount}");
-                Console.WriteLine();
-            }
+                var logPanel = reader.FindLogPanel(mainWindow);
+                if (logPanel == null)
+                {
+                    Console.WriteLine("[inspect-log] Failed: LogPanel not found");
+                    context.ExitCode = NOT_FOUND;
+                    return;
+                }
 
-            Console.WriteLine("=== Element Tree (depth=2) ===");
-            using var automation = new UiAuto();
-            automation.ListElements(logPanel, maxDepth: 2);
+                Console.WriteLine("[inspect-log] LogPanel found - listing element tree (depth=2):");
+                Console.WriteLine();
+                Console.WriteLine("=== Key Elements to Identify ===");
+                Console.WriteLine("  - LogDataGrid (DataGrid with Severity, Time, Source, Message columns)");
+                Console.WriteLine("  - SearchBox (TextBox for search filtering)");
+                Console.WriteLine("  - LevelFilter (ComboBox with: All, Debug, Info, Warning, Error)");
+                Console.WriteLine("  - AutoScrollCheckBox (CheckBox for auto-scroll toggle)");
+                Console.WriteLine("  - Action buttons (Clear, QuickSave, OpenLogFolder, Close)");
+                Console.WriteLine();
+
+                // Get log summary
+                var logDataGrid = reader.FindLogDataGrid(logPanel);
+                if (logDataGrid != null)
+                {
+                    Console.WriteLine("=== LogDataGrid Summary ===");
+                    Console.WriteLine($"  - ControlType: {logDataGrid.ControlType}");
+                    Console.WriteLine($"  - Name: '{logDataGrid.Name ?? "(unnamed)"}'");
+                    Console.WriteLine($"  - ClassName: '{logDataGrid.ClassName ?? "(null)"}'");
+                    Console.WriteLine($"  - AutomationId: '{logDataGrid.AutomationId ?? "(null)"}'");
+
+                    var headers = reader.GetLogHeaders(logPanel);
+                    if (headers.Count > 0)
+                    {
+                        Console.WriteLine($"  - Columns: {string.Join(", ", headers)}");
+                    }
+
+                    var rowCount = reader.GetLogRowCount(logPanel);
+                    Console.WriteLine($"  - Row count: {rowCount}");
+                    Console.WriteLine();
+                }
+
+                Console.WriteLine("=== Element Tree (depth=2) ===");
+                using var automation = new UiAuto();
+                automation.ListElements(logPanel, maxDepth: 2);
+                context.ExitCode = SUCCESS;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[inspect-log] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
         });
         inspectCommand.AddCommand(inspectLogCommand);
 
@@ -136,22 +153,30 @@ public class UtilityCommands : ICommandHandler
 
         // config path: Config 파일 위치 확인
         var configPathCommand = new Command("path", "Config 파일 위치 확인");
-        configPathCommand.SetHandler(() =>
+        configPathCommand.SetHandler((InvocationContext context) =>
         {
-            var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
-
-            Console.WriteLine($"[Config Path] {configPath}");
-            Console.WriteLine($"[Exists] {File.Exists(configPath)}");
-
-            if (File.Exists(configPath))
+            try
             {
-                var fileInfo = new FileInfo(configPath);
-                Console.WriteLine($"[Size] {fileInfo.Length} bytes");
-                Console.WriteLine($"[Modified] {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
-            }
+                var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
 
-            Environment.Exit(EXIT_SUCCESS);
+                Console.WriteLine($"[Config Path] {configPath}");
+                Console.WriteLine($"[Exists] {File.Exists(configPath)}");
+
+                if (File.Exists(configPath))
+                {
+                    var fileInfo = new FileInfo(configPath);
+                    Console.WriteLine($"[Size] {fileInfo.Length} bytes");
+                    Console.WriteLine($"[Modified] {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+                }
+
+                context.ExitCode = SUCCESS;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[config path] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
         });
         configCommand.AddCommand(configPathCommand);
 
@@ -159,20 +184,22 @@ public class UtilityCommands : ICommandHandler
         var configReadCommand = new Command("read", "Config 파일 내용 읽기");
         var jsonConfigOption = new Option<bool>(["--json", "-j"], "JSON 형식으로 출력");
         configReadCommand.AddOption(jsonConfigOption);
-        configReadCommand.SetHandler((json) =>
+        configReadCommand.SetHandler((InvocationContext context) =>
         {
-            var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
-
-            if (!File.Exists(configPath))
-            {
-                Console.WriteLine($"[Config] File not found: {configPath}");
-                Environment.Exit(EXIT_NOT_FOUND);
-                return;
-            }
-
             try
             {
+                var json = context.ParseResult.GetValueForOption(jsonConfigOption);
+
+                var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
+
+                if (!File.Exists(configPath))
+                {
+                    Console.WriteLine($"[Config] File not found: {configPath}");
+                    context.ExitCode = NOT_FOUND;
+                    return;
+                }
+
                 var jsonContent = File.ReadAllText(configPath);
 
                 if (json)
@@ -193,42 +220,43 @@ public class UtilityCommands : ICommandHandler
                     Console.WriteLine(jsonContent);
                 }
 
-                Environment.Exit(EXIT_SUCCESS);
+                context.ExitCode = SUCCESS;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Config] Error reading file: {ex.Message}");
-                Environment.Exit(EXIT_ERROR);
-                return;
+                Console.Error.WriteLine($"[config read] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-        }, jsonConfigOption);
+        });
         configCommand.AddCommand(configReadCommand);
 
         // config get: 특정 설정 값 읽기 (경로 등)
         var configGetCommand = new Command("get", "특정 설정 값 읽기");
         var keyOption = new Option<string>(["--key", "-k"], "설정 키 (예: folderPaths.line1SampleName)");
         configGetCommand.AddOption(keyOption);
-        configGetCommand.SetHandler((key) =>
+        configGetCommand.SetHandler((InvocationContext context) =>
         {
-            if (string.IsNullOrEmpty(key))
-            {
-                Console.WriteLine("[Config] --key parameter is required");
-                Environment.Exit(EXIT_INVALID_ARGUMENT);
-                return;
-            }
-
-            var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
-
-            if (!File.Exists(configPath))
-            {
-                Console.WriteLine($"[Config] File not found: {configPath}");
-                Environment.Exit(EXIT_NOT_FOUND);
-                return;
-            }
-
             try
             {
+                var key = context.ParseResult.GetValueForOption(keyOption);
+
+                if (string.IsNullOrEmpty(key))
+                {
+                    Console.WriteLine("[Config] --key parameter is required");
+                    context.ExitCode = INVALID_ARGUMENT;
+                    return;
+                }
+
+                var localAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var configPath = Path.Combine(localAppDataPath, "prische", "ChronoView", "config.json");
+
+                if (!File.Exists(configPath))
+                {
+                    Console.WriteLine($"[Config] File not found: {configPath}");
+                    context.ExitCode = NOT_FOUND;
+                    return;
+                }
+
                 var jsonContent = File.ReadAllText(configPath);
                 using var jsonDoc = JsonDocument.Parse(jsonContent);
                 var root = jsonDoc.RootElement;
@@ -246,21 +274,20 @@ public class UtilityCommands : ICommandHandler
                     else
                     {
                         Console.WriteLine($"[Config] Key not found: {key}");
-                        Environment.Exit(EXIT_NOT_FOUND);
+                        context.ExitCode = NOT_FOUND;
                         return;
                     }
                 }
 
                 Console.WriteLine($"[{key}] {current}");
-                Environment.Exit(EXIT_SUCCESS);
+                context.ExitCode = SUCCESS;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Config] Error reading key: {ex.Message}");
-                Environment.Exit(EXIT_ERROR);
-                return;
+                Console.Error.WriteLine($"[config get] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-        }, keyOption);
+        });
         configCommand.AddCommand(configGetCommand);
 
         rootCommand.AddCommand(configCommand);

@@ -1,6 +1,8 @@
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Text.Json;
 using Toolbar = SkillsScripts.UiAutomation.ChronoToolbarController;
+using static UiAutomation.Commands.ExitCodes;
 
 namespace UiAutomation.Commands;
 
@@ -10,11 +12,6 @@ namespace UiAutomation.Commands;
 /// </summary>
 public class ToolbarCommands : ICommandHandler
 {
-    // Exit code constants matching Program.cs
-    private const int EXIT_SUCCESS = 0;
-    private const int EXIT_ERROR = 1;
-    private const int EXIT_NOT_FOUND = 2;
-
     /// <summary>
     /// Registers all toolbar commands with the root command.
     /// </summary>
@@ -32,114 +29,162 @@ public class ToolbarCommands : ICommandHandler
 
         // toolbar start: Start 버튼 클릭
         var toolbarStartCommand = new Command("start", "Start 버튼 클릭");
-        toolbarStartCommand.SetHandler(() =>
+        toolbarStartCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Toolbar();
-            var result = controller.ClickStartButton();
-            if (result)
+            try
             {
-                PrintOutput("[toolbar-start] Success: Start button clicked");
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Toolbar();
+                var result = controller.ClickStartButton();
+                if (result)
+                {
+                    PrintOutput("[toolbar-start] Success: Start button clicked");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    PrintOutput("[toolbar-start] Failed: Could not click Start button");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                PrintOutput("[toolbar-start] Failed: Could not click Start button");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[toolbar-start] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         toolbarCommand.AddCommand(toolbarStartCommand);
 
         // toolbar stop: Stop 버튼 클릭
         var toolbarStopCommand = new Command("stop", "Stop 버튼 클릭");
-        toolbarStopCommand.SetHandler(() =>
+        toolbarStopCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Toolbar();
-            var result = controller.ClickStopButton();
-            if (result)
+            try
             {
-                PrintOutput("[toolbar-stop] Success: Stop button clicked");
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Toolbar();
+                var result = controller.ClickStopButton();
+                if (result)
+                {
+                    PrintOutput("[toolbar-stop] Success: Stop button clicked");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    PrintOutput("[toolbar-stop] Failed: Could not click Stop button");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                PrintOutput("[toolbar-stop] Failed: Could not click Stop button");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[toolbar-stop] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         toolbarCommand.AddCommand(toolbarStopCommand);
 
         // toolbar settings: Settings (Setup) 버튼 클릭
         var toolbarSettingsCommand = new Command("settings", "Settings (Setup) 버튼 클릭");
-        toolbarSettingsCommand.SetHandler(() =>
+        toolbarSettingsCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Toolbar();
-            var result = controller.ClickSettingsButton();
-            if (result)
+            try
             {
-                PrintOutput("[toolbar-settings] Success: Settings button clicked");
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Toolbar();
+                var result = controller.ClickSettingsButton();
+                if (result)
+                {
+                    PrintOutput("[toolbar-settings] Success: Settings button clicked");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    PrintOutput("[toolbar-settings] Failed: Could not click Settings button");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                PrintOutput("[toolbar-settings] Failed: Could not click Settings button");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[toolbar-settings] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         toolbarCommand.AddCommand(toolbarSettingsCommand);
 
         // toolbar refresh: Refresh 버튼 클릭
         var toolbarRefreshCommand = new Command("refresh", "Refresh 버튼 클릭");
-        toolbarRefreshCommand.SetHandler(() =>
+        toolbarRefreshCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Toolbar();
-            var result = controller.ClickRefreshButton();
-            if (result)
+            try
             {
-                PrintOutput("[toolbar-refresh] Success: Refresh button clicked");
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Toolbar();
+                var result = controller.ClickRefreshButton();
+                if (result)
+                {
+                    PrintOutput("[toolbar-refresh] Success: Refresh button clicked");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    PrintOutput("[toolbar-refresh] Failed: Could not click Refresh button");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                PrintOutput("[toolbar-refresh] Failed: Could not click Refresh button");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[toolbar-refresh] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         toolbarCommand.AddCommand(toolbarRefreshCommand);
 
         // toolbar move: Move 버튼 클릭
         var toolbarMoveCommand = new Command("move", "Move 버튼 클릭");
-        toolbarMoveCommand.SetHandler(() =>
+        toolbarMoveCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Toolbar();
-            var result = controller.ClickMoveButton();
-            if (result)
+            try
             {
-                PrintOutput("[toolbar-move] Success: Move button clicked");
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Toolbar();
+                var result = controller.ClickMoveButton();
+                if (result)
+                {
+                    PrintOutput("[toolbar-move] Success: Move button clicked");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    PrintOutput("[toolbar-move] Failed: Could not click Move button");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                PrintOutput("[toolbar-move] Failed: Could not click Move button");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[toolbar-move] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         toolbarCommand.AddCommand(toolbarMoveCommand);
 
         // toolbar delete: Delete 버튼 클릭
         var toolbarDeleteCommand = new Command("delete", "Delete 버튼 클릭");
-        toolbarDeleteCommand.SetHandler(() =>
+        toolbarDeleteCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Toolbar();
-            var result = controller.ClickDeleteButton();
-            if (result)
+            try
             {
-                PrintOutput("[toolbar-delete] Success: Delete button clicked");
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Toolbar();
+                var result = controller.ClickDeleteButton();
+                if (result)
+                {
+                    PrintOutput("[toolbar-delete] Success: Delete button clicked");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    PrintOutput("[toolbar-delete] Failed: Could not click Delete button");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                PrintOutput("[toolbar-delete] Failed: Could not click Delete button");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[toolbar-delete] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         toolbarCommand.AddCommand(toolbarDeleteCommand);
@@ -147,66 +192,96 @@ public class ToolbarCommands : ICommandHandler
         // toolbar list: 모든 툴바 버튼 나열
         var toolbarListCommand = new Command("list", "모든 툴바 버튼 나열");
         toolbarListCommand.AddOption(jsonOption);
-        toolbarListCommand.SetHandler((json) =>
+        toolbarListCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Toolbar();
-            var buttons = controller.GetAvailableButtons();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                using var controller = new Toolbar();
+                var buttons = controller.GetAvailableButtons();
+
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        count = buttons.Length,
-                        buttons = buttons
-                    }
-                });
-            }
-            else
-            {
-                PrintOutput($"[toolbar-list] Found {buttons.Length} toolbar button(s):");
-                foreach (var button in buttons)
-                {
-                    PrintOutput($"  - '{button}'");
+                        success = true,
+                        data = new
+                        {
+                            count = buttons.Length,
+                            buttons = buttons
+                        }
+                    });
                 }
+                else
+                {
+                    PrintOutput($"[toolbar-list] Found {buttons.Length} toolbar button(s):");
+                    foreach (var button in buttons)
+                    {
+                        PrintOutput($"  - '{button}'");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[toolbar-list] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         toolbarCommand.AddCommand(toolbarListCommand);
 
         // toolbar click: 지정한 텍스트의 버튼 클릭
         var buttonTextArgument = new Argument<string>("text", "버튼 텍스트 (예: '시작', '중지', '설정')");
         var toolbarClickCommand = new Command("click", "지정한 텍스트의 버튼 클릭");
         toolbarClickCommand.AddArgument(buttonTextArgument);
-        toolbarClickCommand.SetHandler((text) =>
+        toolbarClickCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Toolbar();
-            var result = controller.ClickToolbarButton(text);
-            if (result)
+            try
             {
-                PrintOutput($"[toolbar-click] Success: Button '{text}' clicked");
-                Environment.Exit(EXIT_SUCCESS);
+                var text = context.ParseResult.GetValueForArgument(buttonTextArgument);
+
+                using var controller = new Toolbar();
+                var result = controller.ClickToolbarButton(text);
+                if (result)
+                {
+                    PrintOutput($"[toolbar-click] Success: Button '{text}' clicked");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    PrintOutput($"[toolbar-click] Failed: Could not click button '{text}'");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                PrintOutput($"[toolbar-click] Failed: Could not click button '{text}'");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[toolbar-click] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-        }, buttonTextArgument);
+        });
         toolbarCommand.AddCommand(toolbarClickCommand);
 
         // toolbar enabled: 버튼 활성화 상태 확인
         var toolbarEnabledCommand = new Command("enabled", "버튼 활성화 상태 확인");
         toolbarEnabledCommand.AddArgument(buttonTextArgument);
-        toolbarEnabledCommand.SetHandler((text) =>
+        toolbarEnabledCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Toolbar();
-            var isEnabled = controller.IsButtonEnabled(text);
-            PrintOutput(isEnabled ? $"[toolbar-enabled] Button '{text}' is enabled" : $"[toolbar-enabled] Button '{text}' is disabled");
-            Environment.Exit(EXIT_SUCCESS);
-        }, buttonTextArgument);
+            try
+            {
+                var text = context.ParseResult.GetValueForArgument(buttonTextArgument);
+
+                using var controller = new Toolbar();
+                var isEnabled = controller.IsButtonEnabled(text);
+                PrintOutput(isEnabled ? $"[toolbar-enabled] Button '{text}' is enabled" : $"[toolbar-enabled] Button '{text}' is disabled");
+                context.ExitCode = SUCCESS;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[toolbar-enabled] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         toolbarCommand.AddCommand(toolbarEnabledCommand);
 
         rootCommand.AddCommand(toolbarCommand);
