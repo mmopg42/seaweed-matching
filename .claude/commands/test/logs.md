@@ -23,7 +23,7 @@ Working directory: C:\workspace\seaweed\gui_kiro_v2
 UI Automation CLI: skills_scripts/ui_automation/bin/Debug/net10.0/ui_automation.exe
 
 LogPanel: In-memory, accessible via UI Automation
-Console logs: %LOCALAPPDATA%\prische\ChronoView\Logs\{YYYYMMDD}\*.log
+Console logs: %LOCALAPPDATA%\prische\ChronoView\Logs\{YYYYMMDD}\*.log (auto-discovered with --latest flag)
 
 Arguments: $ARGUMENTS
 </context>
@@ -67,25 +67,53 @@ dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- logs s
 
 **3. Console log actions (developer debug logs)**
 
-List available log files:
-```bash
-# List all log files
-dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs list --json
+### Using automatic latest log discovery
 
-# List log files for specific date
-dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs list --date 20260118 --json
+The `--latest` flag automatically finds the most recent yyyyMMdd log folder. This is the recommended approach for most cases:
+
+```bash
+# List files from latest log folder (recommended)
+dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs list --latest --json
+
+# Tail from latest log folder
+dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs tail 50 --latest --json
+
+# Search in latest log folder
+dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs search "Exception" --latest --json
 ```
 
-Read recent console logs:
+### Using specific date folders
+
+For historical analysis, use `--date` to specify a particular session:
+
 ```bash
-# Get last 50 lines from latest log file
+# List log files for specific date
+dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs list --date 20260118 --json
+
+# Tail from specific date
+dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs tail 50 --date 20260118 --json
+
+# Search in specific date
+dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs search "Exception" --date 20260118 --json
+```
+
+### When to use --latest vs --date
+
+- **Use `--latest`** for automation, debugging current sessions, or when you don't know the exact log date
+- **Use `--date`** only when analyzing a specific past session or comparing historical logs
+
+### Other console log commands
+
+Read recent console logs (default behavior uses all folders):
+```bash
+# Get last 50 lines (default: latest folder)
 dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs tail 50 --json
 
 # Get last 100 lines
 dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs tail 100 --json
 ```
 
-Search console logs:
+Search console logs (default behavior uses all folders):
 ```bash
 # Search for exceptions
 dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs search "Exception" --json
