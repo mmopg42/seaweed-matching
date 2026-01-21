@@ -113,7 +113,16 @@ Windows UI Automation with FlaUI
 
 ---
 
-### 🚧 v1.5 CLI Skill Encapsulation (In Progress)
+### ✅ v1.5 CLI Skill Encapsulation (Shipped: 2026-01-22)
+
+**Phases:** 28-32 (5 phases) | **Timeline:** 1 day | **LOC:** ~700
+
+**Delivered:**
+- Skill registry with 90+ semantic skill definitions organized by 13 categories
+- Orchestrator-prohibited CLI command construction (enforced in docs)
+- Executor skill-to-CLI translation patterns with validation
+- Standardized JSON responses with retryable/suggestion fields
+- Dry-run mode for safe command validation without execution
 
 **Milestone Goal:** AI agents use semantic skill names for test automation instead of constructing CLI commands directly. This creates a clean separation: orchestrators define WHAT to test (intent), executors handle HOW to execute it (implementation).
 
@@ -225,9 +234,9 @@ Plans:
 5. test-executor.md documents dry-run usage patterns
 
 Plans:
-- [ ] 32-01-PLAN.md — Create dry-run infrastructure (models, helper extension, validation logic)
-- [ ] 32-02-PLAN.md — Add --dry-run option to all command handlers
-- [ ] 32-03-PLAN.md — Update documentation (test-executor.md, test-orchestrator.md) with dry-run patterns
+- [x] 32-01-PLAN.md — Create dry-run infrastructure (models, helper extension, validation logic)
+- [x] 32-02-PLAN.md — Add --dry-run option to all command handlers
+- [x] 32-03-PLAN.md — Update documentation (test-executor.md, test-orchestrator.md) with dry-run patterns
 
 ---
 
@@ -240,7 +249,7 @@ Plans:
 | v1.2 Test Automation | 20-21 | 2 | ✅ Complete | 2026-01-20 |
 | v1.3 Setup & Perf | 22-23 | 6 | ✅ Complete | 2026-01-20 |
 | v1.4 Agent Architecture | 24-27 | 8 | ✅ Complete | 2026-01-21 |
-| v1.5 CLI Skill Encapsulation | 28-32 | 10 | 🚧 In progress | - |
+| v1.5 CLI Skill Encapsulation | 28-32 | 10 | ✅ Complete | 2026-01-22 |
 
 | Phase | Milestone | Plans | Status |
 |-------|-----------|-------|--------|
@@ -252,16 +261,16 @@ Plans:
 | 27. Delegation Fix | v1.4 | 2 | ✅ Complete |
 | 28. Skill Registry | v1.5 | 1 | ✅ Complete |
 | 29. Orchestrator Integration | v1.5 | 1 | ✅ Complete |
-| 30. Executor Translation | v1.5 | 1 | Ready |
+| 30. Executor Translation | v1.5 | 1 | ✅ Complete |
 | 31. CLI Schema | v1.5 | 4 | ✅ Complete |
-| 32. Dry-Run Mode | v1.5 | 3 | 📋 Planned |
+| 32. Dry-Run Mode | v1.5 | 3 | ✅ Complete |
 
 ## Current State
 
-**Status:** 🚧 v1.5 CLI Skill Encapsulation - Phase 32 planned, ready for execution.
+**Status:** ✅ v1.5 CLI Skill Encapsulation - All 5 phases complete (28-32).
 
-**Next Step:** Run `/gsd:execute-phase 32` to implement dry-run mode.
+**Next Step:** Run `/gsd:complete-milestone` to archive v1.5 and plan next milestone.
 
 ---
 
-*Last updated: 2026-01-22 - Phase 32 planned*
+*Last updated: 2026-01-22 - Phase 32 complete, v1.5 milestone ready*

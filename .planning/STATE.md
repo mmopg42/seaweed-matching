@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-21)
 
 **Core value:** UI 요소 식별 및 조작 — ChronoView의 모든 UI 요소를 안정적으로 식별하고 조작
-**Current focus:** v1.5 CLI Skill Encapsulation
+**Current focus:** v1.5 CLI Skill Encapsulation - Milestone complete, ready for archival
 
 ## Current Position
 
 Phase: 32 of 32 (Dry Run Mode)
 Plan: 3 of 3 in current phase
-Status: Phase complete
+Status: Phase complete, milestone v1.5 ready for archival
 Last activity: 2026-01-22 — Completed 32-03: Dry-Run Documentation
 
-Progress: [█████████░░░░░░░░░] 46.7% (66/141 plans estimated)
+Progress: [█████████░░░░░░░░░] 46.8% (67/143 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 66
-- Average duration: ~44 min
-- Total execution time: ~48.5 hours
+- Total plans completed: 67
+- Average duration: ~43 min
+- Total execution time: ~48 hours
 
 **By Phase:**
 
@@ -32,7 +32,7 @@ Progress: [█████████░░░░░░░░░] 46.7% (66/141
 | v1.2 (20-21) | 2 | ~1h | ~30 min |
 | v1.3 (22-23) | 6 | ~4h | ~40 min |
 | v1.4 (24-27) | 8 | ~5h | ~38 min |
-| v1.5 (28-32) | 11 | ~3.5h | ~19 min |
+| v1.5 (28-32) | 10 | ~3h | ~18 min |
 
 **Recent Trend:**
 - Last 5 phases: 6-3-2-2-3 plans
