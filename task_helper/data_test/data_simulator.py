@@ -82,6 +82,9 @@ class DataSimulator:
         self._outlier_lock = threading.Lock()
         self.current_simulation_id = None
 
+        # State file for cross-process status queries
+        self.state_file = os.path.join(self.config_dir, "simulation_state.json")
+
         # Load saved configuration
         self.load_config()
 
@@ -1207,6 +1210,69 @@ class DataSimulator:
     def stop(self):
         """Stop the running simulation"""
         self.is_running = False
+
+    def _get_state_file_path(self):
+        """Get the path to the simulation state file.
+
+        Returns:
+            Path to simulation_state.json in config_dir
+        """
+        return os.path.join(self.config_dir, "simulation_state.json")
+
+    def _update_state(self, status, progress, items_created, simulation_id):
+        """Write simulation state to file.
+
+        Args:
+            status: Current status (running, completed, idle, error)
+            progress: Progress percentage (0-100)
+            items_created: Number of items created/moved
+            simulation_id: UUID of the current simulation
+        """
+        state = {
+            "status": status,
+            "progress": round(progress, 1),
+            "items_created": items_created,
+            "simulation_id": simulation_id,
+            "last_activity": datetime.now().isoformat()
+        }
+        try:
+            with open(self._get_state_file_path(), 'w') as f:
+                json.dump(state, f, indent=2)
+        except Exception as e:
+            print(f"[Warning] Failed to write state file: {e}")
+
+    def _load_state(self):
+        """Load simulation state from file.
+
+        Returns:
+            State dictionary or None if file doesn't exist or is invalid
+        """
+        state_path = self._get_state_file_path()
+        if not os.path.exists(state_path):
+            return None
+        try:
+            with open(state_path, 'r') as f:
+                return json.load(f)
+        except Exception:
+            return None
+
+    def get_status(self):
+        """Get current simulation status.
+
+        Returns:
+            Dictionary with status, progress, items_created, simulation_id, last_activity
+            Returns idle state if no state file exists
+        """
+        state = self._load_state()
+        if state is None:
+            return {
+                "status": "idle",
+                "progress": 0,
+                "items_created": 0,
+                "simulation_id": None,
+                "last_activity": None
+            }
+        return state
 
     def cleanup_test_data(self, target_path):
         """Remove all test data from target directory.
