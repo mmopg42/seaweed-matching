@@ -2374,8 +2374,17 @@ Examples:
                         help='Clean up test data after simulation')
     parser.add_argument('--delayed', action='store_true',
                         help='Enable delayed file creation (10-40s random delay)')
+    parser.add_argument('--status', action='store_true',
+                        help='Show simulation status and exit')
 
     args = parser.parse_args()
+
+    # Handle --status (works independently, reads from state file)
+    if args.status:
+        simulator = DataSimulator()
+        status = simulator.get_status()
+        print(json.dumps(status, indent=2))
+        sys.exit(0)
 
     if args.cli:
         # CLI mode
