@@ -3,6 +3,7 @@ using System.CommandLine.Invocation;
 using System.Diagnostics;
 using static UiAutomation.Commands.ExitCodes;
 using static UiAutomation.Commands.JsonResponseHelper;
+using static UiAutomation.Commands.DryRunHandler;
 
 namespace UiAutomation.Commands;
 
@@ -39,6 +40,12 @@ public class AppLifecycleCommands : ICommandHandler
         launchCommand.AddOption(jsonOption);
         launchCommand.SetHandler(async (InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "APP_LAUNCH", "app launch"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -87,6 +94,12 @@ public class AppLifecycleCommands : ICommandHandler
         stopCommand.AddOption(jsonOption);
         stopCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "APP_STOP", "app stop"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -135,6 +148,12 @@ public class AppLifecycleCommands : ICommandHandler
         restartCommand.AddOption(jsonOption);
         restartCommand.SetHandler(async (InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "APP_RESTART", "app restart"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
@@ -184,6 +203,12 @@ public class AppLifecycleCommands : ICommandHandler
         statusCommand.AddOption(jsonOption);
         statusCommand.SetHandler((InvocationContext context) =>
         {
+            // Dry-run check - return early if in dry-run mode
+            if (CheckDryRun(context, "APP_STATUS", "app status"))
+            {
+                return; // Dry-run response already printed
+            }
+
             try
             {
                 var json = context.ParseResult.GetValueForOption(jsonOption);
