@@ -10,11 +10,27 @@ See: .planning/PROJECT.md (updated 2026-01-21)
 ## Current Position
 
 **Milestone:** v1.4 Test Agent Architecture & Reliability
-**Phase:** 25 (Simulator Status)
-**Plan:** 02 (Status Documentation)
+**Phase:** 26 (Dynamic Log Path Discovery)
+**Plan:** 01 (Automatic Latest Log Discovery)
 **Status:** Complete
 
-Progress: ██████████ 100% (Phase 25: 2/2 plans complete)
+Progress: █████████░ 50% (Phase 26: 1/2 plans complete)
+
+## Plan 26-01 Summary
+
+**Timeline:** 4 min (2026-01-21)
+**Deliverables:**
+- GetLatestLogDateFolder() method for yyyyMMdd folder discovery
+- GetLogFilesFromLatest() convenience method for automatic log file listing
+- --latest flag for console-logs list, tail, search commands
+
+**Commits:** 3 atomic commits
+
+**Features:**
+- yyyyMMdd folder validation via DateTime.TryParseExact (same pattern as LogCleanupService)
+- String comparison for folder sorting (yyyyMMdd format = lexicographic = chronological)
+- Explicit option precedence: --date > --latest > default (all folders)
+- Empty/non-existent directories handled gracefully (return empty arrays, no crashes)
 
 ## Plan 24-01 Summary
 
@@ -250,6 +266,9 @@ Decisions from all phases are logged in PROJECT.md.
 | 25-02 | Status polling patterns | Background execution with &/Start-Process for cross-process status queries |
 | 25-02 | Bash polling via grep | Simple JSON parsing without jq dependency |
 | 25-02 | PowerShell polling | Select-String regex-based JSON parsing for Windows |
+| 26-01 | yyyyMMdd folder validation | DateTime.TryParseExact for consistent folder discovery (same as LogCleanupService) |
+| 26-01 | String-based folder sorting | yyyyMMdd format guarantees lexicographic = chronological order |
+| 26-01 | Explicit option precedence | --date > --latest > default for predictable CLI behavior |
 
 ### Deferred Issues
 
@@ -283,8 +302,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed Phase 25-02 (Status Documentation)
-Resume file: None (Phase 25 complete, ready for Phase 26)
+Stopped at: Completed Phase 26-01 (Automatic Latest Log Discovery)
+Resume file: None (Phase 26-01 complete, ready for Phase 26-02)
 
 ## Roadmap Evolution
 
@@ -298,9 +317,10 @@ Resume file: None (Phase 25 complete, ready for Phase 26)
 - Phase 23 complete: Performance optimization + CLI-01 commands (open-settings, camera-states)
 - Phase 24 complete: Error Diagnosis with centralized ExitCodes and InvocationContext pattern
 - Phase 25 complete: Simulator status CLI endpoint + documentation with polling patterns
-- 10 controller methods + 11 CLI commands + config verification + optimized execution patterns + centralized error handling + status query + polling patterns
+- Phase 26 in progress: Dynamic log path discovery (Plan 26-01 complete, Plan 26-02 pending)
+- 10 controller methods + 11 CLI commands + config verification + optimized execution patterns + centralized error handling + status query + polling patterns + automatic log folder discovery
 - v1.3 Setup Automation & Test Reliability: Phase 22 complete, Phase 23 complete
-- v1.4 Test Agent Architecture & Reliability: Phase 24 complete (100%), Phase 25 complete (100%)
+- v1.4 Test Agent Architecture & Reliability: Phase 24 complete (100%), Phase 25 complete (100%), Phase 26 in progress (50%)
 
 **v1.2 Test Automation Enhancement - SHIPPED**
 
@@ -322,4 +342,4 @@ Resume file: None (Phase 25 complete, ready for Phase 26)
 
 ---
 
-*Updated: 2026-01-21 after Phase 25-02 completion - Phase 25: 2/2 plans complete*
+*Updated: 2026-01-21 after Phase 26-01 completion - Phase 26: 1/2 plans complete*
