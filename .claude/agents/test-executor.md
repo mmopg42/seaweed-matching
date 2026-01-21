@@ -102,6 +102,31 @@ Simulation state is persisted to: `%config_dir%/simulation_state.json`
 - `simulation_id`: UUID for tracking this simulation (changes each run)
 - `last_activity`: ISO 8601 timestamp of last file operation
 
+**Windows PowerShell Polling Example:**
+```powershell
+# Start simulation in background
+Start-Process -FilePath "python" -ArgumentList "task_helper\data_test\data_simulator.py","--cli","--read-config","--mode","dummy","--line","line1" -NoNewWindow
+
+# Poll for completion
+for ($i = 0; $i -lt 60; $i++) {
+  $STATUS = python task_helper\data_test\data_simulator.py --status
+  $STATE = ($STATUS | Select-String '"status":\s*"(\w+)"').Matches[0].Groups[1].Value
+
+  if ($STATE -eq "completed") {
+    Write-Host "Simulation completed"
+    break
+  }
+  elseif ($STATE -eq "error") {
+    Write-Host "Simulation failed!"
+    break
+  }
+
+  $PROGRESS = ($STATUS | Select-String '"progress":\s*([\d.]+)').Matches[0].Groups[1].Value
+  Write-Host "Progress: $PROGRESS%"
+  Start-Sleep -Seconds 5
+}
+```
+
 **Configuration Location:** `%LOCALAPPDATA%\prische\ChronoView\config.json`
 
 **What it generates:**
