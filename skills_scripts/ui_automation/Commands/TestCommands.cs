@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Text.Json;
 using UiAuto = SkillsScripts.UiAutomation.UiAutomation;
 using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
@@ -7,6 +8,7 @@ using Workflow = SkillsScripts.UiAutomation.ChronoWorkflowController;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
 using Settings = SkillsScripts.UiAutomation.ChronoSettingsController;
 using FileOps = SkillsScripts.UiAutomation.ChronoFileOperationsController;
+using static UiAutomation.Commands.ExitCodes;
 
 namespace UiAutomation.Commands;
 
@@ -20,13 +22,6 @@ namespace UiAutomation.Commands;
 /// </summary>
 public class TestCommands : ICommandHandler
 {
-    // Exit code constants matching Program.cs
-    private const int EXIT_SUCCESS = 0;
-    private const int EXIT_ERROR = 1;
-    private const int EXIT_NOT_FOUND = 2;
-    private const int EXIT_TIMEOUT = 3;
-    private const int EXIT_INVALID_ARGUMENT = 4;
-
     /// <summary>
     /// Registers all test, scenario, and batch commands with the root command.
     /// </summary>
@@ -58,137 +53,14 @@ public class TestCommands : ICommandHandler
         // test connectivity: ChronoView 실행 중인지 확인
         var testConnectivityCommand = new Command("connectivity", "ChronoView 연결 상태 확인");
         testConnectivityCommand.AddOption(jsonOption);
-        testConnectivityCommand.SetHandler((json) =>
+        testConnectivityCommand.SetHandler((InvocationContext context) =>
         {
-            using var automation = new UiAuto();
-            var finder = new Finder(automation.GetAutomation());
-            var window = finder.FindMainWindow();
-
-            if (json)
+            try
             {
-                PrintJsonOutput(new
-                {
-                    success = true,
-                    data = new
-                    {
-                        connected = window != null,
-                        windowFound = window != null,
-                        appName = window != null ? window.Name : null,
-                        timestamp = DateTime.Now.ToString("o")
-                    }
-                });
-            }
-            else
-            {
-                if (window != null)
-                {
-                    PrintOutput($"[test-connectivity] Connected: '{window.Name}'");
-                }
-                else
-                {
-                    PrintOutput("[test-connectivity] Not connected: ChronoView MainWindow not found");
-                }
-            }
-            Environment.Exit(window != null ? EXIT_SUCCESS : EXIT_NOT_FOUND);
-        }, jsonOption);
-        testCommand.AddCommand(testConnectivityCommand);
-
-        // test capabilities: 사용 가능한 자동화 기능 목록
-        var testCapabilitiesCommand = new Command("capabilities", "사용 가능한 자동화 기능 목록");
-        testCapabilitiesCommand.AddOption(jsonOption);
-        testCapabilitiesCommand.SetHandler((json) =>
-        {
-            using var automation = new UiAuto();
-            var finder = new Finder(automation.GetAutomation());
-
-            // Check which windows are available
-            var mainWindow = finder.FindMainWindow();
-            var setupWindow = finder.FindSetupWindow();
-            var settingsDialog = finder.FindSettingsDialog();
-
-            // Get available controllers/capabilities
-            var windows = new List<object>();
-            var controllers = new List<string>();
-            var commands = new List<string>();
-
-            if (mainWindow != null)
-            {
-                windows.Add(new { type = "MainWindow", title = mainWindow.Name, accessible = true });
-                controllers.Add("ChronoToolbarController");
-                controllers.Add("ChronoDataPanelReader");
-                controllers.Add("ChronoWorkflowController");
-                controllers.Add("ChronoFileOperationsController");
-                commands.Add("toolbar");
-                commands.Add("datagrid");
-                commands.Add("workflow");
-                commands.Add("logs");
-                commands.Add("file-ops");
-            }
-            else
-            {
-                windows.Add(new { type = "MainWindow", accessible = false });
-            }
-
-            if (setupWindow != null)
-            {
-                windows.Add(new { type = "SetupWindow", title = setupWindow.Name, accessible = true });
-            }
-            else
-            {
-                windows.Add(new { type = "SetupWindow", accessible = false });
-            }
-
-            if (settingsDialog != null)
-            {
-                windows.Add(new { type = "SettingsDialog", title = settingsDialog.Name, accessible = true });
-                controllers.Add("ChronoSettingsController");
-                commands.Add("settings-dialog");
-            }
-            else
-            {
-                windows.Add(new { type = "SettingsDialog", accessible = false });
-            }
-
-            if (json)
-            {
-                PrintJsonOutput(new
-                {
-                    success = true,
-                    data = new
-                    {
-                        windows,
-                        controllers = controllers.Distinct().ToList(),
-                        commands = commands.Distinct().ToList()
-                    }
-                });
-            }
-            else
-            {
-                PrintOutput("[test-capabilities] Available automation capabilities:");
-                PrintOutput("  Windows:");
-                foreach (var w in windows)
-                {
-                    PrintOutput($"    - {w}");
-                }
-                PrintOutput($"  Controllers: {string.Join(", ", controllers.Distinct())}");
-                PrintOutput($"  Commands: {string.Join(", ", commands.Distinct())}");
-            }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
-        testCommand.AddCommand(testCapabilitiesCommand);
-
-        // test datagrid: DataGrid 접근 가능 여부 확인
-        var testDatagridCommand = new Command("datagrid", "DataGrid 접근 가능 여부 및 행 개수 확인");
-        testDatagridCommand.AddOption(jsonOption);
-        testDatagridCommand.SetHandler((json) =>
-        {
-            using var reader = new DataReader();
-            var dataGrid = reader.FindDataGrid();
-
-            if (dataGrid != null)
-            {
-                var rowCount = reader.GetDataRowCount();
-                var headers = reader.GetDataGridHeaders();
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var automation = new UiAuto();
+                var finder = new Finder(automation.GetAutomation());
+                var window = finder.FindMainWindow();
 
                 if (json)
                 {
@@ -197,37 +69,187 @@ public class TestCommands : ICommandHandler
                         success = true,
                         data = new
                         {
-                            accessible = true,
-                            rowCount = rowCount,
-                            headers = headers
+                            connected = window != null,
+                            windowFound = window != null,
+                            appName = window != null ? window.Name : null,
+                            timestamp = DateTime.Now.ToString("o")
                         }
                     });
                 }
                 else
                 {
-                    PrintOutput($"[test-datagrid] Accessible: {rowCount} row(s), {headers.Count} column(s)");
-                    PrintOutput($"  Columns: {string.Join(", ", headers)}");
+                    if (window != null)
+                    {
+                        PrintOutput($"[test-connectivity] Connected: '{window.Name}'");
+                    }
+                    else
+                    {
+                        PrintOutput("[test-connectivity] Not connected: ChronoView MainWindow not found");
+                    }
                 }
-                Environment.Exit(EXIT_SUCCESS);
+                context.ExitCode = window != null ? SUCCESS : NOT_FOUND;
             }
-            else
+            catch (Exception ex)
             {
+                Console.Error.WriteLine($"[test-connectivity] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
+        testCommand.AddCommand(testConnectivityCommand);
+
+        // test capabilities: 사용 가능한 자동화 기능 목록
+        var testCapabilitiesCommand = new Command("capabilities", "사용 가능한 자동화 기능 목록");
+        testCapabilitiesCommand.AddOption(jsonOption);
+        testCapabilitiesCommand.SetHandler((InvocationContext context) =>
+        {
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var automation = new UiAuto();
+                var finder = new Finder(automation.GetAutomation());
+
+                // Check which windows are available
+                var mainWindow = finder.FindMainWindow();
+                var setupWindow = finder.FindSetupWindow();
+                var settingsDialog = finder.FindSettingsDialog();
+
+                // Get available controllers/capabilities
+                var windows = new List<object>();
+                var controllers = new List<string>();
+                var commands = new List<string>();
+
+                if (mainWindow != null)
+                {
+                    windows.Add(new { type = "MainWindow", title = mainWindow.Name, accessible = true });
+                    controllers.Add("ChronoToolbarController");
+                    controllers.Add("ChronoDataPanelReader");
+                    controllers.Add("ChronoWorkflowController");
+                    controllers.Add("ChronoFileOperationsController");
+                    commands.Add("toolbar");
+                    commands.Add("datagrid");
+                    commands.Add("workflow");
+                    commands.Add("logs");
+                    commands.Add("file-ops");
+                }
+                else
+                {
+                    windows.Add(new { type = "MainWindow", accessible = false });
+                }
+
+                if (setupWindow != null)
+                {
+                    windows.Add(new { type = "SetupWindow", title = setupWindow.Name, accessible = true });
+                }
+                else
+                {
+                    windows.Add(new { type = "SetupWindow", accessible = false });
+                }
+
+                if (settingsDialog != null)
+                {
+                    windows.Add(new { type = "SettingsDialog", title = settingsDialog.Name, accessible = true });
+                    controllers.Add("ChronoSettingsController");
+                    commands.Add("settings-dialog");
+                }
+                else
+                {
+                    windows.Add(new { type = "SettingsDialog", accessible = false });
+                }
+
                 if (json)
                 {
                     PrintJsonOutput(new
                     {
-                        success = false,
-                        error = "DataGrid not found",
-                        errorCode = EXIT_NOT_FOUND
+                        success = true,
+                        data = new
+                        {
+                            windows,
+                            controllers = controllers.Distinct().ToList(),
+                            commands = commands.Distinct().ToList()
+                        }
                     });
                 }
                 else
                 {
-                    PrintOutput("[test-datagrid] Not accessible: DataGrid not found");
+                    PrintOutput("[test-capabilities] Available automation capabilities:");
+                    PrintOutput("  Windows:");
+                    foreach (var w in windows)
+                    {
+                        PrintOutput($"    - {w}");
+                    }
+                    PrintOutput($"  Controllers: {string.Join(", ", controllers.Distinct())}");
+                    PrintOutput($"  Commands: {string.Join(", ", commands.Distinct())}");
                 }
-                Environment.Exit(EXIT_NOT_FOUND);
+                context.ExitCode = SUCCESS;
             }
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[test-capabilities] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
+        testCommand.AddCommand(testCapabilitiesCommand);
+
+        // test datagrid: DataGrid 접근 가능 여부 확인
+        var testDatagridCommand = new Command("datagrid", "DataGrid 접근 가능 여부 및 행 개수 확인");
+        testDatagridCommand.AddOption(jsonOption);
+        testDatagridCommand.SetHandler((InvocationContext context) =>
+        {
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var reader = new DataReader();
+                var dataGrid = reader.FindDataGrid();
+
+                if (dataGrid != null)
+                {
+                    var rowCount = reader.GetDataRowCount();
+                    var headers = reader.GetDataGridHeaders();
+
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = true,
+                            data = new
+                            {
+                                accessible = true,
+                                rowCount = rowCount,
+                                headers = headers
+                            }
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput($"[test-datagrid] Accessible: {rowCount} row(s), {headers.Count} column(s)");
+                        PrintOutput($"  Columns: {string.Join(", ", headers)}");
+                    }
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "DataGrid not found",
+                            errorCode = NOT_FOUND
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[test-datagrid] Not accessible: DataGrid not found");
+                    }
+                    context.ExitCode = NOT_FOUND;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[test-datagrid] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         testCommand.AddCommand(testDatagridCommand);
 
         rootCommand.AddCommand(testCommand);
@@ -241,83 +263,94 @@ public class TestCommands : ICommandHandler
         // scenario start-monitoring: 모니터링 시작 완전 워크플로우
         var scenarioStartMonitoringCommand = new Command("start-monitoring", "모니터링 시작 완전 워크플로우");
         scenarioStartMonitoringCommand.AddOption(jsonOption);
-        scenarioStartMonitoringCommand.SetHandler((json) =>
+        scenarioStartMonitoringCommand.SetHandler((InvocationContext context) =>
         {
-            using var automation = new UiAuto();
-            var finder = new Finder(automation.GetAutomation());
-            var window = finder.FindMainWindow();
-
-            if (window == null)
+            try
             {
-                if (json)
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var automation = new UiAuto();
+                var finder = new Finder(automation.GetAutomation());
+                var window = finder.FindMainWindow();
+
+                if (window == null)
                 {
-                    PrintJsonOutput(new
+                    if (json)
                     {
-                        success = false,
-                        error = "MainWindow not found",
-                        errorCode = EXIT_NOT_FOUND
-                    });
-                }
-                else
-                {
-                    PrintOutput("[scenario-start-monitoring] Failed: MainWindow not found");
-                }
-                Environment.Exit(EXIT_NOT_FOUND);
-            }
-
-            using var toolbar = new Toolbar(automation.GetAutomation());
-
-            // Click Start button
-            var clicked = toolbar.ClickStartButton();
-            if (!clicked)
-            {
-                if (json)
-                {
-                    PrintJsonOutput(new
-                    {
-                        success = false,
-                        error = "Could not click Start button",
-                        errorCode = EXIT_ERROR
-                    });
-                }
-                else
-                {
-                    PrintOutput("[scenario-start-monitoring] Failed: Could not click Start button");
-                }
-                Environment.Exit(EXIT_ERROR);
-            }
-
-            // Wait for button state change (Start becomes disabled)
-            var stateChanged = toolbar.WaitForButtonDisabled("시작", 5000);
-
-            // Check statistics for monitoring indicators
-            using var reader = new DataReader(automation.GetAutomation());
-            var stats = reader.GetAllStatistics();
-
-            if (json)
-            {
-                PrintJsonOutput(new
-                {
-                    success = true,
-                    data = new
-                    {
-                        started = true,
-                        buttonState = stateChanged ? "disabled" : "unknown",
-                        stats = stats
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "MainWindow not found",
+                            errorCode = NOT_FOUND
+                        });
                     }
-                });
-            }
-            else
-            {
-                PrintOutput($"[scenario-start-monitoring] Success: Monitoring started");
-                PrintOutput($"  Button state changed: {stateChanged}");
-                if (stats != null)
-                {
-                    PrintOutput($"  Statistics: {string.Join(", ", stats.Keys)}");
+                    else
+                    {
+                        PrintOutput("[scenario-start-monitoring] Failed: MainWindow not found");
+                    }
+                    context.ExitCode = NOT_FOUND;
+                    return;
                 }
+
+                using var toolbar = new Toolbar(automation.GetAutomation());
+
+                // Click Start button
+                var clicked = toolbar.ClickStartButton();
+                if (!clicked)
+                {
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "Could not click Start button",
+                            errorCode = ERROR
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[scenario-start-monitoring] Failed: Could not click Start button");
+                    }
+                    context.ExitCode = ERROR;
+                    return;
+                }
+
+                // Wait for button state change (Start becomes disabled)
+                var stateChanged = toolbar.WaitForButtonDisabled("시작", 5000);
+
+                // Check statistics for monitoring indicators
+                using var reader = new DataReader(automation.GetAutomation());
+                var stats = reader.GetAllStatistics();
+
+                if (json)
+                {
+                    PrintJsonOutput(new
+                    {
+                        success = true,
+                        data = new
+                        {
+                            started = true,
+                            buttonState = stateChanged ? "disabled" : "unknown",
+                            stats = stats
+                        }
+                    });
+                }
+                else
+                {
+                    PrintOutput($"[scenario-start-monitoring] Success: Monitoring started");
+                    PrintOutput($"  Button state changed: {stateChanged}");
+                    if (stats != null)
+                    {
+                        PrintOutput($"  Statistics: {string.Join(", ", stats.Keys)}");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[scenario-start-monitoring] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         scenarioCommand.AddCommand(scenarioStartMonitoringCommand);
 
         // scenario configure-paths: 모니터링 경로 설정 완전 워크플로우
@@ -348,133 +381,150 @@ public class TestCommands : ICommandHandler
         scenarioConfigurePathsCommand.AddOption(line2NormalOption);
         scenarioConfigurePathsCommand.AddOption(outputPathOption);
         scenarioConfigurePathsCommand.AddOption(jsonOption);
-        scenarioConfigurePathsCommand.SetHandler((line1Nir, line1Normal, line2Nir, line2Normal, output, json) =>
+        scenarioConfigurePathsCommand.SetHandler((InvocationContext context) =>
         {
-            using var automation = new UiAuto();
-            var finder = new Finder(automation.GetAutomation());
-
-            // Open SettingsDialog
-            using var toolbar = new Toolbar(automation.GetAutomation());
-            var opened = toolbar.ClickSettingsButton();
-            if (!opened)
+            try
             {
-                if (json)
+                var line1Nir = context.ParseResult.GetValueForOption(line1NirOption);
+                var line1Normal = context.ParseResult.GetValueForOption(line1NormalOption);
+                var line2Nir = context.ParseResult.GetValueForOption(line2NirOption);
+                var line2Normal = context.ParseResult.GetValueForOption(line2NormalOption);
+                var output = context.ParseResult.GetValueForOption(outputPathOption);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+
+                using var automation = new UiAuto();
+                var finder = new Finder(automation.GetAutomation());
+
+                // Open SettingsDialog
+                using var toolbar = new Toolbar(automation.GetAutomation());
+                var opened = toolbar.ClickSettingsButton();
+                if (!opened)
                 {
-                    PrintJsonOutput(new
+                    if (json)
                     {
-                        success = false,
-                        error = "Could not open SettingsDialog",
-                        errorCode = EXIT_ERROR
-                    });
-                }
-                else
-                {
-                    PrintOutput("[scenario-configure-paths] Failed: Could not open SettingsDialog");
-                }
-                Environment.Exit(EXIT_ERROR);
-            }
-
-            // Wait for dialog to appear
-            var dialog = finder.WaitForWindow("Settings", 5000);
-            if (dialog == null)
-            {
-                // Try Korean title
-                dialog = finder.WaitForWindow("설정", 2000);
-            }
-            if (dialog == null)
-            {
-                if (json)
-                {
-                    PrintJsonOutput(new
-                    {
-                        success = false,
-                        error = "SettingsDialog did not appear",
-                        errorCode = EXIT_TIMEOUT
-                    });
-                }
-                else
-                {
-                    PrintOutput("[scenario-configure-paths] Failed: SettingsDialog did not appear");
-                }
-                Environment.Exit(EXIT_TIMEOUT);
-            }
-
-            using var settings = new Settings(automation.GetAutomation());
-
-            // Set paths if provided using the dedicated path setters
-            var configured = new List<string>();
-            if (!string.IsNullOrEmpty(line1Nir))
-            {
-                if (settings.SetLine1Path("nir1", line1Nir))
-                {
-                    configured.Add("Line1NIR");
-                }
-            }
-            if (!string.IsNullOrEmpty(line1Normal))
-            {
-                if (settings.SetLine1Path("normal1", line1Normal))
-                {
-                    configured.Add("Line1Normal");
-                }
-            }
-            if (!string.IsNullOrEmpty(line2Nir))
-            {
-                if (settings.SetLine2Path("nir2", line2Nir))
-                {
-                    configured.Add("Line2NIR");
-                }
-            }
-            if (!string.IsNullOrEmpty(line2Normal))
-            {
-                if (settings.SetLine2Path("normal2", line2Normal))
-                {
-                    configured.Add("Line2Normal");
-                }
-            }
-            if (!string.IsNullOrEmpty(output))
-            {
-                // Output path needs to use SetPathTextBoxValue
-                var outputSet = settings.SetPathTextBoxValue(dialog, "Output", output);
-                if (outputSet)
-                {
-                    configured.Add("Output");
-                }
-            }
-
-            // Click Save button
-            var saved = settings.ClickSaveButton();
-
-            // Wait for dialog to close
-            var dialogClosed = finder.WaitForWindowToClose("Settings", 3000);
-            if (!dialogClosed)
-            {
-                // Try Korean title
-                dialogClosed = finder.WaitForWindowToClose("설정", 1000);
-            }
-
-            if (json)
-            {
-                PrintJsonOutput(new
-                {
-                    success = saved && dialogClosed,
-                    data = new
-                    {
-                        configured = configured,
-                        verified = dialogClosed
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "Could not open SettingsDialog",
+                            errorCode = ERROR
+                        });
                     }
-                });
-            }
-            else
-            {
-                PrintOutput($"[scenario-configure-paths] {(saved && dialogClosed ? "Success" : "Partial")}: Configured {configured.Count} path(s)");
-                foreach (var path in configured)
-                {
-                    PrintOutput($"  - {path}");
+                    else
+                    {
+                        PrintOutput("[scenario-configure-paths] Failed: Could not open SettingsDialog");
+                    }
+                    context.ExitCode = ERROR;
+                    return;
                 }
-                PrintOutput($"  Verified: {dialogClosed}");
+
+                // Wait for dialog to appear
+                var dialog = finder.WaitForWindow("Settings", 5000);
+                if (dialog == null)
+                {
+                    // Try Korean title
+                    dialog = finder.WaitForWindow("설정", 2000);
+                }
+                if (dialog == null)
+                {
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "SettingsDialog did not appear",
+                            errorCode = TIMEOUT
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[scenario-configure-paths] Failed: SettingsDialog did not appear");
+                    }
+                    context.ExitCode = TIMEOUT;
+                    return;
+                }
+
+                using var settings = new Settings(automation.GetAutomation());
+
+                // Set paths if provided using the dedicated path setters
+                var configured = new List<string>();
+                if (!string.IsNullOrEmpty(line1Nir))
+                {
+                    if (settings.SetLine1Path("nir1", line1Nir))
+                    {
+                        configured.Add("Line1NIR");
+                    }
+                }
+                if (!string.IsNullOrEmpty(line1Normal))
+                {
+                    if (settings.SetLine1Path("normal1", line1Normal))
+                    {
+                        configured.Add("Line1Normal");
+                    }
+                }
+                if (!string.IsNullOrEmpty(line2Nir))
+                {
+                    if (settings.SetLine2Path("nir2", line2Nir))
+                    {
+                        configured.Add("Line2NIR");
+                    }
+                }
+                if (!string.IsNullOrEmpty(line2Normal))
+                {
+                    if (settings.SetLine2Path("normal2", line2Normal))
+                    {
+                        configured.Add("Line2Normal");
+                    }
+                }
+                if (!string.IsNullOrEmpty(output))
+                {
+                    // Output path needs to use SetPathTextBoxValue
+                    var outputSet = settings.SetPathTextBoxValue(dialog, "Output", output);
+                    if (outputSet)
+                    {
+                        configured.Add("Output");
+                    }
+                }
+
+                // Click Save button
+                var saved = settings.ClickSaveButton();
+
+                // Wait for dialog to close
+                var dialogClosed = finder.WaitForWindowToClose("Settings", 3000);
+                if (!dialogClosed)
+                {
+                    // Try Korean title
+                    dialogClosed = finder.WaitForWindowToClose("설정", 1000);
+                }
+
+                if (json)
+                {
+                    PrintJsonOutput(new
+                    {
+                        success = saved && dialogClosed,
+                        data = new
+                        {
+                            configured = configured,
+                            verified = dialogClosed
+                        }
+                    });
+                }
+                else
+                {
+                    PrintOutput($"[scenario-configure-paths] {(saved && dialogClosed ? "Success" : "Partial")}: Configured {configured.Count} path(s)");
+                    foreach (var path in configured)
+                    {
+                        PrintOutput($"  - {path}");
+                    }
+                    PrintOutput($"  Verified: {dialogClosed}");
+                }
+                context.ExitCode = saved && dialogClosed ? SUCCESS : ERROR;
             }
-            Environment.Exit(saved && dialogClosed ? EXIT_SUCCESS : EXIT_ERROR);
-        }, line1NirOption, line1NormalOption, line2NirOption, line2NormalOption, outputPathOption, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[scenario-configure-paths] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         scenarioCommand.AddCommand(scenarioConfigurePathsCommand);
 
         // scenario move-groups: 파일 그룹 이동 완전 워크플로우
@@ -482,71 +532,84 @@ public class TestCommands : ICommandHandler
         scenarioMoveGroupsCommand.AddOption(rowsOption);
         scenarioMoveGroupsCommand.AddOption(groupIdsOption);
         scenarioMoveGroupsCommand.AddOption(jsonOption);
-        scenarioMoveGroupsCommand.SetHandler((rows, groupIds, json) =>
+        scenarioMoveGroupsCommand.SetHandler((InvocationContext context) =>
         {
-            using var reader = new DataReader();
-            using var controller = new FileOps();
+            try
+            {
+                var rows = context.ParseResult.GetValueForOption(rowsOption);
+                var groupIds = context.ParseResult.GetValueForOption(groupIdsOption);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-            // Get original row count
-            var originalCount = reader.GetDataRowCount();
+                using var reader = new DataReader();
+                using var controller = new FileOps();
 
-            // Select and move rows
-            var moved = false;
-            if (rows != null && rows.Length > 0)
-            {
-                moved = controller.SelectAndMoveRows(rows);
-            }
-            else if (groupIds != null && groupIds.Length > 0)
-            {
-                moved = controller.SelectAndMoveByGroupIds(groupIds);
-            }
-            else
-            {
+                // Get original row count
+                var originalCount = reader.GetDataRowCount();
+
+                // Select and move rows
+                var moved = false;
+                if (rows != null && rows.Length > 0)
+                {
+                    moved = controller.SelectAndMoveRows(rows);
+                }
+                else if (groupIds != null && groupIds.Length > 0)
+                {
+                    moved = controller.SelectAndMoveByGroupIds(groupIds);
+                }
+                else
+                {
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "Must specify --rows or --group-ids",
+                            errorCode = INVALID_ARGUMENT
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[scenario-move-groups] Failed: Must specify --rows or --group-ids");
+                    }
+                    context.ExitCode = INVALID_ARGUMENT;
+                    return;
+                }
+
+                // Wait for operation completion
+                if (moved)
+                {
+                    controller.WaitForMoveComplete(30000);
+                }
+
+                // Get new row count
+                var newCount = reader.GetDataRowCount();
+
                 if (json)
                 {
                     PrintJsonOutput(new
                     {
-                        success = false,
-                        error = "Must specify --rows or --group-ids",
-                        errorCode = EXIT_INVALID_ARGUMENT
+                        success = moved,
+                        data = new
+                        {
+                            moved = moved ? (rows?.Length ?? groupIds?.Length ?? 0) : 0,
+                            originalCount = originalCount,
+                            newCount = newCount
+                        }
                     });
                 }
                 else
                 {
-                    PrintOutput("[scenario-move-groups] Failed: Must specify --rows or --group-ids");
+                    PrintOutput($"[scenario-move-groups] {(moved ? "Success" : "Failed")}: Moved {rows?.Length ?? groupIds?.Length ?? 0} group(s)");
+                    PrintOutput($"  Row count: {originalCount} -> {newCount}");
                 }
-                Environment.Exit(EXIT_INVALID_ARGUMENT);
+                context.ExitCode = moved ? SUCCESS : ERROR;
             }
-
-            // Wait for operation completion
-            if (moved)
+            catch (Exception ex)
             {
-                controller.WaitForMoveComplete(30000);
+                Console.Error.WriteLine($"[scenario-move-groups] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-
-            // Get new row count
-            var newCount = reader.GetDataRowCount();
-
-            if (json)
-            {
-                PrintJsonOutput(new
-                {
-                    success = moved,
-                    data = new
-                    {
-                        moved = moved ? (rows?.Length ?? groupIds?.Length ?? 0) : 0,
-                        originalCount = originalCount,
-                        newCount = newCount
-                    }
-                });
-            }
-            else
-            {
-                PrintOutput($"[scenario-move-groups] {(moved ? "Success" : "Failed")}: Moved {rows?.Length ?? groupIds?.Length ?? 0} group(s)");
-                PrintOutput($"  Row count: {originalCount} -> {newCount}");
-            }
-            Environment.Exit(moved ? EXIT_SUCCESS : EXIT_ERROR);
-        }, rowsOption, groupIdsOption, jsonOption);
+        });
         scenarioCommand.AddCommand(scenarioMoveGroupsCommand);
 
         rootCommand.AddCommand(scenarioCommand);
@@ -572,91 +635,106 @@ public class TestCommands : ICommandHandler
         batchSelectAndMoveCommand.AddOption(rowsOption);
         batchSelectAndMoveCommand.AddOption(groupIdsOption);
         batchSelectAndMoveCommand.AddOption(jsonOption);
-        batchSelectAndMoveCommand.SetHandler((startIndex, count, rows, groupIds, json) =>
+        batchSelectAndMoveCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
+            try
+            {
+                var startIndex = context.ParseResult.GetValueForOption(startIndexOption);
+                var count = context.ParseResult.GetValueForOption(countOption);
+                var rows = context.ParseResult.GetValueForOption(rowsOption);
+                var groupIds = context.ParseResult.GetValueForOption(groupIdsOption);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-            // Clear existing selection first
-            controller.ClearSelection();
+                using var controller = new FileOps();
 
-            var selectedCount = 0;
+                // Clear existing selection first
+                controller.ClearSelection();
 
-            // Determine selection method
-            if (rows != null && rows.Length > 0)
-            {
-                // Select by specific row indices
-                selectedCount = rows.Length;
-                foreach (var rowIndex in rows)
+                var selectedCount = 0;
+
+                // Determine selection method
+                if (rows != null && rows.Length > 0)
                 {
-                    controller.SelectRowByIndex(rowIndex);
+                    // Select by specific row indices
+                    selectedCount = rows.Length;
+                    foreach (var rowIndex in rows)
+                    {
+                        controller.SelectRowByIndex(rowIndex);
+                    }
                 }
-            }
-            else if (groupIds != null && groupIds.Length > 0)
-            {
-                // Select by GroupIds
-                selectedCount = groupIds.Length;
-                foreach (var groupId in groupIds)
+                else if (groupIds != null && groupIds.Length > 0)
                 {
-                    controller.SelectRowByGroupId(groupId);
+                    // Select by GroupIds
+                    selectedCount = groupIds.Length;
+                    foreach (var groupId in groupIds)
+                    {
+                        controller.SelectRowByGroupId(groupId);
+                    }
                 }
-            }
-            else if (count > 0)
-            {
-                // Select by range
-                selectedCount = count;
-                for (int i = startIndex; i < startIndex + count; i++)
+                else if (count > 0)
                 {
-                    controller.SelectRowByIndex(i);
+                    // Select by range
+                    selectedCount = count;
+                    for (int i = startIndex; i < startIndex + count; i++)
+                    {
+                        controller.SelectRowByIndex(i);
+                    }
                 }
-            }
-            else
-            {
+                else
+                {
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "Must specify --rows, --group-ids, or --count with --start-index",
+                            errorCode = INVALID_ARGUMENT
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[batch-select-and-move] Failed: Must specify --rows, --group-ids, or --count with --start-index");
+                    }
+                    context.ExitCode = INVALID_ARGUMENT;
+                    return;
+                }
+
+                // Click Move button
+                var moved = controller.ClickMoveButton();
+
+                // Wait for completion
+                if (moved)
+                {
+                    controller.WaitForMoveComplete(30000);
+                }
+
+                var duration = moved ? "completed" : "failed";
+
                 if (json)
                 {
                     PrintJsonOutput(new
                     {
-                        success = false,
-                        error = "Must specify --rows, --group-ids, or --count with --start-index",
-                        errorCode = EXIT_INVALID_ARGUMENT
+                        success = moved,
+                        data = new
+                        {
+                            selected = selectedCount,
+                            moved = moved ? selectedCount : 0,
+                            duration = duration
+                        }
                     });
                 }
                 else
                 {
-                    PrintOutput("[batch-select-and-move] Failed: Must specify --rows, --group-ids, or --count with --start-index");
+                    PrintOutput($"[batch-select-and-move] {(moved ? "Success" : "Failed")}: {selectedCount} row(s) selected, {(moved ? "moved" : "move failed")}");
                 }
-                Environment.Exit(EXIT_INVALID_ARGUMENT);
+                context.ExitCode = moved ? SUCCESS : ERROR;
             }
-
-            // Click Move button
-            var moved = controller.ClickMoveButton();
-
-            // Wait for completion
-            if (moved)
+            catch (Exception ex)
             {
-                controller.WaitForMoveComplete(30000);
+                Console.Error.WriteLine($"[batch-select-and-move] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-
-            var duration = moved ? "completed" : "failed";
-
-            if (json)
-            {
-                PrintJsonOutput(new
-                {
-                    success = moved,
-                    data = new
-                    {
-                        selected = selectedCount,
-                        moved = moved ? selectedCount : 0,
-                        duration = duration
-                    }
-                });
-            }
-            else
-            {
-                PrintOutput($"[batch-select-and-move] {(moved ? "Success" : "Failed")}: {selectedCount} row(s) selected, {(moved ? "moved" : "move failed")}");
-            }
-            Environment.Exit(moved ? EXIT_SUCCESS : EXIT_ERROR);
-        }, startIndexOption, countOption, rowsOption, groupIdsOption, jsonOption);
+        });
         batchCommand.AddCommand(batchSelectAndMoveCommand);
 
         // batch select-and-delete: Select multiple rows and delete them
@@ -666,154 +744,178 @@ public class TestCommands : ICommandHandler
         batchSelectAndDeleteCommand.AddOption(rowsOption);
         batchSelectAndDeleteCommand.AddOption(groupIdsOption);
         batchSelectAndDeleteCommand.AddOption(jsonOption);
-        batchSelectAndDeleteCommand.SetHandler((startIndex, count, rows, groupIds, json) =>
+        batchSelectAndDeleteCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new FileOps();
+            try
+            {
+                var startIndex = context.ParseResult.GetValueForOption(startIndexOption);
+                var count = context.ParseResult.GetValueForOption(countOption);
+                var rows = context.ParseResult.GetValueForOption(rowsOption);
+                var groupIds = context.ParseResult.GetValueForOption(groupIdsOption);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-            // Clear existing selection first
-            controller.ClearSelection();
+                using var controller = new FileOps();
 
-            var selectedCount = 0;
+                // Clear existing selection first
+                controller.ClearSelection();
 
-            // Determine selection method
-            if (rows != null && rows.Length > 0)
-            {
-                // Select by specific row indices
-                selectedCount = rows.Length;
-                foreach (var rowIndex in rows)
+                var selectedCount = 0;
+
+                // Determine selection method
+                if (rows != null && rows.Length > 0)
                 {
-                    controller.SelectRowByIndex(rowIndex);
+                    // Select by specific row indices
+                    selectedCount = rows.Length;
+                    foreach (var rowIndex in rows)
+                    {
+                        controller.SelectRowByIndex(rowIndex);
+                    }
                 }
-            }
-            else if (groupIds != null && groupIds.Length > 0)
-            {
-                // Select by GroupIds
-                selectedCount = groupIds.Length;
-                foreach (var groupId in groupIds)
+                else if (groupIds != null && groupIds.Length > 0)
                 {
-                    controller.SelectRowByGroupId(groupId);
+                    // Select by GroupIds
+                    selectedCount = groupIds.Length;
+                    foreach (var groupId in groupIds)
+                    {
+                        controller.SelectRowByGroupId(groupId);
+                    }
                 }
-            }
-            else if (count > 0)
-            {
-                // Select by range
-                selectedCount = count;
-                for (int i = startIndex; i < startIndex + count; i++)
+                else if (count > 0)
                 {
-                    controller.SelectRowByIndex(i);
+                    // Select by range
+                    selectedCount = count;
+                    for (int i = startIndex; i < startIndex + count; i++)
+                    {
+                        controller.SelectRowByIndex(i);
+                    }
                 }
-            }
-            else
-            {
+                else
+                {
+                    if (json)
+                    {
+                        PrintJsonOutput(new
+                        {
+                            success = false,
+                            error = "Must specify --rows, --group-ids, or --count with --start-index",
+                            errorCode = INVALID_ARGUMENT
+                        });
+                    }
+                    else
+                    {
+                        PrintOutput("[batch-select-and-delete] Failed: Must specify --rows, --group-ids, or --count with --start-index");
+                    }
+                    context.ExitCode = INVALID_ARGUMENT;
+                    return;
+                }
+
+                // Click Delete button
+                var deleted = controller.ClickDeleteButton();
+
+                // Handle confirmation dialog if present
+                var confirmed = false;
+                if (deleted)
+                {
+                    confirmed = controller.HandleDeleteConfirmationDialog();
+                    if (confirmed)
+                    {
+                        controller.WaitForDeleteComplete(30000);
+                    }
+                }
+
                 if (json)
                 {
                     PrintJsonOutput(new
                     {
-                        success = false,
-                        error = "Must specify --rows, --group-ids, or --count with --start-index",
-                        errorCode = EXIT_INVALID_ARGUMENT
+                        success = confirmed,
+                        data = new
+                        {
+                            selected = selectedCount,
+                            deleted = confirmed ? selectedCount : 0,
+                            confirmed = confirmed
+                        }
                     });
                 }
                 else
                 {
-                    PrintOutput("[batch-select-and-delete] Failed: Must specify --rows, --group-ids, or --count with --start-index");
+                    PrintOutput($"[batch-select-and-delete] {(confirmed ? "Success" : "Failed")}: {selectedCount} row(s) selected, {(confirmed ? "deleted" : "delete failed")}");
+                    PrintOutput($"  Confirmed: {confirmed}");
                 }
-                Environment.Exit(EXIT_INVALID_ARGUMENT);
+                context.ExitCode = confirmed ? SUCCESS : ERROR;
             }
-
-            // Click Delete button
-            var deleted = controller.ClickDeleteButton();
-
-            // Handle confirmation dialog if present
-            var confirmed = false;
-            if (deleted)
+            catch (Exception ex)
             {
-                confirmed = controller.HandleDeleteConfirmationDialog();
-                if (confirmed)
-                {
-                    controller.WaitForDeleteComplete(30000);
-                }
+                Console.Error.WriteLine($"[batch-select-and-delete] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-
-            if (json)
-            {
-                PrintJsonOutput(new
-                {
-                    success = confirmed,
-                    data = new
-                    {
-                        selected = selectedCount,
-                        deleted = confirmed ? selectedCount : 0,
-                        confirmed = confirmed
-                    }
-                });
-            }
-            else
-            {
-                PrintOutput($"[batch-select-and-delete] {(confirmed ? "Success" : "Failed")}: {selectedCount} row(s) selected, {(confirmed ? "deleted" : "delete failed")}");
-                PrintOutput($"  Confirmed: {confirmed}");
-            }
-            Environment.Exit(confirmed ? EXIT_SUCCESS : EXIT_ERROR);
-        }, startIndexOption, countOption, rowsOption, groupIdsOption, jsonOption);
+        });
         batchCommand.AddCommand(batchSelectAndDeleteCommand);
 
         // batch export-all: Export all available data from ChronoView
         var batchExportAllCommand = new Command("export-all", "Export all available data from ChronoView");
         batchExportAllCommand.AddOption(jsonOption);
-        batchExportAllCommand.SetHandler((json) =>
+        batchExportAllCommand.SetHandler((InvocationContext context) =>
         {
-            using var automation = new UiAuto();
-
-            // Get StatisticsPanel statistics
-            using var reader = new DataReader(automation.GetAutomation());
-            var stats = reader.GetAllStatistics();
-
-            // Get all DataGrid rows
-            var allData = reader.GetAllData();
-
-            // Get camera states from WorkflowPanel
-            using var workflow = new Workflow(automation.GetAutomation());
-            var cameraStates = workflow.GetCameraStates();
-
-            if (json)
+            try
             {
-                PrintJsonOutput(new
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var automation = new UiAuto();
+
+                // Get StatisticsPanel statistics
+                using var reader = new DataReader(automation.GetAutomation());
+                var stats = reader.GetAllStatistics();
+
+                // Get all DataGrid rows
+                var allData = reader.GetAllData();
+
+                // Get camera states from WorkflowPanel
+                using var workflow = new Workflow(automation.GetAutomation());
+                var cameraStates = workflow.GetCameraStates();
+
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        timestamp = DateTime.Now.ToString("o"),
-                        statistics = stats,
-                        dataGrid = new
+                        success = true,
+                        data = new
                         {
-                            rowCount = allData.Count,
-                            rows = allData
-                        },
-                        cameraStates = cameraStates
-                    }
-                });
-            }
-            else
-            {
-                PrintOutput("[batch-export-all] Exported all available data:");
-                PrintOutput($"  Timestamp: {DateTime.Now:O}");
-                PrintOutput($"  Statistics: {stats?.Count ?? 0} entries");
-                if (stats != null)
+                            timestamp = DateTime.Now.ToString("o"),
+                            statistics = stats,
+                            dataGrid = new
+                            {
+                                rowCount = allData.Count,
+                                rows = allData
+                            },
+                            cameraStates = cameraStates
+                        }
+                    });
+                }
+                else
                 {
-                    foreach (var stat in stats)
+                    PrintOutput("[batch-export-all] Exported all available data:");
+                    PrintOutput($"  Timestamp: {DateTime.Now:O}");
+                    PrintOutput($"  Statistics: {stats?.Count ?? 0} entries");
+                    if (stats != null)
                     {
-                        PrintOutput($"    - {stat.Key}: {stat.Value}");
+                        foreach (var stat in stats)
+                        {
+                            PrintOutput($"    - {stat.Key}: {stat.Value}");
+                        }
+                    }
+                    PrintOutput($"  DataGrid: {allData.Count} row(s)");
+                    PrintOutput($"  Camera States: {cameraStates.Count} camera(s)");
+                    foreach (var camState in cameraStates)
+                    {
+                        PrintOutput($"    - {camState.Key}: {camState.Value}");
                     }
                 }
-                PrintOutput($"  DataGrid: {allData.Count} row(s)");
-                PrintOutput($"  Camera States: {cameraStates.Count} camera(s)");
-                foreach (var camState in cameraStates)
-                {
-                    PrintOutput($"    - {camState.Key}: {camState.Value}");
-                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[batch-export-all] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         batchCommand.AddCommand(batchExportAllCommand);
 
         rootCommand.AddCommand(batchCommand);
