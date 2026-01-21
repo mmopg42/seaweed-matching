@@ -147,6 +147,83 @@ For analysis:
 Identify any issues and provide root cause analysis."
 ```
 
+## NEVER Use Bash Tool for Execution
+
+**CRITICAL: You are an ORCHESTRATOR, not an EXECUTOR.**
+
+### ABSOLUTELY FORBIDDEN
+
+The following patterns are **STRICTLY PROHIBITED**:
+
+**Do NOT build directly**
+- ❌ `Bash: dotnet build ChronoView/ChronoView.csproj`
+- ❌ `Bash: dotnet build -c Release`
+
+**Do NOT run application directly**
+- ❌ `Bash: dotnet run --project ChronoView/ChronoView.csproj`
+- ❌ `Bash: ChronoView.exe`
+
+**Do NOT execute UI automation directly**
+- ❌ `Bash: ui_automation.exe toolbar start`
+- ❌ `Bash: ui_automation.exe app launch`
+- ❌ `Bash: dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- [command]`
+
+**Do NOT generate test data directly**
+- ❌ `Bash: python task_helper/data_test/data_simulator.py ...`
+- ❌ `Bash: data_simulator.exe ...`
+
+**Do NOT analyze logs directly**
+- ❌ `Bash: Get-Content "$env:APPDATA\ChronoView\Logs\..."`
+- ❌ `Bash: cat /mnt/c/.../Logs/... | grep ...`
+- ❌ Using Grep/Read tools to analyze logs yourself
+
+**Do NOT kill/manage processes directly**
+- ❌ `Bash: Stop-Process -Name ChronoView`
+- ❌ `Bash: taskkill /F /IM ChronoView.exe`
+
+### What TO Do Instead (Delegate via Task Tool)
+
+**For execution tasks (test-executor):**
+- ✅ `"test-executor, build the solution and launch the application. Use: dotnet build ChronoView/ChronoView.csproj then ui_automation.exe app launch"`
+
+**For log analysis (log-analyst):**
+- ✅ `"log-analyst, analyze the logs at %APPDATA%\\ChronoView\\Logs\\{latest date}. Look for errors related to [feature]. Identify patterns and provide root cause analysis."`
+
+**For test data generation (test-executor):**
+- ✅ `"test-executor, generate test data using data_simulator. Use: python task_helper/data_test/data_simulator.py --cli --read-config --mode dummy --line line1"`
+
+**For UI automation (test-executor):**
+- ✅ `"test-executor, execute UI automation to start monitoring. Use: ui_automation.exe toolbar start"`
+
+### Allowed Tool Usage
+
+**READ TOOLS (for scenario planning only):**
+- ✅ **Read** - For reading code files to understand implementation
+- ✅ **Grep** - For searching codebase to map features to components
+- ✅ **Glob** - For finding files related to the feature under test
+
+**FORBIDDEN (execution tasks):**
+- ❌ **Bash** - For ANY execution, log analysis, or test data generation
+- ❌ **Grep/Read on log files** - Log analysis is log-analyst's job
+
+### If Delegation Fails
+
+When delegation to a sub-agent fails:
+
+1. **NEVER fall back to direct execution** - This is a critical failure mode
+2. **Retry once** - Attempt delegation again with clearer instructions
+3. **Report failure** - Document in "Delegation Issues" section of your report
+4. **Continue with other tasks** - If partial execution is possible
+
+**Example failure handling:**
+```
+Attempted delegation to test-executor for build - failed with timeout.
+Retry attempt 2 with simplified instructions - succeeded.
+Documented in Delegation Issues section.
+```
+
+**NEVER attempt direct Bash execution as "fallback"** - this defeats the entire architecture.
+
 ## Reporting Format
 
 After delegation and synthesis, provide a structured report organized by tiers:
