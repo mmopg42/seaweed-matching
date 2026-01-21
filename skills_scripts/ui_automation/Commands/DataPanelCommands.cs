@@ -380,7 +380,8 @@ public class DataPanelCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new { success = false, error = "MainWindow not found", errorCode = NOT_FOUND });
+                        PrintError("MainWindow not found", NOT_FOUND,
+                            "Ensure ChronoView is running. Try 'windows main --json'.");
                     }
                     else
                     {
@@ -395,7 +396,8 @@ public class DataPanelCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new { success = false, error = "DataGrid not found", errorCode = NOT_FOUND });
+                        PrintError("DataGrid not found", NOT_FOUND,
+                            "DataGrid may be disabled or no data is available.");
                     }
                     else
                     {
@@ -412,7 +414,8 @@ public class DataPanelCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new { success = false, error = $"Row index {row} out of range", errorCode = INVALID_ARGUMENT });
+                        PrintError($"Row index {row} out of range", INVALID_ARGUMENT,
+                            $"Valid range is 0-{rows.Length - 1}. Try 'datagrid rows --json' to check.");
                     }
                     else
                     {
@@ -427,10 +430,11 @@ public class DataPanelCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = cellText != null,
-                        data = new { row = row, column = col, value = cellText }
+                        row = row,
+                        column = col,
+                        value = cellText
                     });
                 }
                 else
@@ -463,16 +467,12 @@ public class DataPanelCommands : ICommandHandler
                 }
 
                 var allData = reader.GetAllData(mainWindow);
-                Console.WriteLine(JsonSerializer.Serialize(new
+                PrintSuccess(new
                 {
-                    success = true,
-                    data = new
-                    {
-                        rowCount = allData.Count,
-                        exportedAt = DateTime.UtcNow.ToString("o"),
-                        data = allData
-                    }
-                }, new JsonSerializerOptions { WriteIndented = true }));
+                    rowCount = allData.Count,
+                    exportedAt = DateTime.UtcNow.ToString("o"),
+                    data = allData
+                });
                 context.ExitCode = SUCCESS;
             }
             catch (Exception ex)
@@ -484,17 +484,6 @@ public class DataPanelCommands : ICommandHandler
         datagridCommand.AddCommand(dgExportCommand);
 
         rootCommand.AddCommand(datagridCommand);
-    }
-
-    /// <summary>
-    /// Print JSON output with consistent formatting for programmatic consumption
-    /// </summary>
-    private static void PrintJsonOutput(object data)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(data, new JsonSerializerOptions
-        {
-            WriteIndented = false
-        }));
     }
 
     /// <summary>
