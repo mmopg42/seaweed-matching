@@ -143,7 +143,7 @@ Windows UI Automation with FlaUI
 |-------|-----------|-------|--------|
 | 22. Setup Window Controller | v1.3 | 3 | ✅ Complete |
 | 23. Performance & Docs | v1.3 | 3 | ✅ Complete |
-| 24. Error Diagnosis | v1.4 | 2 | 📋 Planned |
+| 24. Error Diagnosis | v1.4 | 2 | ✅ Complete |
 | 25. Simulator Status | v1.4 | 2 | 📋 Planned |
 | 26. Log Path Finder | v1.4 | 2 | 📋 Planned |
 | 27. Delegation Fix | v1.4 | 2 | ○ Pending |
@@ -152,7 +152,25 @@ Windows UI Automation with FlaUI
 
 **Status:** 🔄 v1.4 Test Agent Architecture & Reliability in progress.
 
-**Next Step:** Run `/gsd:execute-phase 24` to execute Phase 24 plans.
+**Next Step:** Run `/gsd:execute-phase 25` to execute Phase 25 plans.
+
+---
+
+### ✅ Phase 24: Error Diagnosis (v1.4) — Shipped 2026-01-21
+
+**Goal:** Exit Code 1 에러 원인 분석 및 해결
+
+**Requirements:** ERROR-01
+
+**Plans:**
+- [x] 24-01: Centralized Error Handler (ExitCodes.cs + Program.cs wrapper)
+- [x] 24-02: Command Handler Refactoring (return-based exit codes)
+
+**Delivered:**
+- ExitCodes.cs with 5 centralized exit code constants (SUCCESS, ERROR, NOT_FOUND, TIMEOUT, INVALID_ARGUMENT)
+- Program.cs with try-catch wrapper around InvokeAsync for structured error output
+- All 10 command handlers refactored to use context.ExitCode instead of Environment.Exit()
+- 262 context.ExitCode assignments, 99 catch blocks with Console.Error.WriteLine
 
 ---
 
@@ -173,25 +191,25 @@ Windows UI Automation with FlaUI
 
 **Requirements:** PERF-01, PERF-02, CLI-01
 
-### 📋 Phase 24: Error Diagnosis (v1.4) — Ready to Execute
+### ✅ Phase 24: Error Diagnosis (v1.4) — Shipped 2026-01-21
 
 **Goal:** Exit Code 1 에러 원인 분석 및 해결
 
 **Requirements:** ERROR-01
 
 **Plans:**
-- [ ] 24-01: Centralized Error Handler (ExitCodes.cs + Program.cs wrapper)
-  - Create ExitCodes.cs with SUCCESS=0, ERROR=1, NOT_FOUND=2, TIMEOUT=3, INVALID_ARGUMENT=4
-  - Add try-catch wrapper around InvokeAsync in Program.cs
-  - Write structured error messages to stderr with exception type, message, and command
-- [ ] 24-02: Command Handler Refactoring (return-based exit codes)
-  - Refactor all 10 command handler classes to return int instead of Environment.Exit()
-  - Replace 144 Environment.Exit() calls with return statements
-  - Wrap handlers in try-catch for local error context
+- [x] 24-01: Centralized Error Handler (ExitCodes.cs + Program.cs wrapper)
+  - Created ExitCodes.cs with SUCCESS=0, ERROR=1, NOT_FOUND=2, TIMEOUT=3, INVALID_ARGUMENT=4
+  - Added try-catch wrapper around InvokeAsync in Program.cs
+  - Structured error messages to stderr with exception type, message, and command
+- [x] 24-02: Command Handler Refactoring (return-based exit codes)
+  - Refactored all 10 command handler classes to use context.ExitCode
+  - Replaced 262 Environment.Exit() calls with context.ExitCode assignments
+  - Added 99 try-catch wrappers for local error context
 
-**Expected Outcome:**
+**Delivered:**
 - Unhandled exceptions produce detailed error messages on stderr
-- Exit code 1 errors now include exception type and message
+- Exit code errors include exception type and message
 - FlaUI exceptions caught and formatted with context
 - Verbose mode shows stack traces for debugging
 
@@ -245,4 +263,4 @@ Windows UI Automation with FlaUI
 
 ---
 
-*Last updated: 2026-01-21 - Phase 26 planned, ready for execution*
+*Last updated: 2026-01-21 - Phase 24 complete, Phase 25 ready for execution*
