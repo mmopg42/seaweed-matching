@@ -2,20 +2,36 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-20)
+See: .planning/PROJECT.md (updated 2026-01-21)
 
 **Core value:** UI 요소 식별 및 조작 — ChronoView의 모든 UI 요소를 안정적으로 식별하고 조작
-**Current focus:** Phase 23 - Performance Documentation
+**Current focus:** Milestone v1.4 - Test Agent Architecture & Reliability
 
 ## Current Position
 
-**Milestone:** v1.3 Setup Automation & Test Reliability
-**Phase:** 23 of 23 (Performance Documentation)
-**Plan:** 23-03 Complete Setup CLI Commands - COMPLETE
-**Status:** All CLI-01 requirements satisfied, setup commands fully implemented
-**Last activity:** 2026-01-20 — Plan 23-03 executed, open-settings and camera-states commands added
+**Milestone:** v1.4 Test Agent Architecture & Reliability
+**Phase:** 24 (Error Diagnosis)
+**Plan:** 02 (Command Handler Refactoring)
+**Status:** In progress
 
-Progress: ██████████ 100% (3/3 plans complete for Phase 23, Phase 22 complete)
+Progress: ██████░░░░░ 40% (Phase 24: 1/2 plans complete)
+
+## Plan 24-01 Summary
+
+**Timeline:** 7 min (2026-01-21)
+**Deliverables:**
+- ExitCodes.cs with 5 centralized exit code constants
+- Program.cs with try-catch wrapper around InvokeAsync
+- Structured error messages to stderr with exception type and command context
+- Verbose mode (--verbose) for stack trace output
+
+**Commits:** 2 atomic commits
+
+**Features:**
+- SUCCESS=0, ERROR=1, NOT_FOUND=2, TIMEOUT=3, INVALID_ARGUMENT=4 exit codes
+- FlaUI exception detection by namespace (AutomationException base class doesn't exist in 5.0.0)
+- Error format: "[Error] ExceptionType: Message" + "Command: args"
+- Stack traces shown when --verbose flag is used
 
 ## Plan 23-01 Summary
 
@@ -166,6 +182,8 @@ Decisions from all phases are logged in PROJECT.md.
 | 23-01 | Execute first, verify on failure | Pre-checks add overhead; direct execution faster |
 | 23-01 | Parallel execution for read queries | Independent operations can run concurrently |
 | 23-03 | Complete CLI-01 commands | Expose ChronoSetupWindowController methods via CLI |
+| 24-01 | Centralized error handling | Try-catch wrapper at Program.cs for better diagnostics |
+| 24-02 | Return-based exit codes | Replace Environment.Exit() with return statements |
 
 ### Deferred Issues
 
@@ -178,36 +196,45 @@ None.
 - [x] Add config verification logic (Plan 22-03)
 - [x] Update agent documentation with setup commands
 - [x] Optimize test execution speed (Plan 23-01)
+- [x] Create ExitCodes.cs with centralized constants (Plan 24-01)
+- [x] Add try-catch wrapper around InvokeAsync (Plan 24-01)
+- [ ] Refactor SetupCommands to return exit codes (Plan 24-02)
+- [ ] Refactor all command handlers to return exit codes (Plan 24-02)
 
 ### Blockers/Concerns
 
 **Identified Issues:**
 1. ~~SetupWindow에서 설정을 열어서 모니터링 시작 버튼을 누르지 못함~~ (resolved with ChronoSetupWindowController)
 2. 껐다가 다시 켰을 때 아무런 작동도 안 됨
-3. 테스트 실행 속도가 느림
+3. ~~테스트 실행 속도가 느림~~ (resolved with delay optimization and parallel patterns)
+4. **Exit Code 1 에러 메시지가 너무 일반적** (addressed in Phase 24)
 
 **Root Causes:**
 - ~~SetupWindow 전용 컨트롤러 부재~~ (resolved)
 - ~~데이터 시뮬레이터 설정 검증 부재~~ (resolved with SetupConfigVerifier)
-- 불필요한 사전 체크로 인한 지연
+- ~~불필요한 사전 체크로 인한 지연~~ (resolved)
+- **Environment.Exit() 호출로 인한 예외 처리 우회** (planned fix in Phase 24)
 
 ## Session Continuity
 
-Last session: 2026-01-20
-Stopped at: Plan 23-03 complete, Phase 23 complete (3/3 plans done)
-Resume file: .planning/phases/23-performance-documentation/23-03-SUMMARY.md
+Last session: 2026-01-21
+Stopped at: Completed Phase 24-01 (Centralized Error Handler)
+Resume file: .planning/phases/24-error-diagnosis/24-02-PLAN.md
 
 ## Roadmap Evolution
 
-- Milestone v1.3 created: Setup Automation & Test Reliability, 2 phases (Phase 22-23)
-- Plan 22-01 complete: ChronoSetupWindowController class
-- Plan 22-02 complete: Setup Complete Workflow
-- Plan 22-03 complete: Settings Verification
-- Plan 23-01 complete: Performance Optimization (delays, documentation, parallel groups)
-- Plan 23-02 complete: Test documentation updated with setup commands
-- Plan 23-03 complete: Setup CLI commands (open-settings, camera-states) implemented
-- Phase 22 fully delivered (3/3 plans complete)
-- Phase 23 fully delivered (3/3 plans complete)
+- Milestone v1.4 created: Test Agent Architecture & Reliability, 4 phases (Phase 24-27)
+- Phase 24 planned: Error Diagnosis (2 plans)
+  - 24-01: Centralized Error Handler (ExitCodes.cs + Program.cs wrapper)
+  - 24-02: Command Handler Refactoring (return-based exit codes)
+
+**Current State:**
+- Phase 22 complete: ChronoSetupWindowController + SetupCommands + SetupConfigVerifier (2,092 lines total)
+- Phase 23 complete: Performance optimization + CLI-01 commands (open-settings, camera-states)
+- Phase 24: 1/2 complete (24-01: Centralized Error Handler, 24-02: Command Handler Refactoring pending)
+- 10 controller methods + 11 CLI commands + config verification + optimized execution patterns
+- v1.3 Setup Automation & Test Reliability: Phase 22 complete, Phase 23 complete
+- v1.4 Test Agent Architecture & Reliability: Phase 24 in progress (40%)
 
 **v1.2 Test Automation Enhancement - SHIPPED**
 
@@ -227,12 +254,6 @@ Resume file: .planning/phases/23-performance-documentation/23-03-SUMMARY.md
 - ~11,600 LOC C# + Python test agent
 - Full archive: .planning/milestones/v1.0-ROADMAP.md
 
-**Current State:**
-- Phase 22 complete: ChronoSetupWindowController + SetupCommands + SetupConfigVerifier (2,092 lines total)
-- Phase 23 complete: Performance optimization + CLI-01 commands (open-settings, camera-states)
-- 10 controller methods + 11 CLI commands + config verification + optimized execution patterns
-- v1.3 Setup Automation & Test Reliability: Phase 22 complete, Phase 23 complete
-
 ---
 
-*Updated: 2026-01-20 after Plan 23-03 completion - Phase 23 complete*
+*Updated: 2026-01-21 after Phase 24-01 completion - 1/2 plans complete*
