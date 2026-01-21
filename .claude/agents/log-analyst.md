@@ -96,11 +96,16 @@ FileWatcherService (FileCreated)
 %APPDATA%\ChronoView\Logs\{YYYYMMDD}\ChronoView.log
 ```
 
+**Note:** Use `console-logs --latest` CLI command for automatic log discovery regardless of environment. The `--latest` flag automatically finds the most recent yyyyMMdd log folder.
+
 **Alternative Locations (if configured differently):**
 ```
 %LOCALAPPDATA%\ChronoView\Logs\
 %TEMP%\ChronoView\Logs\
 ```
+
+**Windows/WSL Path Compatibility:**
+The log paths use Windows-native format (%LOCALAPPDATA%, %APPDATA%). When running from WSL, the CLI handles path resolution automatically - no manual conversion needed. If accessing logs directly from WSL bash, use `/mnt/c/Users/.../AppData/Local/...`
 
 ## Analysis Patterns
 
@@ -270,6 +275,35 @@ After analysis, provide a TIER-organized report:
 ## Analysis Commands
 
 When you need to read logs:
+
+### Log Discovery Strategy
+
+**Primary: Use --latest flag (recommended)**
+```bash
+# Find latest log folder automatically (recommended)
+dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs list --latest --json
+
+# Tail from latest log folder
+dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs tail 100 --latest --json
+
+# Search in latest log folder
+dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs search "Exception" --latest --json
+```
+
+**Fallback: Use --date for historical analysis**
+```bash
+# Specific date logs
+dotnet run --project skills_scripts/ui_automation/ui_automation.csproj -- console-logs list --date 20260121 --json
+```
+
+**How it works:**
+- The yyyyMMdd folder format is used for chronological sorting
+- `GetLatestLogDateFolder()` enumerates folders and validates names using `DateTime.TryParseExact`
+- String comparison finds the latest folder (yyyyMMdd format = lexicographic = chronological)
+- `GetLogFilesFromLatest()` combines folder discovery + file enumeration in one call
+
+### Direct log access (if needed)
+
 ```bash
 # Find today's log
 ls "$APPDATA/ChronoView/Logs/$(date +%Y%m%d)/"
@@ -300,7 +334,7 @@ When suggesting locations to investigate, reference these key areas:
 
 ## Success Criteria
 
-- Logs are located and accessed successfully
+- Logs are located using `--latest` flag (automatic discovery)
 - All relevant entries are analyzed
 - Patterns are identified and categorized
 - Root causes are hypothesized with evidence
