@@ -16,10 +16,17 @@ public static class DryRunValidator
     /// <summary>
     /// Validates a skill name against the registry.
     /// </summary>
-    /// <param name="skillName">Skill name to validate</param>
+    /// <param name="skillName">Skill name to validate (empty for orchestration/scenario commands)</param>
     /// <returns>Validation result with error if skill not found</returns>
     public static ValidationResult ValidateSkill(string skillName)
     {
+        // Empty skill name is valid for orchestration/scenario commands
+        // that don't map directly to individual skills
+        if (string.IsNullOrEmpty(skillName))
+        {
+            return ValidationResult.Success();
+        }
+
         var skills = GetRegisteredSkills();
 
         if (!skills.Any(s => string.Equals(s, skillName, StringComparison.Ordinal)))
