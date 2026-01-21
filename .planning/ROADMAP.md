@@ -119,27 +119,30 @@ Windows UI Automation with FlaUI
 
 **Success Criteria:**
 - Orchestrator agents never construct CLI commands (prohibition enforced in docs)
-- All 30+ CLI commands mapped to semantic skill names
+- All 90+ CLI commands mapped to semantic skill names
 - Executor validates skills before execution and reports unknown skills
 - JSON responses standardized with retryable and suggestion fields
 - Dry-run mode enables safe command validation
 
 #### Phase 28: Skill Registry Definition
 
-**Goal:** Create semantic skill definitions for all 30+ CLI commands
+**Goal:** Create semantic skill definitions for all 90+ CLI commands
 
 **Depends on:** Phase 27 (delegation pattern established)
 **Research:** Unlikely (skills map 1:1 to existing CLI commands)
-**Plans:** TBD
+**Plans:** 1 plan
 
 **Requirements:** SKILL-01 through SKILL-06
 
 **Success Criteria:**
-1. All 30+ CLI commands have corresponding skill definitions
+1. All 90+ CLI commands have corresponding skill definitions
 2. Each skill has semantic name (intent-based, not CLI-based)
 3. Skill definition includes exact CLI command pattern and parameter schema
-4. Skills organized by category (Lifecycle, Workflow, Settings, Window, Data, Diagnostic)
+4. Skills organized by category (APP, BATCH, CONSOLE_LOGS, DATA_PANEL, FILE_OPS, LOGS, SETTINGS_DIALOG, SETUP, TEST, TOOLBAR, UTILITY, WINDOWS, WORKFLOW)
 5. test-executor-skills.md documents complete skill registry
+
+Plans:
+- [ ] 28-01-PLAN.md — Create skill registry document with all 90+ skill definitions
 
 #### Phase 29: Orchestrator Skill Integration
 
@@ -220,7 +223,7 @@ Windows UI Automation with FlaUI
 | v1.2 Test Automation | 20-21 | 2 | ✅ Complete | 2026-01-20 |
 | v1.3 Setup & Perf | 22-23 | 6 | ✅ Complete | 2026-01-20 |
 | v1.4 Agent Architecture | 24-27 | 8 | ✅ Complete | 2026-01-21 |
-| v1.5 CLI Skill Encapsulation | 28-32 | TBD | 🚧 In progress | - |
+| v1.5 CLI Skill Encapsulation | 28-32 | 1 | 🚧 In progress | - |
 
 | Phase | Milestone | Plans | Status |
 |-------|-----------|-------|--------|
@@ -230,7 +233,7 @@ Windows UI Automation with FlaUI
 | 25. Simulator Status | v1.4 | 2 | ✅ Complete |
 | 26. Log Path Finder | v1.4 | 2 | ✅ Complete |
 | 27. Delegation Fix | v1.4 | 2 | ✅ Complete |
-| 28. Skill Registry | v1.5 | TBD | Not started |
+| 28. Skill Registry | v1.5 | 1 | 📋 Ready to execute |
 | 29. Orchestrator Integration | v1.5 | TBD | Not started |
 | 30. Executor Translation | v1.5 | TBD | Not started |
 | 31. CLI Schema | v1.5 | TBD | Not started |
@@ -238,10 +241,10 @@ Windows UI Automation with FlaUI
 
 ## Current State
 
-**Status:** 🚧 v1.5 CLI Skill Encapsulation planning complete.
+**Status:** 🚧 v1.5 CLI Skill Encapsulation phase 28 planned.
 
-**Next Step:** Run `/gsd:plan-phase 28` to begin Skill Registry Definition.
+**Next Step:** Run `/gsd:execute-phase 28` to create the skill registry.
 
 ---
 
-*Last updated: 2026-01-21 - v1.5 roadmap created*
+*Last updated: 2026-01-21 - Phase 28 plan created*
