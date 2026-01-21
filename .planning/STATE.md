@@ -10,11 +10,27 @@ See: .planning/PROJECT.md (updated 2026-01-21)
 ## Current Position
 
 **Milestone:** v1.4 Test Agent Architecture & Reliability
-**Phase:** 26 (Dynamic Log Path Discovery)
-**Plan:** 02 (Documentation Update)
-**Status:** Complete
+**Phase:** 27 (Orchestrator Delegation Fix)
+**Plan:** 01 (Strengthen Delegation Pattern)
+**Status:** In Progress
 
-Progress: ██████████ 100% (Phase 26: 2/2 plans complete)
+Progress: ███░░░░░░░ 33% (Phase 27: 1/3 plans complete)
+
+## Plan 27-01 Summary
+
+**Timeline:** 4 min (2026-01-21)
+**Deliverables:**
+- "NEVER Use Bash Tool for Execution" section in test-orchestrator.md
+- "Delegation Issues" subsection in Reporting Format
+- Strengthened Critical Reminders with ABSOLUTE PROHIBITION
+
+**Commits:** 3 atomic commits
+
+**Features:**
+- 5+ forbidden pattern examples with visual markers (X/OK)
+- Delegation failure reporting format (which agent, error, retry, impact)
+- Cross-reference from Critical Reminders to prohibition section
+- test-orchestrator.md: 352 -> 446 lines (+94 lines)
 
 ## Plan 26-01 Summary
 
@@ -302,6 +318,9 @@ Decisions from all phases are logged in PROJECT.md.
 | 26-01 | Explicit option precedence | --date > --latest > default for predictable CLI behavior |
 | 26-02 | Documentation-first for CLI features | Documentation follows implementation so agents know about new capabilities |
 | 26-02 | --latest as primary method | Show --latest as recommended, --date as fallback for historical analysis |
+| 27-01 | Explicit Bash tool prohibitions | Visual markers (X/OK) and concrete forbidden examples prevent orchestration bypass |
+| 27-01 | Delegation Issues reporting | Early visibility section tracks sub-agent failures with retry/impact |
+| 27-01 | ABSOLUTE PROHIBITION cross-reference | Critical Reminders point to prohibition section for reinforcement |
 
 ### Deferred Issues
 
@@ -335,8 +354,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed Phase 26-02 (Documentation Update)
-Resume file: None (Phase 26 complete, ready for next phase)
+Stopped at: Completed Phase 27-01 (Strengthen Delegation Pattern)
+Resume file: None (Plan 27-01 complete, ready for next plan)
 
 ## Roadmap Evolution
 
@@ -351,9 +370,10 @@ Resume file: None (Phase 26 complete, ready for next phase)
 - Phase 24 complete: Error Diagnosis with centralized ExitCodes and InvocationContext pattern
 - Phase 25 complete: Simulator status CLI endpoint + documentation with polling patterns
 - Phase 26 complete: Dynamic log path discovery (--latest flag + documentation)
-- 10 controller methods + 11 CLI commands + config verification + optimized execution patterns + centralized error handling + status query + polling patterns + automatic log folder discovery + documentation
+- Phase 27 in progress: Orchestrator Delegation Fix (1/3 plans complete)
+- 10 controller methods + 11 CLI commands + config verification + optimized execution patterns + centralized error handling + status query + polling patterns + automatic log folder discovery + delegation prohibitions
 - v1.3 Setup Automation & Test Reliability: Phase 22 complete, Phase 23 complete
-- v1.4 Test Agent Architecture & Reliability: Phase 24 complete (100%), Phase 25 complete (100%), Phase 26 complete (100%)
+- v1.4 Test Agent Architecture & Reliability: Phase 24 complete (100%), Phase 25 complete (100%), Phase 26 complete (100%), Phase 27 in progress (33%)
 
 **v1.2 Test Automation Enhancement - SHIPPED**
 
@@ -375,4 +395,4 @@ Resume file: None (Phase 26 complete, ready for next phase)
 
 ---
 
-*Updated: 2026-01-21 after Phase 26-02 completion - Phase 26: 2/2 plans complete*
+*Updated: 2026-01-21 after Phase 27-01 completion - Phase 27: 1/3 plans complete*
