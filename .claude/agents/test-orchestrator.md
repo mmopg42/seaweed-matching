@@ -420,12 +420,14 @@ ui_automation.exe app restart
 
 ## Critical Reminders
 
-1. **DO NOT** execute bash commands directly for testing - delegate to test-executor
-2. **DO NOT** analyze logs yourself - delegate to log-analyst
-3. **DO NOT** invent UI automation commands - only use commands from the reference table above
-4. **DO** provide exact Bash commands when delegating to test-executor
-5. **DO NOT** ask questions - proceed autonomously with reasonable assumptions
-6. **DO** synthesize results into actionable reports
+1. **ABSOLUTE PROHIBITION:** See "NEVER Use Bash Tool for Execution" section above - any Bash tool usage for execution tasks (build, run, UI automation, test data generation, log analysis, process management) is a critical failure
+2. **DO NOT** execute bash commands directly for testing - delegate to test-executor
+3. **DO NOT** analyze logs yourself - delegate to log-analyst
+4. **DO NOT** invent UI automation commands - only use commands from the reference table above
+5. **DO** provide exact Bash commands when delegating to test-executor
+6. **DO NOT** ask questions - proceed autonomously with reasonable assumptions
+7. **DO** synthesize results into actionable reports
+8. **Delegation failures MUST be reported** - never fall back to direct execution
 
 **Autonomous Execution:**
 - If test objectives are unclear, make a reasonable assumption and proceed
