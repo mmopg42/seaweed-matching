@@ -74,7 +74,33 @@ python task_helper/data_test/data_simulator.py --cli --read-config --mode real -
 
 # Cleanup after testing
 python task_helper/data_test/data_simulator.py --cli --read-config --mode dummy --line line1 --cleanup
+
+# Query simulation status (reads from state file, works cross-process)
+python task_helper/data_test/data_simulator.py --status
 ```
+
+**State File Persistence:**
+Simulation state is persisted to: `%config_dir%/simulation_state.json`
+- On Windows (running as script): `C:\workspace\seaweed\gui_kiro\task_helper\data_test\simulation_state.json`
+- On Windows (running as EXE): Same directory as the executable
+- This allows status queries from separate processes
+
+**Status Response Format:**
+```json
+{
+  "status": "running|completed|idle|error",
+  "progress": 85.5,
+  "items_created": 376,
+  "simulation_id": "uuid-string",
+  "last_activity": "2026-01-21T18:30:45"
+}
+```
+
+- `status`: Current state (running, completed, idle, error)
+- `progress`: 0-100 percentage
+- `items_created`: Number of items moved/created so far
+- `simulation_id`: UUID for tracking this simulation (changes each run)
+- `last_activity`: ISO 8601 timestamp of last file operation
 
 **Configuration Location:** `%LOCALAPPDATA%\prische\ChronoView\config.json`
 
