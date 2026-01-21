@@ -20,19 +20,23 @@ FlaUI.UIA3 기반 ChronoView WPF 데스크톱 애플리케이션 자동화 도�
 - ✓ 테스트 에이전트 구현 — 스킬을 사용하여 ChronoView를 자동 테스트하는 에이전트 — v1.0
 - ✓ CommandRegistry 아키텍처 — 모듈형 커맨드 핸들러 구조 — v1.1
 - ✓ 10개 핸들러 클래스 — 각각 600줄 미만의 단일 책임 클래스 — v1.1
+- ✓ SetupWindow 전용 컨트롤러 구현 — v1.3
+- ✓ 설정 다이얼로그 열기/닫기 자동화 — v1.3
+- ✓ 완전한 셋업 완료 워크플로우 — v1.3
+- ✓ 데이터 시뮬레이터 설정값 비교 검증 — v1.3
+- ✓ 테스트 속도 최적화 — v1.3
 
 ### Active
 
-**Current Milestone: v1.3 Setup Automation & Test Reliability**
+**Current Milestone: v1.4 Test Agent Architecture & Reliability**
 
-**Goal:** SetupWindow 완전 자동화와 테스트 신뢰성/속도 개선
+**Goal:** 테스트 에이전트의 올바른 역할 분할과 신뢰성 개선
 
 **Target features:**
-- [ ] SetupWindow 전용 컨트롤러 구현
-- [ ] 설정 다이얼로그 열기/닫기 자동화
-- [ ] 완전한 셋업 완료 워크플로우 (카메라 실행 → 설정 확인 → 모니터링 시작)
-- [ ] 데이터 시뮬레이터 설정값과 ChronoView 설정값 비교 검증
-- [ ] 테스트 속도 최적화 (불필요한 체크 제거, 명령어 병렬화)
+- [ ] Exit Code 1 에러 원인 분석 및 명확한 에러 메시지
+- [ ] data_simulator.py에 --status endpoint 추가 (JSON 반환)
+- [ ] 로그 경로 동적 해결 (날짜별 폴더 자동 탐색)
+- [ ] test-orchestrator 역할 분할 수정 (executor/log-analyst 위임)
 
 ### Out of Scope
 
@@ -94,4 +98,4 @@ FlaUI.UIA3 기반 ChronoView WPF 데스크톱 애플리케이션 자동화 도�
 | Pure migration approach | Original code copied verbatim for compatibility | ✓ Good — zero regressions |
 
 ---
-*Last updated: 2026-01-20 after v1.3 milestone initialization*
+*Last updated: 2026-01-21 after v1.4 milestone initialization*

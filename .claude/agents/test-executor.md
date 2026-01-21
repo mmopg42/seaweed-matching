@@ -211,15 +211,22 @@ ui_automation.exe windows setup-complete
 ui_automation.exe setup verify-config --config-path path/to/simulator_config.json --json
 
 # Complete full setup workflow (launch cameras, verify config, start monitoring)
+# NOTE: In test environments without cameras, camera launch failures are acceptable
 ui_automation.exe setup complete-full --verify-config --json
 
 # With verification step first, then full workflow:
 ui_automation.exe setup verify-config --open-settings --json
 ui_automation.exe setup complete-full --json
+
+# TEST ENVIRONMENT: Skip camera-dependent workflow, go directly to monitoring:
+ui_automation.exe windows setup-complete  # Skips camera launches
+ui_automation.exe toolbar start           # Start monitoring directly
 ```
 
 The `--verify-config` flag in `complete-full` runs config verification as a pre-step.
 Use `--strict` to fail on config mismatches instead of continuing.
+
+**TEST ENVIRONMENT NOTE:** In environments without camera programs installed, use `windows setup-complete` instead of `setup complete-full` to avoid camera launch timeouts.
 
 ## What to Report
 
@@ -275,10 +282,35 @@ After execution, provide a TIER-organized report:
 - Errors: [If any]
 ```
 
+## Test Environment Considerations
+
+**Camera Launch Behavior:**
+- In **test environments**, camera programs (General Camera, NIR Camera 1/2) are typically **not installed**
+- Camera launch failures are **EXPECTED and ACCEPTABLE** in test scenarios
+- **DO NOT** wait for or retry camera launches in test workflows
+- The "Start Monitoring" button and core file monitoring functionality work independently of cameras
+
+**Test Workflow Adaptation:**
+```bash
+# In test environments, skip camera launch steps:
+# ❌ DON'T do this:
+ui_automation.exe workflow launch-general  # Will fail, wastes time
+ui_automation.exe workflow launch-nir       # Will fail, wastes time
+
+# ✅ Instead, proceed directly to monitoring:
+ui_automation.exe windows setup-complete  # Skip setup, go to main
+ui_automation.exe toolbar start           # Start monitoring (cameras optional)
+```
+
+**When testing camera-dependent features:**
+- Verify the UI shows appropriate "Camera not configured" warnings
+- Confirm the application doesn't hang or crash when cameras are missing
+- Test should continue despite camera unavailability
+
 ## ChronoView UI Reference
 
 **Main Toolbar:**
-- Start Monitoring - Begin watching configured folders
+- Start Monitoring - Begin watching configured folders (works without cameras)
 - Stop Monitoring - Pause file watching
 - Settings - Open configuration dialog
 - Refresh - Reload data
