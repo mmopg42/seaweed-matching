@@ -47,4 +47,25 @@ public static class JsonResponseModels
         bool Success,
         string Timestamp
     );
+
+    /// <summary>
+    /// Dry-run response showing what command would execute without execution.
+    /// Includes dryRun: true flag to distinguish from real executions.
+    /// </summary>
+    public record DryRunResponse(
+        bool Success,
+        bool DryRun,
+        string Timestamp,
+        DryRunData Data
+    );
+
+    /// <summary>
+    /// Data payload for dry-run responses.
+    /// Contains the skill name, CLI command, and arguments.
+    /// </summary>
+    public record DryRunData(
+        string Skill,
+        string Cli,
+        Dictionary<string, object> Args
+    );
 }
