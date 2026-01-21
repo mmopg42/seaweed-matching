@@ -952,6 +952,39 @@ All CLI commands with `--json` flag return standardized JSON responses that test
 }
 ```
 
+### Dry-Run Response Schema
+
+Dry-run responses use the same structure as success responses but include `dryRun: true`:
+
+```json
+{
+  "success": true,
+  "dryRun": true,
+  "timestamp": "2026-01-22T00:30:20Z",
+  "data": {
+    "skill": "TOOLBAR_START",
+    "cli": "toolbar start",
+    "args": {}
+  }
+}
+```
+
+**TypeScript interface:**
+```typescript
+interface DryRunResponse {
+  success: true;
+  dryRun: true;
+  timestamp: string;  // ISO 8601 format
+  data: {
+    skill: string;    // Validated skill name
+    cli: string;      // CLI command that would execute
+    args: Record<string, unknown>;  // Arguments (may be empty)
+  };
+}
+```
+
+**Note:** The `dryRun` field is the key differentiator - always check `response.dryRun === true` before treating a response as real execution.
+
 ### Standard Error Response
 
 ```json
@@ -962,6 +995,20 @@ All CLI commands with `--json` flag return standardized JSON responses that test
   "retryable": true,
   "suggestion": "Actionable suggestion for recovery",
   "timestamp": "2026-01-21T12:34:56.789Z"
+}
+```
+
+**Dry-run error responses** include `dryRun: true` and always have `errorCode: 4` (INVALID_ARGUMENT):
+
+```json
+{
+  "success": false,
+  "dryRun": true,
+  "error": "Unknown skill: INVALID_SKILL",
+  "errorCode": 4,
+  "retryable": false,
+  "suggestion": "Did you mean: APP_LAUNCH? See test-executor-skills.md",
+  "timestamp": "2026-01-22T00:30:20Z"
 }
 ```
 
