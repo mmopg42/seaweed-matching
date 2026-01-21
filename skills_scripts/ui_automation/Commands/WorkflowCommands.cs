@@ -1,10 +1,10 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
-using System.Text.Json;
 using FlaUI.Core.AutomationElements;
 using Workflow = SkillsScripts.UiAutomation.ChronoWorkflowController;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
 using static UiAutomation.Commands.ExitCodes;
+using static UiAutomation.Commands.JsonResponseHelper;
 
 namespace UiAutomation.Commands;
 
@@ -151,15 +151,11 @@ public class WorkflowCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            source = "WorkflowPanel",
-                            count = states.Count,
-                            states = states
-                        }
+                        source = "WorkflowPanel",
+                        count = states.Count,
+                        states = states
                     });
                 }
                 else
@@ -196,15 +192,11 @@ public class WorkflowCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            line = "Line1",
-                            count = paths.Count,
-                            paths = paths
-                        }
+                        line = "Line 1",
+                        count = paths.Count,
+                        paths = paths
                     });
                 }
                 else
@@ -237,15 +229,11 @@ public class WorkflowCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            line = "Line2",
-                            count = paths.Count,
-                            paths = paths
-                        }
+                        line = "Line 2",
+                        count = paths.Count,
+                        paths = paths
                     });
                 }
                 else
@@ -278,14 +266,10 @@ public class WorkflowCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            count = allPaths.Count,
-                            paths = allPaths
-                        }
+                        count = allPaths.Count,
+                        paths = allPaths
                     });
                 }
                 else
@@ -427,15 +411,11 @@ public class WorkflowCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            source = "LogPanel",
-                            count = logs.Count,
-                            logs = logs
-                        }
+                        source = "LogPanel",
+                        count = logs.Count,
+                        logs = logs
                     });
                 }
                 else
@@ -454,7 +434,8 @@ public class WorkflowCommands : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[logs-get] Error: {ex.Message}");
+                PrintError($"Failed to get log messages: {ex.Message}", ERROR,
+                    "Ensure ChronoView is running and LogPanel is accessible.");
                 context.ExitCode = ERROR;
             }
         });
@@ -481,16 +462,12 @@ public class WorkflowCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            source = "LogPanel",
-                            requested = actualCount,
-                            returned = logs.Count,
-                            logs = logs
-                        }
+                        source = "LogPanel",
+                        requested = actualCount,
+                        returned = logs.Count,
+                        logs = logs
                     });
                 }
                 else
@@ -509,7 +486,8 @@ public class WorkflowCommands : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[logs-tail] Error: {ex.Message}");
+                PrintError($"Failed to get latest logs: {ex.Message}", ERROR,
+                    "Ensure ChronoView is running and LogPanel has data.");
                 context.ExitCode = ERROR;
             }
         });
@@ -536,16 +514,12 @@ public class WorkflowCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            source = "LogPanel",
-                            filter = new { level = level },
-                            count = logs.Count,
-                            logs = logs
-                        }
+                        source = "LogPanel",
+                        filter = new { level = level },
+                        count = logs.Count,
+                        logs = logs
                     });
                 }
                 else
@@ -565,7 +539,8 @@ public class WorkflowCommands : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[logs-filter] Error: {ex.Message}");
+                PrintError($"Failed to filter logs: {ex.Message}", ERROR,
+                    "Check if the log level is valid (Debug, Info, Warning, Error).");
                 context.ExitCode = ERROR;
             }
         });
@@ -588,16 +563,12 @@ public class WorkflowCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            source = "LogPanel",
-                            search = text,
-                            count = logs.Count,
-                            logs = logs
-                        }
+                        source = "LogPanel",
+                        search = text,
+                        count = logs.Count,
+                        logs = logs
                     });
                 }
                 else
@@ -616,23 +587,13 @@ public class WorkflowCommands : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[logs-search] Error: {ex.Message}");
+                PrintError($"Failed to search logs: {ex.Message}", ERROR,
+                    "Verify the search text and try again.");
                 context.ExitCode = ERROR;
             }
         });
         logsCommand.AddCommand(logsSearchCommand);
 
         rootCommand.AddCommand(logsCommand);
-    }
-
-    /// <summary>
-    /// Print JSON output with consistent formatting for programmatic consumption
-    /// </summary>
-    private static void PrintJsonOutput(object data)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(data, new JsonSerializerOptions
-        {
-            WriteIndented = false
-        }));
     }
 }
