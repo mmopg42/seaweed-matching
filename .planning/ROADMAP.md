@@ -213,7 +213,7 @@ Plans:
 
 **Depends on:** Phase 31 (standardized schemas)
 **Research:** Unlikely (dry-run is standard CLI pattern)
-**Plans:** TBD
+**Plans:** 3 plans
 
 **Requirements:** DRYRUN-01 through DRYRUN-05
 
@@ -223,6 +223,11 @@ Plans:
 3. Dry-run validates parameter syntax before returning
 4. Dry-run validates skill exists (in executor)
 5. test-executor.md documents dry-run usage patterns
+
+Plans:
+- [ ] 32-01-PLAN.md — Create dry-run infrastructure (models, helper extension, validation logic)
+- [ ] 32-02-PLAN.md — Add --dry-run option to all command handlers
+- [ ] 32-03-PLAN.md — Update documentation (test-executor.md, test-orchestrator.md) with dry-run patterns
 
 ---
 
@@ -235,7 +240,7 @@ Plans:
 | v1.2 Test Automation | 20-21 | 2 | ✅ Complete | 2026-01-20 |
 | v1.3 Setup & Perf | 22-23 | 6 | ✅ Complete | 2026-01-20 |
 | v1.4 Agent Architecture | 24-27 | 8 | ✅ Complete | 2026-01-21 |
-| v1.5 CLI Skill Encapsulation | 28-32 | 7 | 🚧 In progress | - |
+| v1.5 CLI Skill Encapsulation | 28-32 | 10 | 🚧 In progress | - |
 
 | Phase | Milestone | Plans | Status |
 |-------|-----------|-------|--------|
@@ -249,14 +254,14 @@ Plans:
 | 29. Orchestrator Integration | v1.5 | 1 | ✅ Complete |
 | 30. Executor Translation | v1.5 | 1 | Ready |
 | 31. CLI Schema | v1.5 | 4 | ✅ Complete |
-| 32. Dry-Run Mode | v1.5 | TBD | Not started |
+| 32. Dry-Run Mode | v1.5 | 3 | 📋 Planned |
 
 ## Current State
 
-**Status:** 🚧 v1.5 CLI Skill Encapsulation - Phase 32 not started.
+**Status:** 🚧 v1.5 CLI Skill Encapsulation - Phase 32 planned, ready for execution.
 
-**Next Step:** Run `/gsd:plan-phase 32` to plan dry-run mode implementation.
+**Next Step:** Run `/gsd:execute-phase 32` to implement dry-run mode.
 
 ---
 
-*Last updated: 2026-01-21 - Phase 31 complete*
+*Last updated: 2026-01-22 - Phase 32 planned*
