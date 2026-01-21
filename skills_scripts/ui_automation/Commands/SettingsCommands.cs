@@ -1,10 +1,10 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
-using System.Text.Json;
 using FlaUI.Core.AutomationElements;
 using Settings = SkillsScripts.UiAutomation.ChronoSettingsController;
 using ConsoleLogs = SkillsScripts.UiAutomation.ConsoleLogsReader;
 using static UiAutomation.Commands.ExitCodes;
+using static UiAutomation.Commands.JsonResponseHelper;
 
 namespace UiAutomation.Commands;
 
@@ -86,17 +86,13 @@ public class SettingsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            source = "ConsoleLogs",
-                            logDirectory = reader.GetLogDirectory(),
-                            dateFilter = dateFilter,
-                            count = files.Length,
-                            files = files
-                        }
+                        source = "ConsoleLogs",
+                        logDirectory = reader.GetLogDirectory(),
+                        dateFilter = dateFilter,
+                        count = files.Length,
+                        files = files
                     });
                 }
                 else
@@ -118,7 +114,8 @@ public class SettingsCommands : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[console-logs-list] Error: {ex.Message}");
+                PrintError($"Failed to list log files: {ex.Message}", ERROR,
+                    "Ensure ChronoView has been run. Check log directory path.");
                 context.ExitCode = ERROR;
             }
         });
@@ -173,7 +170,8 @@ public class SettingsCommands : ICommandHandler
                     var files = reader.GetLogFiles();
                     if (files.Length == 0)
                     {
-                        Console.Error.WriteLine("[console-logs-tail] No log files found");
+                        PrintError("No log files found", NOT_FOUND,
+                            "Ensure ChronoView has been run. Check log directory path.");
                         context.ExitCode = NOT_FOUND;
                         return;
                     }
@@ -182,7 +180,8 @@ public class SettingsCommands : ICommandHandler
 
                 if (!File.Exists(targetPath))
                 {
-                    Console.Error.WriteLine($"[console-logs-tail] File not found: {targetPath}");
+                    PrintError($"File not found: {targetPath}", NOT_FOUND,
+                        "Verify the file path or use --latest flag.");
                     context.ExitCode = NOT_FOUND;
                     return;
                 }
@@ -191,17 +190,13 @@ public class SettingsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            source = "ConsoleLogs",
-                            file = targetPath,
-                            requested = actualCount,
-                            returned = lines.Length,
-                            logs = lines
-                        }
+                        source = "ConsoleLogs",
+                        file = targetPath,
+                        requested = actualCount,
+                        returned = lines.Length,
+                        logs = lines
                     });
                 }
                 else
@@ -216,7 +211,8 @@ public class SettingsCommands : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[console-logs-tail] Error: {ex.Message}");
+                PrintError($"Failed to read log tail: {ex.Message}", ERROR,
+                    "Ensure the log file exists and is readable.");
                 context.ExitCode = ERROR;
             }
         });
@@ -269,7 +265,8 @@ public class SettingsCommands : ICommandHandler
                     var files = reader.GetLogFiles();
                     if (files.Length == 0)
                     {
-                        Console.Error.WriteLine("[console-logs-search] No log files found");
+                        PrintError("No log files found to search", NOT_FOUND,
+                            "Ensure ChronoView has been run and logs exist.");
                         context.ExitCode = NOT_FOUND;
                         return;
                     }
@@ -278,7 +275,8 @@ public class SettingsCommands : ICommandHandler
 
                 if (!File.Exists(targetPath))
                 {
-                    Console.Error.WriteLine($"[console-logs-search] File not found: {targetPath}");
+                    PrintError($"File not found: {targetPath}", NOT_FOUND,
+                        "Verify the file path or use --latest flag.");
                     context.ExitCode = NOT_FOUND;
                     return;
                 }
@@ -287,18 +285,14 @@ public class SettingsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            source = "ConsoleLogs",
-                            file = targetPath,
-                            search = text,
-                            maxResults = maxResults,
-                            count = lines.Length,
-                            logs = lines
-                        }
+                        source = "ConsoleLogs",
+                        file = targetPath,
+                        search = text,
+                        maxResults = maxResults,
+                        count = lines.Length,
+                        logs = lines
                     });
                 }
                 else
@@ -313,7 +307,8 @@ public class SettingsCommands : ICommandHandler
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[console-logs-search] Error: {ex.Message}");
+                PrintError($"Failed to search logs: {ex.Message}", ERROR,
+                    "Verify the search text and file path are valid.");
                 context.ExitCode = ERROR;
             }
         });
@@ -420,14 +415,10 @@ public class SettingsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            dialogType = "SettingsDialog",
-                            isOpen = isOpen
-                        }
+                        dialogType = "SettingsDialog",
+                        isOpen = isOpen
                     });
                 }
                 else
@@ -463,16 +454,12 @@ public class SettingsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            line1 = line1Paths,
-                            line2 = line2Paths,
-                            output = outputPath,
-                            quarantine = quarantinePath
-                        }
+                        line1 = line1Paths,
+                        line2 = line2Paths,
+                        output = outputPath,
+                        quarantine = quarantinePath
                     });
                 }
                 else
@@ -514,15 +501,11 @@ public class SettingsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            line = "Line1",
-                            count = paths.Count,
-                            paths = paths
-                        }
+                        line = "Line 1",
+                        count = paths.Count,
+                        paths = paths
                     });
                 }
                 else
@@ -556,15 +539,11 @@ public class SettingsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            line = "Line2",
-                            count = paths.Count,
-                            paths = paths
-                        }
+                        line = "Line 2",
+                        count = paths.Count,
+                        paths = paths
                     });
                 }
                 else
@@ -598,14 +577,10 @@ public class SettingsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            pathType = "output",
-                            path = path
-                        }
+                        pathType = "output",
+                        path = path
                     });
                 }
                 else
@@ -635,14 +610,10 @@ public class SettingsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            pathType = "quarantine",
-                            path = path
-                        }
+                        pathType = "quarantine",
+                        path = path
                     });
                 }
                 else
@@ -751,14 +722,10 @@ public class SettingsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            checkbox = name,
-                            isChecked = state
-                        }
+                        checkbox = name,
+                        isChecked = state
                     });
                 }
                 else
@@ -821,15 +788,11 @@ public class SettingsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            source = "AdvancedTab",
-                            count = settings.Count,
-                            settings = settings
-                        }
+                        source = "AdvancedTab",
+                        count = settings.Count,
+                        settings = settings
                     });
                 }
                 else
@@ -934,16 +897,5 @@ public class SettingsCommands : ICommandHandler
         settingsDialogCommand.AddCommand(settingsActionCommand);
 
         rootCommand.AddCommand(settingsDialogCommand);
-    }
-
-    /// <summary>
-    /// Print JSON output with consistent formatting for programmatic consumption
-    /// </summary>
-    private static void PrintJsonOutput(object data)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(data, new JsonSerializerOptions
-        {
-            WriteIndented = false
-        }));
     }
 }

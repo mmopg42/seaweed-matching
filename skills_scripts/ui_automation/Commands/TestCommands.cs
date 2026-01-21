@@ -1,6 +1,5 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
-using System.Text.Json;
 using UiAuto = SkillsScripts.UiAutomation.UiAutomation;
 using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
 using Toolbar = SkillsScripts.UiAutomation.ChronoToolbarController;
@@ -9,6 +8,7 @@ using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
 using Settings = SkillsScripts.UiAutomation.ChronoSettingsController;
 using FileOps = SkillsScripts.UiAutomation.ChronoFileOperationsController;
 using static UiAutomation.Commands.ExitCodes;
+using static UiAutomation.Commands.JsonResponseHelper;
 
 namespace UiAutomation.Commands;
 
@@ -64,17 +64,26 @@ public class TestCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    if (window != null)
                     {
-                        success = true,
-                        data = new
+                        PrintSuccess(new
                         {
-                            connected = window != null,
-                            windowFound = window != null,
-                            appName = window != null ? window.Name : null,
-                            timestamp = DateTime.Now.ToString("o")
-                        }
-                    });
+                            connected = true,
+                            windowFound = true,
+                            appName = window.Name,
+                            timestamp = DateTime.UtcNow.ToString("o")
+                        });
+                    }
+                    else
+                    {
+                        PrintSuccess(new
+                        {
+                            connected = false,
+                            windowFound = false,
+                            appName = (string?)null,
+                            timestamp = DateTime.UtcNow.ToString("o")
+                        });
+                    }
                 }
                 else
                 {
@@ -158,15 +167,11 @@ public class TestCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            windows,
-                            controllers = controllers.Distinct().ToList(),
-                            commands = commands.Distinct().ToList()
-                        }
+                        windows,
+                        controllers = controllers.Distinct().ToList(),
+                        commands = commands.Distinct().ToList()
                     });
                 }
                 else
@@ -208,15 +213,11 @@ public class TestCommands : ICommandHandler
 
                     if (json)
                     {
-                        PrintJsonOutput(new
+                        PrintSuccess(new
                         {
-                            success = true,
-                            data = new
-                            {
-                                accessible = true,
-                                rowCount = rowCount,
-                                headers = headers
-                            }
+                            accessible = true,
+                            rowCount = rowCount,
+                            headers = headers
                         });
                     }
                     else
@@ -230,12 +231,8 @@ public class TestCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "DataGrid not found",
-                            errorCode = NOT_FOUND
-                        });
+                        PrintError("DataGrid not accessible", NOT_FOUND,
+                            "Ensure ChronoView is running and MainWindow is active. Try 'windows main --json'.");
                     }
                     else
                     {
@@ -276,12 +273,8 @@ public class TestCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "MainWindow not found",
-                            errorCode = NOT_FOUND
-                        });
+                        PrintError("MainWindow not found", NOT_FOUND,
+                            "Ensure ChronoView is running. Try 'app status --json' to check.");
                     }
                     else
                     {
@@ -299,12 +292,8 @@ public class TestCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "Could not click Start button",
-                            errorCode = ERROR
-                        });
+                        PrintError("Could not click Start button", ERROR,
+                            "The toolbar may be busy. Wait a moment and retry.");
                     }
                     else
                     {
@@ -323,15 +312,11 @@ public class TestCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            started = true,
-                            buttonState = stateChanged ? "disabled" : "unknown",
-                            stats = stats
-                        }
+                        started = true,
+                        buttonState = stateChanged ? "disabled" : "unknown",
+                        stats = stats
                     });
                 }
                 else
@@ -402,12 +387,8 @@ public class TestCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "Could not open SettingsDialog",
-                            errorCode = ERROR
-                        });
+                        PrintError("Could not open SettingsDialog", ERROR,
+                            "MainWindow may not be active. Try 'windows main --json' first.");
                     }
                     else
                     {
@@ -428,12 +409,8 @@ public class TestCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "SettingsDialog did not appear",
-                            errorCode = TIMEOUT
-                        });
+                        PrintError("SettingsDialog did not appear", TIMEOUT,
+                            "The dialog may have opened and closed quickly. Try 'settings-dialog open --json'.");
                     }
                     else
                     {
@@ -498,14 +475,10 @@ public class TestCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = saved && dialogClosed,
-                        data = new
-                        {
-                            configured = configured,
-                            verified = dialogClosed
-                        }
+                        configured = configured,
+                        verified = dialogClosed
                     });
                 }
                 else
@@ -560,12 +533,8 @@ public class TestCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "Must specify --rows or --group-ids",
-                            errorCode = INVALID_ARGUMENT
-                        });
+                        PrintError("Must specify --rows or --group-ids", INVALID_ARGUMENT,
+                            "Provide row indices with --rows or GroupIds with --group-ids.");
                     }
                     else
                     {
@@ -586,15 +555,11 @@ public class TestCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = moved,
-                        data = new
-                        {
-                            moved = moved ? (rows?.Length ?? groupIds?.Length ?? 0) : 0,
-                            originalCount = originalCount,
-                            newCount = newCount
-                        }
+                        moved = moved ? (rows?.Length ?? groupIds?.Length ?? 0) : 0,
+                        originalCount = originalCount,
+                        newCount = newCount
                     });
                 }
                 else
@@ -684,12 +649,8 @@ public class TestCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "Must specify --rows, --group-ids, or --count with --start-index",
-                            errorCode = INVALID_ARGUMENT
-                        });
+                        PrintError("Must specify --rows, --group-ids, or --count with --start-index", INVALID_ARGUMENT,
+                            "Provide selection criteria: --rows, --group-ids, or --count with --start-index.");
                     }
                     else
                     {
@@ -712,15 +673,11 @@ public class TestCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = moved,
-                        data = new
-                        {
-                            selected = selectedCount,
-                            moved = moved ? selectedCount : 0,
-                            duration = duration
-                        }
+                        selected = selectedCount,
+                        moved = moved ? selectedCount : 0,
+                        duration = duration
                     });
                 }
                 else
@@ -793,12 +750,8 @@ public class TestCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "Must specify --rows, --group-ids, or --count with --start-index",
-                            errorCode = INVALID_ARGUMENT
-                        });
+                        PrintError("Must specify --rows, --group-ids, or --count with --start-index", INVALID_ARGUMENT,
+                            "Provide selection criteria: --rows, --group-ids, or --count with --start-index.");
                     }
                     else
                     {
@@ -824,15 +777,11 @@ public class TestCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = confirmed,
-                        data = new
-                        {
-                            selected = selectedCount,
-                            deleted = confirmed ? selectedCount : 0,
-                            confirmed = confirmed
-                        }
+                        selected = selectedCount,
+                        deleted = confirmed ? selectedCount : 0,
+                        confirmed = confirmed
                     });
                 }
                 else
@@ -873,20 +822,16 @@ public class TestCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
+                        timestamp = DateTime.UtcNow.ToString("o"),
+                        statistics = stats,
+                        dataGrid = new
                         {
-                            timestamp = DateTime.Now.ToString("o"),
-                            statistics = stats,
-                            dataGrid = new
-                            {
-                                rowCount = allData.Count,
-                                rows = allData
-                            },
-                            cameraStates = cameraStates
-                        }
+                            rowCount = allData.Count,
+                            rows = allData
+                        },
+                        cameraStates = cameraStates
                     });
                 }
                 else
@@ -924,17 +869,6 @@ public class TestCommands : ICommandHandler
     // ============================================================
     // Helper methods
     // ============================================================
-
-    /// <summary>
-    /// Print JSON output with consistent formatting for programmatic consumption
-    /// </summary>
-    private static void PrintJsonOutput(object data)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(data, new JsonSerializerOptions
-        {
-            WriteIndented = false
-        }));
-    }
 
     /// <summary>
     /// Print output message (always enabled for test/scenario/batch commands)

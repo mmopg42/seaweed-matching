@@ -1,12 +1,12 @@
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Linq;
-using System.Text.Json;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 using UiAuto = SkillsScripts.UiAutomation.UiAutomation;
 using Finder = SkillsScripts.UiAutomation.ChronoWindowFinder;
 using static UiAutomation.Commands.ExitCodes;
+using static UiAutomation.Commands.JsonResponseHelper;
 
 namespace UiAutomation.Commands;
 
@@ -48,17 +48,13 @@ public class WindowsCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
+                        PrintSuccess(new
                         {
-                            success = true,
-                            data = new
-                            {
-                                found = true,
-                                windowType = "MainWindow",
-                                title = window.Name,
-                                className = window.ClassName,
-                                automationId = window.AutomationId
-                            }
+                            found = true,
+                            windowType = "MainWindow",
+                            title = window.Name,
+                            className = window.ClassName,
+                            automationId = window.AutomationId
                         });
                     }
                     else
@@ -73,12 +69,8 @@ public class WindowsCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "MainWindow not found",
-                            errorCode = NOT_FOUND
-                        });
+                        PrintError("MainWindow not found", NOT_FOUND,
+                            "Ensure ChronoView is running. Try 'app status --json' to check.");
                     }
                     else
                     {
@@ -112,17 +104,13 @@ public class WindowsCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
+                        PrintSuccess(new
                         {
-                            success = true,
-                            data = new
-                            {
-                                found = true,
-                                windowType = "SetupWindow",
-                                title = window.Name,
-                                className = window.ClassName,
-                                automationId = window.AutomationId
-                            }
+                            found = true,
+                            windowType = "SetupWindow",
+                            title = window.Name,
+                            className = window.ClassName,
+                            automationId = window.AutomationId
                         });
                     }
                     else
@@ -137,12 +125,8 @@ public class WindowsCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "SetupWindow not found",
-                            errorCode = NOT_FOUND
-                        });
+                        PrintError("SetupWindow not found", NOT_FOUND,
+                            "Setup may have been completed. Try 'windows main --json'.");
                     }
                     else
                     {
@@ -176,12 +160,8 @@ public class WindowsCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "SetupWindow not found",
-                            hint = "ChronoView may not be at setup screen"
-                        });
+                        PrintError("SetupWindow not found", NOT_FOUND,
+                            "Setup may have already been completed. Try 'windows main --json'.");
                     }
                     else
                     {
@@ -214,12 +194,8 @@ public class WindowsCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "Start button not found in SetupWindow",
-                            hint = "Button text may have changed"
-                        });
+                        PrintError("Start button not found in SetupWindow", ERROR,
+                            "Button text may have changed. Use 'windows setup --json' to inspect.");
                     }
                     else
                     {
@@ -239,17 +215,20 @@ public class WindowsCommands : ICommandHandler
 
                 if (json)
                 {
-                    PrintJsonOutput(new
+                    if (success)
                     {
-                        success,
-                        data = success ? new
+                        PrintSuccess(new
                         {
                             completed = true,
                             mainWindowFound = true,
                             mainWindowTitle = mainWindow?.Name
-                        } : null,
-                        error = success ? null : "MainWindow did not appear after clicking start"
-                    });
+                        });
+                    }
+                    else
+                    {
+                        PrintError("MainWindow did not appear after clicking start", TIMEOUT,
+                            "The application may be initializing. Wait a few seconds and try 'windows main --json'.");
+                    }
                 }
                 else
                 {
@@ -290,17 +269,13 @@ public class WindowsCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
+                        PrintSuccess(new
                         {
-                            success = true,
-                            data = new
-                            {
-                                found = true,
-                                windowType = "SettingsDialog",
-                                title = window.Name,
-                                className = window.ClassName,
-                                automationId = window.AutomationId
-                            }
+                            found = true,
+                            windowType = "SettingsDialog",
+                            title = window.Name,
+                            className = window.ClassName,
+                            automationId = window.AutomationId
                         });
                     }
                     else
@@ -315,12 +290,8 @@ public class WindowsCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "SettingsDialog not found",
-                            errorCode = NOT_FOUND
-                        });
+                        PrintError("SettingsDialog not found", NOT_FOUND,
+                            "Settings dialog is not open. Try 'settings-dialog open'.");
                     }
                     else
                     {
@@ -354,17 +325,13 @@ public class WindowsCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
+                        PrintSuccess(new
                         {
-                            success = true,
-                            data = new
-                            {
-                                found = true,
-                                windowType = "ImagePreviewWindow",
-                                title = window.Name,
-                                className = window.ClassName,
-                                automationId = window.AutomationId
-                            }
+                            found = true,
+                            windowType = "ImagePreviewWindow",
+                            title = window.Name,
+                            className = window.ClassName,
+                            automationId = window.AutomationId
                         });
                     }
                     else
@@ -379,12 +346,8 @@ public class WindowsCommands : ICommandHandler
                 {
                     if (json)
                     {
-                        PrintJsonOutput(new
-                        {
-                            success = false,
-                            error = "ImagePreviewWindow not found",
-                            errorCode = NOT_FOUND
-                        });
+                        PrintError("ImagePreviewWindow not found", NOT_FOUND,
+                            "No preview window is currently open.");
                     }
                     else
                     {
@@ -422,14 +385,10 @@ public class WindowsCommands : ICommandHandler
                         className = w.ClassName,
                         automationId = TryGetAutomationId(w)
                     });
-                    PrintJsonOutput(new
+                    PrintSuccess(new
                     {
-                        success = true,
-                        data = new
-                        {
-                            count = windows.Count,
-                            windows = windowList
-                        }
+                        count = windows.Count,
+                        windows = windowList
                     });
                 }
                 else
@@ -451,17 +410,6 @@ public class WindowsCommands : ICommandHandler
         windowsCommand.AddCommand(allCommand);
 
         rootCommand.AddCommand(windowsCommand);
-    }
-
-    /// <summary>
-    /// Print JSON output with consistent formatting for programmatic consumption
-    /// </summary>
-    private static void PrintJsonOutput(object data)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(data, new JsonSerializerOptions
-        {
-            WriteIndented = false
-        }));
     }
 
     /// <summary>
