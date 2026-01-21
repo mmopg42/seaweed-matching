@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-01-21)
 **Milestone:** v1.4 Test Agent Architecture & Reliability
 **Phase:** 24 (Error Diagnosis)
 **Plan:** 02 (Command Handler Refactoring)
-**Status:** In progress
+**Status:** Complete
 
-Progress: ██████░░░░░ 40% (Phase 24: 1/2 plans complete)
+Progress: ██████████ 100% (Phase 24: 2/2 plans complete)
 
 ## Plan 24-01 Summary
 
@@ -32,6 +32,28 @@ Progress: ██████░░░░░ 40% (Phase 24: 1/2 plans complete)
 - FlaUI exception detection by namespace (AutomationException base class doesn't exist in 5.0.0)
 - Error format: "[Error] ExceptionType: Message" + "Command: args"
 - Stack traces shown when --verbose flag is used
+
+## Plan 24-02 Summary
+
+**Timeline:** 25 min (2026-01-21)
+**Deliverables:**
+- All 10 command handler files refactored to use ExitCodes via InvocationContext.ExitCode
+- Try-catch wrappers in all ~150 command handlers for local error context
+- Console.Error for error messages, Console.Out for normal output
+
+**Commits:** 6 atomic commits
+
+**Files Modified:**
+- SetupCommands.cs - verify-config, complete-full, open-settings, camera-states handlers
+- WindowsCommands.cs - main, setup, settings, preview, all handlers
+- ToolbarCommands.cs - all 9 toolbar button handlers
+- UtilityCommands.cs - inspect and config command handlers
+- AppLifecycleCommands.cs - launch, stop, restart, status handlers (async)
+- FileOpsCommands.cs - select, move, delete, wait, confirm, verify handlers
+- TestCommands.cs - test, scenario, batch command handlers
+- DataPanelCommands.cs - stats, datagrid command handlers
+- WorkflowCommands.cs - workflow and logs command handlers
+- SettingsCommands.cs - console-logs and settings-dialog handlers
 
 ## Plan 23-01 Summary
 
@@ -183,7 +205,7 @@ Decisions from all phases are logged in PROJECT.md.
 | 23-01 | Parallel execution for read queries | Independent operations can run concurrently |
 | 23-03 | Complete CLI-01 commands | Expose ChronoSetupWindowController methods via CLI |
 | 24-01 | Centralized error handling | Try-catch wrapper at Program.cs for better diagnostics |
-| 24-02 | Return-based exit codes | Replace Environment.Exit() with return statements |
+| 24-02 | Return-based exit codes | Use InvocationContext.ExitCode for System.CommandLine beta4 compatibility |
 
 ### Deferred Issues
 
@@ -198,8 +220,7 @@ None.
 - [x] Optimize test execution speed (Plan 23-01)
 - [x] Create ExitCodes.cs with centralized constants (Plan 24-01)
 - [x] Add try-catch wrapper around InvokeAsync (Plan 24-01)
-- [ ] Refactor SetupCommands to return exit codes (Plan 24-02)
-- [ ] Refactor all command handlers to return exit codes (Plan 24-02)
+- [x] Refactor all command handlers to return exit codes via InvocationContext (Plan 24-02)
 
 ### Blockers/Concerns
 
@@ -207,19 +228,19 @@ None.
 1. ~~SetupWindow에서 설정을 열어서 모니터링 시작 버튼을 누르지 못함~~ (resolved with ChronoSetupWindowController)
 2. 껐다가 다시 켰을 때 아무런 작동도 안 됨
 3. ~~테스트 실행 속도가 느림~~ (resolved with delay optimization and parallel patterns)
-4. **Exit Code 1 에러 메시지가 너무 일반적** (addressed in Phase 24)
+4. ~~Exit Code 1 에러 메시지가 너무 일반적~~ (resolved in Phase 24)
 
 **Root Causes:**
 - ~~SetupWindow 전용 컨트롤러 부재~~ (resolved)
 - ~~데이터 시뮬레이터 설정 검증 부재~~ (resolved with SetupConfigVerifier)
 - ~~불필요한 사전 체크로 인한 지연~~ (resolved)
-- **Environment.Exit() 호출로 인한 예외 처리 우회** (planned fix in Phase 24)
+- ~~Environment.Exit() 호출로 인한 예외 처리 우회~~ (resolved with InvocationContext.ExitCode)
 
 ## Session Continuity
 
 Last session: 2026-01-21
-Stopped at: Completed Phase 24-01 (Centralized Error Handler)
-Resume file: .planning/phases/24-error-diagnosis/24-02-PLAN.md
+Stopped at: Completed Phase 24-02 (Command Handler Refactoring)
+Resume file: None (Phase 24 complete)
 
 ## Roadmap Evolution
 
@@ -231,10 +252,10 @@ Resume file: .planning/phases/24-error-diagnosis/24-02-PLAN.md
 **Current State:**
 - Phase 22 complete: ChronoSetupWindowController + SetupCommands + SetupConfigVerifier (2,092 lines total)
 - Phase 23 complete: Performance optimization + CLI-01 commands (open-settings, camera-states)
-- Phase 24: 1/2 complete (24-01: Centralized Error Handler, 24-02: Command Handler Refactoring pending)
-- 10 controller methods + 11 CLI commands + config verification + optimized execution patterns
+- Phase 24 complete: Error Diagnosis with centralized ExitCodes and InvocationContext pattern
+- 10 controller methods + 11 CLI commands + config verification + optimized execution patterns + centralized error handling
 - v1.3 Setup Automation & Test Reliability: Phase 22 complete, Phase 23 complete
-- v1.4 Test Agent Architecture & Reliability: Phase 24 in progress (40%)
+- v1.4 Test Agent Architecture & Reliability: Phase 24 complete (100%)
 
 **v1.2 Test Automation Enhancement - SHIPPED**
 
@@ -256,4 +277,4 @@ Resume file: .planning/phases/24-error-diagnosis/24-02-PLAN.md
 
 ---
 
-*Updated: 2026-01-21 after Phase 24-01 completion - 1/2 plans complete*
+*Updated: 2026-01-21 after Phase 24-02 completion - 2/2 plans complete*
