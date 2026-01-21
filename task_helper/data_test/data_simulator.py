@@ -739,7 +739,21 @@ class DataSimulator:
 
     def run_line1_simulation(self, log_callback, progress_callback, complete_callback):
         """Run Line1 simulation by moving files at exact timestamps"""
+        # Clean up old state file from previous simulation
+        old_state = self._get_state_file_path()
+        if os.path.exists(old_state):
+            try:
+                os.remove(old_state)
+            except Exception:
+                pass
+
         self.is_running = True
+
+        # Initialize simulation state
+        self.current_simulation_id = str(uuid.uuid4())
+        total_items = 0
+        items_moved = 0
+
         try:
             if not self.target_base:
                 log_callback("ERROR: Target folder not set!")
@@ -777,6 +791,10 @@ class DataSimulator:
                     return
 
                 log_callback(f"[LINE1] Found {len(items)} items to move")
+
+            # Set total items and update initial state
+            total_items = len(items)
+            self._update_state("running", 0, 0, self.current_simulation_id)
 
             self.reset_outlier_state()
 
@@ -927,11 +945,20 @@ class DataSimulator:
                     progress = (idx + 1) / len(items) * 100
                     progress_callback(progress)
 
+                    # Update state after successful item move
+                    items_moved = len(self.moved_items)
+                    self._update_state("running", progress, items_moved, self.current_simulation_id)
+
             if self.is_running:
                 action_word = "created" if self.use_dummy_data else "moved"
-                log_callback(f"[LINE1] Simulation completed! {len(self.moved_items)} items {action_word}.")
+                items_moved = len(self.moved_items)
+                log_callback(f"[LINE1] Simulation completed! {items_moved} items {action_word}.")
+                self._update_state("completed", 100, items_moved, self.current_simulation_id)
 
         except Exception as e:
+            items_moved = len(self.moved_items)
+            progress = (items_moved / total_items * 100) if total_items > 0 else 0
+            self._update_state("error", progress, items_moved, self.current_simulation_id)
             log_callback(f"[LINE1] ERROR: {str(e)}")
         finally:
             self.is_running = False
@@ -939,7 +966,21 @@ class DataSimulator:
 
     def run_line2_simulation(self, log_callback, progress_callback, complete_callback):
         """Run Line2 simulation by moving files at exact timestamps"""
+        # Clean up old state file from previous simulation
+        old_state = self._get_state_file_path()
+        if os.path.exists(old_state):
+            try:
+                os.remove(old_state)
+            except Exception:
+                pass
+
         self.is_running = True
+
+        # Initialize simulation state
+        self.current_simulation_id = str(uuid.uuid4())
+        total_items = 0
+        items_moved = 0
+
         try:
             if not self.target_base:
                 log_callback("ERROR: Target folder not set!")
@@ -1007,6 +1048,10 @@ class DataSimulator:
                     return
 
                 log_callback(f"[LINE2] Found {len(items)} items to move")
+
+            # Set total items and update initial state
+            total_items = len(items)
+            self._update_state("running", 0, 0, self.current_simulation_id)
 
             self.reset_outlier_state()
 
@@ -1158,11 +1203,20 @@ class DataSimulator:
                     progress = (idx + 1) / len(items) * 100
                     progress_callback(progress)
 
+                    # Update state after successful item move
+                    items_moved = len(self.moved_items)
+                    self._update_state("running", progress, items_moved, self.current_simulation_id)
+
             if self.is_running:
                 action_word = "created" if self.use_dummy_data else "moved"
-                log_callback(f"[LINE2] Simulation completed! {len(self.moved_items)} items {action_word}.")
+                items_moved = len(self.moved_items)
+                log_callback(f"[LINE2] Simulation completed! {items_moved} items {action_word}.")
+                self._update_state("completed", 100, items_moved, self.current_simulation_id)
 
         except Exception as e:
+            items_moved = len(self.moved_items)
+            progress = (items_moved / total_items * 100) if total_items > 0 else 0
+            self._update_state("error", progress, items_moved, self.current_simulation_id)
             log_callback(f"[LINE2] ERROR: {str(e)}")
         finally:
             self.is_running = False
