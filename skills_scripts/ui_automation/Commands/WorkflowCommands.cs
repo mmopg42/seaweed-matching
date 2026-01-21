@@ -1,8 +1,10 @@
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Text.Json;
 using FlaUI.Core.AutomationElements;
 using Workflow = SkillsScripts.UiAutomation.ChronoWorkflowController;
 using DataReader = SkillsScripts.UiAutomation.ChronoDataPanelReader;
+using static UiAutomation.Commands.ExitCodes;
 
 namespace UiAutomation.Commands;
 
@@ -13,12 +15,6 @@ namespace UiAutomation.Commands;
 /// </summary>
 public class WorkflowCommands : ICommandHandler
 {
-    // Exit code constants matching Program.cs
-    private const int EXIT_SUCCESS = 0;
-    private const int EXIT_ERROR = 1;
-    private const int EXIT_NOT_FOUND = 2;
-    private const int EXIT_INVALID_ARGUMENT = 4;
-
     /// <summary>
     /// Registers all workflow and log panel commands with the root command.
     /// </summary>
@@ -36,76 +32,108 @@ public class WorkflowCommands : ICommandHandler
 
         // workflow launch-general: General Camera 버튼 클릭
         var wfLaunchGeneralCommand = new Command("launch-general", "General Camera 버튼 클릭");
-        wfLaunchGeneralCommand.SetHandler(() =>
+        wfLaunchGeneralCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Workflow();
-            var result = controller.ClickGeneralCameraButton();
-            if (result)
+            try
             {
-                Console.WriteLine("[workflow-launch-general] Success: General Camera button clicked");
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Workflow();
+                var result = controller.ClickGeneralCameraButton();
+                if (result)
+                {
+                    Console.WriteLine("[workflow-launch-general] Success: General Camera button clicked");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine("[workflow-launch-general] Failed: Could not click General Camera button");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("[workflow-launch-general] Failed: Could not click General Camera button");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[workflow-launch-general] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         workflowCommand.AddCommand(wfLaunchGeneralCommand);
 
         // workflow launch-nir: NIR 1 Camera 버튼 클릭
         var wfLaunchNirCommand = new Command("launch-nir", "NIR 1 Camera 버튼 클릭");
-        wfLaunchNirCommand.SetHandler(() =>
+        wfLaunchNirCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Workflow();
-            var result = controller.ClickNirCameraButton();
-            if (result)
+            try
             {
-                Console.WriteLine("[workflow-launch-nir] Success: NIR 1 Camera button clicked");
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Workflow();
+                var result = controller.ClickNirCameraButton();
+                if (result)
+                {
+                    Console.WriteLine("[workflow-launch-nir] Success: NIR 1 Camera button clicked");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine("[workflow-launch-nir] Failed: Could not click NIR 1 Camera button");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("[workflow-launch-nir] Failed: Could not click NIR 1 Camera button");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[workflow-launch-nir] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         workflowCommand.AddCommand(wfLaunchNirCommand);
 
         // workflow launch-nir2: NIR 2 Camera 버튼 클릭
         var wfLaunchNir2Command = new Command("launch-nir2", "NIR 2 Camera 버튼 클릭");
-        wfLaunchNir2Command.SetHandler(() =>
+        wfLaunchNir2Command.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Workflow();
-            var result = controller.ClickNir2CameraButton();
-            if (result)
+            try
             {
-                Console.WriteLine("[workflow-launch-nir2] Success: NIR 2 Camera button clicked");
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Workflow();
+                var result = controller.ClickNir2CameraButton();
+                if (result)
+                {
+                    Console.WriteLine("[workflow-launch-nir2] Success: NIR 2 Camera button clicked");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine("[workflow-launch-nir2] Failed: Could not click NIR 2 Camera button");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("[workflow-launch-nir2] Failed: Could not click NIR 2 Camera button");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[workflow-launch-nir2] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         workflowCommand.AddCommand(wfLaunchNir2Command);
 
         // workflow toggle-filtering: NIR Filtering 토글
         var wfToggleFilteringCommand = new Command("toggle-filtering", "NIR Filtering 토글");
-        wfToggleFilteringCommand.SetHandler(() =>
+        wfToggleFilteringCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Workflow();
-            var result = controller.ToggleNir2Filtering();
-            if (result)
+            try
             {
-                Console.WriteLine("[workflow-toggle-filtering] Success: NIR Filtering toggled");
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Workflow();
+                var result = controller.ToggleNir2Filtering();
+                if (result)
+                {
+                    Console.WriteLine("[workflow-toggle-filtering] Success: NIR Filtering toggled");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine("[workflow-toggle-filtering] Failed: Could not toggle NIR Filtering");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("[workflow-toggle-filtering] Failed: Could not toggle NIR Filtering");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[workflow-toggle-filtering] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         workflowCommand.AddCommand(wfToggleFilteringCommand);
@@ -113,34 +141,43 @@ public class WorkflowCommands : ICommandHandler
         // workflow camera-states: 모든 카메라 상태 읽기
         var wfCameraStatesCommand = new Command("camera-states", "모든 카메라 상태 읽기");
         wfCameraStatesCommand.AddOption(jsonOption);
-        wfCameraStatesCommand.SetHandler((json) =>
+        wfCameraStatesCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Workflow();
-            var states = controller.GetCameraStates();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new Workflow();
+                var states = controller.GetCameraStates();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        source = "WorkflowPanel",
-                        count = states.Count,
-                        states = states
-                    }
-                });
-            }
-            else
-            {
-                Console.WriteLine($"[workflow-camera-states] Found {states.Count} camera state(s):");
-                foreach (var kvp in states)
-                {
-                    Console.WriteLine($"  - {kvp.Key}: {kvp.Value}");
+                        success = true,
+                        data = new
+                        {
+                            source = "WorkflowPanel",
+                            count = states.Count,
+                            states = states
+                        }
+                    });
                 }
+                else
+                {
+                    Console.WriteLine($"[workflow-camera-states] Found {states.Count} camera state(s):");
+                    foreach (var kvp in states)
+                    {
+                        Console.WriteLine($"  - {kvp.Key}: {kvp.Value}");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[workflow-camera-states] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         workflowCommand.AddCommand(wfCameraStatesCommand);
 
         // workflow path: Path 제어 (읽기/쓰기)
@@ -149,101 +186,128 @@ public class WorkflowCommands : ICommandHandler
         // workflow path get-line1: Line 1 경로 읽기
         var pathGetLine1Command = new Command("get-line1", "Line 1 경로 모두 읽기");
         pathGetLine1Command.AddOption(jsonOption);
-        pathGetLine1Command.SetHandler((json) =>
+        pathGetLine1Command.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Workflow();
-            var paths = controller.GetLine1Paths();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new Workflow();
+                var paths = controller.GetLine1Paths();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        line = "Line1",
-                        count = paths.Count,
-                        paths = paths
-                    }
-                });
+                        success = true,
+                        data = new
+                        {
+                            line = "Line1",
+                            count = paths.Count,
+                            paths = paths
+                        }
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("[workflow-path get-line1] Line 1 Paths:");
+                    Console.WriteLine($"  SampleName: {paths.GetValueOrDefault("SampleName", "(not found)")}");
+                    Console.WriteLine($"  MoveNIR: {paths.GetValueOrDefault("MoveNir", "(not found)")}");
+                    Console.WriteLine($"  MoveAllData: {paths.GetValueOrDefault("MoveAllData", "(not found)")}");
+                }
+                context.ExitCode = SUCCESS;
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("[workflow-path get-line1] Line 1 Paths:");
-                Console.WriteLine($"  SampleName: {paths.GetValueOrDefault("SampleName", "(not found)")}");
-                Console.WriteLine($"  MoveNIR: {paths.GetValueOrDefault("MoveNir", "(not found)")}");
-                Console.WriteLine($"  MoveAllData: {paths.GetValueOrDefault("MoveAllData", "(not found)")}");
+                Console.Error.WriteLine($"[workflow-path get-line1] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+        });
         workflowPathCommand.AddCommand(pathGetLine1Command);
 
         // workflow path get-line2: Line 2 경로 읽기
         var pathGetLine2Command = new Command("get-line2", "Line 2 경로 모두 읽기");
         pathGetLine2Command.AddOption(jsonOption);
-        pathGetLine2Command.SetHandler((json) =>
+        pathGetLine2Command.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Workflow();
-            var paths = controller.GetLine2Paths();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new Workflow();
+                var paths = controller.GetLine2Paths();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        line = "Line2",
-                        count = paths.Count,
-                        paths = paths
-                    }
-                });
+                        success = true,
+                        data = new
+                        {
+                            line = "Line2",
+                            count = paths.Count,
+                            paths = paths
+                        }
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("[workflow-path get-line2] Line 2 Paths:");
+                    Console.WriteLine($"  SampleName: {paths.GetValueOrDefault("SampleName", "(not found)")}");
+                    Console.WriteLine($"  MoveNIR: {paths.GetValueOrDefault("MoveNir", "(not found)")}");
+                    Console.WriteLine($"  MoveAllData: {paths.GetValueOrDefault("MoveAllData", "(not found)")}");
+                }
+                context.ExitCode = SUCCESS;
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("[workflow-path get-line2] Line 2 Paths:");
-                Console.WriteLine($"  SampleName: {paths.GetValueOrDefault("SampleName", "(not found)")}");
-                Console.WriteLine($"  MoveNIR: {paths.GetValueOrDefault("MoveNir", "(not found)")}");
-                Console.WriteLine($"  MoveAllData: {paths.GetValueOrDefault("MoveAllData", "(not found)")}");
+                Console.Error.WriteLine($"[workflow-path get-line2] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+        });
         workflowPathCommand.AddCommand(pathGetLine2Command);
 
         // workflow path get-all: 모든 라인 경로 읽기
         var pathGetAllCommand = new Command("get-all", "모든 Line 1/Line 2 경로 읽기");
         pathGetAllCommand.AddOption(jsonOption);
-        pathGetAllCommand.SetHandler((json) =>
+        pathGetAllCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Workflow();
-            var allPaths = controller.GetAllPaths();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new Workflow();
+                var allPaths = controller.GetAllPaths();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        count = allPaths.Count,
-                        paths = allPaths
-                    }
-                });
-            }
-            else
-            {
-                Console.WriteLine("[workflow-path get-all] All Paths:");
-                foreach (var linePaths in allPaths)
+                        success = true,
+                        data = new
+                        {
+                            count = allPaths.Count,
+                            paths = allPaths
+                        }
+                    });
+                }
+                else
                 {
-                    Console.WriteLine($"\n{linePaths.Key}:");
-                    foreach (var path in linePaths.Value)
+                    Console.WriteLine("[workflow-path get-all] All Paths:");
+                    foreach (var linePaths in allPaths)
                     {
-                        Console.WriteLine($"  {path.Key}: {path.Value}");
+                        Console.WriteLine($"\n{linePaths.Key}:");
+                        foreach (var path in linePaths.Value)
+                        {
+                            Console.WriteLine($"  {path.Key}: {path.Value}");
+                        }
                     }
                 }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[workflow-path get-all] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         workflowPathCommand.AddCommand(pathGetAllCommand);
 
         // workflow path set-line1: Line 1 특정 경로 설정
@@ -252,42 +316,64 @@ public class WorkflowCommands : ICommandHandler
         var pathSetLine1Command = new Command("set-line1", "Line 1 특정 경로 설정");
         pathSetLine1Command.AddArgument(pathTypeArgument);
         pathSetLine1Command.AddArgument(pathValueArgument);
-        pathSetLine1Command.SetHandler((type, value) =>
+        pathSetLine1Command.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Workflow();
-            var result = controller.SetLine1Path(type, value);
-            if (result)
+            try
             {
-                Console.WriteLine($"[workflow-path set-line1] Success: {type} set to '{value}'");
-                Environment.Exit(EXIT_SUCCESS);
+                var type = context.ParseResult.GetValueForArgument(pathTypeArgument);
+                var value = context.ParseResult.GetValueForArgument(pathValueArgument);
+
+                using var controller = new Workflow();
+                var result = controller.SetLine1Path(type, value);
+                if (result)
+                {
+                    Console.WriteLine($"[workflow-path set-line1] Success: {type} set to '{value}'");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine($"[workflow-path set-line1] Failed: Could not set {type}");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"[workflow-path set-line1] Failed: Could not set {type}");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[workflow-path set-line1] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-        }, pathTypeArgument, pathValueArgument);
+        });
         workflowPathCommand.AddCommand(pathSetLine1Command);
 
         // workflow path set-line2: Line 2 특정 경로 설정
         var pathSetLine2Command = new Command("set-line2", "Line 2 특정 경로 설정");
         pathSetLine2Command.AddArgument(pathTypeArgument);
         pathSetLine2Command.AddArgument(pathValueArgument);
-        pathSetLine2Command.SetHandler((type, value) =>
+        pathSetLine2Command.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Workflow();
-            var result = controller.SetLine2Path(type, value);
-            if (result)
+            try
             {
-                Console.WriteLine($"[workflow-path set-line2] Success: {type} set to '{value}'");
-                Environment.Exit(EXIT_SUCCESS);
+                var type = context.ParseResult.GetValueForArgument(pathTypeArgument);
+                var value = context.ParseResult.GetValueForArgument(pathValueArgument);
+
+                using var controller = new Workflow();
+                var result = controller.SetLine2Path(type, value);
+                if (result)
+                {
+                    Console.WriteLine($"[workflow-path set-line2] Success: {type} set to '{value}'");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine($"[workflow-path set-line2] Failed: Could not set {type}");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"[workflow-path set-line2] Failed: Could not set {type}");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[workflow-path set-line2] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-        }, pathTypeArgument, pathValueArgument);
+        });
         workflowPathCommand.AddCommand(pathSetLine2Command);
 
         workflowCommand.AddCommand(workflowPathCommand);
@@ -296,21 +382,31 @@ public class WorkflowCommands : ICommandHandler
         var tabNameArgument = new Argument<string>("tab", "Tab name: 'Line 1', 'Line 2', or 'Combined'");
         var wfSelectTabCommand = new Command("select-tab", "Select a tab in MainWindow TabControl");
         wfSelectTabCommand.AddArgument(tabNameArgument);
-        wfSelectTabCommand.SetHandler((tabName) =>
+        wfSelectTabCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Workflow();
-            var result = controller.SelectTab(tabName);
-            if (result)
+            try
             {
-                Console.WriteLine($"[workflow-select-tab] Success: Selected tab '{tabName}'");
-                Environment.Exit(EXIT_SUCCESS);
+                var tabName = context.ParseResult.GetValueForArgument(tabNameArgument);
+
+                using var controller = new Workflow();
+                var result = controller.SelectTab(tabName);
+                if (result)
+                {
+                    Console.WriteLine($"[workflow-select-tab] Success: Selected tab '{tabName}'");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine($"[workflow-select-tab] Failed: Could not select tab '{tabName}'");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"[workflow-select-tab] Failed: Could not select tab '{tabName}'");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[workflow-select-tab] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-        }, tabNameArgument);
+        });
         workflowCommand.AddCommand(wfSelectTabCommand);
 
         rootCommand.AddCommand(workflowCommand);
@@ -321,38 +417,47 @@ public class WorkflowCommands : ICommandHandler
         // logs get: 모든 로그 메시지 가져오기
         var logsGetCommand = new Command("get", "모든 로그 메시지 가져오기");
         logsGetCommand.AddOption(jsonOption);
-        logsGetCommand.SetHandler((json) =>
+        logsGetCommand.SetHandler((InvocationContext context) =>
         {
-            using var reader = new DataReader();
-            var logs = reader.GetAllLogMessages();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var reader = new DataReader();
+                var logs = reader.GetAllLogMessages();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        source = "LogPanel",
-                        count = logs.Count,
-                        logs = logs
-                    }
-                });
-            }
-            else
-            {
-                Console.WriteLine($"[logs-get] Found {logs.Count} log message(s):");
-                foreach (var log in logs)
-                {
-                    var severity = log.GetValueOrDefault("Severity", "");
-                    var time = log.GetValueOrDefault("Time", "");
-                    var source = log.GetValueOrDefault("Source", "");
-                    var message = log.GetValueOrDefault("Message", "");
-                    Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
+                        success = true,
+                        data = new
+                        {
+                            source = "LogPanel",
+                            count = logs.Count,
+                            logs = logs
+                        }
+                    });
                 }
+                else
+                {
+                    Console.WriteLine($"[logs-get] Found {logs.Count} log message(s):");
+                    foreach (var log in logs)
+                    {
+                        var severity = log.GetValueOrDefault("Severity", "");
+                        var time = log.GetValueOrDefault("Time", "");
+                        var source = log.GetValueOrDefault("Source", "");
+                        var message = log.GetValueOrDefault("Message", "");
+                        Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[logs-get] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         logsCommand.AddCommand(logsGetCommand);
 
         // logs tail: 최근 N개 로그 메시지 가져오기
@@ -363,40 +468,51 @@ public class WorkflowCommands : ICommandHandler
         var logsTailCommand = new Command("tail", "최근 N개 로그 메시지 가져오기");
         logsTailCommand.AddArgument(countArgument);
         logsTailCommand.AddOption(jsonOption);
-        logsTailCommand.SetHandler((count, json) =>
+        logsTailCommand.SetHandler((InvocationContext context) =>
         {
-            var actualCount = count > 0 ? count : 10;
-            using var reader = new DataReader();
-            var logs = reader.GetLatestLogs(actualCount);
+            try
+            {
+                var count = context.ParseResult.GetValueForArgument(countArgument);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                var actualCount = count > 0 ? count : 10;
+                using var reader = new DataReader();
+                var logs = reader.GetLatestLogs(actualCount);
+
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        source = "LogPanel",
-                        requested = actualCount,
-                        returned = logs.Count,
-                        logs = logs
-                    }
-                });
-            }
-            else
-            {
-                Console.WriteLine($"[logs-tail] Latest {logs.Count} log message(s):");
-                foreach (var log in logs)
-                {
-                    var severity = log.GetValueOrDefault("Severity", "");
-                    var time = log.GetValueOrDefault("Time", "");
-                    var source = log.GetValueOrDefault("Source", "");
-                    var message = log.GetValueOrDefault("Message", "");
-                    Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
+                        success = true,
+                        data = new
+                        {
+                            source = "LogPanel",
+                            requested = actualCount,
+                            returned = logs.Count,
+                            logs = logs
+                        }
+                    });
                 }
+                else
+                {
+                    Console.WriteLine($"[logs-tail] Latest {logs.Count} log message(s):");
+                    foreach (var log in logs)
+                    {
+                        var severity = log.GetValueOrDefault("Severity", "");
+                        var time = log.GetValueOrDefault("Time", "");
+                        var source = log.GetValueOrDefault("Source", "");
+                        var message = log.GetValueOrDefault("Message", "");
+                        Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, countArgument, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[logs-tail] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         logsCommand.AddCommand(logsTailCommand);
 
         // logs filter: 로그 레벨로 필터링
@@ -408,40 +524,51 @@ public class WorkflowCommands : ICommandHandler
         var logsFilterCommand = new Command("filter", "로그 레벨로 필터링");
         logsFilterCommand.AddOption(levelOption);
         logsFilterCommand.AddOption(jsonOption);
-        logsFilterCommand.SetHandler((level, json) =>
+        logsFilterCommand.SetHandler((InvocationContext context) =>
         {
-            using var reader = new DataReader();
-            var logs = reader.GetLogsByLevel(level);
+            try
+            {
+                var level = context.ParseResult.GetValueForOption(levelOption);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                using var reader = new DataReader();
+                var logs = reader.GetLogsByLevel(level);
+
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        source = "LogPanel",
-                        filter = new { level = level },
-                        count = logs.Count,
-                        logs = logs
-                    }
-                });
-            }
-            else
-            {
-                var levelText = string.IsNullOrWhiteSpace(level) ? "All" : level;
-                Console.WriteLine($"[logs-filter] Filtered by level '{levelText}': {logs.Count} message(s)");
-                foreach (var log in logs)
-                {
-                    var severity = log.GetValueOrDefault("Severity", "");
-                    var time = log.GetValueOrDefault("Time", "");
-                    var source = log.GetValueOrDefault("Source", "");
-                    var message = log.GetValueOrDefault("Message", "");
-                    Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
+                        success = true,
+                        data = new
+                        {
+                            source = "LogPanel",
+                            filter = new { level = level },
+                            count = logs.Count,
+                            logs = logs
+                        }
+                    });
                 }
+                else
+                {
+                    var levelText = string.IsNullOrWhiteSpace(level) ? "All" : level;
+                    Console.WriteLine($"[logs-filter] Filtered by level '{levelText}': {logs.Count} message(s)");
+                    foreach (var log in logs)
+                    {
+                        var severity = log.GetValueOrDefault("Severity", "");
+                        var time = log.GetValueOrDefault("Time", "");
+                        var source = log.GetValueOrDefault("Source", "");
+                        var message = log.GetValueOrDefault("Message", "");
+                        Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, levelOption, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[logs-filter] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         logsCommand.AddCommand(logsFilterCommand);
 
         // logs search: 로그 메시지 검색
@@ -449,39 +576,50 @@ public class WorkflowCommands : ICommandHandler
         var logsSearchCommand = new Command("search", "로그 메시지 검색");
         logsSearchCommand.AddArgument(searchTextArgument);
         logsSearchCommand.AddOption(jsonOption);
-        logsSearchCommand.SetHandler((text, json) =>
+        logsSearchCommand.SetHandler((InvocationContext context) =>
         {
-            using var reader = new DataReader();
-            var logs = reader.SearchLogs(text);
+            try
+            {
+                var text = context.ParseResult.GetValueForArgument(searchTextArgument);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                using var reader = new DataReader();
+                var logs = reader.SearchLogs(text);
+
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        source = "LogPanel",
-                        search = text,
-                        count = logs.Count,
-                        logs = logs
-                    }
-                });
-            }
-            else
-            {
-                Console.WriteLine($"[logs-search] Searched for '{text}': {logs.Count} message(s) found");
-                foreach (var log in logs)
-                {
-                    var severity = log.GetValueOrDefault("Severity", "");
-                    var time = log.GetValueOrDefault("Time", "");
-                    var source = log.GetValueOrDefault("Source", "");
-                    var message = log.GetValueOrDefault("Message", "");
-                    Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
+                        success = true,
+                        data = new
+                        {
+                            source = "LogPanel",
+                            search = text,
+                            count = logs.Count,
+                            logs = logs
+                        }
+                    });
                 }
+                else
+                {
+                    Console.WriteLine($"[logs-search] Searched for '{text}': {logs.Count} message(s) found");
+                    foreach (var log in logs)
+                    {
+                        var severity = log.GetValueOrDefault("Severity", "");
+                        var time = log.GetValueOrDefault("Time", "");
+                        var source = log.GetValueOrDefault("Source", "");
+                        var message = log.GetValueOrDefault("Message", "");
+                        Console.WriteLine($"  [{severity}] {time} | {source} | {message}");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, searchTextArgument, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[logs-search] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         logsCommand.AddCommand(logsSearchCommand);
 
         rootCommand.AddCommand(logsCommand);

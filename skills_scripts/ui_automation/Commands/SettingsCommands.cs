@@ -1,8 +1,10 @@
 using System.CommandLine;
+using System.CommandLine.Invocation;
 using System.Text.Json;
 using FlaUI.Core.AutomationElements;
 using Settings = SkillsScripts.UiAutomation.ChronoSettingsController;
 using ConsoleLogs = SkillsScripts.UiAutomation.ConsoleLogsReader;
+using static UiAutomation.Commands.ExitCodes;
 
 namespace UiAutomation.Commands;
 
@@ -13,12 +15,6 @@ namespace UiAutomation.Commands;
 /// </summary>
 public class SettingsCommands : ICommandHandler
 {
-    // Exit code constants matching Program.cs
-    private const int EXIT_SUCCESS = 0;
-    private const int EXIT_ERROR = 1;
-    private const int EXIT_NOT_FOUND = 2;
-    private const int EXIT_INVALID_ARGUMENT = 4;
-
     /// <summary>
     /// Registers all settings dialog and console log commands with the root command.
     /// </summary>
@@ -46,43 +42,54 @@ public class SettingsCommands : ICommandHandler
         var consoleLogsListCommand = new Command("list", "사용 가능한 로그 파일 목록");
         consoleLogsListCommand.AddOption(dateFilterOption);
         consoleLogsListCommand.AddOption(jsonOption);
-        consoleLogsListCommand.SetHandler((dateFilter, json) =>
+        consoleLogsListCommand.SetHandler((InvocationContext context) =>
         {
-            var reader = new ConsoleLogs();
-            var files = reader.GetLogFiles(dateFilter);
+            try
+            {
+                var dateFilter = context.ParseResult.GetValueForOption(dateFilterOption);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                var reader = new ConsoleLogs();
+                var files = reader.GetLogFiles(dateFilter);
+
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        source = "ConsoleLogs",
-                        logDirectory = reader.GetLogDirectory(),
-                        dateFilter = dateFilter,
-                        count = files.Length,
-                        files = files
+                        success = true,
+                        data = new
+                        {
+                            source = "ConsoleLogs",
+                            logDirectory = reader.GetLogDirectory(),
+                            dateFilter = dateFilter,
+                            count = files.Length,
+                            files = files
+                        }
+                    });
+                }
+                else
+                {
+                    Console.WriteLine($"[console-logs-list] Log directory: {reader.GetLogDirectory()}");
+                    if (!string.IsNullOrEmpty(dateFilter))
+                    {
+                        Console.WriteLine($"  Date filter: {dateFilter}");
                     }
-                });
+                    Console.WriteLine($"  Found {files.Length} file(s):");
+                    foreach (var file in files)
+                    {
+                        var fileName = Path.GetFileName(file);
+                        var lastWrite = File.GetLastWriteTime(file);
+                        Console.WriteLine($"    - {fileName} (Modified: {lastWrite:yyyy-MM-dd HH:mm:ss})");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"[console-logs-list] Log directory: {reader.GetLogDirectory()}");
-                if (!string.IsNullOrEmpty(dateFilter))
-                {
-                    Console.WriteLine($"  Date filter: {dateFilter}");
-                }
-                Console.WriteLine($"  Found {files.Length} file(s):");
-                foreach (var file in files)
-                {
-                    var fileName = Path.GetFileName(file);
-                    var lastWrite = File.GetLastWriteTime(file);
-                    Console.WriteLine($"    - {fileName} (Modified: {lastWrite:yyyy-MM-dd HH:mm:ss})");
-                }
+                Console.Error.WriteLine($"[console-logs-list] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, dateFilterOption, jsonOption);
+        });
         consoleLogsCommand.AddCommand(consoleLogsListCommand);
 
         // console-logs tail: 최근 N줄 읽기
@@ -99,59 +106,71 @@ public class SettingsCommands : ICommandHandler
         consoleLogsTailCommand.AddArgument(tailCountArgument);
         consoleLogsTailCommand.AddOption(logPathOption);
         consoleLogsTailCommand.AddOption(jsonOption);
-        consoleLogsTailCommand.SetHandler((count, logPath, json) =>
+        consoleLogsTailCommand.SetHandler((InvocationContext context) =>
         {
-            var actualCount = count > 0 ? count : 20;
-            var reader = new ConsoleLogs();
-
-            // 경로가 지정되지 않으면 최신 파일 찾기
-            var targetPath = logPath;
-            if (string.IsNullOrEmpty(targetPath))
+            try
             {
-                var files = reader.GetLogFiles();
-                if (files.Length == 0)
+                var count = context.ParseResult.GetValueForArgument(tailCountArgument);
+                var logPath = context.ParseResult.GetValueForOption(logPathOption);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+
+                var actualCount = count > 0 ? count : 20;
+                var reader = new ConsoleLogs();
+
+                // 경로가 지정되지 않으면 최신 파일 찾기
+                var targetPath = logPath;
+                if (string.IsNullOrEmpty(targetPath))
                 {
-                    Console.Error.WriteLine("[console-logs-tail] No log files found");
-                    Environment.Exit(EXIT_NOT_FOUND);
+                    var files = reader.GetLogFiles();
+                    if (files.Length == 0)
+                    {
+                        Console.Error.WriteLine("[console-logs-tail] No log files found");
+                        context.ExitCode = NOT_FOUND;
+                        return;
+                    }
+                    targetPath = files[0]; // 최신 파일
+                }
+
+                if (!File.Exists(targetPath))
+                {
+                    Console.Error.WriteLine($"[console-logs-tail] File not found: {targetPath}");
+                    context.ExitCode = NOT_FOUND;
                     return;
                 }
-                targetPath = files[0]; // 최신 파일
-            }
 
-            if (!File.Exists(targetPath))
-            {
-                Console.Error.WriteLine($"[console-logs-tail] File not found: {targetPath}");
-                Environment.Exit(EXIT_NOT_FOUND);
-                return;
-            }
+                var lines = reader.ReadTail(targetPath, actualCount);
 
-            var lines = reader.ReadTail(targetPath, actualCount);
-
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        source = "ConsoleLogs",
-                        file = targetPath,
-                        requested = actualCount,
-                        returned = lines.Length,
-                        logs = lines
-                    }
-                });
-            }
-            else
-            {
-                Console.WriteLine($"[console-logs-tail] Latest {lines.Length} line(s) from: {Path.GetFileName(targetPath)}");
-                foreach (var line in lines)
-                {
-                    Console.WriteLine($"  {line}");
+                        success = true,
+                        data = new
+                        {
+                            source = "ConsoleLogs",
+                            file = targetPath,
+                            requested = actualCount,
+                            returned = lines.Length,
+                            logs = lines
+                        }
+                    });
                 }
+                else
+                {
+                    Console.WriteLine($"[console-logs-tail] Latest {lines.Length} line(s) from: {Path.GetFileName(targetPath)}");
+                    foreach (var line in lines)
+                    {
+                        Console.WriteLine($"  {line}");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, tailCountArgument, logPathOption, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[console-logs-tail] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         consoleLogsCommand.AddCommand(consoleLogsTailCommand);
 
         // console-logs search: 텍스트 검색
@@ -166,59 +185,72 @@ public class SettingsCommands : ICommandHandler
         consoleLogsSearchCommand.AddOption(logPathOption);
         consoleLogsSearchCommand.AddOption(consoleMaxResultsOption);
         consoleLogsSearchCommand.AddOption(jsonOption);
-        consoleLogsSearchCommand.SetHandler((text, path, maxResults, json) =>
+        consoleLogsSearchCommand.SetHandler((InvocationContext context) =>
         {
-            var reader = new ConsoleLogs();
-
-            // 경로가 지정되지 않으면 최신 파일 찾기
-            var targetPath = path;
-            if (string.IsNullOrEmpty(targetPath))
+            try
             {
-                var files = reader.GetLogFiles();
-                if (files.Length == 0)
+                var text = context.ParseResult.GetValueForArgument(consoleSearchTextArgument);
+                var path = context.ParseResult.GetValueForOption(logPathOption);
+                var maxResults = context.ParseResult.GetValueForOption(consoleMaxResultsOption);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+
+                var reader = new ConsoleLogs();
+
+                // 경로가 지정되지 않으면 최신 파일 찾기
+                var targetPath = path;
+                if (string.IsNullOrEmpty(targetPath))
                 {
-                    Console.Error.WriteLine("[console-logs-search] No log files found");
-                    Environment.Exit(EXIT_NOT_FOUND);
+                    var files = reader.GetLogFiles();
+                    if (files.Length == 0)
+                    {
+                        Console.Error.WriteLine("[console-logs-search] No log files found");
+                        context.ExitCode = NOT_FOUND;
+                        return;
+                    }
+                    targetPath = files[0]; // 최신 파일
+                }
+
+                if (!File.Exists(targetPath))
+                {
+                    Console.Error.WriteLine($"[console-logs-search] File not found: {targetPath}");
+                    context.ExitCode = NOT_FOUND;
                     return;
                 }
-                targetPath = files[0]; // 최신 파일
-            }
 
-            if (!File.Exists(targetPath))
-            {
-                Console.Error.WriteLine($"[console-logs-search] File not found: {targetPath}");
-                Environment.Exit(EXIT_NOT_FOUND);
-                return;
-            }
+                var lines = reader.Search(targetPath, text, maxResults);
 
-            var lines = reader.Search(targetPath, text, maxResults);
-
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        source = "ConsoleLogs",
-                        file = targetPath,
-                        search = text,
-                        maxResults = maxResults,
-                        count = lines.Length,
-                        logs = lines
-                    }
-                });
-            }
-            else
-            {
-                Console.WriteLine($"[console-logs-search] Searched for '{text}' in {Path.GetFileName(targetPath)}: {lines.Length} match(es)");
-                foreach (var line in lines)
-                {
-                    Console.WriteLine($"  {line}");
+                        success = true,
+                        data = new
+                        {
+                            source = "ConsoleLogs",
+                            file = targetPath,
+                            search = text,
+                            maxResults = maxResults,
+                            count = lines.Length,
+                            logs = lines
+                        }
+                    });
                 }
+                else
+                {
+                    Console.WriteLine($"[console-logs-search] Searched for '{text}' in {Path.GetFileName(targetPath)}: {lines.Length} match(es)");
+                    foreach (var line in lines)
+                    {
+                        Console.WriteLine($"  {line}");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, consoleSearchTextArgument, logPathOption, consoleMaxResultsOption, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[console-logs-search] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         consoleLogsCommand.AddCommand(consoleLogsSearchCommand);
 
         rootCommand.AddCommand(consoleLogsCommand);
@@ -231,56 +263,80 @@ public class SettingsCommands : ICommandHandler
 
         // settings-dialog open: SettingsDialog 열기
         var settingsOpenCommand = new Command("open", "SettingsDialog 열기 (Settings 버튼 클릭)");
-        settingsOpenCommand.SetHandler(() =>
+        settingsOpenCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var result = controller.OpenSettingsDialog();
-            if (result)
+            try
             {
-                Console.WriteLine("[settings-dialog-open] Success: SettingsDialog opened");
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Settings();
+                var result = controller.OpenSettingsDialog();
+                if (result)
+                {
+                    Console.WriteLine("[settings-dialog-open] Success: SettingsDialog opened");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine("[settings-dialog-open] Failed: Could not open SettingsDialog");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("[settings-dialog-open] Failed: Could not open SettingsDialog");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[settings-dialog-open] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         settingsDialogCommand.AddCommand(settingsOpenCommand);
 
         // settings-dialog close: SettingsDialog 닫기
         var settingsCloseCommand = new Command("close", "SettingsDialog 닫기 (Cancel 버튼 클릭)");
-        settingsCloseCommand.SetHandler(() =>
+        settingsCloseCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var result = controller.CloseSettingsDialog();
-            if (result)
+            try
             {
-                Console.WriteLine("[settings-dialog-close] Success: SettingsDialog closed");
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Settings();
+                var result = controller.CloseSettingsDialog();
+                if (result)
+                {
+                    Console.WriteLine("[settings-dialog-close] Success: SettingsDialog closed");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine("[settings-dialog-close] Failed: Could not close SettingsDialog");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("[settings-dialog-close] Failed: Could not close SettingsDialog");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[settings-dialog-close] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         settingsDialogCommand.AddCommand(settingsCloseCommand);
 
         // settings-dialog inspect: SettingsDialog 구조 검사
         var settingsInspectCommand = new Command("inspect", "SettingsDialog 구조 검사");
-        settingsInspectCommand.SetHandler(() =>
+        settingsInspectCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var result = controller.InspectSettingsDialog();
-            if (result)
+            try
             {
-                Environment.Exit(EXIT_SUCCESS);
+                using var controller = new Settings();
+                var result = controller.InspectSettingsDialog();
+                if (result)
+                {
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine("[settings-dialog-inspect] Failed: Could not inspect SettingsDialog (dialog not open?)");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("[settings-dialog-inspect] Failed: Could not inspect SettingsDialog (dialog not open?)");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[settings-dialog-inspect] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
         });
         settingsDialogCommand.AddCommand(settingsInspectCommand);
@@ -288,29 +344,38 @@ public class SettingsCommands : ICommandHandler
         // settings-dialog status: SettingsDialog 열림 상태 확인
         var settingsStatusCommand = new Command("status", "SettingsDialog 열림 상태 확인");
         settingsStatusCommand.AddOption(jsonOption);
-        settingsStatusCommand.SetHandler((json) =>
+        settingsStatusCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var isOpen = controller.IsSettingsDialogOpen();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new Settings();
+                var isOpen = controller.IsSettingsDialogOpen();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        dialogType = "SettingsDialog",
-                        isOpen = isOpen
-                    }
-                });
+                        success = true,
+                        data = new
+                        {
+                            dialogType = "SettingsDialog",
+                            isOpen = isOpen
+                        }
+                    });
+                }
+                else
+                {
+                    Console.WriteLine(isOpen ? "[settings-dialog-status] SettingsDialog is open" : "[settings-dialog-status] SettingsDialog is not open");
+                }
+                context.ExitCode = SUCCESS;
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine(isOpen ? "[settings-dialog-status] SettingsDialog is open" : "[settings-dialog-status] SettingsDialog is not open");
+                Console.Error.WriteLine($"[settings-dialog-status] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+        });
         settingsDialogCommand.AddCommand(settingsStatusCommand);
 
         // settings-dialog path: Path 제어 (읽기/쓰기)
@@ -319,168 +384,213 @@ public class SettingsCommands : ICommandHandler
         // settings-dialog path get-all: 모든 경로 읽기
         var settingsPathGetAllCommand = new Command("get-all", "모든 경로 읽기 (Line 1, Line 2, Output, Quarantine)");
         settingsPathGetAllCommand.AddOption(jsonOption);
-        settingsPathGetAllCommand.SetHandler((json) =>
+        settingsPathGetAllCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var line1Paths = controller.GetLine1Paths();
-            var line2Paths = controller.GetLine2Paths();
-            var outputPath = controller.GetOutputPath();
-            var quarantinePath = controller.GetQuarantinePath();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new Settings();
+                var line1Paths = controller.GetLine1Paths();
+                var line2Paths = controller.GetLine2Paths();
+                var outputPath = controller.GetOutputPath();
+                var quarantinePath = controller.GetQuarantinePath();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        line1 = line1Paths,
-                        line2 = line2Paths,
-                        output = outputPath,
-                        quarantine = quarantinePath
+                        success = true,
+                        data = new
+                        {
+                            line1 = line1Paths,
+                            line2 = line2Paths,
+                            output = outputPath,
+                            quarantine = quarantinePath
+                        }
+                    });
+                }
+                else
+                {
+                    Console.WriteLine("[settings-dialog-path get-all] All Paths:");
+                    Console.WriteLine("\nLine 1:");
+                    foreach (var kvp in line1Paths)
+                    {
+                        Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
                     }
-                });
+                    Console.WriteLine("\nLine 2:");
+                    foreach (var kvp in line2Paths)
+                    {
+                        Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                    }
+                    Console.WriteLine($"\nOutput: {outputPath}");
+                    Console.WriteLine($"Quarantine: {quarantinePath}");
+                }
+                context.ExitCode = SUCCESS;
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("[settings-dialog-path get-all] All Paths:");
-                Console.WriteLine("\nLine 1:");
-                foreach (var kvp in line1Paths)
-                {
-                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
-                }
-                Console.WriteLine("\nLine 2:");
-                foreach (var kvp in line2Paths)
-                {
-                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
-                }
-                Console.WriteLine($"\nOutput: {outputPath}");
-                Console.WriteLine($"Quarantine: {quarantinePath}");
+                Console.Error.WriteLine($"[settings-dialog-path get-all] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+        });
         settingsPathCommand.AddCommand(settingsPathGetAllCommand);
 
         // settings-dialog path get-line1: Line 1 경로 읽기
         var settingsPathGetLine1Command = new Command("get-line1", "Line 1 경로 읽기");
         settingsPathGetLine1Command.AddOption(jsonOption);
-        settingsPathGetLine1Command.SetHandler((json) =>
+        settingsPathGetLine1Command.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var paths = controller.GetLine1Paths();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new Settings();
+                var paths = controller.GetLine1Paths();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        line = "Line1",
-                        count = paths.Count,
-                        paths = paths
-                    }
-                });
-            }
-            else
-            {
-                Console.WriteLine("[settings-dialog-path get-line1] Line 1 Paths:");
-                foreach (var kvp in paths)
-                {
-                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                        success = true,
+                        data = new
+                        {
+                            line = "Line1",
+                            count = paths.Count,
+                            paths = paths
+                        }
+                    });
                 }
+                else
+                {
+                    Console.WriteLine("[settings-dialog-path get-line1] Line 1 Paths:");
+                    foreach (var kvp in paths)
+                    {
+                        Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[settings-dialog-path get-line1] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         settingsPathCommand.AddCommand(settingsPathGetLine1Command);
 
         // settings-dialog path get-line2: Line 2 경로 읽기
         var settingsPathGetLine2Command = new Command("get-line2", "Line 2 경로 읽기");
         settingsPathGetLine2Command.AddOption(jsonOption);
-        settingsPathGetLine2Command.SetHandler((json) =>
+        settingsPathGetLine2Command.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var paths = controller.GetLine2Paths();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new Settings();
+                var paths = controller.GetLine2Paths();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        line = "Line2",
-                        count = paths.Count,
-                        paths = paths
-                    }
-                });
-            }
-            else
-            {
-                Console.WriteLine("[settings-dialog-path get-line2] Line 2 Paths:");
-                foreach (var kvp in paths)
-                {
-                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                        success = true,
+                        data = new
+                        {
+                            line = "Line2",
+                            count = paths.Count,
+                            paths = paths
+                        }
+                    });
                 }
+                else
+                {
+                    Console.WriteLine("[settings-dialog-path get-line2] Line 2 Paths:");
+                    foreach (var kvp in paths)
+                    {
+                        Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[settings-dialog-path get-line2] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         settingsPathCommand.AddCommand(settingsPathGetLine2Command);
 
         // settings-dialog path get-output: 출력 경로 읽기
         var settingsPathGetOutputCommand = new Command("get-output", "출력 경로 읽기");
         settingsPathGetOutputCommand.AddOption(jsonOption);
-        settingsPathGetOutputCommand.SetHandler((json) =>
+        settingsPathGetOutputCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var path = controller.GetOutputPath();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new Settings();
+                var path = controller.GetOutputPath();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        pathType = "output",
-                        path = path
-                    }
-                });
+                        success = true,
+                        data = new
+                        {
+                            pathType = "output",
+                            path = path
+                        }
+                    });
+                }
+                else
+                {
+                    Console.WriteLine($"[settings-dialog-path get-output] Output Path: {path}");
+                }
+                context.ExitCode = SUCCESS;
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"[settings-dialog-path get-output] Output Path: {path}");
+                Console.Error.WriteLine($"[settings-dialog-path get-output] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+        });
         settingsPathCommand.AddCommand(settingsPathGetOutputCommand);
 
         // settings-dialog path get-quarantine: 격리 경로 읽기
         var settingsPathGetQuarantineCommand = new Command("get-quarantine", "격리 경로 읽기");
         settingsPathGetQuarantineCommand.AddOption(jsonOption);
-        settingsPathGetQuarantineCommand.SetHandler((json) =>
+        settingsPathGetQuarantineCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var path = controller.GetQuarantinePath();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new Settings();
+                var path = controller.GetQuarantinePath();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        pathType = "quarantine",
-                        path = path
-                    }
-                });
+                        success = true,
+                        data = new
+                        {
+                            pathType = "quarantine",
+                            path = path
+                        }
+                    });
+                }
+                else
+                {
+                    Console.WriteLine($"[settings-dialog-path get-quarantine] Quarantine Path: {path}");
+                }
+                context.ExitCode = SUCCESS;
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"[settings-dialog-path get-quarantine] Quarantine Path: {path}");
+                Console.Error.WriteLine($"[settings-dialog-path get-quarantine] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+        });
         settingsPathCommand.AddCommand(settingsPathGetQuarantineCommand);
 
         // settings-dialog path set: 경로 설정
@@ -489,53 +599,68 @@ public class SettingsCommands : ICommandHandler
         var settingsPathSetCommand = new Command("set", "경로 설정");
         settingsPathSetCommand.AddArgument(settingsPathKeyArgument);
         settingsPathSetCommand.AddArgument(settingsPathValueArgument);
-        settingsPathSetCommand.SetHandler((key, value) =>
+        settingsPathSetCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            bool result = false;
-
-            var keyLower = key.ToLowerInvariant();
-            if (keyLower.StartsWith("cam") && keyLower.Length == 4)
+            try
             {
-                // cam1-6
-                var camNum = keyLower[3];
-                if (camNum >= '1' && camNum <= '3')
+                var key = context.ParseResult.GetValueForArgument(settingsPathKeyArgument);
+                var value = context.ParseResult.GetValueForArgument(settingsPathValueArgument);
+
+                using var controller = new Settings();
+                bool result = false;
+
+                var keyLower = key.ToLowerInvariant();
+                if (keyLower.StartsWith("cam") && keyLower.Length == 4)
+                {
+                    // cam1-6
+                    var camNum = keyLower[3];
+                    if (camNum >= '1' && camNum <= '3')
+                    {
+                        result = controller.SetLine1Path(key, value);
+                    }
+                    else if (camNum >= '4' && camNum <= '6')
+                    {
+                        result = controller.SetLine2Path(key, value);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[settings-dialog-path set] Unknown camera key: {key}");
+                        context.ExitCode = INVALID_ARGUMENT;
+                        return;
+                    }
+                }
+                else if (keyLower == "nir1" || keyLower == "normal1")
                 {
                     result = controller.SetLine1Path(key, value);
                 }
-                else if (camNum >= '4' && camNum <= '6')
+                else if (keyLower == "nir2" || keyLower == "normal2")
                 {
                     result = controller.SetLine2Path(key, value);
                 }
                 else
                 {
-                    Console.WriteLine($"[settings-dialog-path set] Unknown camera key: {key}");
+                    Console.WriteLine($"[settings-dialog-path set] Unknown path key: {key}");
+                    context.ExitCode = INVALID_ARGUMENT;
                     return;
                 }
-            }
-            else if (keyLower == "nir1" || keyLower == "normal1")
-            {
-                result = controller.SetLine1Path(key, value);
-            }
-            else if (keyLower == "nir2" || keyLower == "normal2")
-            {
-                result = controller.SetLine2Path(key, value);
-            }
-            else
-            {
-                Console.WriteLine($"[settings-dialog-path set] Unknown path key: {key}");
-                return;
-            }
 
-            if (result)
-            {
-                Console.WriteLine($"[settings-dialog-path set] Success: {key} set to '{value}'");
+                if (result)
+                {
+                    Console.WriteLine($"[settings-dialog-path set] Success: {key} set to '{value}'");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine($"[settings-dialog-path set] Failed: Could not set {key}");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"[settings-dialog-path set] Failed: Could not set {key}");
+                Console.Error.WriteLine($"[settings-dialog-path set] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-        }, settingsPathKeyArgument, settingsPathValueArgument);
+        });
         settingsPathCommand.AddCommand(settingsPathSetCommand);
 
         settingsDialogCommand.AddCommand(settingsPathCommand);
@@ -548,29 +673,40 @@ public class SettingsCommands : ICommandHandler
         var checkboxGetCommand = new Command("get", "CheckBox 상태 읽기");
         checkboxGetCommand.AddArgument(checkboxNameArgument);
         checkboxGetCommand.AddOption(jsonOption);
-        checkboxGetCommand.SetHandler((name, json) =>
+        checkboxGetCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var state = controller.GetCheckBoxState(null, name);
+            try
+            {
+                var name = context.ParseResult.GetValueForArgument(checkboxNameArgument);
+                var json = context.ParseResult.GetValueForOption(jsonOption);
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                using var controller = new Settings();
+                var state = controller.GetCheckBoxState(null, name);
+
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        checkbox = name,
-                        isChecked = state
-                    }
-                });
+                        success = true,
+                        data = new
+                        {
+                            checkbox = name,
+                            isChecked = state
+                        }
+                    });
+                }
+                else
+                {
+                    Console.WriteLine($"[settings-dialog-checkbox get] '{name}': {(state ? "Checked" : "Unchecked")}");
+                }
+                context.ExitCode = SUCCESS;
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"[settings-dialog-checkbox get] '{name}': {(state ? "Checked" : "Unchecked")}");
+                Console.Error.WriteLine($"[settings-dialog-checkbox get] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, checkboxNameArgument, jsonOption);
+        });
         settingsCheckboxCommand.AddCommand(checkboxGetCommand);
 
         // settings-dialog checkbox set: CheckBox 상태 설정
@@ -578,54 +714,74 @@ public class SettingsCommands : ICommandHandler
         var checkboxSetCommand = new Command("set", "CheckBox 상태 설정");
         checkboxSetCommand.AddArgument(checkboxNameArgument);
         checkboxSetCommand.AddArgument(checkboxValueArgument);
-        checkboxSetCommand.SetHandler((name, value) =>
+        checkboxSetCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var result = controller.SetCheckBoxState(null, name, value);
-            if (result)
+            try
             {
-                Console.WriteLine($"[settings-dialog-checkbox set] Success: '{name}' set to {value}");
-                Environment.Exit(EXIT_SUCCESS);
+                var name = context.ParseResult.GetValueForArgument(checkboxNameArgument);
+                var value = context.ParseResult.GetValueForArgument(checkboxValueArgument);
+
+                using var controller = new Settings();
+                var result = controller.SetCheckBoxState(null, name, value);
+                if (result)
+                {
+                    Console.WriteLine($"[settings-dialog-checkbox set] Success: '{name}' set to {value}");
+                    context.ExitCode = SUCCESS;
+                }
+                else
+                {
+                    Console.WriteLine($"[settings-dialog-checkbox set] Failed: Could not set '{name}'");
+                    context.ExitCode = ERROR;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine($"[settings-dialog-checkbox set] Failed: Could not set '{name}'");
-                Environment.Exit(EXIT_ERROR);
+                Console.Error.WriteLine($"[settings-dialog-checkbox set] Error: {ex.Message}");
+                context.ExitCode = ERROR;
             }
-        }, checkboxNameArgument, checkboxValueArgument);
+        });
         settingsCheckboxCommand.AddCommand(checkboxSetCommand);
 
         // settings-dialog checkbox list: 모든 CheckBox 상태 목록
         var checkboxListCommand = new Command("list", "모든 CheckBox 상태 목록 (Advanced tab)");
         checkboxListCommand.AddOption(jsonOption);
-        checkboxListCommand.SetHandler((json) =>
+        checkboxListCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var settings = controller.GetAdvancedSettings();
+            try
+            {
+                var json = context.ParseResult.GetValueForOption(jsonOption);
+                using var controller = new Settings();
+                var settings = controller.GetAdvancedSettings();
 
-            if (json)
-            {
-                PrintJsonOutput(new
+                if (json)
                 {
-                    success = true,
-                    data = new
+                    PrintJsonOutput(new
                     {
-                        source = "AdvancedTab",
-                        count = settings.Count,
-                        settings = settings
-                    }
-                });
-            }
-            else
-            {
-                Console.WriteLine($"[settings-dialog-checkbox list] Found {settings.Count} setting(s):");
-                foreach (var kvp in settings)
-                {
-                    Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                        success = true,
+                        data = new
+                        {
+                            source = "AdvancedTab",
+                            count = settings.Count,
+                            settings = settings
+                        }
+                    });
                 }
+                else
+                {
+                    Console.WriteLine($"[settings-dialog-checkbox list] Found {settings.Count} setting(s):");
+                    foreach (var kvp in settings)
+                    {
+                        Console.WriteLine($"  {kvp.Key}: {kvp.Value}");
+                    }
+                }
+                context.ExitCode = SUCCESS;
             }
-            Environment.Exit(EXIT_SUCCESS);
-        }, jsonOption);
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[settings-dialog-checkbox list] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
+        });
         settingsCheckboxCommand.AddCommand(checkboxListCommand);
 
         settingsDialogCommand.AddCommand(settingsCheckboxCommand);
@@ -635,41 +791,77 @@ public class SettingsCommands : ICommandHandler
 
         // settings-dialog action save: Save/OK 버튼 클릭
         var actionSaveCommand = new Command("save", "Save/OK 버튼 클릭 (dialog closes)");
-        actionSaveCommand.SetHandler(() =>
+        actionSaveCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var result = controller.ClickSaveButton();
-            Console.WriteLine(result ? "[settings-dialog-action save] Success: Dialog saved and closed" : "[settings-dialog-action save] Failed: Could not click Save button or dialog did not close");
+            try
+            {
+                using var controller = new Settings();
+                var result = controller.ClickSaveButton();
+                Console.WriteLine(result ? "[settings-dialog-action save] Success: Dialog saved and closed" : "[settings-dialog-action save] Failed: Could not click Save button or dialog did not close");
+                context.ExitCode = result ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[settings-dialog-action save] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
         });
         settingsActionCommand.AddCommand(actionSaveCommand);
 
         // settings-dialog action apply: Apply 버튼 클릭
         var actionApplyCommand = new Command("apply", "Apply 버튼 클릭 (dialog stays open)");
-        actionApplyCommand.SetHandler(() =>
+        actionApplyCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var result = controller.ClickApplyButton();
-            Console.WriteLine(result ? "[settings-dialog-action apply] Success: Apply button clicked" : "[settings-dialog-action apply] Failed: Could not click Apply button");
+            try
+            {
+                using var controller = new Settings();
+                var result = controller.ClickApplyButton();
+                Console.WriteLine(result ? "[settings-dialog-action apply] Success: Apply button clicked" : "[settings-dialog-action apply] Failed: Could not click Apply button");
+                context.ExitCode = result ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[settings-dialog-action apply] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
         });
         settingsActionCommand.AddCommand(actionApplyCommand);
 
         // settings-dialog action cancel: Cancel 버튼 클릭
         var actionCancelCommand = new Command("cancel", "Cancel 버튼 클릭 (dialog closes)");
-        actionCancelCommand.SetHandler(() =>
+        actionCancelCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var result = controller.ClickCancelButton();
-            Console.WriteLine(result ? "[settings-dialog-action cancel] Success: Dialog cancelled and closed" : "[settings-dialog-action cancel] Failed: Could not click Cancel button or dialog did not close");
+            try
+            {
+                using var controller = new Settings();
+                var result = controller.ClickCancelButton();
+                Console.WriteLine(result ? "[settings-dialog-action cancel] Success: Dialog cancelled and closed" : "[settings-dialog-action cancel] Failed: Could not click Cancel button or dialog did not close");
+                context.ExitCode = result ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[settings-dialog-action cancel] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
         });
         settingsActionCommand.AddCommand(actionCancelCommand);
 
         // settings-dialog action reset: Reset/Defaults 버튼 클릭
         var actionResetCommand = new Command("reset", "Reset/Defaults 버튼 클릭 (dialog stays open)");
-        actionResetCommand.SetHandler(() =>
+        actionResetCommand.SetHandler((InvocationContext context) =>
         {
-            using var controller = new Settings();
-            var result = controller.ClickResetButton();
-            Console.WriteLine(result ? "[settings-dialog-action reset] Success: Reset button clicked" : "[settings-dialog-action reset] Failed: Could not click Reset button");
+            try
+            {
+                using var controller = new Settings();
+                var result = controller.ClickResetButton();
+                Console.WriteLine(result ? "[settings-dialog-action reset] Success: Reset button clicked" : "[settings-dialog-action reset] Failed: Could not click Reset button");
+                context.ExitCode = result ? SUCCESS : ERROR;
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[settings-dialog-action reset] Error: {ex.Message}");
+                context.ExitCode = ERROR;
+            }
         });
         settingsActionCommand.AddCommand(actionResetCommand);
 
