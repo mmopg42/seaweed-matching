@@ -39,18 +39,50 @@ public class SettingsCommands : ICommandHandler
             () => null,
             "날짜 필터 (YYYYMMDD 형식, 예: 20260118)"
         );
+        var latestOption = new Option<bool>(
+            ["--latest", "-l"],
+            "가장 최신 날짜 폴더 사용 (yyyyMMdd 형식 폴더 중 최신)"
+        );
         var consoleLogsListCommand = new Command("list", "사용 가능한 로그 파일 목록");
         consoleLogsListCommand.AddOption(dateFilterOption);
+        consoleLogsListCommand.AddOption(latestOption);
         consoleLogsListCommand.AddOption(jsonOption);
         consoleLogsListCommand.SetHandler((InvocationContext context) =>
         {
             try
             {
                 var dateFilter = context.ParseResult.GetValueForOption(dateFilterOption);
+                var latest = context.ParseResult.GetValueForOption(latestOption);
                 var json = context.ParseResult.GetValueForOption(jsonOption);
 
                 var reader = new ConsoleLogs();
-                var files = reader.GetLogFiles(dateFilter);
+                string[] files;
+
+                // 명시적 우선순위: --date > --latest > 기본 (모든 폴더)
+                if (!string.IsNullOrEmpty(dateFilter))
+                {
+                    // --date 우선 (기존 동작)
+                    files = reader.GetLogFiles(dateFilter);
+                }
+                else if (latest)
+                {
+                    // --latest만 사용: 자동 발견
+                    var latestFolder = reader.GetLatestLogDateFolder();
+                    if (latestFolder != null)
+                    {
+                        dateFilter = Path.GetFileName(latestFolder);
+                        files = reader.GetLogFiles(dateFilter);
+                    }
+                    else
+                    {
+                        files = Array.Empty<string>();
+                    }
+                }
+                else
+                {
+                    // 없음: 모든 폴더 검색 (기본 동작)
+                    files = reader.GetLogFiles();
+                }
 
                 if (json)
                 {
@@ -105,6 +137,7 @@ public class SettingsCommands : ICommandHandler
         var consoleLogsTailCommand = new Command("tail", "최근 N줄 읽기");
         consoleLogsTailCommand.AddArgument(tailCountArgument);
         consoleLogsTailCommand.AddOption(logPathOption);
+        consoleLogsTailCommand.AddOption(latestOption);
         consoleLogsTailCommand.AddOption(jsonOption);
         consoleLogsTailCommand.SetHandler((InvocationContext context) =>
         {
@@ -112,13 +145,29 @@ public class SettingsCommands : ICommandHandler
             {
                 var count = context.ParseResult.GetValueForArgument(tailCountArgument);
                 var logPath = context.ParseResult.GetValueForOption(logPathOption);
+                var latest = context.ParseResult.GetValueForOption(latestOption);
                 var json = context.ParseResult.GetValueForOption(jsonOption);
 
                 var actualCount = count > 0 ? count : 20;
                 var reader = new ConsoleLogs();
 
-                // 경로가 지정되지 않으면 최신 파일 찾기
-                var targetPath = logPath;
+                // 명시적 우선순위: --file > --latest > 기본
+                string? targetPath = null;
+                if (!string.IsNullOrEmpty(logPath))
+                {
+                    targetPath = logPath;  // --file 우선
+                }
+                else if (latest)
+                {
+                    var latestFiles = reader.GetLogFilesFromLatest();
+                    if (latestFiles.Length > 0)
+                    {
+                        targetPath = latestFiles[0];  // 최신 폴더의 첫 번째 파일
+                    }
+                }
+                // else: 기본 동작 (모든 폴더에서 최신 파일)
+
+                // 경로가 지정되지 않으면 모든 폴더에서 최신 파일 찾기
                 if (string.IsNullOrEmpty(targetPath))
                 {
                     var files = reader.GetLogFiles();
@@ -183,6 +232,7 @@ public class SettingsCommands : ICommandHandler
         var consoleLogsSearchCommand = new Command("search", "텍스트 검색");
         consoleLogsSearchCommand.AddArgument(consoleSearchTextArgument);
         consoleLogsSearchCommand.AddOption(logPathOption);
+        consoleLogsSearchCommand.AddOption(latestOption);
         consoleLogsSearchCommand.AddOption(consoleMaxResultsOption);
         consoleLogsSearchCommand.AddOption(jsonOption);
         consoleLogsSearchCommand.SetHandler((InvocationContext context) =>
@@ -191,13 +241,29 @@ public class SettingsCommands : ICommandHandler
             {
                 var text = context.ParseResult.GetValueForArgument(consoleSearchTextArgument);
                 var path = context.ParseResult.GetValueForOption(logPathOption);
+                var latest = context.ParseResult.GetValueForOption(latestOption);
                 var maxResults = context.ParseResult.GetValueForOption(consoleMaxResultsOption);
                 var json = context.ParseResult.GetValueForOption(jsonOption);
 
                 var reader = new ConsoleLogs();
 
-                // 경로가 지정되지 않으면 최신 파일 찾기
-                var targetPath = path;
+                // 명시적 우선순위: --file > --latest > 기본
+                string? targetPath = null;
+                if (!string.IsNullOrEmpty(path))
+                {
+                    targetPath = path;  // --file 우선
+                }
+                else if (latest)
+                {
+                    var latestFiles = reader.GetLogFilesFromLatest();
+                    if (latestFiles.Length > 0)
+                    {
+                        targetPath = latestFiles[0];  // 최신 폴더의 첫 번째 파일
+                    }
+                }
+                // else: 기본 동작 (모든 폴더에서 최신 파일)
+
+                // 경로가 지정되지 않으면 모든 폴더에서 최신 파일 찾기
                 if (string.IsNullOrEmpty(targetPath))
                 {
                     var files = reader.GetLogFiles();
