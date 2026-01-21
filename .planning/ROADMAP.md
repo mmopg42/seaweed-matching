@@ -184,13 +184,13 @@ Plans:
 Plans:
 - [ ] 30-01-PLAN.md — Add skill translation documentation to test-executor.md with parsing, validation, error handling, and retryable flag support
 
-#### Phase 31: CLI Schema Standardization
+#### ✅ Phase 31: CLI Schema Standardization
 
 **Goal:** Standardize JSON response format across all commands
 
 **Depends on:** Phase 28 (skill definitions include schema expectations)
 **Research:** Unlikely (schema standardization is well-defined)
-**Plans:** TBD
+**Plans:** 4 plans
 
 **Requirements:** SCHEMA-01 through SCHEMA-05
 
@@ -200,6 +200,12 @@ Plans:
 3. Error responses include suggestion string for common failures
 4. JSON schemas documented for each command category
 5. Executor can reliably parse all command responses
+
+Plans:
+- [x] 31-01-PLAN.md — Create shared JSON response infrastructure (models, helper, exit codes)
+- [x] 31-02-PLAN.md — Migrate APP, WINDOWS, TOOLBAR, DATA_PANEL commands
+- [x] 31-03-PLAN.md — Migrate WORKFLOW, SETTINGS, FILE_OPS commands
+- [x] 31-04-PLAN.md — Migrate TEST, UTILITY, SETUP commands + documentation
 
 #### Phase 32: Dry-Run Mode
 
@@ -229,7 +235,7 @@ Plans:
 | v1.2 Test Automation | 20-21 | 2 | ✅ Complete | 2026-01-20 |
 | v1.3 Setup & Perf | 22-23 | 6 | ✅ Complete | 2026-01-20 |
 | v1.4 Agent Architecture | 24-27 | 8 | ✅ Complete | 2026-01-21 |
-| v1.5 CLI Skill Encapsulation | 28-32 | 3 | 🚧 In progress | - |
+| v1.5 CLI Skill Encapsulation | 28-32 | 7 | 🚧 In progress | - |
 
 | Phase | Milestone | Plans | Status |
 |-------|-----------|-------|--------|
@@ -242,15 +248,15 @@ Plans:
 | 28. Skill Registry | v1.5 | 1 | ✅ Complete |
 | 29. Orchestrator Integration | v1.5 | 1 | ✅ Complete |
 | 30. Executor Translation | v1.5 | 1 | Ready |
-| 31. CLI Schema | v1.5 | TBD | Not started |
+| 31. CLI Schema | v1.5 | 4 | ✅ Complete |
 | 32. Dry-Run Mode | v1.5 | TBD | Not started |
 
 ## Current State
 
-**Status:** 🚧 v1.5 CLI Skill Encapsulation - Phase 30 planned, ready for execution.
+**Status:** 🚧 v1.5 CLI Skill Encapsulation - Phase 32 not started.
 
-**Next Step:** Run `/gsd:execute-phase 30` to add skill translation documentation to test-executor.md.
+**Next Step:** Run `/gsd:plan-phase 32` to plan dry-run mode implementation.
 
 ---
 
-*Last updated: 2026-01-21 - Phase 30 planned*
+*Last updated: 2026-01-21 - Phase 31 complete*
