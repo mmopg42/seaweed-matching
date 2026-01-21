@@ -91,4 +91,32 @@ public static class JsonResponseHelper
         );
         Console.WriteLine(JsonSerializer.Serialize(response, JsonOptions));
     }
+
+    /// <summary>
+    /// Print dry-run response showing what command would execute without execution.
+    /// </summary>
+    /// <param name="skill">Skill name being validated</param>
+    /// <param name="cli">CLI command that would execute</param>
+    /// <param name="args">Arguments provided (may be empty)</param>
+    /// <param name="timestamp">Optional timestamp (defaults to current UTC time)</param>
+    public static void PrintDryRun(
+        string skill,
+        string cli,
+        Dictionary<string, object> args,
+        string? timestamp = null)
+    {
+        var data = new JsonResponseModels.DryRunData(
+            Skill: skill,
+            Cli: cli,
+            Args: args
+        );
+
+        var response = new JsonResponseModels.DryRunResponse(
+            Success: true,
+            DryRun: true,
+            Timestamp: timestamp ?? DateTime.UtcNow.ToString("o"),
+            Data: data
+        );
+        Console.WriteLine(JsonSerializer.Serialize(response, JsonOptions));
+    }
 }
