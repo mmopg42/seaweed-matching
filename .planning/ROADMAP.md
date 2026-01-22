@@ -111,6 +111,14 @@ Windows UI Automation with FlaUI
 - [x] **Phase 26: Dynamic Log Path Discovery** - Automatic log folder discovery
 - [x] **Phase 27: Orchestrator Delegation Fix** - Bash tool prohibitions in test-orchestrator
 
+### ✅ Phase 28-32: v1.5 CLI Skill Encapsulation (Shipped)
+
+- [x] **Phase 28: Skill Registry** - 92 semantic skill definitions in 13 categories
+- [x] **Phase 29: Orchestrator Integration** - Skill-only delegation with CLI prohibition
+- [x] **Phase 30: Executor Translation** - Skill-to-CLI parsing and validation
+- [x] **Phase 31: CLI Schema** - Standardized JSON responses with retryable/suggestion
+- [x] **Phase 32: Dry-Run Mode** - --dry-run flag for safe command validation
+
 ---
 
 ### ✅ v1.5 CLI Skill Encapsulation (Shipped: 2026-01-22)
@@ -118,125 +126,13 @@ Windows UI Automation with FlaUI
 **Phases:** 28-32 (5 phases) | **Timeline:** 1 day | **LOC:** ~700
 
 **Delivered:**
-- Skill registry with 90+ semantic skill definitions organized by 13 categories
+- Skill registry with 92 semantic skill definitions organized by 13 categories
 - Orchestrator-prohibited CLI command construction (enforced in docs)
 - Executor skill-to-CLI translation patterns with validation
 - Standardized JSON responses with retryable/suggestion fields
 - Dry-run mode for safe command validation without execution
 
-**Milestone Goal:** AI agents use semantic skill names for test automation instead of constructing CLI commands directly. This creates a clean separation: orchestrators define WHAT to test (intent), executors handle HOW to execute it (implementation).
-
-**Success Criteria:**
-- Orchestrator agents never construct CLI commands (prohibition enforced in docs)
-- All 90+ CLI commands mapped to semantic skill names
-- Executor validates skills before execution and reports unknown skills
-- JSON responses standardized with retryable and suggestion fields
-- Dry-run mode enables safe command validation
-
-#### Phase 28: Skill Registry Definition
-
-**Goal:** Create semantic skill definitions for all 90+ CLI commands
-
-**Depends on:** Phase 27 (delegation pattern established)
-**Research:** Unlikely (skills map 1:1 to existing CLI commands)
-**Plans:** 1 plan
-
-**Requirements:** SKILL-01 through SKILL-06
-
-**Success Criteria:**
-1. All 90+ CLI commands have corresponding skill definitions
-2. Each skill has semantic name (intent-based, not CLI-based)
-3. Skill definition includes exact CLI command pattern and parameter schema
-4. Skills organized by category (APP, BATCH, CONSOLE_LOGS, DATA_PANEL, FILE_OPS, LOGS, SETTINGS_DIALOG, SETUP, TEST, TOOLBAR, UTILITY, WINDOWS, WORKFLOW)
-5. test-executor-skills.md documents complete skill registry
-
-Plans:
-- [x] 28-01-PLAN.md — Create skill registry document with all 90+ skill definitions
-
-#### Phase 29: Orchestrator Skill Integration
-
-**Goal:** Update test-orchestrator to use skill names only (no CLI commands)
-
-**Depends on:** Phase 28 (skills defined)
-**Research:** Unlikely (delegation pattern established in Phase 27)
-**Plans:** 1 plan
-
-**Requirements:** ORCH-01 through ORCH-05
-
-**Success Criteria:**
-1. Orchestrator uses skill names only (no CLI commands in delegation)
-2. test-orchestrator.md includes skill reference section (names and descriptions)
-3. "No Command Construction" prohibition added with examples
-4. Delegation template uses skill names
-5. Orchestrator documentation explicitly forbids CLI command construction
-
-Plans:
-- [x] 29-01-PLAN.md — Update test-orchestrator with skill-based delegation format, prohibition section, and skill reference
-
-#### Phase 30: Executor Skill Translation
-
-**Goal:** Enable executor to translate skill names to CLI commands
-
-**Depends on:** Phase 28 (skills defined), Phase 29 (orchestrator using skills)
-**Research:** Complete (30-RESEARCH.md provides patterns)
-**Plans:** 1 plan
-
-**Requirements:** EXEC-01 through EXEC-05
-
-**Success Criteria:**
-1. test-executor.md includes skill-to-CLI translation patterns
-2. Executor validates skill names against registry before execution
-3. Executor reports error for unknown skills with helpful message
-4. Retry logic respects skill `retryable` flag
-5. Error handling includes skill context in messages
-
-Plans:
-- [ ] 30-01-PLAN.md — Add skill translation documentation to test-executor.md with parsing, validation, error handling, and retryable flag support
-
-#### ✅ Phase 31: CLI Schema Standardization
-
-**Goal:** Standardize JSON response format across all commands
-
-**Depends on:** Phase 28 (skill definitions include schema expectations)
-**Research:** Unlikely (schema standardization is well-defined)
-**Plans:** 4 plans
-
-**Requirements:** SCHEMA-01 through SCHEMA-05
-
-**Success Criteria:**
-1. All CLI commands return standardized JSON with success, data/error, errorCode fields
-2. Error responses include retryable boolean for recoverable failures
-3. Error responses include suggestion string for common failures
-4. JSON schemas documented for each command category
-5. Executor can reliably parse all command responses
-
-Plans:
-- [x] 31-01-PLAN.md — Create shared JSON response infrastructure (models, helper, exit codes)
-- [x] 31-02-PLAN.md — Migrate APP, WINDOWS, TOOLBAR, DATA_PANEL commands
-- [x] 31-03-PLAN.md — Migrate WORKFLOW, SETTINGS, FILE_OPS commands
-- [x] 31-04-PLAN.md — Migrate TEST, UTILITY, SETUP commands + documentation
-
-#### Phase 32: Dry-Run Mode
-
-**Goal:** Add --dry-run flag for safe command validation
-
-**Depends on:** Phase 31 (standardized schemas)
-**Research:** Unlikely (dry-run is standard CLI pattern)
-**Plans:** 3 plans
-
-**Requirements:** DRYRUN-01 through DRYRUN-05
-
-**Success Criteria:**
-1. All CLI commands support --dry-run flag
-2. Dry-run returns command that would execute without execution
-3. Dry-run validates parameter syntax before returning
-4. Dry-run validates skill exists (in executor)
-5. test-executor.md documents dry-run usage patterns
-
-Plans:
-- [x] 32-01-PLAN.md — Create dry-run infrastructure (models, helper extension, validation logic)
-- [x] 32-02-PLAN.md — Add --dry-run option to all command handlers
-- [x] 32-03-PLAN.md — Update documentation (test-executor.md, test-orchestrator.md) with dry-run patterns
+**[→ Full details: milestones/v1.5-ROADMAP.md](milestones/v1.5-ROADMAP.md)**
 
 ---
 
@@ -267,10 +163,10 @@ Plans:
 
 ## Current State
 
-**Status:** ✅ v1.5 CLI Skill Encapsulation - All 5 phases complete (28-32).
+**Status:** ✅ v1.5 CLI Skill Encapsulation shipped 2026-01-22.
 
-**Next Step:** Run `/gsd:complete-milestone` to archive v1.5 and plan next milestone.
+**Next Step:** Run `/gsd:new-milestone` to define v1.6 goals and requirements.
 
 ---
 
-*Last updated: 2026-01-22 - Phase 32 complete, v1.5 milestone ready*
+*Last updated: 2026-01-22 - v1.5 milestone complete and archived*

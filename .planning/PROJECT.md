@@ -25,40 +25,20 @@ FlaUI.UIA3 기반 ChronoView WPF 데스크톱 애플리케이션 자동화 도�
 - ✓ 완전한 셋업 완료 워크플로우 — v1.3
 - ✓ 데이터 시뮬레이터 설정값 비교 검증 — v1.3
 - ✓ 테스트 속도 최적화 — v1.3
-
-### Validated
-
-- ✓ FlaUI.UIA3 기반 UI 자동화 스킬 구현 — v1.0
-- ✓ ChronoView WPF 애플리케이션 구조 파악 완료 — v1.0
-- ✓ MVVM 아키텍처 이해 — MainWindow, DashboardViewModel, 각종 Dialog 구조 확인 — v1.0
-- ✓ 상태 확인 스킬 구현 — FileGroups, StatusMessage, 통계 정보 읽기 — v1.0
-- ✓ 스킬 실행 인터페이스 — Claude Agent가 호출 가능한 명령줄 인터페이스 — v1.0
-- ✓ 테스트 에이전트 구현 — 스킬을 사용하여 ChronoView를 자동 테스트하는 에이전트 — v1.0
-- ✓ CommandRegistry 아키텍처 — 모듈형 커맨드 핸들러 구조 — v1.1
-- ✓ 10개 핸들러 클래스 — 각각 600줄 미만의 단일 책임 클래스 — v1.1
-- ✓ SetupWindow 전용 컨트롤러 구현 — v1.3
-- ✓ 설정 다이얼로그 열기/닫기 자동화 — v1.3
-- ✓ 완전한 셋업 완료 워크플로우 — v1.3
-- ✓ 데이터 시뮬레이터 설정값 비교 검증 — v1.3
-- ✓ 테스트 속도 최적화 — v1.3
 - ✓ 중앙화된 에러 핸들러 — ExitCodes.cs + Program.cs wrapper — v1.4
 - ✓ 명령어 핸들러 리팩토링 — InvocationContext.ExitCode 패턴 — v1.4
 - ✓ 데이터 시뮬레이터 상태 endpoint — --status JSON 반환 — v1.4
 - ✓ 동적 로그 경로 해결 — GetLatestLogDateFolder() + --latest 플래그 — v1.4
 - ✓ Orchestrator 위임 패턴 수정 — Bash 사용 금지 문서화 — v1.4
+- ✓ 스킬 레지스트리 정의 — 92개 스킬 정의, 13개 카테고리 — v1.5
+- ✓ Orchestrator 스킬 전용 위임 — CLI 명령어 직접 사용 금지 — v1.5
+- ✓ Executor 스킬→CLI 변환 — 검증 및 에러 처리 — v1.5
+- ✓ 표준화된 JSON 응답 — SuccessResponse<T>, ErrorResponse — v1.5
+- ✓ Dry-Run 모드 — --dry-run 플래그, 스킬 검증 — v1.5
 
 ### Active
 
-**Current Milestone: v1.5 CLI Skill Encapsulation & Delegation Fix**
-
-**Goal:** CLI 명령어를 스킬로 캡슐화하여 오케스트레이터가 의도(intent)만 전달하도록 수정
-
-**Target features:**
-- [ ] 30+ CLI 명령어에 대한 스킬 레지스트리 정의
-- [ ] 오케스트레이터가 스킬 이름만 사용하도록 수정 (CLI 명령어 직접 사용 금지)
-- [ ] 익스큐터가 스킬→CLI 변환을 담당
-- [ ] CLI JSON 스키마 표준화
-- [ ] --dry-run 모드 추가
+None — Current milestone complete. Use `/gsd:new-milestone` to define next milestone goals.
 
 ### Out of Scope
 
@@ -68,12 +48,14 @@ FlaUI.UIA3 기반 ChronoView WPF 데스크톱 애플리케이션 자동화 도�
 
 ## Context
 
-**Current State (v1.2 shipped):**
-- `skills_scripts/ui_automation/`에 FlaUI 기반 C# 프로젝트 (~11,600 LOC)
+**Current State (v1.5 shipped):**
+- `skills_scripts/ui_automation/`에 FlaUI 기반 C# 프로젝트 (~15,900 LOC)
 - FlaUI.UIA3 5.0.0, System.CommandLine 2.0.0-beta4
 - 10개 모듈형 커맨드 핸들러 클래스 (각각 < 600 lines)
 - Program.cs: 60 lines (98.3% reduction from original 3,611 lines)
-- AppLifecycleCommands: launch/stop/restart/status 명령
+- 92개 시맨틱 스킬 정의 (13개 카테고리)
+- 표준화된 JSON 응답 형식 (SuccessResponse<T>, ErrorResponse)
+- --dry-run 플래그 지원 (모든 명령어)
 
 **ChronoView UI 구조:**
 - 메인 윈도우: MainWindow (제목: "ChronoView Pro")
@@ -118,6 +100,11 @@ FlaUI.UIA3 기반 ChronoView WPF 데스크톱 애플리케이션 자동화 도�
 | ICommandHandler interface | Modular command registration pattern | ✓ Good — v1.1 verified |
 | CommandRegistry class | Centralized handler aggregation | ✓ Good — enables 98% reduction |
 | Pure migration approach | Original code copied verbatim for compatibility | ✓ Good — zero regressions |
+| 13개 스킬 카테고리 | CLI 구조와 정렬된 카테고리로 발견성 향상 | ✓ Good — v1.5 verified |
+| UPPER_SNAKE_CASE 스킬 네이밍 | CATEGORY_ACTION 형식으로 의도 전달 명확화 | ✓ Good — v1.5 verified |
+| Record types for JSON | 불변성과 간결한 문법, JsonPropertyName 불필요 | ✓ Good — v1.5 verified |
+| Levenshtein distance (threshold=3) | 유사한 스킬 이름 제안으로 오타 복구 | ✓ Good — v1.5 verified |
+| --dry-run global option | 안전한 명령어 검증, 실행 없이 | ✓ Good — v1.5 verified |
 
 ---
-*Last updated: 2026-01-21 after v1.5 milestone initialization*
+*Last updated: 2026-01-22 after v1.5 milestone completion*
