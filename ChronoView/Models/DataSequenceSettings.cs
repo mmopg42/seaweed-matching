@@ -102,6 +102,44 @@ namespace ChronoView.Models
         }
 
         /// <summary>
+        /// Get ordered list of ALL data sequence items (both enabled and disabled).
+        /// Enabled flag controls matching STRATEGY, not inclusion.
+        /// </summary>
+        public List<DataSequenceItem> GetAllOrderedItems()
+        {
+            if (Sequence == null || Sequence.Count == 0)
+                return new List<DataSequenceItem>();
+
+            return Sequence
+                .OrderBy(item => item.Order)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Get ordered list of ALL data types (both enabled and disabled).
+        /// </summary>
+        public List<DataType> GetAllOrderedTypes()
+        {
+            if (Sequence == null || Sequence.Count == 0)
+                return new List<DataType>();
+
+            return Sequence
+                .OrderBy(item => item.Order)
+                .Select(item => item.Type)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Check if a data type uses sequence-based matching (Enabled=true)
+        /// or timestamp-only matching (Enabled=false)
+        /// </summary>
+        public bool IsSequenceMatching(DataType type)
+        {
+            var item = GetByType(type);
+            return item != null && item.Enabled;  // null guard: return false if type not found
+        }
+
+        /// <summary>
         /// Validate sequence configuration
         /// </summary>
         /// <param name="errors">Output list of validation errors</param>
@@ -116,11 +154,8 @@ namespace ChronoView.Models
                 return false;
             }
 
-            // Rule 1: At least one enabled item
-            if (Sequence.Count(item => item.Enabled) == 0)
-            {
-                errors.Add("At least one data type must be enabled");
-            }
+            // Rule 1: Sequence items must exist (Enabled status only affects matching strategy, not validity)
+            // All items can be disabled (timestamp-only matching mode for all types)
 
             // Rule 2: Unique Order values
             var orderGroups = Sequence.GroupBy(item => item.Order);
@@ -132,7 +167,7 @@ namespace ChronoView.Models
                 }
             }
 
-            // Rule 3: Unique Type values
+            // Rule 2: Unique Type values
             var typeGroups = Sequence.GroupBy(item => item.Type);
             foreach (var group in typeGroups)
             {
@@ -142,7 +177,7 @@ namespace ChronoView.Models
                 }
             }
 
-            // Rule 4: Valid delay ranges
+            // Rule 3: Valid delay ranges
             foreach (var item in Sequence)
             {
                 if (item.MinDelaySeconds < 0)

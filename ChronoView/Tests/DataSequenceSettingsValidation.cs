@@ -100,7 +100,7 @@ namespace ChronoView.Tests
 
         private static void TestValidation_AllDisabled()
         {
-            Console.WriteLine("Test: Validation - All Disabled");
+            Console.WriteLine("Test: Validation - All Disabled (Timestamp-Only Mode)");
             var settings = new DataSequenceSettings
             {
                 Sequence = new List<DataSequenceItem>
@@ -109,12 +109,12 @@ namespace ChronoView.Tests
                     new DataSequenceItem { Type = DataType.NIR, Order = 2, MinDelaySeconds = 1, MaxDelaySeconds = 10, Enabled = false }
                 }
             };
-            
+
             bool valid = settings.Validate(out var errors);
-            Assert(!valid, "All disabled should fail validation");
-            Assert(errors.Any(e => e.Contains("at least one")), "Should have 'at least one' error");
-            
-            Console.WriteLine($"  ✓ PASS - Errors: {string.Join(", ", errors)}\n");
+            Assert(valid, "All disabled should be valid (timestamp-only matching mode)");
+            Assert(errors.Count == 0, $"Should have no errors, got {errors.Count}");
+
+            Console.WriteLine("  ✓ PASS - All disabled is valid (timestamp-only mode)\n");
         }
 
         private static void TestValidation_DuplicateOrder()
