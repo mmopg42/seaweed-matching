@@ -884,11 +884,8 @@ public class SettingsDialogViewModel : ViewModelBase
             Enabled = vm.Enabled
         }).ToList();
 
-        // Update existing object (preserves other properties like CompareToReferenceCamera)
-        _configuration.DataSequenceSettings.Sequence = newSequence;
-
-        // Validate
-        if (!_configuration.DataSequenceSettings.Validate(out var errors))
+        // Validate BEFORE modifying config
+        if (!ValidateNewSequence(newSequence, out var errors))
         {
             var errorMessage = string.Join("\n", errors);
             _logger.LogWarning("Data sequence validation failed: {Errors}", errorMessage);
@@ -896,7 +893,18 @@ public class SettingsDialogViewModel : ViewModelBase
             return;
         }
 
+        // Only modify config if validation passes (preserves other properties like CompareToReferenceCamera)
+        _configuration.DataSequenceSettings.Sequence = newSequence;
         _logger.LogInformation("Data sequence settings saved");
+    }
+
+    /// <summary>
+    /// Validate new sequence without modifying config object.
+    /// </summary>
+    private bool ValidateNewSequence(List<DataSequenceItem> newSequence, out List<string> errors)
+    {
+        var tempSettings = new DataSequenceSettings { Sequence = newSequence };
+        return tempSettings.Validate(out errors);
     }
 
     /// <summary>
