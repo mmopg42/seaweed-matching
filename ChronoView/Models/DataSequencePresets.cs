@@ -140,7 +140,7 @@ namespace ChronoView.Models
                     },
                     new DataSequenceItem
                     {
-                        Type = DataType.Cam1,
+                        Type = DataType.Normal,
                         Order = 3,
                         MinDelaySeconds = 4,
                         MaxDelaySeconds = 9,
@@ -148,7 +148,7 @@ namespace ChronoView.Models
                     },
                     new DataSequenceItem
                     {
-                        Type = DataType.Cam2,
+                        Type = DataType.NIR,
                         Order = 4,
                         MinDelaySeconds = 0,
                         MaxDelaySeconds = 1,
