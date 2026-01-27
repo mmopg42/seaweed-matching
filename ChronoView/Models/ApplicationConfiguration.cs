@@ -185,9 +185,9 @@ public class MatchingSettings
     /// </summary>
     public bool UseCameraSubfolderNormal { get; set; } = false;
 
-    /// \u003csummary\u003e
+    /// <summary>
     /// Use camera subfolder for Normal2 path.
-    /// \u003c/summary\u003e
+    /// </summary>
     public bool UseCameraSubfolderNormal2 { get; set; } = false;
 
     /// <summary>
