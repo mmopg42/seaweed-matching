@@ -11,12 +11,13 @@ namespace ChronoView.Core.Configuration;
 /// </summary>
 public class ConfigurationManager : IConfigurationManager
 {
-    private readonly string _appName;
     private readonly string _appAuthor;
     private readonly JsonSerializerOptions _jsonOptions;
+    private Models.ApplicationConfiguration? _configuration;
 
     public string AppDataDirectory { get; }
     public string ConfigurationFilePath { get; }
+    public string AppName => _configuration?.ProgramName ?? "AI 데이터 통합 관제 솔루션";
 
     public string LogsDirectory => Path.Combine(AppDataDirectory, "Logs");
     public string HistoryFilePath => Path.Combine(AppDataDirectory, "abnormal_history.json");
@@ -26,11 +27,9 @@ public class ConfigurationManager : IConfigurationManager
     /// <summary>
     /// Initializes a new instance of ConfigurationManager.
     /// </summary>
-    /// <param name="appName">Application name for directory creation.</param>
     /// <param name="appAuthor">Application author for directory creation.</param>
-    public ConfigurationManager(string appName = "ChronoView", string appAuthor = "prische")
+    public ConfigurationManager(string appAuthor = "prische")
     {
-        _appName = appName;
         _appAuthor = appAuthor;
 
         // Configure JSON serialization options
@@ -42,17 +41,20 @@ public class ConfigurationManager : IConfigurationManager
             Converters = { new JsonStringEnumConverter() }
         };
 
-        // Determine platform-specific user data directory
-        AppDataDirectory = GetUserDataDirectory();
+        // Load configuration using default program name for initial path
+        AppDataDirectory = GetUserDataDirectory("AI 데이터 통합 관제 솔루션");
         Directory.CreateDirectory(AppDataDirectory);
 
         ConfigurationFilePath = Path.Combine(AppDataDirectory, "config.json");
+
+        // Load configuration to get actual program name
+        _configuration = LoadConfiguration<Models.ApplicationConfiguration>();
     }
 
     /// <summary>
-    /// Gets the platform-specific user data directory.
+    /// Gets platform-specific user data directory.
     /// </summary>
-    private string GetUserDataDirectory()
+    private string GetUserDataDirectory(string programName)
     {
         string baseDir;
 
@@ -76,7 +78,7 @@ public class ConfigurationManager : IConfigurationManager
                 : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share");
         }
 
-        return Path.Combine(baseDir, _appAuthor, _appName);
+        return Path.Combine(baseDir, _appAuthor, programName);
     }
 
     /// <summary>

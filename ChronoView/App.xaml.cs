@@ -212,7 +212,7 @@ public partial class App : Application
         });
 
         // Core Services (Singleton - maintain state across application lifetime)
-        services.AddSingleton<IConfigurationManager>(sp => new ConfigurationManager("ChronoView", "prische"));
+        services.AddSingleton<IConfigurationManager>(sp => new ConfigurationManager("prische"));
         services.AddSingleton<ITimestampCache>(sp =>
         {
             var config = sp.GetRequiredService<ApplicationConfiguration>();
@@ -228,7 +228,8 @@ public partial class App : Application
                 ? new LineBasedGroupIdGenerator()
                 : new GlobalGroupIdGenerator();
         });
-        
+
+        services.AddSingleton<IEvictionService, EvictionService>();
         services.AddSingleton<IGroupManager, GroupManager>();
         services.AddSingleton<IFileWatcher, FileWatcherService>();
         services.AddSingleton<IFileGroupMatcher>(sp =>

@@ -6,12 +6,6 @@ namespace ChronoView.Models;
 public class ApplicationConfiguration
 {
     /// <summary>
-    /// Base path for automatic path generation (e.g., "D:/Data").
-    /// Used by PathManagementService.GeneratePathsFromDate().
-    /// </summary>
-    public string BasePath { get; set; } = "";
-
-    /// <summary>
     /// Folder paths for monitoring and file operations.
     /// </summary>
     public Dictionary<string, string> FolderPaths { get; set; } = new();
@@ -50,6 +44,11 @@ public class ApplicationConfiguration
     /// External program settings.
     /// </summary>
     public ExternalProgramSettings ExternalProgramSettings { get; set; } = new();
+
+    /// <summary>
+    /// Display name for this application.
+    /// </summary>
+    public string ProgramName { get; set; } = "AI 데이터 통합 관제 솔루션";
 }
 
 /// <summary>
