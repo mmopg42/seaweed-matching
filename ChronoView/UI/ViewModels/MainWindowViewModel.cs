@@ -4,6 +4,7 @@ using ChronoView.Core.Analytics;
 using ChronoView.Core.ProgramLaunching;
 using ChronoView.Helpers;
 using ChronoView.Core.Configuration;
+using ChronoView.Core.Localization;
 using ChronoView.Core.FileWatching;
 using ChronoView.Core.FileOperations;
 using ChronoView.UI.Controls;
@@ -41,6 +42,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private int _nirDisplayWidth = 120; public int NirDisplayWidth { get => _nirDisplayWidth; set => SetProperty(ref _nirDisplayWidth, value); }
     private int _nirDisplayHeight = 90; public int NirDisplayHeight { get => _nirDisplayHeight; set => SetProperty(ref _nirDisplayHeight, value); }
     private double _displayFontSize = 10.0; public double DisplayFontSize { get => _displayFontSize; set => SetProperty(ref _displayFontSize, value); }
+    public string WindowTitle => "AI 데이터 통합 관제 솔루션 - Desktop Application";
 
     // ============================================================
     // Line 1 Sample Move Settings
@@ -715,9 +717,20 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
 
             // Get quarantine path from config
             var deleteConfig = await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
-            var quarantinePath = !string.IsNullOrEmpty(deleteConfig?.WorkflowSettings?.DeleteQuarantinePath)
-                ? deleteConfig.WorkflowSettings.DeleteQuarantinePath
-                : Path.Combine(deleteConfig?.BasePath ?? @"D:\Data", "Quarantine");
+            var quarantinePath = deleteConfig?.WorkflowSettings?.DeleteQuarantinePath;
+
+            // Validate quarantine path is configured
+            if (string.IsNullOrWhiteSpace(quarantinePath))
+            {
+                var errorMessage = LocalizationManager.GetString("Error_DeleteQuarantinePathNotConfigured");
+                System.Windows.MessageBox.Show(
+                    errorMessage,
+                    "Error",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
             msgBuilder.AppendLine($"📁 이동 경로: {quarantinePath}");
             msgBuilder.AppendLine("\n진행하시겠습니까?");
 
@@ -795,7 +808,7 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
             {
                 if (_uiLogFilePath == null)
                 {
-                    _uiLogFilePath = PathHelper.GetSessionLogFilePath("ChronoView_UI");
+                    _uiLogFilePath = PathHelper.GetSessionLogFilePath(_configManager.AppName + "_UI");
                 }
                 targetFile = _uiLogFilePath;
 

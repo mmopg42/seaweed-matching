@@ -95,6 +95,8 @@ public class SetupWindowViewModel : ViewModelBase
     public ICommand OpenSettingsCommand { get; }
 
     public bool StartClicked { get; private set; }
+    public string WindowTitle => "Setup - AI 데이터 통합 관제 솔루션";
+    public string ProgramTitle => "AI 데이터 통합 관제 솔루션";
 
     public string Nir2FilteringStatus
     {

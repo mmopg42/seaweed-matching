@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using ChronoView.Core.Configuration;
 using ChronoView.UI.ViewModels;
 using Microsoft.Win32;
 using WpfUserControl = System.Windows.Controls.UserControl;
@@ -27,6 +28,7 @@ public partial class LogPanel : WpfUserControl
     private ICollectionView? _filteredView;
     private string _searchText = string.Empty;
     private string? _selectedLevel = null; // null = "All", otherwise LogSeverity enum string
+    private readonly IConfigurationManager _configurationManager;
 
     public LogPanel()
     {
@@ -227,7 +229,7 @@ public partial class LogPanel : WpfUserControl
         try
         {
             var filePath = Core.Configuration.PathHelper.GetSessionLogExportFilePath(
-                "ChronoView_UI_Export",
+                _configurationManager.AppName + "_UI_Export",
                 "txt");
             
             ExportToFile(filePath);
@@ -265,11 +267,20 @@ public partial class LogPanel : WpfUserControl
         catch (Exception ex)
         {
             WpfMessageBox.Show(
-                $"폴더를 열 수 없습니다:\n{ex.Message}",
-                "오류",
+                $"Log Export Complete: {_configurationManager.AppName}",
+                "완료",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            WpfMessageBox.Show(
+                $"저장 중 오류가 발생했습니다:\n{ex.Message}",
+                "저장 오류",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
+    }
     }
 
     private void ExportToFile(string filePath)
@@ -343,7 +354,7 @@ public partial class LogPanel : WpfUserControl
         {
             var logDir = Core.Configuration.PathHelper.LogsDirectory;
 
-            var logFile = Core.Configuration.PathHelper.GetSessionLogFilePath("ChronoView");
+            var logFile = Core.Configuration.PathHelper.GetSessionLogFilePath(_configurationManager.AppName);
 
             var logEntry = $"[{message.Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{message.Severity}] [{message.Source}] {message.Message}";
 
