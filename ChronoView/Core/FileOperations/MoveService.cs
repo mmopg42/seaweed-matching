@@ -12,11 +12,14 @@ namespace ChronoView.Core.FileOperations;
 public class MoveService : IMoveService
 {
     private readonly IFileGroupOperator _operator;
+    private readonly ApplicationConfiguration _config;
     private readonly ILogger<MoveService> _logger;
 
-    public MoveService(IFileGroupOperator op, ILogger<MoveService> logger)
+    public MoveService(IFileGroupOperator op, ApplicationConfiguration config, ILogger<MoveService> logger)
     {
-        _operator = op; _logger = logger;
+        _operator = op;
+        _config = config;
+        _logger = logger;
     }
 
     public async Task<OperationResult> BatchMoveAsync(
@@ -30,10 +33,13 @@ public class MoveService : IMoveService
     {
         var allSorted = groups.OrderBy(g => g.CreatedAt).ToList();
 
-        // 1단계: 사전 NIR 초과분 삭제 (전체 데이터에서)
+        // 1단계: totalLimit 적용하여 이동 대상 candidates 먼저 선택
+        var candidates = totalLimit > 0 ? allSorted.Take(totalLimit).ToList() : allSorted;
+
+        // 2단계: candidates 내에서 NIR 초과분 격리 (선택된 그룹들 중에서만 계산)
         if (nirLimit > 0)
         {
-            var nirGroups = allSorted.Where(g => g.HasNir).ToList();
+            var nirGroups = candidates.Where(g => g.HasNir).ToList();
             var excessNirCount = nirGroups.Count - nirLimit;
 
             if (excessNirCount > 0)
@@ -41,24 +47,31 @@ public class MoveService : IMoveService
                 // CreatedAt 오름차순 정렬된 상태에서 TakeLast() = 최신 NIR 선택
                 var excessNirGroups = nirGroups.TakeLast(excessNirCount).ToList();
 
+                // 격리 폴더 경로 가져오기
+                var quarantinePath = _config.WorkflowSettings.DeleteQuarantinePath;
+                if (string.IsNullOrEmpty(quarantinePath))
+                {
+                    // 설정이 없으면 기본 경로 사용
+                    quarantinePath = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        "ChronoView", "Quarantine");
+                }
+
                 // 사용자 명시적 경고 로그
-                _logger.LogWarning("NIR 제한({Limit}개) 초과분 {Count}개를 격리 폴더로 이동합니다", nirLimit, excessNirCount);
+                _logger.LogWarning("NIR 제한({Limit}개) 초과분 {Count}개를 격리 폴더로 이동합니다: {QuarantinePath}",
+                    nirLimit, excessNirCount, quarantinePath);
 
                 foreach (var group in excessNirGroups)
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    // NIR만 삭제 (Normal/Cam은 그대로 유지)
-                    // DeleteComponentsAsync는 destinationPath를 quarantinePath로 사용하여 격리 폴더로 이동
+                    // NIR만 격리 폴더로 이동 (Normal/Cam은 그대로 유지)
                     var nirOnly = new List<string> { "Nir" };
-                    await _operator.DeleteComponentsAsync(group, nirOnly, destinationPath, subject, ct);
-                    _logger.LogInformation("NIR 격리 완료: {GroupId}", group.GroupId);
+                    await _operator.DeleteComponentsAsync(group, nirOnly, quarantinePath, subject, ct);
+                    _logger.LogInformation("NIR 격리 완료: {GroupId} -> {QuarantinePath}", group.GroupId, quarantinePath);
                 }
             }
         }
-
-        // 2단계: totalLimit 적용하여 candidates 선택
-        var candidates = totalLimit > 0 ? allSorted.Take(totalLimit).ToList() : allSorted;
 
         // 3단계: 메인 이동 루프
         var result = new OperationResult { Success = true };

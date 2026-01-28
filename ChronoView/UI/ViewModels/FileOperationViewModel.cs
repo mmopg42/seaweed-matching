@@ -124,7 +124,13 @@ public class FileOperationViewModel : ViewModelBase, IFileOperationViewModel
 
             var config = await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
             var quarantinePath = config.WorkflowSettings.DeleteQuarantinePath;
-            if (string.IsNullOrEmpty(quarantinePath)) quarantinePath = System.IO.Path.Combine(config.BasePath, "Quarantine");
+
+            // Validate quarantine path is configured
+            if (string.IsNullOrWhiteSpace(quarantinePath))
+            {
+                var errorMessage = LocalizationManager.GetString("Error_DeleteQuarantinePathNotConfigured");
+                throw new InvalidOperationException(errorMessage);
+            }
 
             var groupList = selectedGroups.ToList();
             var groupsToRemove = new List<FileGroupViewModel>();
