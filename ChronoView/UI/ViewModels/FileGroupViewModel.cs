@@ -2,7 +2,7 @@ using ChronoView.Models;
 using ChronoView.Core.ImageProcessing;
 using ChronoView.Core.Localization;
 using ChronoView.Core.Analytics;
-using ChronoView.Core.Nir;
+using ChronoView.Core.NIR.Shared;
 using ChronoView.Helpers;
 using ChronoView.Core.Configuration;
 using ChronoView.Core.FileWatching;

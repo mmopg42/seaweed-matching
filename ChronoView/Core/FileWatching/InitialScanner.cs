@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using ChronoView.Core.Nir;
+using ChronoView.Core.NIR.Shared;
 using ChronoView.Helpers;
 using ChronoView.Models;
 using Microsoft.Extensions.Logging;

@@ -8,7 +8,7 @@ using ChronoView.Core.FileMatching;
 using ChronoView.Core.GroupIdGeneration;
 using ChronoView.Core.ImageProcessing;
 using ChronoView.Core.Analytics;
-using ChronoView.Core.Nir;
+using ChronoView.Core.NIR.Shared;
 using Application = System.Windows.Application;
 using WpfMessageBox = System.Windows.MessageBox;
 using ChronoView.Core.FileOperations;
@@ -158,11 +158,14 @@ public partial class App : Application
         
         logger?.LogCritical(ex, "CRITICAL ERROR in {Source}: {Message}", source, ex?.Message);
         
-        // Write to a separate panic log file in case regular logging fails
-        try 
-        {
-            var criticalLogFile = PathHelper.GetSessionLogFilePath("ChronoView_Critical");
-            File.AppendAllText(criticalLogFile, $"{DateTime.Now}: [{source}] {errorMessage}\n\n");
+            // Get config manager for program name access
+            var configManager = _serviceProvider.GetRequiredService<IConfigurationManager>();
+
+            // Write to a separate panic log file in case regular logging fails
+            try
+            {
+                var criticalLogFile = PathHelper.GetSessionLogFilePath(configManager.AppName + "_Critical");
+                File.AppendAllText(criticalLogFile, $"{DateTime.Now}: [{source}] {errorMessage}\n\n");
         }
         catch { /* ignored as we are in a critical state */ }
 
@@ -184,7 +187,7 @@ public partial class App : Application
             
             // 개발용 로그 파일 저장 추가
             var startTime = PathHelper.SessionStartTime;
-            var logFile = PathHelper.GetSessionLogFilePath("ChronoView_Debug");
+                var logFile = PathHelper.GetSessionLogFilePath("ChronoView_Debug");
             
             // 세션 시작 시간 기록 (파일이 새로 생성될 때만)
             if (!File.Exists(logFile) || new FileInfo(logFile).Length == 0)

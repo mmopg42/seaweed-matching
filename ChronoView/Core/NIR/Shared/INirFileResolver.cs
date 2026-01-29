@@ -1,4 +1,4 @@
-namespace ChronoView.Core.Nir;
+namespace ChronoView.Core.NIR.Shared;
 
 /// <summary>
 /// Resolves NIR file paths and keys for different NIR systems.
@@ -12,7 +12,7 @@ public interface INirFileResolver
     /// <param name="nirFilePath">Full path to NIR file (.spc, .txt, etc.)</param>
     /// <returns>NirKey (common identifier for the file set)</returns>
     string GetNirKey(string nirFilePath);
-    
+
     /// <summary>
     /// Get the primary NIR file path from a NirKey.
     /// Primary file is what gets stored in FileGroup.NirFilePath.
@@ -21,7 +21,7 @@ public interface INirFileResolver
     /// <param name="nirDirectory">Directory containing NIR files</param>
     /// <returns>Full path to primary NIR file (.spc typically)</returns>
     string GetPrimaryFilePath(string nirKey, string nirDirectory);
-    
+
     /// <summary>
     /// Get the text file path for graph generation.
     /// </summary>
@@ -29,7 +29,7 @@ public interface INirFileResolver
     /// <param name="nirDirectory">Directory containing NIR files</param>
     /// <returns>Full path to .txt file for graph generation, or null if not found</returns>
     string? GetTextFilePath(string nirKey, string nirDirectory);
-    
+
     /// <summary>
     /// Get all file paths in the NIR file set.
     /// </summary>
@@ -37,7 +37,7 @@ public interface INirFileResolver
     /// <param name="nirDirectory">Directory containing NIR files</param>
     /// <returns>Enumerable of all file paths in the set</returns>
     IEnumerable<string> GetAllFilePaths(string nirKey, string nirDirectory);
-    
+
     /// <summary>
     /// Get file search pattern for initial scan.
     /// </summary>

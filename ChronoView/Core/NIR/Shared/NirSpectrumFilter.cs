@@ -1,6 +1,6 @@
 using ChronoView.Models;
 
-namespace ChronoView.Core.Nir;
+namespace ChronoView.Core.NIR.Shared;
 
 /// <summary>
 /// NIR spectrum filtering logic using 5-criteria scoring system.

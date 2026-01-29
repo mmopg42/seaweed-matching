@@ -12,7 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using ChronoView.Core.Nir;
+using ChronoView.Core.NIR.Shared;
 using ScottPlot;
 using System.Linq;
 using SixLabors.ImageSharp;

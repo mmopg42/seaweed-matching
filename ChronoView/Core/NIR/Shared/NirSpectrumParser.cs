@@ -1,12 +1,12 @@
 using System.IO;
 using ChronoView.Models;
 
-namespace ChronoView.Core.Nir;
+namespace ChronoView.Core.NIR.Shared;
 
 /// <summary>
 /// Parses NIR spectrum data from .txt files.
 /// </summary>
-public class NirSpectrumParser
+public static class NirSpectrumParser
 {
     /// <summary>
     /// Parses a NIR spectrum .txt file and returns a NirSpectrum object.
@@ -20,6 +20,8 @@ public class NirSpectrumParser
 
         var wavelengths = new List<double>();
         var intensities = new List<double>();
+        double? protein = null;
+        double? moisture = null;
 
         try
         {
@@ -41,6 +43,22 @@ public class NirSpectrumParser
                     wavelengths.Add(wavelength);
                     intensities.Add(intensity);
                 }
+
+                // Parse Metadata (Protein/Moisture)
+                // Expected format: "Protein: 12.3" or "Moisture\t45.2"
+                if (line.Contains("Protein", StringComparison.OrdinalIgnoreCase) ||
+                    line.Contains("Moisture", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Simple heuristic: find the first number in the line
+                    var numberMatch = System.Text.RegularExpressions.Regex.Match(line, @"[+-]?\d+(\.\d+)?");
+                    if (numberMatch.Success && double.TryParse(numberMatch.Value, out double val))
+                    {
+                        if (line.Contains("Protein", StringComparison.OrdinalIgnoreCase))
+                            protein = val;
+                        else if (line.Contains("Moisture", StringComparison.OrdinalIgnoreCase))
+                            moisture = val;
+                    }
+                }
             }
 
             // Validation: Minimum 10 data points required
@@ -53,7 +71,9 @@ public class NirSpectrumParser
                 FileName = Path.GetFileName(filePath),
                 Timestamp = File.GetLastWriteTime(filePath),
                 Wavelengths = wavelengths.ToArray(),
-                Intensities = intensities.ToArray()
+                Intensities = intensities.ToArray(),
+                Protein = protein,
+                Moisture = moisture
             };
         }
         catch (Exception)

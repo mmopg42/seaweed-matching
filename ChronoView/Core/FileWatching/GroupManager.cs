@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ChronoView.Core.GroupIdGeneration;
 using ChronoView.Core.Localization;
-using ChronoView.Core.Nir;
+using ChronoView.Core.NIR.Shared;
 using ChronoView.Helpers;
 using ChronoView.Models;
 using ChronoView.UI.ViewModels;
@@ -20,6 +20,7 @@ namespace ChronoView.Core.FileWatching
         private readonly ILogger<GroupManager> _logger;
         private readonly INirFileResolver _nirFileResolver;
         private readonly IGroupIdGenerator _idGenerator;
+        private readonly IEvictionService _evictionService;
         private readonly ConcurrentDictionary<string, FileGroup> _activeGroups = new();
         private readonly List<(string Path, DateTime Timestamp, DateTime AddedAt)> _pendingNirFiles = new();
         private readonly object _lockObject = new();
@@ -35,12 +36,18 @@ namespace ChronoView.Core.FileWatching
 
         public IEnumerable<FileGroup> ActiveGroups => _activeGroups.Values;
 
-        public GroupManager(ILogger<GroupManager> logger, INirFileResolver nirFileResolver, ITimestampCache folderTimestamps, IGroupIdGenerator idGenerator)
+        public GroupManager(
+            ILogger<GroupManager> logger,
+            INirFileResolver nirFileResolver,
+            ITimestampCache folderTimestamps,
+            IGroupIdGenerator idGenerator,
+            IEvictionService evictionService)
         {
             _logger = logger;
             _nirFileResolver = nirFileResolver;
             _folderTimestamps = folderTimestamps;
             _idGenerator = idGenerator ?? throw new ArgumentNullException(nameof(idGenerator));
+            _evictionService = evictionService ?? throw new ArgumentNullException(nameof(evictionService));
         }
 
         private void RaiseLog(string resourceKey, int? lineNumber = null, LogSeverity severity = LogSeverity.Info, params object[] args)
@@ -129,7 +136,8 @@ namespace ChronoView.Core.FileWatching
                 }
 
                 FileGroup? targetGroup;
-                FileGroup? evictedGroupForEvent = null; // For eviction event outside lock
+                List<FileGroup>? evictedGroupsForEvent = null; // For eviction events outside lock
+                List<string>? removedOriginalGroups = null; // For removed original victim groups
                 bool isNew = false;
                 bool isDataChanged = false;
 
@@ -151,60 +159,103 @@ namespace ChronoView.Core.FileWatching
                     }
                     else
                     {
-                        // ========== NEW: EVICTION CHECK ==========
-                        // Before creating a new group, check if this file should evict an existing group
-                        var evictionResult = CheckEvictionNeeded(newGroupTemplate, config);
-                        
-                        if (evictionResult.ShouldEvict && evictionResult.VictimGroup != null)
+                        // ========== EVICTION CHECK (Cascading Eviction) ==========
+                        // Before creating a new group, check if this file should evict existing groups
+                        var evictionResult = _evictionService.CheckEvictionNeeded(
+                            newGroupTemplate,
+                            config,
+                            _activeGroups.Values,
+                            newGroupTemplate.LineNumber);
+
+                        if (evictionResult.ShouldEvict && evictionResult.VictimGroups != null)
                         {
-                            var victimGroup = evictionResult.VictimGroup;
-                            
-                            // Step 1: Clone victim group to new ID
-                            string evictedGroupId = _idGenerator.GenerateNextId(victimGroup.LineNumber);
-                            evictedGroupForEvent = victimGroup.CloneWithNewId(evictedGroupId);
-                            
-                            // Step 2: Reset victim group and merge new data into it
-                            lock (victimGroup)
+                            var victimGroups = evictionResult.VictimGroups;
+
+                            // 연쇄 eviction: 모든 victim 그룹을 한 칸씩 뒤로 이동
+                            // 내림차순으로 처리하여 ID 충돌 방지 (가장 큰 ID부터)
+                            var sortedVictims = victimGroups
+                                .OrderByDescending(g => ExtractNumericSuffix(g.GroupId))
+                                .ToList();
+
+                            var newGroupsCreated = new List<FileGroup>();
+
+                            foreach (var victim in sortedVictims)
                             {
-                                victimGroup.ResetData();
-                                MergeGroups(victimGroup, newGroupTemplate);
+                                // Step 1: Generate new ID and clone
+                                string oldId = victim.GroupId;
+                                string newId = _idGenerator.GenerateNextId(victim.LineNumber);
+                                var clonedGroup = victim.CloneWithNewId(newId);
+
+                                // Step 2: Register cloned group
+                                _activeGroups[newId] = clonedGroup;
+
+                                // Step 3: Update last assigned group
+                                var dataType = DetermineDataTypeForGroup(clonedGroup);
+                                _lastAssignedGroup[(dataType, clonedGroup.LineNumber)] = newId;
+
+                                // Step 3.5: Log individual clone operation
+                                RaiseLog("Log_Info_EvictionClone", clonedGroup.LineNumber, LogSeverity.Info,
+                                    oldId, newId);
+
+                                newGroupsCreated.Add(clonedGroup);
                             }
-                            
-                            RaiseLog("Log_Info_Eviction", newGroupTemplate.LineNumber, LogSeverity.Info, colName, fileName, victimGroup.GroupId, evictedGroupForEvent.GroupId);
-                            
-                            // Step 3: Register evicted group
-                            _activeGroups[evictedGroupId] = evictedGroupForEvent;
-                            
-                            // Update last assigned group for the evicted data type
-                            var evictedDataType = DetermineDataTypeForGroup(evictedGroupForEvent);
-                            _lastAssignedGroup[(evictedDataType, evictedGroupForEvent.LineNumber)] = evictedGroupForEvent.GroupId;
-                            
-                            targetGroup = victimGroup;
-                            // Mark both as needing UI update
+
+                            // Step 4: 가장 오래된 그룹(가장 작은 ID)에 새 데이터 병합
+                            var oldestVictim = sortedVictims.Last();
+                            lock (oldestVictim)
+                            {
+                                oldestVictim.ResetData();
+                                MergeGroups(oldestVictim, newGroupTemplate);
+                            }
+
+                            // Step 4.5: oldestVictim을 제외한 원본 피해 그룹 제거 (데이터 중복 방지)
+                            var removedGroupIds = new List<string>();
+                            foreach (var victim in sortedVictims)
+                            {
+                                if (victim.GroupId != oldestVictim.GroupId)
+                                {
+                                    if (_activeGroups.TryRemove(victim.GroupId, out _))
+                                    {
+                                        removedGroupIds.Add(victim.GroupId);
+                                    }
+                                }
+                            }
+
+                            // Step 5: Log summary
+                            RaiseLog("Log_Info_CascadingEviction", newGroupTemplate.LineNumber, LogSeverity.Info,
+                                colName, fileName, oldestVictim.GroupId, newGroupsCreated.Count);
+
+                            // Store for event firing outside lock
+                            evictedGroupsForEvent = newGroupsCreated;
+
+                            // Store removed groups for event firing
+                            removedOriginalGroups = removedGroupIds;
+
+                            targetGroup = oldestVictim;
                             isDataChanged = true;
                         }
                         else
                         {
                             // Normal path: Generate new Group ID
                             string newGroupId = _idGenerator.GenerateNextId(newGroupTemplate.LineNumber);
-                            
+
                             // ID 중복 가능성은 낮으나 방어적 코드로 유지
                             if (!_activeGroups.TryAdd(newGroupId, newGroupTemplate))
                             {
                                 newGroupId = _idGenerator.GenerateNextId(newGroupTemplate.LineNumber);
                             }
-                            
+
                             newGroupTemplate.GroupId = newGroupId;
                             _activeGroups[newGroupId] = newGroupTemplate;
-                            
+
                             // ★ 새 그룹 생성 시 마지막 배정 그룹 업데이트 (라인별 분리)
                             _lastAssignedGroup[(newGroupType, newGroupTemplate.LineNumber)] = newGroupTemplate.GroupId;
-                            
+
                             RaiseLog("Log_Info_NewGroup", newGroupTemplate.LineNumber, LogSeverity.Info, colName, fileName, newGroupTemplate.GroupId);
                             targetGroup = newGroupTemplate;
                             isNew = true;
                         }
-                        
+
                     }
                 }
 
@@ -217,10 +268,22 @@ namespace ChronoView.Core.FileWatching
                     GroupUpdated?.Invoke(this, targetGroup);
                 }
                 
-                // Fire GroupCreated for evicted group (moved outside lock)
-                if (evictedGroupForEvent != null)
+                // Fire GroupCreated for all evicted groups (moved outside lock)
+                if (evictedGroupsForEvent != null)
                 {
-                    GroupCreated?.Invoke(this, evictedGroupForEvent);
+                    foreach (var evictedGroup in evictedGroupsForEvent)
+                    {
+                        GroupCreated?.Invoke(this, evictedGroup);
+                    }
+                }
+
+                // Fire GroupRemoved for original victim groups (data deduplication fix)
+                if (removedOriginalGroups != null)
+                {
+                    foreach (var removedId in removedOriginalGroups)
+                    {
+                        GroupRemoved?.Invoke(this, removedId);
+                    }
                 }
 
                 // Match pending NIR
@@ -308,7 +371,7 @@ namespace ChronoView.Core.FileWatching
             switch (fileType)
             {
                 case FileType.Nir:
-                    bool allowNirLeader = config.DataSequenceSettings?.GetOrderedTypes().FirstOrDefault() == DataType.NIR;
+                    bool allowNirLeader = config.DataSequenceSettings?.GetAllOrderedTypes().FirstOrDefault() == DataType.NIR;
                     if (!allowNirLeader)
                     {
                         lock (_lockObject)
@@ -429,78 +492,6 @@ namespace ChronoView.Core.FileWatching
             return 1;
         }
 
-        /// <summary>
-        /// Checks if a new file should evict an existing group based on delay settings.
-        /// This happens when the new file's expected predecessor range indicates it should
-        /// precede an existing group in the sequence order.
-        /// </summary>
-        private (bool ShouldEvict, FileGroup? VictimGroup) CheckEvictionNeeded(
-            FileGroup newGroup, 
-            ApplicationConfiguration config)
-        {
-            if (config.DataSequenceSettings == null || newGroup.Timestamp == DateTime.MinValue)
-                return (false, null);
-
-            var snapshot = _activeGroups.Values.ToArray();
-            var orderedTypes = config.DataSequenceSettings.GetOrderedTypes();
-            if (orderedTypes.Count == 0)
-                return (false, null);
-
-            var newGroupType = DetermineDataTypeForGroup(newGroup);
-            var normalizedNewType = NormalizeForSequence(newGroupType);
-            var newGroupOrder = GetPriority(normalizedNewType, config);
-
-            // Get delay settings for the new file's type
-            var minDelay = config.DataSequenceSettings.GetMinDelay(normalizedNewType);
-            var maxDelay = config.DataSequenceSettings.GetMaxDelay(normalizedNewType);
-
-            // Calculate expected predecessor timestamp range
-            // If minDelay=5, maxDelay=9: newGroup expects predecessor at [T-9, T-5]
-            var expectedPredMin = newGroup.Timestamp.AddSeconds(-maxDelay);
-            var expectedPredMax = newGroup.Timestamp.AddSeconds(-minDelay);
-
-            _logger.LogTrace("Eviction Check: {Type} (T={Time}) expects predecessor in range [{Min}, {Max}]",
-                newGroupType, newGroup.Timestamp.ToString("HHmmss"), 
-                expectedPredMin.ToString("HHmmss"), expectedPredMax.ToString("HHmmss"));
-
-            // Find groups with lower-order types (earlier in sequence) that are "too late"
-            foreach (var candidate in FilterByLine(snapshot, newGroup.LineNumber)
-                .OrderBy(g => ExtractNumericSuffix(g.GroupId)))
-            {
-                var candidateType = DetermineDataTypeForGroup(candidate);
-                var normalizedCandidateType = NormalizeForSequence(candidateType);
-                var candidateOrder = GetPriority(normalizedCandidateType, config);
-
-                // Only consider eviction if candidate has lower-order type (earlier in sequence)
-                if (candidateOrder >= newGroupOrder)
-                    continue;
-
-                // Skip if candidate already has this type of data
-                if (HasDataType(candidate, newGroupType))
-                    continue;
-
-                var candidateTimestamp = GetTimestampForDataType(candidate, candidateType);
-                if (!candidateTimestamp.HasValue)
-                    continue;
-
-                // Check if candidate's timestamp is AFTER our expected predecessor range
-                // This means the candidate is "too late" to be our predecessor
-                if (candidateTimestamp.Value > expectedPredMax)
-                {
-                    _logger.LogInformation(
-                        "Eviction triggered: {NewType} (T={NewTime}) should precede {CandidateType} (T={CandidateTime}) in {GroupId}. " +
-                        "Expected predecessor before T={MaxTime}, but found T={ActualTime}",
-                        newGroupType, newGroup.Timestamp.ToString("HHmmss"),
-                        candidateType, candidateTimestamp.Value.ToString("HHmmss"),
-                        candidate.GroupId, expectedPredMax.ToString("HHmmss"), candidateTimestamp.Value.ToString("HHmmss"));
-
-                    return (true, candidate);
-                }
-            }
-
-            return (false, null);
-        }
-
         private FileGroup? FindMatchingExistingGroup(FileGroup newGroup, ApplicationConfiguration config)
         {
             var snapshot = _activeGroups.Values.ToArray();
@@ -525,18 +516,18 @@ namespace ChronoView.Core.FileWatching
             // Match 3: By Timestamp + LineNumber + Priority
             if (newGroup.Timestamp != DateTime.MinValue && config.DataSequenceSettings != null)
             {
-                var orderedTypes = config.DataSequenceSettings.GetOrderedTypes();
+                var orderedTypes = config.DataSequenceSettings.GetAllOrderedTypes();
                 if (orderedTypes.Count > 0)
                 {
                     var newGroupType = DetermineDataTypeForGroup(newGroup);
                     var normalizedType = NormalizeForSequence(newGroupType); // For settings lookup
                     // IMPORTANT: predecessor/successor must be derived from the configured sequence order,
                     // not from hardcoded camera assumptions.
-                    // Use list index (orderedTypes is already sorted by Order in DataSequenceSettings.GetOrderedTypes()).
+                    // Use list index (orderedTypes is already sorted by Order in DataSequenceSettings.GetAllOrderedTypes()).
                     int currentIndex = orderedTypes.FindIndex(t => NormalizeForSequence(t) == normalizedType);
                     if (currentIndex == -1)
                     {
-                        // This data type is not enabled/represented in the sequence; do not attempt sequence matching.
+                        // This data type is not in the sequence configuration; do not attempt sequence matching.
                         return null;
                     }
 
@@ -573,8 +564,15 @@ namespace ChronoView.Core.FileWatching
                     {
                         var succGroupType = successorType.Value;
                         var succNormalized = NormalizeForSequence(succGroupType);
-                        var minDelay = config.DataSequenceSettings.GetMinDelay(succNormalized);
-                        var maxDelay = config.DataSequenceSettings.GetMaxDelay(succNormalized);
+
+                        // Check if successor type uses sequence matching or timestamp-only matching
+                        bool useSequenceConstraints = config.DataSequenceSettings.IsSequenceMatching(succNormalized);
+                        double minDelay = useSequenceConstraints
+                            ? config.DataSequenceSettings.GetMinDelay(succNormalized)
+                            : double.NegativeInfinity;  // Forward matching: succTs - newGroup.Timestamp, negative means newGroup is later
+                        double maxDelay = useSequenceConstraints
+                            ? config.DataSequenceSettings.GetMaxDelay(succNormalized)
+                            : double.PositiveInfinity;
 
                         foreach (var candidate in FilterByLine(snapshot, newGroup.LineNumber)
                             .OrderBy(g => ExtractNumericSuffix(g.GroupId)))
@@ -585,8 +583,9 @@ namespace ChronoView.Core.FileWatching
 
                             var succTs = GetTimestampForDataType(candidate, succGroupType) ?? candidate.Timestamp;
                             var timeDiff = (succTs - newGroup.Timestamp).TotalSeconds;
-                             
-                            _logger.LogTrace("Checking Fwd Candidate {GroupId}: TimeDiff={Diff}s (Range: {Min}-{Max})", candidate.GroupId, timeDiff, minDelay, maxDelay);
+
+                            _logger.LogTrace("Checking Fwd Candidate {GroupId}: TimeDiff={Diff}s (Range: {Min}-{Max}, SequenceMode={Mode})",
+                                candidate.GroupId, timeDiff, minDelay, maxDelay, useSequenceConstraints ? "On" : "Off");
 
                             if (timeDiff >= minDelay && timeDiff <= maxDelay)
                             {
@@ -598,11 +597,18 @@ namespace ChronoView.Core.FileWatching
                     else if (predecessorType != null)
                     {
                         var predType = predecessorType.Value;
-                        var minDelay = config.DataSequenceSettings.GetMinDelay(normalizedType);
-                        var maxDelay = config.DataSequenceSettings.GetMaxDelay(normalizedType);
 
-                        _logger.LogTrace("Matching {Type} (Index {Index}) - Looking for Predecessor {PredType} in stored groups. Time Window: {Min}-{Max}s",
-                            newGroupType, currentIndex, predType, minDelay, maxDelay);
+                        // Check if current data type uses sequence matching or timestamp-only matching
+                        bool useSequenceConstraints = config.DataSequenceSettings.IsSequenceMatching(normalizedType);
+                        double minDelay = useSequenceConstraints
+                            ? config.DataSequenceSettings.GetMinDelay(normalizedType)
+                            : 0;  // Backward matching: current file must be AFTER predecessor (order preserved)
+                        double maxDelay = useSequenceConstraints
+                            ? config.DataSequenceSettings.GetMaxDelay(normalizedType)
+                            : double.PositiveInfinity;
+
+                        _logger.LogTrace("Matching {Type} (Index {Index}) - Looking for Predecessor {PredType} in stored groups. Time Window: {Min}-{Max}s (SequenceMode={Mode})",
+                            newGroupType, currentIndex, predType, minDelay, maxDelay, useSequenceConstraints ? "On" : "Off");
 
                         // ★ DEBUG: Log sorted group order for diagnosis
                         var sortedGroups = FilterByLine(snapshot, newGroup.LineNumber)
@@ -897,11 +903,18 @@ namespace ChronoView.Core.FileWatching
         private bool TryMatchPendingNirToGroup(FileGroup group, ApplicationConfiguration config)
         {
             if (config.DataSequenceSettings == null) return false;
-            
+
             var groupType = DetermineDataTypeForGroup(group);
             var normalizedGroupType = NormalizeForSequence(groupType);
-            var minDelay = config.DataSequenceSettings.GetMinDelay(normalizedGroupType);
-            var maxDelay = config.DataSequenceSettings.GetMaxDelay(normalizedGroupType);
+
+            // Check if group type uses sequence matching or timestamp-only matching
+            bool useSequenceConstraints = config.DataSequenceSettings.IsSequenceMatching(normalizedGroupType);
+            double minDelay = useSequenceConstraints
+                ? config.DataSequenceSettings.GetMinDelay(normalizedGroupType)
+                : 0;  // NIR must come BEFORE group (order preserved)
+            double maxDelay = useSequenceConstraints
+                ? config.DataSequenceSettings.GetMaxDelay(normalizedGroupType)
+                : double.PositiveInfinity;
 
             lock (_lockObject)
             {

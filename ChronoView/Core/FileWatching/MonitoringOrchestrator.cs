@@ -10,7 +10,7 @@ using ChronoView.Core.Analytics;
 using ChronoView.Core.Configuration;
 using ChronoView.Core.FileMatching;
 using ChronoView.Core.Localization;
-using ChronoView.Core.Nir;
+using ChronoView.Core.NIR.Shared;
 using ChronoView.Models;
 using Microsoft.Extensions.Logging;
 using ChronoView.Helpers;

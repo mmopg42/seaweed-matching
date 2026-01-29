@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ChronoView.Models;
 using ChronoView.Core.Configuration;
 using ChronoView.Core.ProgramLaunching;
-using ChronoView.Core.Nir;
+using ChronoView.Core.NIR.Shared;
 using ChronoView.Core.Localization;
 
 namespace ChronoView.UI.ViewModels;

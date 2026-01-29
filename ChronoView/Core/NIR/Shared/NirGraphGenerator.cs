@@ -2,12 +2,12 @@ using System.Windows.Media.Imaging;
 using ChronoView.Models;
 using ScottPlot;
 
-namespace ChronoView.Core.Nir;
+namespace ChronoView.Core.NIR.Shared;
 
 /// <summary>
 /// Generates NIR spectrum graph images using ScottPlot.
 /// </summary>
-public class NirGraphGenerator
+public static class NirGraphGenerator
 {
     /// <summary>
     /// Generates a BitmapSource image of the NIR spectrum graph.
@@ -49,11 +49,11 @@ public class NirGraphGenerator
 
             // Fallback: Save to temp file and read bytes if direct byte generation is ambiguous
             string tempFile = System.IO.Path.GetTempFileName();
-            try 
+            try
             {
                 plot.SavePng(tempFile, width, height);
                 byte[] bytes = System.IO.File.ReadAllBytes(tempFile);
-                
+
                 // Create WPF BitmapImage
                 using var stream = new System.IO.MemoryStream(bytes);
                 var image = new BitmapImage();
