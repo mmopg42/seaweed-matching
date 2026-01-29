@@ -31,10 +31,10 @@ namespace ChronoView.Core.FileWatching
         }
 
         public async Task<List<(string FilePath, DataType DataType, DateTime Timestamp)>> ScanAndSortFilesAsync(
-            ApplicationConfiguration config, 
+            ApplicationConfiguration config,
             CancellationToken cancellationToken)
         {
-            var orderedTypes = config?.DataSequenceSettings?.GetOrderedTypes();
+            var orderedTypes = config?.DataSequenceSettings?.GetAllOrderedTypes();
             if (orderedTypes == null || orderedTypes.Count == 0)
             {
                 _logger.LogWarning("No ordered types configured in DataSequenceSettings");
@@ -111,26 +111,32 @@ namespace ChronoView.Core.FileWatching
                         break;
 
                     case DataType.Normal:
+                        // Line 1: only _0 suffix when UseFolderSuffix=true
                         if (!string.IsNullOrEmpty(config.Normal1Path) && Directory.Exists(config.Normal1Path))
                         {
                             var folders = Directory.GetDirectories(config.Normal1Path);
-                            // Filter using NormalFolderHelper based on UseFolderSuffix setting
                             foreach (var folder in folders)
                             {
                                 var folderName = Path.GetFileName(folder);
+                                // When suffix mode is enabled, skip _1 folders in Line 1
+                                if (config.UseFolderSuffix && folderName.EndsWith("_1"))
+                                    continue;
                                 if (NormalFolderHelper.IsValidNormalFolder(folderName, config.UseFolderSuffix, expectedLine: 1))
                                 {
                                     files.Add(folder);
                                 }
                             }
                         }
+                        // Line 2: only _1 suffix when UseFolderSuffix=true
                         if (!string.IsNullOrEmpty(config.Normal2Path) && Directory.Exists(config.Normal2Path))
                         {
                             var folders = Directory.GetDirectories(config.Normal2Path);
-                            // Filter using NormalFolderHelper based on UseFolderSuffix setting
                             foreach (var folder in folders)
                             {
                                 var folderName = Path.GetFileName(folder);
+                                // When suffix mode is enabled, skip _0 folders in Line 2
+                                if (config.UseFolderSuffix && folderName.EndsWith("_0"))
+                                    continue;
                                 if (NormalFolderHelper.IsValidNormalFolder(folderName, config.UseFolderSuffix, expectedLine: 2))
                                 {
                                     files.Add(folder);
