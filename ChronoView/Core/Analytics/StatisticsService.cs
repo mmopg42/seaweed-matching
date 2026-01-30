@@ -216,16 +216,16 @@ public class StatisticsService : IStatisticsService, IDisposable
 
         try
         {
-            // Count NIR1 files (Line 1)
+            // Count NIR1 files (Line 1) - count .txt files only (each set = 1 .spc + 1 .txt)
             if (!string.IsNullOrEmpty(config.MatchingSettings.Nir1Path))
             {
-                stats.NirCount = await CountFilesInDirectoryAsync(config.MatchingSettings.Nir1Path);
+                stats.NirCount = await CountNirFilesAsync(config.MatchingSettings.Nir1Path);
             }
 
-            // Count NIR2 files (Line 2)
+            // Count NIR2 files (Line 2) - count .txt files only
             if (!string.IsNullOrEmpty(config.MatchingSettings.Nir2Path))
             {
-                stats.Nir2Count = await CountFilesInDirectoryAsync(config.MatchingSettings.Nir2Path);
+                stats.Nir2Count = await CountNirFilesAsync(config.MatchingSettings.Nir2Path);
             }
 
             // Count Normal1 folders (Line 1)
@@ -510,10 +510,41 @@ public class StatisticsService : IStatisticsService, IDisposable
         }
     }
 
+    /// <summary>
+    /// Counts NIR file sets by counting only .txt files.
+    /// Each NIR set consists of one .spc file and one .txt file.
+    /// We count .txt files because the program actively uses them.
+    /// </summary>
+    private async Task<int> CountNirFilesAsync(string path)
+    {
+        if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+        {
+            return 0;
+        }
+
+        try
+        {
+            return await Task.Run(() =>
+            {
+                return Directory.EnumerateFiles(path, "*.txt", SearchOption.AllDirectories).Count();
+            });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning(ex, "Access denied to NIR directory: {Path}", path);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error counting NIR files in directory: {Path}", path);
+            return 0;
+        }
+    }
+
     private MatchingStatistics CalculateStatsForLine(IEnumerable<FileGroup> groups, int lineNumber)
     {
         var groupList = groups.Where(g => g.LineNumber == lineNumber).ToList();
-        
+
         return new MatchingStatistics
         {
             TotalGroups = groupList.Count,

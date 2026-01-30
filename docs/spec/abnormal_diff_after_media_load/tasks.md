@@ -115,3 +115,5 @@ Depends On: 01_requirements.md, 03_plan.md, 04_design.md
 - Diff 자체는 디스크 캐시에 저장하지 않음 (히스토리/컨텍스트 의존성)
 - 이상치 판정 알고리즘 자체는 변경하지 않음
 
+
+

@@ -1,3 +1,5 @@
+using ChronoView.Core.Configuration;
+
 namespace ChronoView.Models;
 
 /// <summary>
@@ -44,6 +46,12 @@ public class ApplicationConfiguration
     /// External program settings.
     /// </summary>
     public ExternalProgramSettings ExternalProgramSettings { get; set; } = new();
+
+    /// <summary>
+    /// NIR2 runtime data collection settings.
+    /// Separate from ExternalProgramSettings for clarity and separation of concerns.
+    /// </summary>
+    public Nir2Settings Nir2Settings { get; set; } = new();
 
     /// <summary>
     /// Display name for this application.
@@ -517,9 +525,10 @@ public class ExternalProgramSettings
     public string Nir1ProgramPath { get; set; } = "";
 
     /// <summary>
-    /// Path to NIR Program 2 executable.
+    /// Path where NIR2 chunk data (aggregated values) is stored.
+    /// Required for NIR2 parsing - if empty, chunk parsing will be disabled.
     /// </summary>
-    public string Nir2ProgramPath { get; set; } = "";
+    public string Nir2ChunkStoragePath { get; set; } = "";
 
     /// <summary>
     /// Path to monitor for new NIR spectrum files (.txt) for filtering.

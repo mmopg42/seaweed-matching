@@ -14,12 +14,18 @@ public class MoveService : IMoveService
     private readonly IFileGroupOperator _operator;
     private readonly ApplicationConfiguration _config;
     private readonly ILogger<MoveService> _logger;
+    private readonly ICsvMoveManager? _csvMoveManager;
 
-    public MoveService(IFileGroupOperator op, ApplicationConfiguration config, ILogger<MoveService> logger)
+    public MoveService(
+        IFileGroupOperator op,
+        ApplicationConfiguration config,
+        ILogger<MoveService> logger,
+        ICsvMoveManager? csvMoveManager = null)
     {
         _operator = op;
         _config = config;
         _logger = logger;
+        _csvMoveManager = csvMoveManager;
     }
 
     public async Task<OperationResult> BatchMoveAsync(
@@ -31,6 +37,17 @@ public class MoveService : IMoveService
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default)
     {
+        // Validate destination path
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            _logger.LogWarning("BatchMoveAsync called with empty destination path");
+            return new OperationResult
+            {
+                Success = false,
+                ErrorMessage = "이동 경로가 설정되지 않았습니다"
+            };
+        }
+
         var allSorted = groups.OrderBy(g => g.CreatedAt).ToList();
 
         // 1단계: totalLimit 적용하여 이동 대상 candidates 먼저 선택
@@ -112,6 +129,24 @@ public class MoveService : IMoveService
                 TotalFiles = candidates.Count,
                 Status = status
             });
+        }
+
+        // 4단계: Line2 CSV 파일 이동
+        if (_csvMoveManager != null && candidates.Any(g => g.LineNumber == 2))
+        {
+            try
+            {
+                var csvResult = await _csvMoveManager.MoveCsvFilesAsync(candidates, destinationPath, subject ?? "UnknownSubject", ct);
+                if (!csvResult.Success)
+                {
+                    _logger.LogWarning("CSV 파일 이동 실패: {Error}", csvResult.ErrorMessage);
+                    // CSV 이동 실패는 전체 작업 실패로 처리하지 않음
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CSV 파일 이동 중 예외 발생");
+            }
         }
 
         return result;

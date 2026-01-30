@@ -110,7 +110,7 @@
     <!-- SHARED COLUMN TEMPLATES -->
     <!-- Normal/Main Image Template -->
     <DataTemplate x:Key="NormalFileTemplate">
-        <StackPanel Margin="5">
+        <StackPanel Margin="5" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
             <Border Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
                     HorizontalAlignment="Center"
                     Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
@@ -144,7 +144,7 @@
 
     <!-- NIR Graph Template -->
     <DataTemplate x:Key="NirFileTemplate">
-        <StackPanel Margin="5">
+        <StackPanel Margin="5" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
             <Border Width="{Binding DataContext.NirDisplayWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}"
                     Height="{Binding DataContext.NirDisplayHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}"
                     Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
@@ -173,7 +173,7 @@
 
     <!-- Camera 1 Template -->
     <DataTemplate x:Key="Camera1Template">
-        <StackPanel Margin="5">
+        <StackPanel Margin="5" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
             <Border Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
                     HorizontalAlignment="Center"
                     Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
@@ -202,7 +202,7 @@
 
     <!-- Camera 2 Template -->
     <DataTemplate x:Key="Camera2Template">
-        <StackPanel Margin="5">
+        <StackPanel Margin="5" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
             <Border Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
                     HorizontalAlignment="Center"
                     Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
@@ -231,7 +231,7 @@
 
     <!-- Camera 3 Template -->
     <DataTemplate x:Key="Camera3Template">
-        <StackPanel Margin="5">
+        <StackPanel Margin="5" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
             <Border Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
                     HorizontalAlignment="Center"
                     Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
@@ -260,7 +260,7 @@
 
     <!-- Camera 4 Template -->
     <DataTemplate x:Key="Camera4Template">
-        <StackPanel Margin="5">
+        <StackPanel Margin="5" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
             <Border Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
                     HorizontalAlignment="Center"
                     Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
@@ -289,7 +289,7 @@
 
     <!-- Camera 5 Template -->
     <DataTemplate x:Key="Camera5Template">
-        <StackPanel Margin="5">
+        <StackPanel Margin="5" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
             <Border Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
                     HorizontalAlignment="Center"
                     Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
@@ -318,14 +318,14 @@
 
     <!-- Camera 6 Template -->
     <DataTemplate x:Key="Camera6Template">
-        <StackPanel Margin="5">
-            <Border Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}" 
+        <StackPanel Margin="5" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
+            <Border Height="{Binding DataContext.DisplayImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}"
                     HorizontalAlignment="Center"
                     Background="#3a3a3a" BorderBrush="#505050" BorderThickness="1">
                 <Grid>
                     <Image Source="{Binding Camera6Thumbnail}" Stretch="Uniform" Cursor="Hand">
                         <Image.InputBindings>
-                            <MouseBinding MouseAction="LeftClick" 
+                            <MouseBinding MouseAction="LeftClick"
                                           Command="{Binding DataContext.OpenImagePreviewCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                           CommandParameter="{Binding Camera6ImagePath}"/>
                         </Image.InputBindings>
@@ -337,9 +337,43 @@
             </Border>
             <TextBlock Text="{Binding Camera6Label}"
                        Foreground="Black"
-                       HorizontalAlignment="Center" 
-                       FontSize="{Binding DataContext.DisplayFontSize, RelativeSource={RelativeSource AncestorType=Window}}" 
-                       TextWrapping="Wrap" 
+                       HorizontalAlignment="Center"
+                       FontSize="{Binding DataContext.DisplayFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       Margin="0,2,0,0"/>
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- NIR2 Template (Line 2 - API-based, displays Protein/Moisture values) -->
+    <DataTemplate x:Key="Nir2FileTemplate">
+        <StackPanel Margin="5" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
+            <Border Width="{Binding DataContext.NirDisplayWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=120}"
+                    Height="{Binding DataContext.NirDisplayHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=90}"
+                    Background="#2a4a2a" BorderBrush="#3a5a3a" BorderThickness="1"
+                    CornerRadius="4">
+                <Grid>
+                    <!-- NIR2 Data Display (Protein/Moisture) -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding Nir2DisplayText}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   Foreground="#ffffff"
+                                   TextAlignment="Center"
+                                   LineHeight="16"
+                                   Margin="8"/>
+                    </StackPanel>
+                    <!-- Loading indicator -->
+                    <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Bottom"
+                                 Visibility="{Binding Nir2Protein, Converter={StaticResource NullToVisibilityConverter}}"/>
+                    <CheckBox Style="{StaticResource PartialSelectionCheckBoxStyle}" IsChecked="{Binding IsNirSelected, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </Grid>
+            </Border>
+            <TextBlock Text="{Binding NirLabel}"
+                       HorizontalAlignment="Center"
+                       FontSize="{Binding DataContext.DisplayFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                       Foreground="Black"
+                       TextWrapping="Wrap"
                        TextAlignment="Center"
                        Margin="0,2,0,0"/>
         </StackPanel>

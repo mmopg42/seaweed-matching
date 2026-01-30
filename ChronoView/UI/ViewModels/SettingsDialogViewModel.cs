@@ -6,6 +6,7 @@ using System.Linq;
 using WinForms = System.Windows.Forms;
 using ChronoView.Models;
 using ChronoView.Core.Configuration;
+using ChronoView.Core.NIR.Shared;
 using Microsoft.Extensions.Logging;
 using WpfMessageBox = System.Windows.MessageBox;
 
@@ -356,9 +357,10 @@ public class SettingsDialogViewModel : ViewModelBase
 
     private string _generalCameraProgramPath = string.Empty;
     private string _nir1ProgramPath = string.Empty;
-    private string _nir2ProgramPath = string.Empty;
+    private string _nir2ChunkStoragePath = string.Empty;
     private string _nir2FilterMonitorPath = string.Empty;
     private string _nir2FilterDestinationPath = string.Empty;
+    private string _nir2CsvDirectory = string.Empty;
 
     public string GeneralCameraProgramPath
     {
@@ -372,10 +374,13 @@ public class SettingsDialogViewModel : ViewModelBase
         set => SetProperty(ref _nir1ProgramPath, value);
     }
 
-    public string Nir2ProgramPath
+    /// <summary>
+    /// NIR2 청크 데이터 저장 경로.
+    /// </summary>
+    public string Nir2ChunkStoragePath
     {
-        get => _nir2ProgramPath;
-        set => SetProperty(ref _nir2ProgramPath, value);
+        get => _nir2ChunkStoragePath;
+        set => SetProperty(ref _nir2ChunkStoragePath, value);
     }
 
     public string Nir2FilterMonitorPath
@@ -388,6 +393,28 @@ public class SettingsDialogViewModel : ViewModelBase
     {
         get => _nir2FilterDestinationPath;
         set => SetProperty(ref _nir2FilterDestinationPath, value);
+    }
+
+    public string Nir2CsvDirectory
+    {
+        get => _nir2CsvDirectory;
+        set => SetProperty(ref _nir2CsvDirectory, value);
+    }
+
+    /// <summary>
+    /// NIR2 집계 전략 (청크 샘플 선택 방법)
+    /// </summary>
+    public NirAggregationStrategy Nir2AggregationStrategy
+    {
+        get => _configuration.Nir2Settings?.AggregationStrategy ?? NirAggregationStrategy.First;
+        set
+        {
+            if (_configuration.Nir2Settings != null && _configuration.Nir2Settings.AggregationStrategy != value)
+            {
+                _configuration.Nir2Settings.AggregationStrategy = value;
+                OnPropertyChanged();
+            }
+        }
     }
 
     #endregion
@@ -499,6 +526,9 @@ public class SettingsDialogViewModel : ViewModelBase
             case "nir2filterdestination":
                 Nir2FilterDestinationPath = selected;
                 break;
+            case "nir2csv":
+                Nir2CsvDirectory = selected;
+                break;
             default:
                 // Unknown path type; ignore
                 break;
@@ -526,6 +556,7 @@ public class SettingsDialogViewModel : ViewModelBase
             "quarantine" or "deletequarantine" or "deletequarantinepath" => DeleteQuarantinePath,
             "nir2filtermonitor" => Nir2FilterMonitorPath,
             "nir2filterdest" or "nir2filterdestination" => Nir2FilterDestinationPath,
+            "nir2csv" => Nir2CsvDirectory,
             _ => null
         };
 
@@ -578,8 +609,8 @@ public class SettingsDialogViewModel : ViewModelBase
             case "nir1program":
                 Nir1ProgramPath = selected;
                 break;
-            case "nir2program":
-                Nir2ProgramPath = selected;
+            case "nir2chunk":
+                Nir2ChunkStoragePath = selected;
                 break;
             default:
                 // Unknown program type; ignore
@@ -606,18 +637,18 @@ public class SettingsDialogViewModel : ViewModelBase
             DeleteQuarantinePath = this.DeleteQuarantinePath,
             GeneralCameraProgramPath = this.GeneralCameraProgramPath,
             Nir1ProgramPath = this.Nir1ProgramPath,
-            Nir2ProgramPath = this.Nir2ProgramPath,
+            Nir2ChunkStoragePath = this.Nir2ChunkStoragePath,
             Nir2FilterMonitorPath = this.Nir2FilterMonitorPath,
             Nir2FilterDestinationPath = this.Nir2FilterDestinationPath
         };
-        
+
         // 2. Get default configuration and replace local instance
         var defaultConfig = DefaultConfiguration.GetDefault();
         _configuration = defaultConfig;
-        
+
         // 3. Reload ViewModel properties from new configuration (resets all values)
         LoadFromConfiguration();
-        
+
         // 4. Restore saved paths
         NirPath = savedPaths.NirPath;
         Nir2Path = savedPaths.Nir2Path;
@@ -633,7 +664,7 @@ public class SettingsDialogViewModel : ViewModelBase
         DeleteQuarantinePath = savedPaths.DeleteQuarantinePath;
         GeneralCameraProgramPath = savedPaths.GeneralCameraProgramPath;
         Nir1ProgramPath = savedPaths.Nir1ProgramPath;
-        Nir2ProgramPath = savedPaths.Nir2ProgramPath;
+        Nir2ChunkStoragePath = savedPaths.Nir2ChunkStoragePath;
         Nir2FilterMonitorPath = savedPaths.Nir2FilterMonitorPath;
         Nir2FilterDestinationPath = savedPaths.Nir2FilterDestinationPath;
         
@@ -706,9 +737,12 @@ public class SettingsDialogViewModel : ViewModelBase
         // Load External Programs settings
         GeneralCameraProgramPath = _configuration.ExternalProgramSettings.GeneralCameraProgramPath;
         Nir1ProgramPath = _configuration.ExternalProgramSettings.Nir1ProgramPath;
-        Nir2ProgramPath = _configuration.ExternalProgramSettings.Nir2ProgramPath;
+        Nir2ChunkStoragePath = _configuration.ExternalProgramSettings.Nir2ChunkStoragePath;
         Nir2FilterMonitorPath = _configuration.ExternalProgramSettings.Nir2FilterMonitorPath;
         Nir2FilterDestinationPath = _configuration.ExternalProgramSettings.Nir2FilterDestinationPath;
+
+        // Load NIR2 CSV directory
+        Nir2CsvDirectory = _configuration.Nir2Settings?.CsvDirectory ?? string.Empty;
 
         // Auto-update date in monitor path if pattern exists
         Nir2FilterMonitorPath = UpdatePathWithCurrentDate(Nir2FilterMonitorPath);
@@ -791,9 +825,12 @@ public class SettingsDialogViewModel : ViewModelBase
         // Save External Programs settings
         _configuration.ExternalProgramSettings.GeneralCameraProgramPath = GeneralCameraProgramPath;
         _configuration.ExternalProgramSettings.Nir1ProgramPath = Nir1ProgramPath;
-        _configuration.ExternalProgramSettings.Nir2ProgramPath = Nir2ProgramPath;
+        _configuration.ExternalProgramSettings.Nir2ChunkStoragePath = Nir2ChunkStoragePath;
         _configuration.ExternalProgramSettings.Nir2FilterMonitorPath = Nir2FilterMonitorPath;
         _configuration.ExternalProgramSettings.Nir2FilterDestinationPath = Nir2FilterDestinationPath;
+
+        // Save NIR2 CSV directory
+        _configuration.Nir2Settings!.CsvDirectory = Nir2CsvDirectory;
 
         // Save Log retention settings
         _configuration.WorkflowSettings.LogRetentionDays = LogRetentionDays;

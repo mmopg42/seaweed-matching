@@ -91,3 +91,6 @@ build_output.txt
 # 테스트 결과 파일들
 *_result.txt
 output.txt
+
+# Auto Claude data directory
+.auto-claude/

@@ -29,10 +29,7 @@ public static class ConfigurationExtensions
         string todayCompact = DateTime.Now.ToString("yyyyMMdd");
         string todaySlash = DateTime.Now.ToString(@"yyyy\\MM\\dd");
 
-        // 1. Update BasePath (yyyyMMdd format)
-        config.BasePath = UpdatePath("BasePath", config.BasePath, todayCompact, DateRegex);
-
-        // 2. Update MatchingSettings paths (yyyyMMdd format)
+        // Update MatchingSettings paths (yyyyMMdd format)
         if (config.MatchingSettings != null)
         {
             config.MatchingSettings.Nir1Path = UpdatePath("Nir1Path", config.MatchingSettings.Nir1Path, todayCompact, DateRegex);
@@ -48,20 +45,20 @@ public static class ConfigurationExtensions
             config.MatchingSettings.OutputPath = UpdatePath("OutputPath", config.MatchingSettings.OutputPath, todayCompact, DateRegex);
         }
 
-        // 3. Update WorkflowSettings paths (yyyyMMdd format)
+        // Update WorkflowSettings paths (yyyyMMdd format)
         if (config.WorkflowSettings != null)
         {
             config.WorkflowSettings.DeleteQuarantinePath = UpdatePath("DeleteQuarantinePath", config.WorkflowSettings.DeleteQuarantinePath, todayCompact, DateRegex);
         }
 
-        // 4. Update ExternalProgramSettings paths
+        // Update ExternalProgramSettings paths
         if (config.ExternalProgramSettings != null)
         {
             // Program paths typically don't have date in them, but check anyway
             config.ExternalProgramSettings.GeneralCameraProgramPath = UpdatePath("GeneralProgram", config.ExternalProgramSettings.GeneralCameraProgramPath, todayCompact, DateRegex);
             config.ExternalProgramSettings.Nir1ProgramPath = UpdatePath("Nir1Program", config.ExternalProgramSettings.Nir1ProgramPath, todayCompact, DateRegex);
-            config.ExternalProgramSettings.Nir2ProgramPath = UpdatePath("Nir2Program", config.ExternalProgramSettings.Nir2ProgramPath, todayCompact, DateRegex);
-            
+            config.ExternalProgramSettings.Nir2ChunkStoragePath = UpdatePath("Nir2ChunkStorage", config.ExternalProgramSettings.Nir2ChunkStoragePath, todayCompact, DateRegex);
+
             // NIR Filter paths use yyyy\MM\dd format with backslash separators
             config.ExternalProgramSettings.Nir2FilterMonitorPath = UpdatePath("Nir2Monitor", config.ExternalProgramSettings.Nir2FilterMonitorPath, todaySlash, SlashDateRegex);
             config.ExternalProgramSettings.Nir2FilterDestinationPath = UpdatePath("Nir2Dest", config.ExternalProgramSettings.Nir2FilterDestinationPath, todaySlash, SlashDateRegex);

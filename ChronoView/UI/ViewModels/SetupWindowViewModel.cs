@@ -25,7 +25,6 @@ public class SetupWindowViewModel : ViewModelBase
     private readonly IServiceProvider? _serviceProvider;
     private readonly GeneralCameraLauncher? _generalCameraLauncher;
     private readonly NirCameraLauncher? _nirCameraLauncher;
-    private readonly Nir2CameraLauncher? _nir2CameraLauncher;
     private readonly NirFilteringService? _nirFilteringService;
     
     private string _nir2FilteringStatus = LocalizationManager.GetString("Status_Deactivated");
@@ -36,7 +35,6 @@ public class SetupWindowViewModel : ViewModelBase
         // Parameterless constructor for XAML designer
         LaunchGeneralCameraCommand = new RelayCommand(async () => await ExecuteGeneralCameraLaunchAsync());
         LaunchNir1CameraCommand = new RelayCommand(async () => await ExecuteNir1CameraLaunchAsync());
-        LaunchNir2CameraCommand = new RelayCommand(async () => await ExecuteNir2CameraLaunchAsync());
         ToggleNirFilteringCommand = new RelayCommand(async () => await ExecuteToggleNirFilteringAsync(), () => !IsNir2FilteringBusy);
         StartCommand = new RelayCommand(OnStart);
         OpenSettingsCommand = new RelayCommand(OnOpenSettings);
@@ -51,7 +49,6 @@ public class SetupWindowViewModel : ViewModelBase
         IServiceProvider serviceProvider,
         GeneralCameraLauncher generalCameraLauncher,
         NirCameraLauncher nirCameraLauncher,
-        Nir2CameraLauncher nir2CameraLauncher,
         NirFilteringService nirFilteringService)
     {
         _logger = logger;
@@ -59,14 +56,12 @@ public class SetupWindowViewModel : ViewModelBase
         _serviceProvider = serviceProvider;
         _generalCameraLauncher = generalCameraLauncher;
         _nirCameraLauncher = nirCameraLauncher;
-        _nir2CameraLauncher = nir2CameraLauncher;
         _nirFilteringService = nirFilteringService;
 
         _logger.LogInformation("SetupWindowViewModel constructor called");
 
         LaunchGeneralCameraCommand = new RelayCommand(async () => await ExecuteGeneralCameraLaunchAsync());
         LaunchNir1CameraCommand = new RelayCommand(async () => await ExecuteNir1CameraLaunchAsync());
-        LaunchNir2CameraCommand = new RelayCommand(async () => await ExecuteNir2CameraLaunchAsync());
         ToggleNirFilteringCommand = new RelayCommand(async () => await ExecuteToggleNirFilteringAsync(), () => !IsNir2FilteringBusy);
         StartCommand = new RelayCommand(OnStart);
         OpenSettingsCommand = new RelayCommand(OnOpenSettings);
@@ -89,7 +84,6 @@ public class SetupWindowViewModel : ViewModelBase
 
     public ICommand LaunchGeneralCameraCommand { get; }
     public ICommand LaunchNir1CameraCommand { get; }
-    public ICommand LaunchNir2CameraCommand { get; }
     public ICommand ToggleNirFilteringCommand { get; }
     public ICommand StartCommand { get; }
     public ICommand OpenSettingsCommand { get; }
@@ -143,20 +137,6 @@ public class SetupWindowViewModel : ViewModelBase
 
         if (success) _logger?.LogInformation("NIR Camera 1 launch: {Message}", message);
         else _logger?.LogWarning("NIR Camera 1 launch failed: {Message}", message);
-    }
-
-    private async Task ExecuteNir2CameraLaunchAsync()
-    {
-        if (_nir2CameraLauncher == null)
-        {
-            _logger?.LogWarning("NIR Camera 2 launcher not initialized");
-            return;
-        }
-
-        var (success, message) = await _nir2CameraLauncher.LaunchAsync();
-
-        if (success) _logger?.LogInformation("NIR Camera 2 launch: {Message}", message);
-        else _logger?.LogWarning("NIR Camera 2 launch failed: {Message}", message);
     }
 
     private void OnStart()

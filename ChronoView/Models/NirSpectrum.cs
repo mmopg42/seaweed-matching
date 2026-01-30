@@ -56,6 +56,18 @@ public class NirSpectrum : IEquatable<NirSpectrum>
     public double YVariation { get; set; }
 
     /// <summary>
+    /// Protein content percentage (if available).
+    /// </summary>
+    [JsonPropertyName("protein")]
+    public double? Protein { get; set; }
+
+    /// <summary>
+    /// Moisture content percentage (if available).
+    /// </summary>
+    [JsonPropertyName("moisture")]
+    public double? Moisture { get; set; }
+
+    /// <summary>
     /// Validates the integrity of this NIR spectrum.
     /// </summary>
     /// <returns>True if valid, false otherwise.</returns>

@@ -21,14 +21,27 @@ public class PathManagementServiceTests
     }
 
     [Fact]
-    public void GeneratePathsFromDate_ValidDate_ReturnsCorrectPaths()
+    public void GeneratePathsFromDate_ReturnsConfiguredPaths()
     {
         // Arrange
         var config = new ApplicationConfiguration
         {
-            BasePath = "D:/TestData"
+            MatchingSettings = new MatchingSettings
+            {
+                Nir1Path = "D:/TestRoot/20260128/NIR1",
+                Normal1Path = "D:/TestRoot/20260128/Normal1",
+                Camera1Path = "D:/TestRoot/20260128/Cam1",
+                Camera2Path = "D:/TestRoot/20260128/Cam2",
+                Camera3Path = "D:/TestRoot/20260128/Cam3",
+                Nir2Path = "D:/TestRoot/20260128/NIR2",
+                Normal2Path = "D:/TestRoot/20260128/Normal2",
+                Camera4Path = "D:/TestRoot/20260128/Cam4",
+                Camera5Path = "D:/TestRoot/20260128/Cam5",
+                Camera6Path = "D:/TestRoot/20260128/Cam6",
+                OutputPath = "D:/TestRoot/20260128/Output"
+            }
         };
-        var dateString = "20251204";
+        var dateString = "20260128";
 
         // Act
         var result = _service.GeneratePathsFromDate(dateString, config);
@@ -36,62 +49,29 @@ public class PathManagementServiceTests
         // Assert
         Assert.NotEmpty(result);
         Assert.Equal(11, result.Count); // NIR1, Normal1, Cam1-3, NIR2, Normal2, Cam4-6, Output
-        
-        // Line 1 경로 검증
-        Assert.Contains("NIR1", result.Keys);
-        Assert.Contains("Normal1", result.Keys);
-        Assert.Contains("Cam1", result.Keys);
-        Assert.Contains("Cam2", result.Keys);
-        Assert.Contains("Cam3", result.Keys);
-        
-        // Line 2 경로 검증
-        Assert.Contains("NIR2", result.Keys);
-        Assert.Contains("Normal2", result.Keys);
-        Assert.Contains("Cam4", result.Keys);
-        Assert.Contains("Cam5", result.Keys);
-        Assert.Contains("Cam6", result.Keys);
-        
-        // Output 경로 검증
-        Assert.Contains("Output", result.Keys);
-        
-        // 경로 형식 검증 (예: D:/TestData/2025/12/04/NIR1)
-        Assert.Contains("2025", result["NIR1"]);
-        Assert.Contains("12", result["NIR1"]);
-        Assert.Contains("04", result["NIR1"]);
-        Assert.EndsWith("NIR1", result["NIR1"]);
+
+        // 모든 경로가 설정된 값 그대로 반환되는지 검증
+        Assert.Equal("D:/TestRoot/20260128/NIR1", result["NIR1"]);
+        Assert.Equal("D:/TestRoot/20260128/Normal1", result["Normal1"]);
+        Assert.Equal("D:/TestRoot/20260128/Cam1", result["Cam1"]);
+        Assert.Equal("D:/TestRoot/20260128/NIR2", result["NIR2"]);
+        Assert.Equal("D:/TestRoot/20260128/Output", result["Output"]);
     }
 
     [Fact]
-    public void GeneratePathsFromDate_InvalidDate_ReturnsEmptyDictionary()
+    public void GeneratePathsFromDate_EmptyConfig_ReturnsEmptyPaths()
     {
         // Arrange
-        var config = new ApplicationConfiguration();
-        var invalidDate = "invalid";
-
-        // Act
-        var result = _service.GeneratePathsFromDate(invalidDate, config);
-
-        // Assert
-        Assert.Empty(result);
-    }
-
-    [Fact]
-    public void GeneratePathsFromDate_NoBasePath_UsesDefaultPath()
-    {
-        // Arrange
-        var config = new ApplicationConfiguration
-        {
-            BasePath = "" // Empty BasePath should use default
-        };
-        var dateString = "20251204";
+        var config = new ApplicationConfiguration(); // All paths are empty by default
+        var dateString = "20260128";
 
         // Act
         var result = _service.GeneratePathsFromDate(dateString, config);
 
         // Assert
-        Assert.NotEmpty(result);
-        // 기본 경로 "D:/Data" 사용 확인
-        Assert.Contains("D:/Data", result["NIR1"]);
+        Assert.Equal(11, result.Count);
+        // 모든 경로가 빈 문자열이어야 함
+        Assert.All(result.Values, v => Assert.Equal("", v));
     }
 
     [Fact]

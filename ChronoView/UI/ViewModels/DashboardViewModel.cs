@@ -2,6 +2,7 @@ using ChronoView.Core.Analytics;
 using ChronoView.Core.FileWatching;
 using ChronoView.Core.Configuration;
 using ChronoView.Core.ImageProcessing;
+using ChronoView.Core.NIR.Interfaces;
 using ChronoView.Models;
 using Microsoft.Extensions.Logging;
 using System;
@@ -22,6 +23,7 @@ public class DashboardViewModel : ViewModelBase, IDashboardViewModel
     private readonly IConfigurationManager _configManager;
     private readonly ILogger<DashboardViewModel> _logger;
     private readonly ILogger<FileGroupViewModel> _fileGroupLogger;
+    private readonly INirDataProvider? _nirDataProvider;
 
     public event Action<LogSeverity, string, string>? LogRequested;
     public event Action<string>? StatusChanged;
@@ -73,7 +75,8 @@ public class DashboardViewModel : ViewModelBase, IDashboardViewModel
         IAbnormalDetector abnormalDetector,
         IConfigurationManager configManager,
         ILogger<DashboardViewModel> logger,
-        ILogger<FileGroupViewModel> fileGroupLogger)
+        ILogger<FileGroupViewModel> fileGroupLogger,
+        INirDataProvider? nirDataProvider = null)
     {
         _orchestrator = orchestrator;
         _statsService = statsService;
@@ -82,6 +85,7 @@ public class DashboardViewModel : ViewModelBase, IDashboardViewModel
         _configManager = configManager;
         _logger = logger;
         _fileGroupLogger = fileGroupLogger;
+        _nirDataProvider = nirDataProvider;
 
         _orchestrator.GroupCreated += OnGroupCreated;
         _orchestrator.GroupUpdated += OnGroupUpdated;
@@ -142,7 +146,7 @@ public class DashboardViewModel : ViewModelBase, IDashboardViewModel
         WpfApplication.Current.Dispatcher.InvokeAsync(() => {
             if (FileGroups.Any(g => g.GroupId == group.GroupId)) return;
             var config = _configManager.LoadConfiguration<ChronoView.Models.ApplicationConfiguration>();
-            var vm = new FileGroupViewModel(group, _imageProcessor, _orchestrator, _abnormalDetector, config, _fileGroupLogger, (s, src, m) => LogRequested?.Invoke(s, src, m));
+            var vm = new FileGroupViewModel(group, _imageProcessor, _orchestrator, _abnormalDetector, config, _fileGroupLogger, (s, src, m) => LogRequested?.Invoke(s, src, m), _nirDataProvider);
             FileGroups.Add(vm);
             if (group.LineNumber == 1) Line1Groups.Add(vm);
             else if (group.LineNumber == 2) Line2Groups.Add(vm);

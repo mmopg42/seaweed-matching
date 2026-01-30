@@ -2,6 +2,7 @@ using ChronoView.Models;
 using ChronoView.Core.ImageProcessing;
 using ChronoView.Core.Analytics;
 using ChronoView.Core.ProgramLaunching;
+using ChronoView.Core.NIR.Line2;
 using ChronoView.Helpers;
 using ChronoView.Core.Configuration;
 using ChronoView.Core.Localization;
@@ -225,27 +226,28 @@ public class MainWindowViewModel : ViewModelBase, IDisposable
     private bool _isLoadingSettings = false;
 
     public MainWindowViewModel(
-        IMonitoringOrchestrator orchestrator, 
-        IStatisticsService stats, 
-        IFileOperationService fileOp, 
-        IConfigurationManager config, 
-        IImageProcessor proc, 
-        IAbnormalDetector detector, 
-        GeneralCameraLauncher gen, 
-        NirCameraLauncher nir, 
-        Nir2CameraLauncher nir2, 
+        IMonitoringOrchestrator orchestrator,
+        IStatisticsService stats,
+        IFileOperationService fileOp,
+        IConfigurationManager config,
+        IImageProcessor proc,
+        IAbnormalDetector detector,
+        GeneralCameraLauncher gen,
+        NirCameraLauncher nir,
         NirFilteringService nirFilter,
-        IMoveService move, 
-        IDeleteService delete, 
-        ILogger<MainWindowViewModel> logger, 
-        ILoggerFactory factory, 
+        Nir2DataCollector nir2Collector,
+        ApiBasedNirProvider nir2Provider,
+        IMoveService move,
+        IDeleteService delete,
+        ILogger<MainWindowViewModel> logger,
+        ILoggerFactory factory,
         ILogger<FileGroupViewModel> fgLogger)
     {
         _logger = logger;
         _configManager = config;
-        Dashboard = new DashboardViewModel(orchestrator, stats, proc, detector, config, factory.CreateLogger<DashboardViewModel>(), fgLogger);
+        Dashboard = new DashboardViewModel(orchestrator, stats, proc, detector, config, factory.CreateLogger<DashboardViewModel>(), fgLogger, nir2Provider);
         Operations = new FileOperationViewModel(move, delete, config, Dashboard, factory.CreateLogger<FileOperationViewModel>());
-        Control = new SystemControlViewModel(orchestrator, stats, config, gen, nir, nir2, nirFilter, factory.CreateLogger<SystemControlViewModel>());
+        Control = new SystemControlViewModel(orchestrator, stats, config, gen, nir, nirFilter, nir2Collector, nir2Provider, factory.CreateLogger<SystemControlViewModel>());
 
         // Connect Orchestrator logs to the UI log panel
         orchestrator.SetUILog((sev, src, msg) => AddLogMessage(sev, src, msg));

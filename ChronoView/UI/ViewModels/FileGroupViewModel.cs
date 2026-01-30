@@ -3,6 +3,7 @@ using ChronoView.Core.ImageProcessing;
 using ChronoView.Core.Localization;
 using ChronoView.Core.Analytics;
 using ChronoView.Core.NIR.Shared;
+using ChronoView.Core.NIR.Interfaces;
 using ChronoView.Helpers;
 using ChronoView.Core.Configuration;
 using ChronoView.Core.FileWatching;
@@ -25,6 +26,10 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     private readonly IAbnormalDetector? _abnormalDetector;
     private readonly ILogger<FileGroupViewModel>? _logger;
     private readonly Action<LogSeverity, string, string>? _uiLog;
+    private readonly INirDataProvider? _nirDataProvider;
+
+    // NIR2 cached data (lazy loaded from ApiBasedNirProvider)
+    private NirSpectrum? _nir2Data;
     
     private bool _isSelected;
     private bool _isAbnormal;
@@ -151,9 +156,9 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     }
     #endregion
 
-    public FileGroupViewModel(FileGroup fileGroup, IImageProcessor imageProcessor, IMonitoringOrchestrator? orchestrator, IAbnormalDetector? abnormalDetector, ChronoView.Models.ApplicationConfiguration? configuration, ILogger<FileGroupViewModel>? logger, Action<LogSeverity, string, string>? uiLog)
+    public FileGroupViewModel(FileGroup fileGroup, IImageProcessor imageProcessor, IMonitoringOrchestrator? orchestrator, IAbnormalDetector? abnormalDetector, ChronoView.Models.ApplicationConfiguration? configuration, ILogger<FileGroupViewModel>? logger, Action<LogSeverity, string, string>? uiLog, INirDataProvider? nirDataProvider = null)
     {
-        _fileGroup = fileGroup; _imageProcessor = imageProcessor; _abnormalDetector = abnormalDetector; _logger = logger; _uiLog = uiLog;
+        _fileGroup = fileGroup; _imageProcessor = imageProcessor; _abnormalDetector = abnormalDetector; _logger = logger; _uiLog = uiLog; _nirDataProvider = nirDataProvider;
         _mediaLoader = new FileGroupMediaLoader(fileGroup, imageProcessor, orchestrator, configuration, logger, uiLog);
         _mediaLoader.PropertyChanged += (s, e) => 
         {
@@ -181,6 +186,87 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     public GroupStatus Status => _fileGroup.Status;
     public string StatusText => IsAbnormal ? "Abnormal" : (IsGroupComplete() ? "Complete" : "Pending");
 
+    #region NIR2 Properties
+    /// <summary>
+    /// True if this group has NIR2 data (NirKey starts with "chunk:").
+    /// </summary>
+    public bool HasNir2 => !string.IsNullOrEmpty(NirKey) && NirKey.StartsWith("chunk:", StringComparison.Ordinal);
+
+    /// <summary>
+    /// NIR2 Protein value (cached from ApiBasedNirProvider).
+    /// Returns null if not yet loaded or not NIR2.
+    /// </summary>
+    public double? Nir2Protein
+    {
+        get
+        {
+            if (!HasNir2 || _nir2Data == null) return null;
+            if (_nir2Data.Metadata != null && _nir2Data.Metadata.TryGetValue("protein", out var proteinValue))
+            {
+                if (proteinValue != null && double.TryParse(proteinValue.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var protein))
+                    return protein;
+            }
+            return _nir2Data.Protein; // Fallback to direct property
+        }
+    }
+
+    /// <summary>
+    /// NIR2 Moisture value (cached from ApiBasedNirProvider).
+    /// Returns null if not yet loaded or not NIR2.
+    /// </summary>
+    public double? Nir2Moisture
+    {
+        get
+        {
+            if (!HasNir2 || _nir2Data == null) return null;
+            if (_nir2Data.Metadata != null && _nir2Data.Metadata.TryGetValue("moisture", out var moistureValue))
+            {
+                if (moistureValue != null && double.TryParse(moistureValue.ToString(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var moisture))
+                    return moisture;
+            }
+            return _nir2Data.Moisture; // Fallback to direct property
+        }
+    }
+
+    /// <summary>
+    /// NIR2 display text for UI (e.g., "P: 12.5% M: 8.3%").
+    /// </summary>
+    public string Nir2DisplayText
+    {
+        get
+        {
+            var protein = Nir2Protein;
+            var moisture = Nir2Moisture;
+            if (protein.HasValue && moisture.HasValue)
+            {
+                return $"P: {protein.Value:F1}%\nM: {moisture.Value:F1}%";
+            }
+            return HasNir2 ? "Loading..." : "";
+        }
+    }
+
+    /// <summary>
+    /// Loads NIR2 data from the provider for display.
+    /// Should be called when thumbnails are loaded.
+    /// </summary>
+    public async Task LoadNir2DataAsync()
+    {
+        if (!HasNir2 || _nirDataProvider == null || _nir2Data != null) return;
+
+        try
+        {
+            _nir2Data = await _nirDataProvider.LoadNirDataAsync(NirKey);
+            OnPropertyChanged(nameof(Nir2DisplayText));
+            OnPropertyChanged(nameof(Nir2Protein));
+            OnPropertyChanged(nameof(Nir2Moisture));
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogDebug(ex, "Failed to load NIR2 data for {NirKey}", NirKey);
+        }
+    }
+    #endregion
+
     private bool IsGroupComplete()
     {
         if (LineNumber == 1) return !string.IsNullOrEmpty(MainImagePath) && !string.IsNullOrEmpty(Camera1ImagePath) && !string.IsNullOrEmpty(Camera2ImagePath) && !string.IsNullOrEmpty(Camera3ImagePath);
@@ -195,6 +281,7 @@ public class FileGroupViewModel : ViewModelBase, IDisposable
     {
         await _mediaLoader.LoadThumbnailsAsync();
         TryCalculateDiffFromDimensionsFallback();
+        await LoadNir2DataAsync(); // Load NIR2 data for display
     }
     public async Task ReloadNirGraphAsync(ChronoView.Models.ApplicationConfiguration config) => await _mediaLoader.ReloadNirGraphAsync(config);
 

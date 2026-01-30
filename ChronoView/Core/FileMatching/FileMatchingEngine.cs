@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using ChronoView.Core.GroupIdGeneration;
+using ChronoView.Core.NIR.Interfaces;
 using ChronoView.Models;
 using ChronoView.UI.ViewModels;
 using Microsoft.Extensions.Logging;
@@ -38,6 +39,7 @@ namespace ChronoView.Core.FileMatching
         /// <param name="dataSequenceSettings">Configuration for time-based matching (optional)</param>
         /// <param name="consumedNirKeys">Set of NIR keys already consumed (for state management)</param>
         /// <param name="idGenerator">Group ID generator for assigning unique IDs to groups</param>
+        /// <param name="nirMatcher">NIR matcher for NIR file matching logic</param>
         /// <param name="logger">Optional logger for diagnostics</param>
         /// <param name="uiLog">Optional UI log action (Severity, Source, Message)</param>
         /// <returns>List of matched file groups</returns>
@@ -46,6 +48,7 @@ namespace ChronoView.Core.FileMatching
             DataSequenceSettings? dataSequenceSettings,
             HashSet<string> consumedNirKeys,
             IGroupIdGenerator idGenerator,
+            INirMatcher? nirMatcher,
             ILogger? logger = null,
             Action<LogSeverity, string, string>? uiLog = null)
         {
@@ -63,10 +66,11 @@ namespace ChronoView.Core.FileMatching
 
             // Process Line 1
             var groupsLine1 = BuildLineGroups(
-                unmatchedFiles, 
-                lineNumber: 1, 
-                dataSequenceSettings, 
+                unmatchedFiles,
+                lineNumber: 1,
+                dataSequenceSettings,
                 consumedNirKeys,
+                nirMatcher,
                 logger,
                 uiLog);
             
@@ -79,10 +83,11 @@ namespace ChronoView.Core.FileMatching
 
             // Process Line 2
             var groupsLine2 = BuildLineGroups(
-                unmatchedFiles, 
-                lineNumber: 2, 
-                dataSequenceSettings, 
+                unmatchedFiles,
+                lineNumber: 2,
+                dataSequenceSettings,
                 consumedNirKeys,
+                nirMatcher,
                 logger,
                 uiLog);
             
@@ -140,6 +145,7 @@ namespace ChronoView.Core.FileMatching
             int lineNumber,
             DataSequenceSettings? dataSequenceSettings,
             HashSet<string> consumedNirKeys,
+            INirMatcher? nirMatcher,
             ILogger? logger,
             Action<LogSeverity, string, string>? uiLog)
         {
@@ -166,11 +172,11 @@ namespace ChronoView.Core.FileMatching
             if (dataSequenceSettings == null || dataSequenceSettings.Sequence == null || dataSequenceSettings.Sequence.Count == 0)
             {
                 logger?.LogWarning("No DataSequenceSettings configured, using legacy hardcoded matching logic");
-                return BuildLineGroupsLegacy(unmatchedFiles, lineNumber, normalKey, nirKey, camKeys, consumedNirKeys, logger, uiLog, dataSequenceSettings);
+                return BuildLineGroupsLegacy(unmatchedFiles, lineNumber, normalKey, nirKey, camKeys, consumedNirKeys, nirMatcher, logger, uiLog, dataSequenceSettings);
             }
 
             // NEW: Use DataSequenceSettings Order for dynamic matching
-            return BuildLineGroupsWithOrder(unmatchedFiles, lineNumber, normalKey, nirKey, camKeys, dataSequenceSettings, consumedNirKeys, logger, uiLog);
+            return BuildLineGroupsWithOrder(unmatchedFiles, lineNumber, normalKey, nirKey, camKeys, dataSequenceSettings, consumedNirKeys, nirMatcher, logger, uiLog);
         }
 
         /// <summary>
@@ -184,15 +190,16 @@ namespace ChronoView.Core.FileMatching
             string[] camKeys,
             DataSequenceSettings dataSequenceSettings,
             HashSet<string> consumedNirKeys,
+            INirMatcher? nirMatcher,
             ILogger? logger,
             Action<LogSeverity, string, string>? uiLog)
         {
             var groups = new List<FileGroup>();
 
-            // Get ordered data types from DataSequenceSettings
-            var orderedTypes = dataSequenceSettings.GetOrderedItems();
+            // Get ordered data types from DataSequenceSettings (ALL types, Enabled flag controls matching strategy)
+            var orderedTypes = dataSequenceSettings.GetAllOrderedItems();
             logger?.LogInformation("[BUILD-GROUPS] Line {Line}: Using DataSequenceSettings Order: {Order}",
-                lineNumber, string.Join(" → ", orderedTypes.Select(dt => $"{dt.Type}(Order={dt.Order})")));
+                lineNumber, string.Join(" → ", orderedTypes.Select(dt => $"{dt.Type}(Order={dt.Order}, Enabled={dt.Enabled})")));
 
             // Collect all files by DataType
             var filesByType = new Dictionary<DataType, List<(string Key, string Path, DateTime Timestamp)>>();
@@ -309,11 +316,31 @@ namespace ChronoView.Core.FileMatching
                     if (targetRefType != null)
                     {
                         var prevDataType = targetRefType.Value;
-                        var minDelay = dataSequenceSettings.GetMinDelay(dataType);
-                        var maxDelay = dataSequenceSettings.GetMaxDelay(dataType);
 
-                        logger?.LogDebug("[MATCH] {DataType} file {File} ts={Ts:HH:mm:ss}: Looking for {PrevType} within {Min}~{Max}s",
-                            dataType, Path.GetFileName(file.Path), file.Timestamp, prevDataType, minDelay, maxDelay);
+                        // Check if current data type uses sequence matching or timestamp-only matching
+                        bool useSequenceConstraints = dataSequenceSettings.IsSequenceMatching(dataType);
+
+                        double minDelay;
+                        double maxDelay;
+
+                        if (useSequenceConstraints)
+                        {
+                            // Sequence matching: Apply configured min/max constraints
+                            minDelay = dataSequenceSettings.GetMinDelay(dataType);
+                            maxDelay = dataSequenceSettings.GetMaxDelay(dataType);
+                            logger?.LogDebug("[MATCH] {DataType} file {File} ts={Ts:HH:mm:ss}: SEQUENCE mode - Looking for {PrevType} within {Min}~{Max}s",
+                                dataType, Path.GetFileName(file.Path), file.Timestamp, prevDataType, minDelay, maxDelay);
+                        }
+                        else
+                        {
+                            // Timestamp-only matching: Preserve order but no time constraints
+                            // minDelay=0 ensures matching only with EARLIER groups (order preserved)
+                            // maxDelay=infinity allows any later time
+                            minDelay = 0;
+                            maxDelay = double.MaxValue;
+                            logger?.LogDebug("[MATCH] {DataType} file {File} ts={Ts:HH:mm:ss}: TIMESTAMP mode - Looking for {PrevType} with time >= 0s (order preserved, no upper limit)",
+                                dataType, Path.GetFileName(file.Path), file.Timestamp, prevDataType);
+                        }
 
                         // Find closest group with prevDataType
                         foreach (var g in groups)
@@ -350,6 +377,17 @@ namespace ChronoView.Core.FileMatching
                 }
             }
 
+            // Attach NIR files to closest groups
+            if (nirMatcher != null && filesByType.ContainsKey(DataType.NIR) && filesByType[DataType.NIR].Count > 0)
+            {
+                double nirMaxDiff = dataSequenceSettings.GetMaxDelay(DataType.NIR);
+
+                logger?.LogInformation("[MATCH-NIR] Line {Line}: Matching {Count} NIR files (maxDiff={Max}s)",
+                    lineNumber, filesByType[DataType.NIR].Count, nirMaxDiff);
+
+                groups = nirMatcher.MatchNirToGroups(groups, filesByType[DataType.NIR], nirMaxDiff, lineNumber, logger);
+            }
+
             // Final sort by timestamp
             groups = groups.OrderBy(g => g.Timestamp).ToList();
             return groups;
@@ -365,6 +403,7 @@ namespace ChronoView.Core.FileMatching
             string nirKey,
             string[] camKeys,
             HashSet<string> consumedNirKeys,
+            INirMatcher? nirMatcher,
             ILogger? logger,
             Action<LogSeverity, string, string>? uiLog,
             DataSequenceSettings? dataSequenceSettings = null)
@@ -567,85 +606,102 @@ namespace ChronoView.Core.FileMatching
             }
 
             // Attach NIR files to closest groups
-            foreach (var nir in availableNirs)
+            if (nirMatcher != null)
             {
-                int? targetIdx = null;
-                double? minDiff = null;
-
-                // Get NIR matching time window from DataSequenceSettings
+                // Use INirMatcher for NIR matching (modular approach)
                 double nirMaxDiff = dataSequenceSettings?.GetMaxDelay(DataType.NIR) ?? 50.0;
 
-                logger?.LogDebug("[MATCH-NIR] NIR {NirKey} ts={NirTs:HH:mm:ss.fff}: Searching {GroupCount} groups (maxDiff={Max}s)", 
-                    nir.Key, nir.Timestamp!.Value, groups.Count, nirMaxDiff);
-                uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR", 
-                    $"NIR {nir.Key} ts={nir.Timestamp!.Value:HH:mm:ss.fff}: Searching {groups.Count} groups (maxDiff={nirMaxDiff}s)");
+                // Convert availableNirs to match INirMatcher signature (non-nullable DateTime)
+                var nirFilesList = availableNirs
+                    .Where(n => n.Timestamp.HasValue)
+                    .Select(n => (n.Key, n.Path, n.Timestamp!.Value))
+                    .ToList();
 
-                for (int i = 0; i < groups.Count; i++)
+                groups = nirMatcher.MatchNirToGroups(groups, nirFilesList, nirMaxDiff, lineNumber, logger);
+            }
+            else
+            {
+                // Fallback to inline matching logic when INirMatcher is not available
+                foreach (var nir in availableNirs)
                 {
-                    if (groups[i].HasNir)
+                    int? targetIdx = null;
+                    double? minDiff = null;
+
+                    // Get NIR matching time window from DataSequenceSettings
+                    double nirMaxDiff = dataSequenceSettings?.GetMaxDelay(DataType.NIR) ?? 50.0;
+
+                    logger?.LogDebug("[MATCH-NIR] NIR {NirKey} ts={NirTs:HH:mm:ss.fff}: Searching {GroupCount} groups (maxDiff={Max}s)",
+                        nir.Key, nir.Timestamp!.Value, groups.Count, nirMaxDiff);
+                    uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR",
+                        $"NIR {nir.Key} ts={nir.Timestamp!.Value:HH:mm:ss.fff}: Searching {groups.Count} groups (maxDiff={nirMaxDiff}s)");
+
+                    for (int i = 0; i < groups.Count; i++)
                     {
-                        logger?.LogDebug("[MATCH-NIR]   Group[{Index}]: Already has NIR, skip", i);
-                        uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR", $"  Group[{i}]: Already has NIR, skip");
-                        continue; // Already has NIR
+                        if (groups[i].HasNir)
+                        {
+                            logger?.LogDebug("[MATCH-NIR]   Group[{Index}]: Already has NIR, skip", i);
+                            uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR", $"  Group[{i}]: Already has NIR, skip");
+                            continue; // Already has NIR
+                        }
+
+                        var timeDiff = (nir.Timestamp!.Value - groups[i].CreatedAt).TotalSeconds;
+                        var absDiff = Math.Abs(timeDiff);
+
+                        logger?.LogDebug("[MATCH-NIR]   Group[{Index}]: ts={GroupTs:HH:mm:ss.fff} diff={Diff:F3}s (abs={AbsDiff:F3}s)",
+                            i, groups[i].CreatedAt, timeDiff, absDiff);
+                        uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR",
+                            $"  Group[{i}]: ts={groups[i].CreatedAt:HH:mm:ss.fff} diff={timeDiff:F3}s (abs={absDiff:F3}s)");
+
+                        // Must be within configured time difference from DataSequenceSettings
+                        if (absDiff <= nirMaxDiff)
+                        {
+                            if (!minDiff.HasValue || absDiff < minDiff.Value)
+                            {
+                                minDiff = absDiff;
+                                targetIdx = i;
+                                logger?.LogDebug("[MATCH-NIR]   → New best match: Group[{Index}] absDiff={AbsDiff:F3}s", i, absDiff);
+                                uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR", $"  → New best match: Group[{i}] absDiff={absDiff:F3}s");
+                            }
+                        }
+                        else
+                        {
+                            logger?.LogDebug("[MATCH-NIR]   ✗ REJECTED: absDiff={AbsDiff:F3}s > maxDiff={Max}s", absDiff, nirMaxDiff);
+                            uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR", $"  ✗ REJECTED: absDiff={absDiff:F3}s > maxDiff={nirMaxDiff}s");
+                        }
                     }
 
-                    var timeDiff = (nir.Timestamp!.Value - groups[i].CreatedAt).TotalSeconds;
-                    var absDiff = Math.Abs(timeDiff);
-
-                    logger?.LogDebug("[MATCH-NIR]   Group[{Index}]: ts={GroupTs:HH:mm:ss.fff} diff={Diff:F3}s (abs={AbsDiff:F3}s)", 
-                        i, groups[i].CreatedAt, timeDiff, absDiff);
-                    uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR", 
-                        $"  Group[{i}]: ts={groups[i].CreatedAt:HH:mm:ss.fff} diff={timeDiff:F3}s (abs={absDiff:F3}s)");
-
-                    // Must be within configured time difference from DataSequenceSettings
-                    if (absDiff <= nirMaxDiff)
+                    if (targetIdx.HasValue)
                     {
-                        if (!minDiff.HasValue || absDiff < minDiff.Value)
-                        {
-                            minDiff = absDiff;
-                            targetIdx = i;
-                            logger?.LogDebug("[MATCH-NIR]   → New best match: Group[{Index}] absDiff={AbsDiff:F3}s", i, absDiff);
-                            uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR", $"  → New best match: Group[{i}] absDiff={absDiff:F3}s");
-                        }
+                        // Attach to existing group
+                        groups[targetIdx.Value].NirKey = nir.Key;
+                        groups[targetIdx.Value].NirFilePath = nir.Path;
+                        groups[targetIdx.Value].HasNir = true;
+                        logger?.LogDebug("[MATCH-NIR] ✓ MATCHED: NIR {NirKey} → Group[{Idx}] absDiff={Diff:F3}s file={File}",
+                            nir.Key, targetIdx.Value, minDiff, Path.GetFileName(nir.Path));
+                        uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR",
+                            $"✓ MATCHED: NIR {nir.Key} → Group[{targetIdx.Value}] absDiff={minDiff:F3}s file={Path.GetFileName(nir.Path)}");
                     }
                     else
                     {
-                        logger?.LogDebug("[MATCH-NIR]   ✗ REJECTED: absDiff={AbsDiff:F3}s > maxDiff={Max}s", absDiff, nirMaxDiff);
-                        uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR", $"  ✗ REJECTED: absDiff={absDiff:F3}s > maxDiff={nirMaxDiff}s");
+                        // Create NIR-only group
+                        logger?.LogDebug("[MATCH-NIR] ✗ NO MATCH: Creating NIR-only group for {NirKey}", nir.Key);
+                        uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR", $"✗ NO MATCH: Creating NIR-only group for {nir.Key}");
+                        var nirOnlyGroup = new FileGroup
+                        {
+                            GroupId = "",
+                            NirKey = nir.Key,
+                            NirFilePath = nir.Path,
+                            CreatedAt = nir.Timestamp!.Value,
+                            Timestamp = nir.Timestamp.Value,
+                            Status = GroupStatus.Complete,
+                            HasNir = true,
+                            LineNumber = lineNumber,
+                            CameraFiles = new Dictionary<string, string>()
+                        };
+                        groups.Add(nirOnlyGroup);
+                        logger?.LogDebug("Created NIR-only group for {NirKey} ts={Ts} path={Path}",
+                            nir.Key, nir.Timestamp, nir.Path);
                     }
-                }
-
-                if (targetIdx.HasValue)
-                {
-                    // Attach to existing group
-                    groups[targetIdx.Value].NirKey = nir.Key;
-                    groups[targetIdx.Value].NirFilePath = nir.Path;
-                    groups[targetIdx.Value].HasNir = true;
-                    logger?.LogDebug("[MATCH-NIR] ✓ MATCHED: NIR {NirKey} → Group[{Idx}] absDiff={Diff:F3}s file={File}", 
-                        nir.Key, targetIdx.Value, minDiff, Path.GetFileName(nir.Path));
-                    uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR", 
-                        $"✓ MATCHED: NIR {nir.Key} → Group[{targetIdx.Value}] absDiff={minDiff:F3}s file={Path.GetFileName(nir.Path)}");
-                }
-                else
-                {
-                    // Create NIR-only group
-                    logger?.LogDebug("[MATCH-NIR] ✗ NO MATCH: Creating NIR-only group for {NirKey}", nir.Key);
-                    uiLog?.Invoke(LogSeverity.Debug, "MATCH-NIR", $"✗ NO MATCH: Creating NIR-only group for {nir.Key}");
-                    var nirOnlyGroup = new FileGroup
-                    {
-                        GroupId = "",
-                        NirKey = nir.Key,
-                        NirFilePath = nir.Path,
-                        CreatedAt = nir.Timestamp!.Value,
-                        Timestamp = nir.Timestamp.Value,
-                        Status = GroupStatus.Complete,
-                        HasNir = true,
-                        LineNumber = lineNumber,
-                        CameraFiles = new Dictionary<string, string>()
-                    };
-                    groups.Add(nirOnlyGroup);
-                    logger?.LogDebug("Created NIR-only group for {NirKey} ts={Ts} path={Path}", 
-                        nir.Key, nir.Timestamp, nir.Path);
                 }
             }
 

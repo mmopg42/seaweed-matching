@@ -146,6 +146,7 @@ public class FileGroup : IEquatable<FileGroup>
             NormalFolder = this.NormalFolder,
             MainImagePath = this.MainImagePath,
             NirFilePath = this.NirFilePath,
+            CsvFilePath = this.CsvFilePath,
             LineNumber = this.LineNumber,
             HasNir = this.HasNir,
             Timestamp = this.Timestamp,
@@ -168,6 +169,7 @@ public class FileGroup : IEquatable<FileGroup>
         this.NormalFolder = string.Empty;
         this.MainImagePath = string.Empty;
         this.NirFilePath = string.Empty;
+        this.CsvFilePath = string.Empty;
         this.HasNir = false;
         this.Timestamp = DateTime.MinValue;
         this.Status = GroupStatus.Pending;
@@ -189,6 +191,13 @@ public class FileGroup : IEquatable<FileGroup>
     /// </summary>
     [JsonPropertyName("nir_file_path")]
     public string NirFilePath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Associated CSV file path for Line2 NIR2 data.
+    /// Used for moving CSV files to the "뷰키nir csv파일" folder.
+    /// </summary>
+    [JsonPropertyName("csv_file_path")]
+    public string CsvFilePath { get; set; } = string.Empty;
 
     /// <summary>
     /// Validates the integrity of this file group.

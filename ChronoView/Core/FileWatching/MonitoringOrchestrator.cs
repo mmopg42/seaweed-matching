@@ -10,6 +10,8 @@ using ChronoView.Core.Analytics;
 using ChronoView.Core.Configuration;
 using ChronoView.Core.FileMatching;
 using ChronoView.Core.Localization;
+using ChronoView.Core.NIR.Interfaces;
+using ChronoView.Core.NIR.Line2;
 using ChronoView.Core.NIR.Shared;
 using ChronoView.Models;
 using Microsoft.Extensions.Logging;
@@ -34,6 +36,9 @@ namespace ChronoView.Core.FileWatching
         private readonly IEventProcessor _eventProcessor;
         private readonly IConfigurationManager _configManager;
         private readonly IAbnormalDetector _abnormalDetector;
+        private readonly INir2ChunkLoader? _chunkLoader;
+        private readonly ChunkBasedNirMatcher? _chunkBasedNirMatcher;
+        private readonly INirDataProvider? _nirDataProvider;
         private Action<LogSeverity, string, string>? _uiLog;
         
         private const int NirPendingTimeoutSeconds = 10;
@@ -59,7 +64,10 @@ namespace ChronoView.Core.FileWatching
             IEventProcessor eventProcessor,
             IConfigurationManager configManager,
             IAbnormalDetector abnormalDetector,
-            Action<LogSeverity, string, string>? uiLog = null)
+            Action<LogSeverity, string, string>? uiLog = null,
+            INir2ChunkLoader? chunkLoader = null,
+            ChunkBasedNirMatcher? chunkBasedNirMatcher = null,
+            INirDataProvider? nirDataProvider = null)
         {
             _fileGroupMatcher = fileGroupMatcher ?? throw new ArgumentNullException(nameof(fileGroupMatcher));
             _fileWatcher = fileWatcher ?? throw new ArgumentNullException(nameof(fileWatcher));
@@ -73,6 +81,9 @@ namespace ChronoView.Core.FileWatching
             _configManager = configManager ?? throw new ArgumentNullException(nameof(configManager));
             _abnormalDetector = abnormalDetector ?? throw new ArgumentNullException(nameof(abnormalDetector));
             _uiLog = uiLog;
+            _chunkLoader = chunkLoader;
+            _chunkBasedNirMatcher = chunkBasedNirMatcher;
+            _nirDataProvider = nirDataProvider;
 
             // Wire up GroupManager events
             _groupManager.GroupCreated += (s, g) => 
@@ -491,6 +502,9 @@ namespace ChronoView.Core.FileWatching
                 var sortedFiles = await _initialScanner.ScanAndSortFilesAsync(_currentConfig!, cancellationToken);
                 result.FilesScanned = sortedFiles.Count;
 
+                // Step 1.5: Load NIR2 chunks based on camera file time range
+                await LoadNir2ChunksForExistingFilesAsync(sortedFiles, cancellationToken);
+
                 _logger.LogInformation("Processing files in chronological order (earliest to latest)");
 
                 // Step 2: Process files in timestamp order
@@ -697,6 +711,80 @@ namespace ChronoView.Core.FileWatching
         protected virtual void OnFileGroupsCreated(FileGroupsCreatedEventArgs e) => FileGroupsCreated?.Invoke(this, e);
         protected virtual void OnFileGroupsUpdated(FileGroupsUpdatedEventArgs e) => FileGroupsUpdated?.Invoke(this, e);
         #endregion
+
+        /// <summary>
+        /// Loads NIR2 chunks based on existing general camera file time range.
+        /// Only loads chunks when general camera files exist and NIR2 is configured.
+        /// </summary>
+        private async Task LoadNir2ChunksForExistingFilesAsync(
+            List<(string FilePath, DataType DataType, DateTime Timestamp)> sortedFiles,
+            CancellationToken cancellationToken = default)
+        {
+            // Guard: NIR2 services must be available
+            if (_chunkLoader == null || _chunkBasedNirMatcher == null || _nirDataProvider == null)
+            {
+                _logger.LogDebug("NIR2 chunk loading skipped: services not available");
+                return;
+            }
+
+            // Guard: NIR2 must be configured
+            if (_currentConfig?.Nir2Settings == null || !_currentConfig.Nir2Settings.IsEnabled)
+            {
+                _logger.LogDebug("NIR2 chunk loading skipped: NIR2 not enabled in configuration");
+                return;
+            }
+
+            // Guard: DataSequenceSettings required for buffer calculation
+            if (_currentConfig.DataSequenceSettings == null)
+            {
+                _logger.LogWarning("NIR2 chunk loading skipped: DataSequenceSettings not configured");
+                return;
+            }
+
+            // Guard: CSV directory must exist
+            var csvDirectory = _currentConfig.Nir2Settings.FullCsvDirectory;
+            if (!Directory.Exists(csvDirectory))
+            {
+                _logger.LogDebug("NIR2 chunk loading skipped: CSV directory does not exist: {Directory}", csvDirectory);
+                return;
+            }
+
+            try
+            {
+                var chunks = await _chunkLoader.LoadChunksForExistingFilesAsync(
+                    sortedFiles,
+                    _currentConfig.DataSequenceSettings,
+                    csvDirectory);
+
+                if (chunks.Count == 0)
+                {
+                    _logger.LogDebug("No NIR2 chunks found in camera file time range");
+                    return;
+                }
+
+                _logger.LogInformation("Registering {ChunkCount} NIR2 chunks with matcher and provider", chunks.Count);
+
+                // Register chunks with the matcher and provider
+                foreach (var chunk in chunks)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    _chunkBasedNirMatcher.RegisterChunk(chunk);
+
+                    // ApiBasedNirProvider implements INirDataProvider with RegisterChunk method
+                    if (_nirDataProvider is ApiBasedNirProvider apiProvider)
+                    {
+                        apiProvider.RegisterChunk(chunk.ChunkId, chunk);
+                    }
+                }
+
+                _logger.LogInformation("Successfully registered {ChunkCount} NIR2 chunks", chunks.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to load NIR2 chunks for existing files");
+            }
+        }
     }
 
     public enum FileType

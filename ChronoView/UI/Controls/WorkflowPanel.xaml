@@ -64,7 +64,23 @@
                                 IsEnabled="{Binding Control.Nir2CameraState, Converter={StaticResource CameraStateToIsEnabled}}"
                                 Foreground="White" FontWeight="Bold" ToolTip="실행 및 활성화"/>
                     </Grid>
-                    
+
+                    <!-- NIR2 Parsing Toggle -->
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{x:Static res:Strings.Status_Nir2Parsing}" VerticalAlignment="Center"/>
+                        <Ellipse Grid.Column="1" Width="12" Height="12" VerticalAlignment="Center" HorizontalAlignment="Left" Fill="{Binding Control.Nir2ParsingState, Converter={StaticResource CameraStateToIndicatorBrush}}"/>
+                        <Button Grid.Column="2" Content="{Binding Control.Nir2ParsingState, Converter={StaticResource CameraStateToButtonText}}" Width="60" Height="24"
+                                Command="{Binding Control.ToggleNir2ParsingCommand}"
+                                Background="{Binding Control.Nir2ParsingState, Converter={StaticResource CameraStateToButtonBackground}}"
+                                IsEnabled="{Binding Control.Nir2ParsingState, Converter={StaticResource CameraStateToIsEnabled}}"
+                                Foreground="White" FontWeight="Bold"/>
+                    </Grid>
+
                     <!-- NIR Filtering Toggle -->
                     <Grid Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>

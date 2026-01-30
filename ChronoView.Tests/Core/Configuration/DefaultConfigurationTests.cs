@@ -14,9 +14,7 @@ public class DefaultConfigurationTests
 
         // Assert
         Assert.NotNull(config);
-        
-        // Base Path must be overridden to empty (default is "D:/Data")
-        Assert.Equal(string.Empty, config.BasePath);
+
         Assert.Empty(config.FolderPaths);
         
         // Matching Settings Paths

@@ -1,11 +1,11 @@
 using ChronoView.Models;
+using ChronoView.Core.FileOperations.Line1;
+using ChronoView.Core.FileOperations.Line2;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,20 +14,33 @@ namespace ChronoView.Core.FileOperations;
 public class FileGroupOperator : IFileGroupOperator
 {
     private readonly ILogger<FileGroupOperator> _logger;
+    private readonly IPathBuilder _line1PathBuilder;
+    private readonly IPathBuilder _line2PathBuilder;
 
-    public FileGroupOperator(ILogger<FileGroupOperator> logger)
+    public FileGroupOperator(
+        ILogger<FileGroupOperator> logger,
+        Line1PathBuilder line1PathBuilder,
+        Line2PathBuilder line2PathBuilder)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _line1PathBuilder = line1PathBuilder ?? throw new ArgumentNullException(nameof(line1PathBuilder));
+        _line2PathBuilder = line2PathBuilder ?? throw new ArgumentNullException(nameof(line2PathBuilder));
+    }
+
+    private IPathBuilder GetPathBuilder(int lineNumber)
+    {
+        return lineNumber == 1 ? _line1PathBuilder : _line2PathBuilder;
     }
 
     public async Task<OperationResult> ExecuteOpAsync(FileGroup group, string targetBase, OpType opType, PathSchema schema, string? subject = null, IProgress<OperationProgress>? progress = null, CancellationToken ct = default)
     {
         var result = new OperationResult();
         var movedItems = new List<(string source, string dest, bool isDirectory)>();
+        var pathBuilder = GetPathBuilder(group.LineNumber);
+
         _logger.LogInformation("ExecuteOpAsync started: GroupId={GroupId}, TargetBase={TargetBase}, OpType={OpType}, Schema={Schema}, Subject={Subject}", group.GroupId, targetBase, opType, schema, subject ?? "null");
         try {
             if (!string.IsNullOrEmpty(group.NormalFolder) && Directory.Exists(group.NormalFolder)) {
-                var role = schema == PathSchema.MoveSchema ? (group.LineNumber == 1 ? "일반" : "일반2") : (group.LineNumber == 1 ? "일반1" : "일반2");
                 string? folderName = null;
                 // MoveSchema와 QuarantineSchema 모두에서 folderName 추출
                 if (schema == PathSchema.QuarantineSchema || schema == PathSchema.MoveSchema)
@@ -35,13 +48,12 @@ public class FileGroupOperator : IFileGroupOperator
                     folderName = Path.GetFileName(group.NormalFolder);
                 }
 
-                var destPath = BuildPath(targetBase, group, role, schema, subject, folderName);
+                var destPath = pathBuilder.BuildNormalFolderPath(targetBase, subject ?? "UnknownSubject", group, schema, folderName);
                 _logger.LogInformation("Moving NormalFolder: {Src} -> {Dest}", group.NormalFolder, destPath);
                 await MoveDirectoryAtomicAsync(group.NormalFolder, destPath, movedItems, ct);
             }
             if (group.HasNir && !string.IsNullOrEmpty(group.NirFilePath)) {
-                var role = schema == PathSchema.MoveSchema ? "Nir" : (group.LineNumber == 1 ? "nir1" : "nir2");
-                var destDir = BuildPath(targetBase, group, role, schema, subject);
+                var destDir = pathBuilder.BuildNirFolderPath(targetBase, subject ?? "UnknownSubject", group, schema);
                 _logger.LogInformation("Moving NIR files to: {Dest}", destDir);
                 foreach (var file in GetNirFileSet(group.NirFilePath)) {
                     // Camera 파일과 동일한 패턴: 존재 확인 후 이동
@@ -54,7 +66,7 @@ public class FileGroupOperator : IFileGroupOperator
             }
             foreach (var cam in group.CameraFiles) {
                 if (string.IsNullOrEmpty(cam.Value) || !File.Exists(cam.Value)) continue;
-                var destDir = BuildPath(targetBase, group, cam.Key, schema, subject);
+                var destDir = pathBuilder.BuildCameraFolderPath(targetBase, subject ?? "UnknownSubject", group, schema, cam.Key);
                 _logger.LogInformation("Moving camera file {Cam}: {Src} -> {Dest}", cam.Key, cam.Value, destDir);
                 await MoveFileAtomicAsync(cam.Value, Path.Combine(destDir, Path.GetFileName(cam.Value)), movedItems, ct);
             }
@@ -72,18 +84,18 @@ public class FileGroupOperator : IFileGroupOperator
     {
         var result = new OperationResult();
         var movedItems = new List<(string source, string dest, bool isDirectory)>();
+        var pathBuilder = GetPathBuilder(group.LineNumber);
+
         _logger.LogInformation("DeleteComponentsAsync started: GroupId={GroupId}, Components={Components}, QuarantinePath={QuarantinePath}", group.GroupId, string.Join(",", components), quarantinePath);
         try {
             foreach (var comp in components) {
                 if (comp == "Normal" && !string.IsNullOrEmpty(group.NormalFolder) && Directory.Exists(group.NormalFolder)) {
-                    var role = group.LineNumber == 1 ? "일반1" : "일반2";
                     var folderName = Path.GetFileName(group.NormalFolder);
-                    var destPath = BuildPath(quarantinePath, group, role, PathSchema.QuarantineSchema, subject, folderName);
+                    var destPath = pathBuilder.BuildNormalFolderPath(quarantinePath, subject ?? "UnknownSubject", group, PathSchema.QuarantineSchema, folderName);
                     _logger.LogDebug("Moving Normal folder: {Src} -> {Dest}", group.NormalFolder, destPath);
                     await MoveDirectoryAtomicAsync(group.NormalFolder, destPath, movedItems, ct);
                 } else if (comp == "Nir" && group.HasNir && !string.IsNullOrEmpty(group.NirFilePath)) {
-                    var role = group.LineNumber == 1 ? "nir1" : "nir2";
-                    var destDir = BuildPath(quarantinePath, group, role, PathSchema.QuarantineSchema, subject);
+                    var destDir = pathBuilder.BuildNirFolderPath(quarantinePath, subject ?? "UnknownSubject", group, PathSchema.QuarantineSchema);
                     foreach (var file in GetNirFileSet(group.NirFilePath)) {
                         // Camera 파일과 동일한 패턴: 존재 확인 후 이동
                         if (string.IsNullOrEmpty(file) || !File.Exists(file)) {
@@ -97,7 +109,7 @@ public class FileGroupOperator : IFileGroupOperator
                 } else if (comp.StartsWith("Cam", StringComparison.OrdinalIgnoreCase)) {
                     var camKey = comp.ToLower();
                     if (group.CameraFiles.TryGetValue(camKey, out var path) && File.Exists(path)) {
-                        var destDir = BuildPath(quarantinePath, group, camKey, PathSchema.QuarantineSchema, subject);
+                        var destDir = pathBuilder.BuildCameraFolderPath(quarantinePath, subject ?? "UnknownSubject", group, PathSchema.QuarantineSchema, camKey);
                         var destFile = Path.Combine(destDir, Path.GetFileName(path));
                         _logger.LogDebug("Moving Camera file ({Cam}): {Src} -> {Dest}", camKey, path, destFile);
                         await MoveFileAtomicAsync(path, destFile, movedItems, ct);
@@ -112,85 +124,6 @@ public class FileGroupOperator : IFileGroupOperator
             result.Success = false; result.ErrorMessage = ex.Message;
         }
         return result;
-    }
-
-    /// <summary>
-    /// Checks if the path contains a valid yyyyMMdd date segment.
-    /// Validates each path segment using DateTime.TryParseExact to ensure it's a real date.
-    /// </summary>
-    private static bool HasValidDateSegment(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path))
-            return false;
-
-        var segments = path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        var datePattern = new Regex("^(19|20)\\d{6}$", RegexOptions.Compiled);
-
-        foreach (var segment in segments)
-        {
-            // Quick filter: must be 8 characters matching yyyyMMdd pattern
-            if (segment.Length == 8 && datePattern.IsMatch(segment))
-            {
-                // Final validation: must be a valid date
-                if (DateTime.TryParseExact(segment, "yyyyMMdd",
-                    CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Ensures the base path has a date segment. If not, adds today's date.
-    /// </summary>
-    private static string EnsureDateRoot(string basePath)
-    {
-        if (HasValidDateSegment(basePath))
-        {
-            return basePath;
-        }
-
-        var today = DateTime.Now.ToString("yyyyMMdd");
-        return Path.Combine(basePath, today);
-    }
-
-    private string BuildPath(string basePath, FileGroup group, string role, PathSchema schema, string? subject = null, string? folderName = null)
-    {
-        var subj = string.IsNullOrWhiteSpace(subject) ? "UnknownSubject" : subject;
-        
-        // Calculate baseRoot: use basePath as-is if it contains a valid date, otherwise add today's date
-        var baseRoot = EnsureDateRoot(basePath);
-        
-        if (schema == PathSchema.QuarantineSchema) {
-            // QuarantineSchema: baseRoot/Line{N}/subject/role[/folderName]
-            var baseQuarantinePath = Path.Combine(baseRoot, $"Line{group.LineNumber}", subj, role);
-            if (!string.IsNullOrEmpty(folderName))
-            {
-                return Path.Combine(baseQuarantinePath, folderName);
-            }
-            
-            return baseQuarantinePath;
-        } else {
-            // MoveSchema: baseRoot/subject/... (no line separation)
-            var nir = group.HasNir ? "with NIR" : "without NIR";
-            if (role.StartsWith("cam")) return Path.Combine(baseRoot, subj, nir, "복합 카메라", role);
-            
-            // MoveSchema에서 일반 카메라 경로 생성 시 folderName 포함
-            if (role == "일반" || role == "일반2") 
-            {
-                var baseRolePath = Path.Combine(baseRoot, subj, nir, group.HasNir ? role : $"{role} 카메라");
-                if (!string.IsNullOrEmpty(folderName))
-                {
-                    return Path.Combine(baseRolePath, folderName);
-                }
-                return baseRolePath;
-            }
-            
-            return Path.Combine(baseRoot, subj, nir, role);
-        }
     }
 
     private async Task MoveFileAtomicAsync(string src, string dest, List<(string, string, bool)> tracking, CancellationToken ct)

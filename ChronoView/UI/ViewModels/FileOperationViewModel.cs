@@ -54,30 +54,19 @@ public class FileOperationViewModel : ViewModelBase, IFileOperationViewModel
             
             // Validate output path before proceeding
             var outputPath = config.MatchingSettings.OutputPath;
-            
-            // If output path is empty, try to use default path based on BasePath
+
+            // If output path is empty, show error and block move operation
             if (string.IsNullOrWhiteSpace(outputPath))
             {
-                var basePath = !string.IsNullOrWhiteSpace(config.BasePath) ? config.BasePath : "D:/Data";
-                outputPath = System.IO.Path.Combine(basePath, "Output");
-                _logger.LogInformation("OutputPath is empty, using default: {Path}", outputPath);
-                
-                // Ask user if they want to use default path or cancel
-                var message = $"출력 경로가 설정되지 않았습니다.\n\n기본 경로를 사용하시겠습니까?\n{outputPath}\n\n(아니오를 선택하면 이동 작업이 취소됩니다.)";
-                var dialogResult = System.Windows.MessageBox.Show(message, "출력 경로 미지정", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
-                
-                if (dialogResult == System.Windows.MessageBoxResult.No)
-                {
-                    var errorMessage = LocalizationManager.GetString("Log_Error_OutputPathNotSet");
-                    _logger.LogWarning("Move operation cancelled by user: OutputPath is empty");
-                    LogRequested?.Invoke(LogSeverity.Warning, "FileOperation", errorMessage);
-                    return;
-                }
-                
-                // Save the default path to configuration for future use
-                config.MatchingSettings.OutputPath = outputPath;
-                await _configManager.SaveConfigurationAsync(config);
-                _logger.LogInformation("Saved default OutputPath to configuration: {Path}", outputPath);
+                var errorMessage = LocalizationManager.GetString("Error_MoveDestinationPathNotConfigured");
+                _logger.LogWarning("Move operation blocked: OutputPath is empty");
+                LogRequested?.Invoke(LogSeverity.Error, "FileOperation", errorMessage);
+                System.Windows.MessageBox.Show(
+                    errorMessage,
+                    "이동 경로 미지정",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
+                return;
             }
 
             // Check if output directory exists, if not, try to create it

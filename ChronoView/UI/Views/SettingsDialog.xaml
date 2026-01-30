@@ -358,14 +358,46 @@
                             <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Command="{Binding BrowseExeCommand}" CommandParameter="nir1program"/>
                         </StackPanel>
                         
-                        <!-- NIR Program 2 -->
+                        <!-- NIR2 Chunk Storage Path -->
                         <TextBlock Text="{x:Static res:Strings.Section_NirProgram2}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <TextBlock Text="NIR2 청크 데이터 저장 경로입니다. 경로가 설정되지 않으면 NIR2 파싱이 작동하지 않습니다."
+                                   TextWrapping="Wrap" Margin="0,0,0,5" Foreground="Gray" FontSize="11"/>
                         <StackPanel Orientation="Horizontal" Margin="0,5">
-                            <Label Content="{x:Static res:Strings.Label_ProgramPath}" Style="{StaticResource LabelStyle}"/>
-                            <TextBox Text="{Binding Nir2ProgramPath}" Width="400" Margin="0,0,5,0"/>
-                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Command="{Binding BrowseExeCommand}" CommandParameter="nir2program"/>
+                            <Label Content="청크 저장 경로:" Style="{StaticResource LabelStyle}" Width="150"/>
+                            <TextBox Text="{Binding Nir2ChunkStoragePath}" Width="400" Margin="0,0,5,0"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Command="{Binding BrowsePathCommand}" CommandParameter="nir2chunk"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80"
+                                    Command="{Binding OpenFolderCommand}" CommandParameter="nir2chunk"
+                                    ToolTip="{x:Static res:Strings.Tooltip_OpenFolderInExplorer}"/>
                         </StackPanel>
-                        
+
+                        <!-- NIR2 CSV Directory -->
+                        <TextBlock Text="{x:Static res:Strings.Section_Nir2CsvDirectory}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="{x:Static res:Strings.Label_CsvDirectory}" Style="{StaticResource LabelStyle}"/>
+                            <TextBox Text="{Binding Nir2CsvDirectory}" Width="400" Margin="0,0,5,0"
+                                     ToolTip="{x:Static res:Strings.Tooltip_Nir2CsvDirectory}"/>
+                            <Button Content="{x:Static res:Strings.Button_Browse}" Width="80" Margin="0,0,5,0"
+                                    Command="{Binding BrowsePathCommand}" CommandParameter="nir2csv"/>
+                            <Button Content="{x:Static res:Strings.Button_Open}" Width="80"
+                                    Command="{Binding OpenFolderCommand}" CommandParameter="nir2csv"
+                                    ToolTip="{x:Static res:Strings.Tooltip_OpenFolderInExplorer}"/>
+                        </StackPanel>
+
+                        <!-- NIR2 Aggregation Strategy -->
+                        <TextBlock Text="NIR2 집계 전략" Style="{StaticResource SectionHeaderStyle}" Margin="0,20,0,5"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <Label Content="샘플 선택 방법:" Style="{StaticResource LabelStyle}" Width="150"/>
+                            <ComboBox Name="Nir2AggregationComboBox" Width="200" SelectedIndex="{Binding Nir2AggregationStrategy}">
+                                <ComboBoxItem Content="첫 번째"/>
+                                <ComboBoxItem Content="두 번째"/>
+                                <ComboBoxItem Content="중간값"/>
+                                <ComboBoxItem Content="마지막"/>
+                                <ComboBoxItem Content="평균"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <TextBlock Text="청크에 여러 샘플이 있을 때 하나를 선택하는 방법" Foreground="Gray" FontSize="11" Margin="150,0,0,10"/>
+
                         <!-- NIR2 Filtering Paths -->
                         <TextBlock Text="{x:Static res:Strings.Section_Nir2FilteringConfig}" Style="{StaticResource SectionHeaderStyle}"/>
                         <TextBlock Text="{x:Static res:Strings.Helper_Nir2FilteringDescription}" 

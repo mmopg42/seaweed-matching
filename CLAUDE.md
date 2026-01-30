@@ -105,6 +105,25 @@ File Created → FileWatcherService → EventProcessor → MonitoringOrchestrato
 
 - **File Line Limit:** Keep each file under 600 lines. If a file exceeds this limit, plan to split it into smaller, focused modules.
 
+## Code Quality Principles
+
+**Avoid Code Smells:**
+- **No Spaghetti Code:** Keep control flow simple and readable. Avoid deep nesting (>3 levels), excessive goto/early returns, and interwoven logic. Extract complex conditions into well-named methods.
+- **No Duplicate Code:** Before writing new code, search `docs/c_module/` and use `grep` to find existing implementations. Reuse or extend existing code rather than copying. If you find duplicate code during implementation, refactor to eliminate it.
+- **Single Source of Truth (SSOT):** Each concept/term/abstraction should have exactly one definition. Check `docs/architecture/glossary.md` before introducing new terminology. Never create the same concept with different names.
+
+**Refactoring Triggers:**
+- File exceeds 600 lines → Split into focused modules
+- Same logic appears in 3+ places → Extract to shared service/helper
+- Method exceeds 50 lines → Break down into smaller methods
+- Class has >10 dependencies → Consider splitting (Single Responsibility Principle)
+
+**Before Adding New Code:**
+1. Search `docs/c_module/` for similar functionality
+2. Grep for relevant class/method names
+3. Check if existing code can be extended instead
+4. Verify term exists in glossary.md or add it
+
 ## Important Implementation Notes
 
 - **General Camera Move/Delete:** General camera files are moved/deleted as folder units (not individual files)

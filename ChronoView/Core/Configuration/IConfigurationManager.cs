@@ -39,6 +39,11 @@ public interface IConfigurationManager
     string AppDataDirectory { get; }
 
     /// <summary>
+    /// Gets the display name for this application.
+    /// </summary>
+    string AppName { get; }
+
+    /// <summary>
     /// Gets the path to the configuration file.
     /// </summary>
     string ConfigurationFilePath { get; }

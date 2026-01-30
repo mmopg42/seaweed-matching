@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.IO;
 using ChronoView.Core.GroupIdGeneration;
+using ChronoView.Core.NIR.Interfaces;
 using ChronoView.Models;
 using ChronoView.UI.ViewModels;
 using Microsoft.Extensions.Logging;
@@ -20,13 +21,18 @@ namespace ChronoView.Core.FileMatching
         private int _groupCounter;
         private readonly ILogger<FileGroupMatcherService>? _logger;
         private readonly IGroupIdGenerator _idGenerator;
+        private readonly INirMatcher? _nirMatcher;
         private Action<LogSeverity, string, string>? _uiLog;
 
         public MatchingConfiguration Configuration { get; set; }
 
-        public FileGroupMatcherService(IGroupIdGenerator idGenerator, ILogger<FileGroupMatcherService>? logger = null)
+        public FileGroupMatcherService(
+            IGroupIdGenerator idGenerator,
+            INirMatcher? nirMatcher = null,
+            ILogger<FileGroupMatcherService>? logger = null)
         {
             _idGenerator = idGenerator ?? throw new ArgumentNullException(nameof(idGenerator));
+            _nirMatcher = nirMatcher;
             _consumedNirKeys = new HashSet<string>();
             _groupCounter = 0;
             Configuration = new MatchingConfiguration();
@@ -75,6 +81,7 @@ namespace ChronoView.Core.FileMatching
                     Configuration.DataSequenceSettings,
                     _consumedNirKeys,
                     _idGenerator,
+                    _nirMatcher,
                     _logger,
                     _uiLog);
 

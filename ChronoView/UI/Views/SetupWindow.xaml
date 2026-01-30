@@ -343,40 +343,6 @@
                                     </Button.Template>
                                 </Button>
 
-                                <!-- NIR Button 2 -->
-                                <Button Command="{Binding LaunchNir2CameraCommand}"
-                                        FontFamily="Segoe UI"
-                                        Margin="0,12,0,0"
-                                        Height="48"
-                                        Background="#E03030"
-                                        Foreground="White"
-                                        BorderThickness="0"
-                                        FontSize="15"
-                                        FontWeight="Medium"
-                                        Cursor="Hand"
-                                        AutomationProperties.AutomationId="SetupNir2CameraButton">
-                                    <Button.Template>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}"
-                                                    CornerRadius="6"
-                                                    Padding="20,0">
-                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                                    <TextBlock Text="▶" FontSize="13" VerticalAlignment="Center" Margin="0,0,7,0"/>
-                                                    <TextBlock Text="실행 2" VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#E83C44"/>
-                                                </Trigger>
-                                                <Trigger Property="IsPressed" Value="True">
-                                                    <Setter Property="Background" Value="#E83C44"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Button.Template>
-                                </Button>
-
                                 <!-- NIR Filtering Toggle Button -->
                                 <Button Command="{Binding ToggleNirFilteringCommand}"
                                         FontFamily="Segoe UI"

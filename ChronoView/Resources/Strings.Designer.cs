@@ -218,7 +218,13 @@ namespace ChronoView.Resources {
                 return ResourceManager.GetString("Section_Nir2FilteringConfig", resourceCulture);
             }
         }
-        
+
+        public static string Section_Nir2CsvDirectory {
+            get {
+                return ResourceManager.GetString("Section_Nir2CsvDirectory", resourceCulture);
+            }
+        }
+
         // Settings Dialog - Labels
         public static string Label_Nir1Path {
             get {
@@ -309,7 +315,13 @@ namespace ChronoView.Resources {
                 return ResourceManager.GetString("Label_DestinationPath", resourceCulture);
             }
         }
-        
+
+        public static string Label_CsvDirectory {
+            get {
+                return ResourceManager.GetString("Label_CsvDirectory", resourceCulture);
+            }
+        }
+
         public static string Label_ImageWidth {
             get {
                 return ResourceManager.GetString("Label_ImageWidth", resourceCulture);
@@ -487,7 +499,13 @@ namespace ChronoView.Resources {
                 return ResourceManager.GetString("Tooltip_DestinationPath", resourceCulture);
             }
         }
-        
+
+        public static string Tooltip_Nir2CsvDirectory {
+            get {
+                return ResourceManager.GetString("Tooltip_Nir2CsvDirectory", resourceCulture);
+            }
+        }
+
         // Settings Dialog - Data Sequence Help Text
         public static string Help_DragToReorder {
             get {
@@ -1147,7 +1165,13 @@ namespace ChronoView.Resources {
                 return ResourceManager.GetString("Status_NirFiltering", resourceCulture);
             }
         }
-        
+
+        public static string Status_Nir2Parsing {
+            get {
+                return ResourceManager.GetString("Status_Nir2Parsing", resourceCulture);
+            }
+        }
+
         public static string Sample_Name {
             get {
                 return ResourceManager.GetString("Sample_Name", resourceCulture);

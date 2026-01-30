@@ -7,6 +7,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using ChronoView.Core.Configuration;
 using ChronoView.UI.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using WpfUserControl = System.Windows.Controls.UserControl;
 using WpfMessageBox = System.Windows.MessageBox;
@@ -28,7 +29,10 @@ public partial class LogPanel : WpfUserControl
     private ICollectionView? _filteredView;
     private string _searchText = string.Empty;
     private string? _selectedLevel = null; // null = "All", otherwise LogSeverity enum string
-    private readonly IConfigurationManager _configurationManager;
+    private IConfigurationManager? _configurationManager;
+
+    private IConfigurationManager ConfigManager =>
+        _configurationManager ??= ((App)App.Current).Services.GetRequiredService<IConfigurationManager>();
 
     public LogPanel()
     {
@@ -229,7 +233,7 @@ public partial class LogPanel : WpfUserControl
         try
         {
             var filePath = Core.Configuration.PathHelper.GetSessionLogExportFilePath(
-                _configurationManager.AppName + "_UI_Export",
+                ConfigManager.AppName + "_UI_Export",
                 "txt");
             
             ExportToFile(filePath);
@@ -267,20 +271,11 @@ public partial class LogPanel : WpfUserControl
         catch (Exception ex)
         {
             WpfMessageBox.Show(
-                $"Log Export Complete: {_configurationManager.AppName}",
-                "완료",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            WpfMessageBox.Show(
-                $"저장 중 오류가 발생했습니다:\n{ex.Message}",
-                "저장 오류",
+                $"폴더 열기 중 오류가 발생했습니다:\n{ex.Message}",
+                "오류",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
-    }
     }
 
     private void ExportToFile(string filePath)
@@ -354,7 +349,7 @@ public partial class LogPanel : WpfUserControl
         {
             var logDir = Core.Configuration.PathHelper.LogsDirectory;
 
-            var logFile = Core.Configuration.PathHelper.GetSessionLogFilePath(_configurationManager.AppName);
+            var logFile = Core.Configuration.PathHelper.GetSessionLogFilePath(ConfigManager.AppName);
 
             var logEntry = $"[{message.Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{message.Severity}] [{message.Source}] {message.Message}";
 

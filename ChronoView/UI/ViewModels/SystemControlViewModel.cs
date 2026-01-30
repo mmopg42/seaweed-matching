@@ -3,6 +3,7 @@ using ChronoView.Core.Localization;
 using ChronoView.Core.FileWatching;
 using ChronoView.Core.Analytics;
 using ChronoView.Core.ProgramLaunching;
+using ChronoView.Core.NIR.Line2;
 using ChronoView.Models;
 using ChronoView.Helpers;
 using Microsoft.Extensions.Logging;
@@ -24,8 +25,9 @@ public class SystemControlViewModel : ViewModelBase, ISystemControlViewModel
     private readonly IConfigurationManager _configManager;
     private readonly GeneralCameraLauncher _generalCameraLauncher;
     private readonly NirCameraLauncher _nirCameraLauncher;
-    private readonly Nir2CameraLauncher _nir2CameraLauncher;
     private readonly NirFilteringService _nirFilteringService;
+    private readonly Nir2DataCollector _nir2DataCollector;
+    private readonly ApiBasedNirProvider _nir2DataProvider;
     private readonly ILogger<SystemControlViewModel> _logger;
 
     public event Action<LogSeverity, string, string>? LogRequested;
@@ -37,32 +39,32 @@ public class SystemControlViewModel : ViewModelBase, ISystemControlViewModel
     
     private CameraState _nirCamState = CameraState.Stopped; public CameraState NirCameraState { get => _nirCamState; private set => SetProperty(ref _nirCamState, value); }
     
-    private CameraState _nir2CamState = CameraState.Stopped; public CameraState Nir2CameraState { get => _nir2CamState; private set => SetProperty(ref _nir2CamState, value); }
 
     private CameraState _nir2FiltState = CameraState.Stopped; public CameraState Nir2FilteringState { get => _nir2FiltState; private set => SetProperty(ref _nir2FiltState, value); }
+
+    private CameraState _nir2ParsingState = CameraState.Stopped; public CameraState Nir2ParsingState { get => _nir2ParsingState; private set => SetProperty(ref _nir2ParsingState, value); }
 
     public ICommand StartCommand { get; }
     public ICommand StopCommand { get; }
     public ICommand ToggleNir2FilteringCommand { get; }
+    public ICommand ToggleNir2ParsingCommand { get; }
     public ICommand LaunchGeneralCameraCommand { get; }
     public ICommand LaunchNir1CameraCommand { get; }
-    public ICommand LaunchNir2CameraCommand { get; }
 
-    public SystemControlViewModel(IMonitoringOrchestrator orchestrator, IStatisticsService statsService, IConfigurationManager configManager, GeneralCameraLauncher genCam, NirCameraLauncher nirCam, Nir2CameraLauncher nir2Cam, NirFilteringService nirFilter, ILogger<SystemControlViewModel> logger)
+    public SystemControlViewModel(IMonitoringOrchestrator orchestrator, IStatisticsService statsService, IConfigurationManager configManager, GeneralCameraLauncher genCam, NirCameraLauncher nirCam, NirFilteringService nirFilter, Nir2DataCollector nir2Collector, ApiBasedNirProvider nir2Provider, ILogger<SystemControlViewModel> logger)
     {
-        _orchestrator = orchestrator; _statsService = statsService; _configManager = configManager; _generalCameraLauncher = genCam; _nirCameraLauncher = nirCam; _nir2CameraLauncher = nir2Cam; _nirFilteringService = nirFilter; _logger = logger;
+        _orchestrator = orchestrator; _statsService = statsService; _configManager = configManager; _generalCameraLauncher = genCam; _nirCameraLauncher = nirCam; _nirFilteringService = nirFilter; _nir2DataCollector = nir2Collector; _nir2DataProvider = nir2Provider; _logger = logger;
 
         StartCommand = new RelayCommand(() => _ = StartMonitoringAsync(), () => !IsMonitoring);
         StopCommand = new RelayCommand(() => _ = StopMonitoringAsync(), () => IsMonitoring);
         ToggleNir2FilteringCommand = new RelayCommand(() => ExecuteToggleNir2Filtering());
+        ToggleNir2ParsingCommand = new RelayCommand(() => ExecuteToggleNir2Parsing());
         LaunchGeneralCameraCommand = new RelayCommand(async () => await ExecuteLaunchAsync(_generalCameraLauncher, "General Camera", s => GeneralCameraState = s, () => GeneralCameraState));
         LaunchNir1CameraCommand = new RelayCommand(async () => await ExecuteLaunchAsync(_nirCameraLauncher, "NIR Camera 1", s => NirCameraState = s, () => NirCameraState));
-        LaunchNir2CameraCommand = new RelayCommand(async () => await ExecuteLaunchAsync(_nir2CameraLauncher, "NIR Camera 2", s => Nir2CameraState = s, () => Nir2CameraState));
 
         _generalCameraLauncher.StatusChanged += (s, active) => UpdateCameraStatus(active, () => GeneralCameraState, s => GeneralCameraState = s);
         _nirCameraLauncher.StatusChanged += (s, active) => UpdateCameraStatus(active, () => NirCameraState, s => NirCameraState = s);
-        _nir2CameraLauncher.StatusChanged += (s, active) => UpdateCameraStatus(active, () => Nir2CameraState, s => Nir2CameraState = s);
-        
+
         Nir2FilteringState = _nirFilteringService.IsFilteringActive ? CameraState.Running : CameraState.Stopped;
         _nirFilteringService.StatusChanged += (s, active) =>
         {
@@ -71,6 +73,13 @@ public class SystemControlViewModel : ViewModelBase, ISystemControlViewModel
             var message = LocalizationManager.GetString("Log_Info_NirFiltering_Toggled", stateText);
             LogRequested?.Invoke(LogSeverity.Info, "System", message);
         };
+
+        // Wire up NIR2 data collector events
+        _nir2DataCollector.StateChanged += OnNir2CollectorStateChanged;
+        _nir2DataCollector.ChunkDetected += OnNir2ChunkDetected;
+
+        // Initialize NIR2 parsing state from collector
+        UpdateNir2ParsingState(_nir2DataCollector.State);
 
         // Initialize launcher status
         _ = InitializeLaunchersAsync();
@@ -127,14 +136,14 @@ public class SystemControlViewModel : ViewModelBase, ISystemControlViewModel
 
     private async void ExecuteToggleNir2Filtering()
     {
-        if (_nirFilteringService.IsFilteringActive) 
+        if (_nirFilteringService.IsFilteringActive)
         {
             Nir2FilteringState = CameraState.Stopping;
             _nirFilteringService.StopFiltering();
             if (Nir2FilteringState == CameraState.Stopping)
                 Nir2FilteringState = CameraState.Stopped;
         }
-        else 
+        else
         {
             Nir2FilteringState = CameraState.Starting;
             (bool success, string message) = await _nirFilteringService.StartFilteringAsync();
@@ -148,6 +157,88 @@ public class SystemControlViewModel : ViewModelBase, ISystemControlViewModel
                 LogRequested?.Invoke(LogSeverity.Error, "System", failMessage);
                 Nir2FilteringState = CameraState.Stopped;
             }
+        }
+    }
+
+    /// <summary>
+    /// Toggles NIR2 data parsing (collection from API).
+    /// </summary>
+    private async void ExecuteToggleNir2Parsing()
+    {
+        if (Nir2ParsingState == CameraState.Running || Nir2ParsingState == CameraState.Starting)
+        {
+            // Stop parsing
+            Nir2ParsingState = CameraState.Stopping;
+            await _nir2DataCollector.StopAsync();
+            _logger.LogInformation("NIR2 parsing stopped by user");
+        }
+        else
+        {
+            // Start parsing - validate settings first
+            var config = await _configManager.LoadConfigurationAsync<ApplicationConfiguration>();
+            if (string.IsNullOrWhiteSpace(config.Nir2Settings?.CsvDirectory))
+            {
+                Nir2ParsingState = CameraState.Stopped;
+                var errorMsg = LocalizationManager.GetString("Error_Nir2CsvPathNotSet") ?? "CSV 저장 경로가 설정되지 않았습니다.";
+
+                // Show MessageBox for user visibility
+                System.Windows.MessageBox.Show(
+                    errorMsg + "\n\n설정에서 NIR2 CSV 저장 경로를 먼저 설정하세요.",
+                    "NIR2 CSV 경로 설정 필요",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+
+                LogRequested?.Invoke(LogSeverity.Error, "NIR2", errorMsg);
+                _logger.LogWarning("NIR2 parsing start failed: CSV directory not set");
+                return;
+            }
+
+            Nir2ParsingState = CameraState.Starting;
+            await _nir2DataCollector.StartAsync();
+            _logger.LogInformation("NIR2 parsing started by user");
+        }
+    }
+
+    /// <summary>
+    /// Handles NIR2 data collector state changes.
+    /// </summary>
+    private void OnNir2CollectorStateChanged(Nir2CollectorState collectorState)
+    {
+        UpdateNir2ParsingState(collectorState);
+    }
+
+    /// <summary>
+    /// Updates the Nir2ParsingState based on the collector state.
+    /// </summary>
+    private void UpdateNir2ParsingState(Nir2CollectorState collectorState)
+    {
+        CameraState uiState = collectorState switch
+        {
+            Nir2CollectorState.Stopped => CameraState.Stopped,
+            Nir2CollectorState.Starting => CameraState.Starting,
+            Nir2CollectorState.Running => CameraState.Running,
+            Nir2CollectorState.Stopping => CameraState.Stopping,
+            _ => CameraState.Stopped
+        };
+        Nir2ParsingState = uiState;
+    }
+
+    /// <summary>
+    /// Handles NIR2 chunk detection events.
+    /// Registers the chunk with the provider for later matching.
+    /// </summary>
+    private void OnNir2ChunkDetected(Nir2Chunk chunk)
+    {
+        _nir2DataProvider.RegisterChunk(chunk.ChunkId, chunk);
+        _logger.LogInformation("[NIR2-UI] Chunk detected and registered: {ChunkId}, Samples={SampleCount}, P={Protein:F2}%, M={Moisture:F2}%",
+            chunk.ChunkId, chunk.SampleCount, chunk.AggregatedProtein, chunk.AggregatedMoisture);
+
+        var message = LocalizationManager.GetString("Log_Info_Nir2_ChunkDetected",
+            chunk.ChunkId, chunk.SampleCount, chunk.AggregatedProtein?.ToString("F2") ?? "N/A",
+            chunk.AggregatedMoisture?.ToString("F2") ?? "N/A");
+        if (message != null)
+        {
+            LogRequested?.Invoke(LogSeverity.Info, "NIR2", message);
         }
     }
 
@@ -220,8 +311,7 @@ public class SystemControlViewModel : ViewModelBase, ISystemControlViewModel
     {
         await Task.WhenAll(
             _generalCameraLauncher.CheckStatusAsync(),
-            _nirCameraLauncher.CheckStatusAsync(),
-            _nir2CameraLauncher.CheckStatusAsync()
+            _nirCameraLauncher.CheckStatusAsync()
         );
     }
 

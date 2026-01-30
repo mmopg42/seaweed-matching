@@ -388,7 +388,10 @@
   <data name="Status_NirFiltering" xml:space="preserve">
     <value>NIR 필터링:</value>
   </data>
-  
+  <data name="Status_Nir2Parsing" xml:space="preserve">
+    <value>NIR2 파싱:</value>
+  </data>
+
   <!-- Sample Information -->
   <data name="Sample_Name" xml:space="preserve">
     <value>시료명:</value>
@@ -545,7 +548,10 @@
   <data name="Section_Nir2FilteringConfig" xml:space="preserve">
     <value>NIR2 필터링 구성</value>
   </data>
-  
+  <data name="Section_Nir2CsvDirectory" xml:space="preserve">
+    <value>NIR2 CSV 저장 경로</value>
+  </data>
+
   <!-- Settings Dialog - Labels -->
   <data name="Label_Nir1Path" xml:space="preserve">
     <value>NIR 1 경로:</value>
@@ -591,6 +597,9 @@
   </data>
   <data name="Label_DestinationPath" xml:space="preserve">
     <value>대상 경로:</value>
+  </data>
+  <data name="Label_CsvDirectory" xml:space="preserve">
+    <value>CSV 저장 경로:</value>
   </data>
   <data name="Label_ImageWidth" xml:space="preserve">
     <value>이미지 너비 (px):</value>
@@ -678,7 +687,10 @@
   <data name="Tooltip_DestinationPath" xml:space="preserve">
     <value>필터링된 NIR 파일을 이동할 폴더 경로</value>
   </data>
-  
+  <data name="Tooltip_Nir2CsvDirectory" xml:space="preserve">
+    <value>NIR2 데이터 수집 CSV 파일 저장 경로입니다.</value>
+  </data>
+
   <!-- Settings Dialog - Data Sequence Help Text -->
   <data name="Help_DragToReorder" xml:space="preserve">
     <value>• ≡를 드래그하여 항목 순서 변경</value>
@@ -745,6 +757,12 @@
   <!-- Info Level -->
   <data name="Log_Info_Eviction" xml:space="preserve">
     <value>[Eviction] {0}: {1} -> {2} occupied, existing data -> {3} moved</value>
+  </data>
+  <data name="Log_Info_EvictionClone" xml:space="preserve">
+    <value>[Eviction Move] {0}: {1} -> {2} (reason: cascading eviction)</value>
+  </data>
+  <data name="Log_Info_CascadingEviction" xml:space="preserve">
+    <value>[CASCADING EVICTION] {0}: {1} taking over {2}, {3} groups shifted</value>
   </data>
   <data name="Log_Info_NewGroup" xml:space="preserve">
     <value>[NewGroup] {0}: {1} -> {2}</value>
@@ -860,6 +878,15 @@ Error: {1}</value>
   </data>
   <data name="Log_Error_Delete_Error" xml:space="preserve">
     <value>Error: {0}</value>
+  </data>
+  <data name="Error_Nir2CsvPathNotSet" xml:space="preserve">
+    <value>NIR2 CSV save path is not configured. Please set the NIR2 CSV path in Settings first.</value>
+  </data>
+  <data name="Error_DeleteQuarantinePathNotConfigured" xml:space="preserve">
+    <value>The delete quarantine path is not configured. Please set the quarantine path in Settings before performing delete operations.</value>
+  </data>
+  <data name="Error_MoveDestinationPathNotConfigured" xml:space="preserve">
+    <value>이동 경로가 설정되지 않았습니다. 설정에서 출력 경로를 먼저 설정하세요.</value>
   </data>
 </root>
 

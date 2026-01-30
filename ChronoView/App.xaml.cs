@@ -9,9 +9,14 @@ using ChronoView.Core.GroupIdGeneration;
 using ChronoView.Core.ImageProcessing;
 using ChronoView.Core.Analytics;
 using ChronoView.Core.NIR.Shared;
+using ChronoView.Core.NIR.Line1;
+using ChronoView.Core.NIR.Line2;
+using ChronoView.Core.NIR.Interfaces;
 using Application = System.Windows.Application;
 using WpfMessageBox = System.Windows.MessageBox;
 using ChronoView.Core.FileOperations;
+using ChronoView.Core.FileOperations.Line1;
+using ChronoView.Core.FileOperations.Line2;
 using ChronoView.Core.ProgramLaunching;
 using ChronoView.UI.ViewModels;
 using ChronoView.UI.Views;
@@ -238,7 +243,9 @@ public partial class App : Application
         services.AddSingleton<IFileGroupMatcher>(sp =>
             new FileGroupMatcherService(
                 sp.GetRequiredService<IGroupIdGenerator>(),
+                sp.GetRequiredService<INirMatcher>(),
                 sp.GetService<ILogger<FileGroupMatcherService>>()));
+        services.AddSingleton<INirMatcher, FileBasedNirMatcher>();
         services.AddSingleton<INirFileResolver, SpcTxtNirFileResolver>();
         services.AddSingleton<IInitialScanner, InitialScanner>();
         services.AddSingleton<IImageProcessor, ImageProcessingService>();
@@ -267,14 +274,26 @@ public partial class App : Application
         
         // Abnormal Detection Services
         services.AddSingleton<AbnormalHistoryManager>();
-        services.AddSingleton<IAbnormalDetector, AbnormalDetectorService>(sp => 
+        services.AddSingleton<IAbnormalDetector, AbnormalDetectorService>(sp =>
             new AbnormalDetectorService(
                 sp.GetRequiredService<IConfigurationManager>(),
                 sp.GetRequiredService<AbnormalHistoryManager>(),
                 sp.GetService<ILogger<AbnormalDetectorService>>()));
 
+        // Path Builders (Singleton - shared for all operations)
+        services.AddSingleton<IPathBuilder, Line2PathBuilder>();  // Register as interface for Line2CsvMoveManager
+        services.AddSingleton<Line1PathBuilder>();
+        services.AddSingleton<Line2PathBuilder>();
+
+        // CSV Move Manager (Line2 only)
+        services.AddSingleton<ICsvMoveManager, Line2CsvMoveManager>();
+
         // File Operation Services (Transient - new instance per operation)
-        services.AddSingleton<IFileGroupOperator, FileGroupOperator>();
+        services.AddSingleton<IFileGroupOperator, FileGroupOperator>(sp =>
+            new FileGroupOperator(
+                sp.GetRequiredService<ILogger<FileGroupOperator>>(),
+                sp.GetRequiredService<Line1PathBuilder>(),
+                sp.GetRequiredService<Line2PathBuilder>()));
         services.AddTransient<IMoveService, MoveService>();
         services.AddTransient<IDeleteService, DeleteService>();
         services.AddTransient<IFileOperationService, FileOperationService>();
@@ -283,8 +302,27 @@ public partial class App : Application
         // Program Launchers (Singleton - shared state for program status tracking)
         services.AddSingleton<GeneralCameraLauncher>();
         services.AddSingleton<NirCameraLauncher>();
-        services.AddSingleton<Nir2CameraLauncher>();
         services.AddSingleton<NirFilteringService>();
+
+        // NIR2 Services (Singleton - shared state for data collection)
+        services.AddSingleton<INir2ChunkFileStorage, Nir2ChunkFileStorage>();
+        services.AddSingleton<ApiBasedNirProvider>(sp =>
+        {
+            var logger = sp.GetRequiredService<ILogger<ApiBasedNirProvider>>();
+            var chunkStorage = sp.GetRequiredService<INir2ChunkFileStorage>();
+            return new ApiBasedNirProvider(logger, chunkStorage);
+        });
+        services.AddSingleton<INirDataProvider>(sp => sp.GetRequiredService<ApiBasedNirProvider>());
+        services.AddSingleton<ChunkBasedNirMatcher>();
+        services.AddSingleton<Nir2DataCollector>(sp =>
+        {
+            var config = sp.GetRequiredService<ApplicationConfiguration>();
+            var logger = sp.GetRequiredService<ILogger<Nir2DataCollector>>();
+            var chunkStorage = sp.GetRequiredService<INir2ChunkFileStorage>();
+            var settings = config.Nir2Settings ?? new Core.Configuration.Nir2Settings();
+            var chunkStoragePath = config.ExternalProgramSettings.Nir2ChunkStoragePath ?? "";
+            return new Nir2DataCollector(settings, chunkStoragePath, logger, chunkStorage);
+        });
 
         // ViewModels (Transient - new instance per view)
         services.AddTransient<MainWindowViewModel>();

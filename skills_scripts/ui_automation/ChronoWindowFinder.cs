@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using FlaUI.Core;
 using FlaUI.Core.AutomationElements;
@@ -48,11 +49,144 @@ namespace SkillsScripts.UiAutomation
         /// The SetupWindow has Title="Setup - ChronoView Pro" (SetupWindow.xaml line 4).
         /// It uses WindowStyle="None" and AllowsTransparency="True" which may affect detection.
         /// Uses substring search for "Setup" to ensure reliability.
+        /// Excludes VS Code windows (containing "Visual Studio Code", "Code -").
+        /// Validates the window is from ChronoView process and has AutomationId "SetupWindow".
         /// </remarks>
         /// <returns>The SetupWindow if found, null otherwise</returns>
         public Window? FindSetupWindow()
         {
-            return FindWindowByTitle("Setup", substring: true);
+            return FindSetupWindowImpl();
+        }
+
+        /// <summary>
+        /// Implementation of SetupWindow finding with enhanced filtering.
+        /// </summary>
+        private Window? FindSetupWindowImpl()
+        {
+            try
+            {
+                var cf = _automation.ConditionFactory;
+                var desktop = _automation.GetDesktop();
+
+                // Find all windows and filter
+                var windowCondition = cf.ByControlType(ControlType.Window);
+                var windows = desktop.FindAllChildren(windowCondition);
+
+                Window? bestMatch = null;
+                int bestMatchScore = 0;
+
+                foreach (var window in windows)
+                {
+                    string windowName = window.Name ?? string.Empty;
+
+                    // Skip if no name
+                    if (string.IsNullOrEmpty(windowName))
+                    {
+                        continue;
+                    }
+
+                    // Check if title contains "Setup"
+                    bool hasSetupTitle = windowName.IndexOf("Setup", StringComparison.OrdinalIgnoreCase) >= 0;
+                    if (!hasSetupTitle)
+                    {
+                        continue;
+                    }
+
+                    // Calculate match score based on positive and negative indicators
+                    int score = 0;
+
+                    // Positive indicators
+                    if (windowName.IndexOf("ChronoView", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        score += 10; // Strong positive: contains "ChronoView"
+                    }
+                    if (windowName.IndexOf("Pro", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        score += 5; // Positive: contains "Pro"
+                    }
+
+                    // Negative indicators (exclude these windows)
+                    if (windowName.IndexOf("Visual Studio Code", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        windowName.IndexOf("Code -", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        windowName.StartsWith("Code ", StringComparison.OrdinalIgnoreCase) ||
+                        windowName.IndexOf(".xaml", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        windowName.IndexOf(".cs", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        Console.WriteLine($"[ChronoWindowFinder] Skipping non-ChronoView window: '{windowName}'");
+                        continue;
+                    }
+
+                    // Check process name (strongest validation)
+                    string? processName = GetProcessName(window);
+                    if (processName != null)
+                    {
+                        if (processName.Equals("ChronoView", StringComparison.OrdinalIgnoreCase))
+                        {
+                            score += 20; // Strongest positive: from ChronoView process
+                            Console.WriteLine($"[ChronoWindowFinder] Found ChronoView process window: '{windowName}'");
+                        }
+                        else if (processName.IndexOf("Code", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                 processName.IndexOf("chrome", StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            Console.WriteLine($"[ChronoWindowFinder] Skipping window from process '{processName}': '{windowName}'");
+                            continue;
+                        }
+                    }
+
+                    // Check AutomationId (final validation)
+                    string? automationId = window.AutomationId;
+                    if (automationId == "SetupWindow")
+                    {
+                        score += 30; // Absolute match: correct AutomationId
+                        Console.WriteLine($"[ChronoWindowFinder] Found window with AutomationId 'SetupWindow': '{windowName}'");
+                    }
+
+                    // Update best match
+                    if (score > bestMatchScore)
+                    {
+                        bestMatch = window.AsWindow();
+                        bestMatchScore = score;
+                    }
+                }
+
+                if (bestMatch != null)
+                {
+                    Console.WriteLine($"[ChronoWindowFinder] Found SetupWindow (score: {bestMatchScore}): '{bestMatch.Name}'");
+                    return bestMatch;
+                }
+
+                Console.WriteLine($"[ChronoWindowFinder] No valid SetupWindow found");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoWindowFinder] Error finding SetupWindow: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Gets the process name for a window element.
+        /// </summary>
+        private string? GetProcessName(AutomationElement element)
+        {
+            try
+            {
+                if (element.Properties.ProcessId.IsSupported)
+                {
+                    int processId = element.Properties.ProcessId.ValueOrDefault;
+                    if (processId > 0)
+                    {
+                        var process = Process.GetProcessById(processId);
+                        return process.ProcessName;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChronoWindowFinder] Error getting process name: {ex.Message}");
+            }
+            return null;
         }
 
         /// <summary>

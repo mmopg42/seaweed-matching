@@ -19,7 +19,11 @@
       "Bash(cmd:*)",
       "Skill(gsd:execute-phase)",
       "Skill(test:action)",
-      "mcp__plugin_context7_context7__query-docs"
+      "mcp__plugin_context7_context7__query-docs",
+      "Skill(glm-plan-usage:usage-query-skill)",
+      "Bash(./skills_scripts/ui_automation/bin/Debug/net10.0-windows/ui_automation.exe:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)"
     ]
   },
   "disableAllHooks": false,

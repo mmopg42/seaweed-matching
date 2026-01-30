@@ -50,6 +50,10 @@ grep -rn "term_name" docs/architecture/
 | `MoveService` | Service for moving files with conflict resolution | `Core/FileOperations/MoveService.cs` |
 | `PathManagementService` | Service for managing file paths and directory structures | `Core/FileOperations/PathManagementService.cs` |
 | `FileGroupOperator` | Service for performing operations on entire file groups | `Core/FileOperations/FileGroupOperator.cs` |
+| `PathSegmentHelper` | Shared utility for path segment validation and date processing (EnsureDateRoot, HasValidDateSegment). Distinct from PathHelper in Core/Configuration. | `Core/FileOperations/PathSegmentHelper.cs` |
+| `Line1PathBuilder` | Line1 path builder maintaining existing "with NIR/without NIR" folder structure | `Core/FileOperations/Line1/Line1PathBuilder.cs` |
+| `Line2PathBuilder` | Line2 path builder for new folder structure (일반카메라, 뷰키nir csv파일, 복합 카메라) | `Core/FileOperations/Line2/Line2PathBuilder.cs` |
+| `Line2CsvMoveManager` | Line2 CSV file movement manager. Distinct from Nir2CsvManager (CSV writing). Moves CSV files to "뷰키nir csv파일" folder. | `Core/FileOperations/Line2/Line2CsvMoveManager.cs` |
 | `EventProcessor` | Service for processing file system events with priority queuing | `Core/FileWatching/EventProcessor.cs` |
 | `GroupManager` | Service for creating and managing file groups based on matching criteria | `Core/FileWatching/GroupManager.cs` |
 | `ImageCaptureService` | Service for capturing images from file system events | `Core/FileWatching/ImageCaptureService.cs` |
@@ -59,14 +63,26 @@ grep -rn "term_name" docs/architecture/
 | `EventPriority` | Enum defining priority levels for file system events | `Core/FileWatching/EventPriority.cs` |
 | `FileWatcherOptions` | Configuration options for FileWatcherService | `Core/FileWatching/FileWatcherOptions.cs` |
 | `LruCache` | Least Recently Used cache implementation for image caching | `Core/ImageProcessing/LruCache.cs` |
-| `NirSpectrumParser` | Parser for NIR spectroscopy data files | `Core/NIR/NirSpectrumParser.cs` |
-| `NirGraphGenerator` | Generator for creating NIR spectrum graphs | `Core/NIR/NirGraphGenerator.cs` |
-| `NirSpectrumFilter` | Filter for processing and cleaning NIR spectrum data | `Core/NIR/NirSpectrumFilter.cs` |
-| `SpcTxtNirFileResolver` | Resolver for SPC and TXT format NIR files | `Core/NIR/SpcTxtNirFileResolver.cs` |
+| `NirSpectrumParser` | Parser for NIR spectroscopy data files | `Core/NIR/Shared/NirSpectrumParser.cs` |
+| `NirGraphGenerator` | Generator for creating NIR spectrum graphs | `Core/NIR/Shared/NirGraphGenerator.cs` |
+| `NirSpectrumFilter` | Filter for processing and cleaning NIR spectrum data | `Core/NIR/Shared/NirSpectrumFilter.cs` |
+| `SpcTxtNirFileResolver` | Resolver for SPC and TXT format NIR files | `Core/NIR/Shared/SpcTxtNirFileResolver.cs` |
+| `FileBasedNirProvider` | Line 1 NIR data provider (file-based) | `Core/NIR/Line1/FileBasedNirProvider.cs` |
+| `FileBasedNirMatcher` | Line 1 NIR matcher (file-based) | `Core/NIR/Line1/FileBasedNirMatcher.cs` |
+| `NirDisplayHandler` | Line 1 NIR display handler (graph) | `Core/NIR/Line1/NirDisplayHandler.cs` |
+| `Nir2Sample` | 뷰키 NIR sample data model (API response) | `Core/NIR/Line2/Nir2Sample.cs` |
+| `Nir2Chunk` | 뷰키 NIR chunk model (aggregated samples) | `Core/NIR/Line2/Nir2Chunk.cs` |
+| `Nir2CsvManager` | 뷰키 NIR CSV file manager | `Core/NIR/Line2/Nir2CsvManager.cs` |
+| `Nir2ChunkDetector` | 뷰키 NIR chunk detector (state machine) | `Core/NIR/Line2/Nir2ChunkDetector.cs` |
+| `Nir2DataCollector` | 뷰키 NIR data collector (API polling) | `Core/NIR/Line2/Nir2DataCollector.cs` |
+| `ApiBasedNirProvider` | 뷰키 NIR data provider (API-based) | `Core/NIR/Line2/ApiBasedNirProvider.cs` |
+| `ChunkBasedNirMatcher` | 뷰키 NIR matcher (chunk-based) | `Core/NIR/Line2/ChunkBasedNirMatcher.cs` |
+| `EvictionService` | Service for evicting stale file groups from the tracking system | `Core/FileWatching/EvictionService.cs` |
+| `IEvictionService` | Interface for eviction services | `Core/FileWatching/IEvictionService.cs` |
 | `LocalizationManager` | Manager for multi-language support and resource strings | `Core/Localization/LocalizationManager.cs` |
 | `GeneralCameraLauncher` | Launcher for general camera capture programs | `Core/ProgramLaunching/GeneralCameraLauncher.cs` |
 | `NirCameraLauncher` | Launcher for NIR camera capture programs | `Core/ProgramLaunching/NirCameraLauncher.cs` |
-| `Nir2CameraLauncher` | Launcher for secondary NIR camera capture programs | `Core/ProgramLaunching/Nir2CameraLauncher.cs` |
+| `Nir2CameraLauncher` | Launcher for 뷰키 NIR camera capture programs | `Core/ProgramLaunching/Nir2CameraLauncher.cs` |
 | `FileCountStatistics` | Statistics model for file counts by type | `Core/Analytics/FileCountStatistics.cs` |
 | `MatchingStatistics` | Statistics model for file matching metrics | `Core/Analytics/MatchingStatistics.cs` |
 | `DashboardViewModel` | ViewModel for the main dashboard view displaying file groups | `UI/ViewModels/DashboardViewModel.cs` |
@@ -116,10 +132,15 @@ grep -rn "term_name" docs/architecture/
 | `IMoveService` | Interface for file moving services | `Core/FileOperations/IMoveService.cs` |
 | `IPathManagementService` | Interface for path management services | `Core/FileOperations/IPathManagementService.cs` |
 | `IFileGroupOperator` | Interface for file group operations | `Core/FileOperations/IFileGroupOperator.cs` |
+| `IPathBuilder` | Interface for line-specific path building (Line1/Line2 folder structures) | `Core/FileOperations/IPathBuilder.cs` |
+| `ICsvMoveManager` | Interface for CSV file movement operations (primarily Line2 BukiKye NIR) | `Core/FileOperations/ICsvMoveManager.cs` |
 | `IImageProcessor` | Interface for image processing services | `Core/ImageProcessing/IImageProcessor.cs` |
 | `IAbnormalDetector` | Interface for anomaly detection services | `Core/Analytics/IAbnormalDetector.cs` |
 | `IStatisticsService` | Interface for statistics collection services | `Core/Analytics/IStatisticsService.cs` |
-| `INirFileResolver` | Interface for NIR file resolution services | `Core/NIR/INirFileResolver.cs` |
+| `INirFileResolver` | Interface for NIR file resolution services | `Core/NIR/Shared/INirFileResolver.cs` |
+| `INirDataProvider` | Interface for NIR data loading and processing | `Core/NIR/Interfaces/INirDataProvider.cs` |
+| `INirMatcher` | Interface for NIR matching operations | `Core/NIR/Interfaces/INirMatcher.cs` |
+| `INirDisplayHandler` | Interface for NIR UI display handling | `Core/NIR/Interfaces/INirDisplayHandler.cs` |
 | `IDashboardViewModel` | Interface for dashboard ViewModel | `UI/ViewModels/IDashboardViewModel.cs` |
 | `IFileOperationViewModel` | Interface for file operation ViewModel | `UI/ViewModels/IFileOperationViewModel.cs` |
 | `ISystemControlViewModel` | Interface for system control ViewModel | `UI/ViewModels/ISystemControlViewModel.cs` |
@@ -180,7 +201,7 @@ grep -rn "term_name" docs/architecture/
 | `matching.require_all_cameras` | `bool` | `false` | Require files from all cameras for a match | `FileMatchingEngine` |
 | `paths.general_camera` | `string` | `""` | Path to general camera folder | `ConfigurationManager` |
 | `paths.nir_camera` | `string` | `""` | Path to NIR camera folder | `ConfigurationManager` |
-| `paths.nir2_camera` | `string` | `""` | Path to secondary NIR camera folder | `ConfigurationManager` |
+| `paths.nir2_camera` | `string` | `""` | Path to 뷰키 NIR camera folder | `ConfigurationManager` |
 | `paths.output` | `string` | `""` | Path to output folder | `FileOperationService` |
 | `paths.delete_bucket` | `string` | `""` | Path to delete bucket folder | `DeleteService` |
 | `image.cache_size_mb` | `int` | `100` | Image cache size in megabytes | `ImageProcessingService` |
@@ -214,6 +235,10 @@ grep -rn "term_name" docs/architecture/
 |------|------------|--------------|
 | File Group | A matched set of files from different cameras (general, NIR, NIR2) that belong to the same capture event, identified by timestamp | `Models/FileGroup.md` |
 | Unmatched Files | Files that have been detected but not yet matched into a group, organized by folder type (general, NIR, NIR2) | `Models/UnmatchedFiles.md` |
+| NIR1 (Line 1 NIR) | File-based Near-Infrared spectroscopy data from Line 1, stored as .spc/.txt file pairs | `Core/NIR/Line1/` |
+| 뷰키 NIR (Line 2 NIR) | API-based Near-Infrared spectroscopy data from Line 2, collected in real-time with chunk aggregation | `Core/NIR/Line2/` |
+| 뷰키 NIR Chunk | A collection of 뷰키 NIR samples aggregated over time, representing a single measurement event | `Core/NIR/Line2/Nir2Chunk.cs` |
+| 뷰키 NIR Sample | A single 뷰키 NIR data point containing timestamp, protein, moisture, and presence values | `Core/NIR/Line2/Nir2Sample.cs` |
 | Monitoring Orchestration | The coordination of file watching, matching, and group management workflows | `Core/FileWatching/MonitoringOrchestrator.md` |
 | File Matching | The process of grouping files from different cameras based on timestamps and naming patterns | `Core/FileMatching/` |
 | Bucket Organization | A file organization strategy where files are grouped into "buckets" (folders) based on criteria like date or subject | `Core/FileOperations/` |
@@ -222,6 +247,8 @@ grep -rn "term_name" docs/architecture/
 | Anomaly Detection | Detect abnormal file groups by **aspect ratio deviation** (current \(W/H\) vs median baseline per context). Used for UI warning/triage (not file matching). | `Core/Analytics/AbnormalDetectorService.md` |
 | Event Priority | A system for prioritizing file system events (High, Normal, Low) to ensure critical events are processed first | `Core/FileWatching/EventPriority.md` |
 | Timestamp Cache | A cache storing folder modification timestamps to optimize file system scanning by avoiding redundant scans | `Core/FileWatching/FolderTimestampCache.md` |
+| Path Builder | Line-specific strategy for building destination folder paths during file operations. Enables modularization of Line1/Line2 move logic. | `Core/FileOperations/IPathBuilder.cs` |
+| Path Schema | Enum defining path structures (MoveSchema vs QuarantineSchema) for different file operation contexts | `Core/FileOperations/PathSchema.cs` |
 
 ---
 
@@ -242,3 +269,6 @@ grep -rn "term_name" docs/architecture/
 - 2025-01-05: Added configuration keys and environment variables
 - 2025-01-05: Added method and property naming patterns
 - 2026-01-14: Updated abnormal detection terminology/config keys to match current ratio-based implementation (removed Z-score references)
+- 2026-01-29: Added NIR2 modularization terms (Nir2Sample, Nir2Chunk, ApiBasedNirProvider, ChunkBasedNirMatcher, etc.)
+- 2026-01-29: Renamed "Line 2 NIR" → "뷰키 NIR" for consistency with project terminology
+- 2026-01-29: Added Path Builder modularization terms (IPathBuilder, ICsvMoveManager, Line1PathBuilder, Line2PathBuilder, Line2CsvMoveManager, PathSegmentHelper)

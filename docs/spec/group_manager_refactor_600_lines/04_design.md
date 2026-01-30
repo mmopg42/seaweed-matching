@@ -138,3 +138,5 @@ SSOT 통일 전에 아래 결정을 “의도된 동작”으로 확정해야 �
 - 규칙 구현체는 `Models`(FileGroup/DataType)와 `Helpers(FileNamingHelper)`에만 의존
 
 
+
+

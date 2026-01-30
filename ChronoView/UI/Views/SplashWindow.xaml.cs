@@ -12,6 +12,15 @@ namespace ChronoView.UI.Views
         public SplashWindow()
         {
             InitializeComponent();
+
+            // SSOT: ApplicationConfiguration의 기본 ProgramName 사용
+            var config = new ChronoView.Models.ApplicationConfiguration();
+            DataContext = new
+            {
+                WindowTitle = config.ProgramName,
+                ProgramTitle = config.ProgramName
+            };
+
             StartLoadingAnimation();
         }
 

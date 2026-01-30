@@ -142,7 +142,8 @@ public partial class FileGroupDataGrid : System.Windows.Controls.UserControl
                 var configManager = app.Services.GetRequiredService<IConfigurationManager>();
                 var config = configManager.LoadConfiguration<ApplicationConfiguration>();
                 var sequenceSettings = config.DataSequenceSettings;
-                var orderedTypes = sequenceSettings.GetOrderedTypes();
+                // Show ALL data types as columns (Enabled flag only affects matching strategy, not UI visibility)
+                var orderedTypes = sequenceSettings.GetAllOrderedTypes();
 
                 MainDataGrid.BeginInit();
 
@@ -209,6 +210,7 @@ public partial class FileGroupDataGrid : System.Windows.Controls.UserControl
         else if (lineNumber == 2)
         {
             // Line 2 maps Cam1/2/3 types to Cam4/5/6 headers and templates
+            // Line 2 uses NIR2 template for NIR data
             if (dataType == DataType.Cam1) headerDataType = DataType.Cam4;
             else if (dataType == DataType.Cam2) headerDataType = DataType.Cam5;
             else if (dataType == DataType.Cam3) headerDataType = DataType.Cam6;
@@ -216,7 +218,7 @@ public partial class FileGroupDataGrid : System.Windows.Controls.UserControl
             resourceKey = dataType switch
             {
                 DataType.Normal => "NormalFileTemplate",
-                DataType.NIR => "NirFileTemplate",
+                DataType.NIR => "Nir2FileTemplate",  // Line 2 uses NIR2 template
                 DataType.Cam1 => "Camera4Template",
                 DataType.Cam2 => "Camera5Template",
                 DataType.Cam3 => "Camera6Template",

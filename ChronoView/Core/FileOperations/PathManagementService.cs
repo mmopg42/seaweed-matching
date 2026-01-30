@@ -1,6 +1,5 @@
 using ChronoView.Models;
 using Microsoft.Extensions.Logging;
-using System.Globalization;
 using System.IO;
 
 namespace ChronoView.Core.FileOperations;
@@ -20,46 +19,27 @@ public class PathManagementService : IPathManagementService
     /// <inheritdoc/>
     public Dictionary<string, string> GeneratePathsFromDate(string dateString, ApplicationConfiguration config)
     {
-        _logger.LogInformation("Generating paths from date: {Date}", dateString);
-        
+        _logger.LogInformation("Getting configured paths for date: {Date}", dateString);
+
         var paths = new Dictionary<string, string>();
-        
-        // 날짜 형식 검증
-        if (!DateTime.TryParseExact(dateString, "yyyyMMdd", 
-            CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
-        {
-            _logger.LogWarning("Invalid date format: {Date}", dateString);
-            return paths;
-        }
-        
-        // 기본 경로 패턴: BasePath/{YYYY}/{MM}/{DD}/
-        var basePath = !string.IsNullOrEmpty(config.BasePath) 
-            ? config.BasePath 
-            : "D:/Data";
-        
-        var datePath = Path.Combine(basePath, 
-            date.Year.ToString(), 
-            date.Month.ToString("D2"), 
-            date.Day.ToString("D2"));
-        
-        // ====== Line 1 경로 ======
-        paths["NIR1"] = Path.Combine(datePath, "NIR1");
-        paths["Normal1"] = Path.Combine(datePath, "Normal1");
-        paths["Cam1"] = Path.Combine(datePath, "Cam1");
-        paths["Cam2"] = Path.Combine(datePath, "Cam2");
-        paths["Cam3"] = Path.Combine(datePath, "Cam3");
-        
-        // ====== Line 2 경로 ======
-        paths["NIR2"] = Path.Combine(datePath, "NIR2");
-        paths["Normal2"] = Path.Combine(datePath, "Normal2");
-        paths["Cam4"] = Path.Combine(datePath, "Cam4");
-        paths["Cam5"] = Path.Combine(datePath, "Cam5");
-        paths["Cam6"] = Path.Combine(datePath, "Cam6");
-        
-        // ====== 공통 경로 ======
-        paths["Output"] = Path.Combine(datePath, "Output");
-        
-        _logger.LogInformation("Generated {Count} paths for date {Date}", paths.Count, dateString);
+        var settings = config.MatchingSettings;
+
+        // 설정된 경로들 그대로 반환 (비어 있으면 빈 문자열)
+        paths["NIR1"] = settings.Nir1Path ?? "";
+        paths["Normal1"] = settings.Normal1Path ?? "";
+        paths["Cam1"] = settings.Camera1Path ?? "";
+        paths["Cam2"] = settings.Camera2Path ?? "";
+        paths["Cam3"] = settings.Camera3Path ?? "";
+        paths["NIR2"] = settings.Nir2Path ?? "";
+        paths["Normal2"] = settings.Normal2Path ?? "";
+        paths["Cam4"] = settings.Camera4Path ?? "";
+        paths["Cam5"] = settings.Camera5Path ?? "";
+        paths["Cam6"] = settings.Camera6Path ?? "";
+        paths["Output"] = settings.OutputPath ?? "";
+
+        var configuredCount = paths.Values.Count(p => !string.IsNullOrWhiteSpace(p));
+        _logger.LogInformation("Retrieved {Count} configured paths out of {Total}", configuredCount, paths.Count);
+
         return paths;
     }
 
